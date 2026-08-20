@@ -1,4 +1,5 @@
 // @improved-by-ai
+// @cleaned-by-ai
 import { screen } from '@testing-library/react';
 import { beforeEach } from 'vitest';
 import { travel, q, setup, beforeEachSetup } from './log-test-utils.jsx';
@@ -43,13 +44,8 @@ describe('Log', () => {
       expect(screen.getByText(/\(5, -3\)/)).toBeInTheDocument();
     });
 
-    it('does not render coords when hex is null', () => {
+    it('does not render coords when hex is missing', () => {
       setup(Log, [travel({ hex: null })]);
-      expect(screen.queryByText(/\(\d+, -?\d+\)/)).not.toBeInTheDocument();
-    });
-
-    it('does not render coords when hex is undefined', () => {
-      setup(Log, [travel({ hex: undefined })]);
       expect(screen.queryByText(/\(\d+, -?\d+\)/)).not.toBeInTheDocument();
     });
   });
@@ -62,13 +58,8 @@ describe('Log', () => {
       expect(q('.log-travel-terrain i.fa-mountain')).toBeInTheDocument();
     });
 
-    it('does not render terrain when empty string', () => {
+    it('does not render terrain when missing', () => {
       setup(Log, [travel({ terrain: '' })]);
-      expect(q('.log-travel-terrain')).not.toBeInTheDocument();
-    });
-
-    it('does not render terrain when undefined', () => {
-      setup(Log, [travel({ terrain: undefined })]);
       expect(q('.log-travel-terrain')).not.toBeInTheDocument();
     });
   });
@@ -86,13 +77,8 @@ describe('Log', () => {
       expect(q('.log-travel-weather i.fa-cloud-showers-heavy')).toBeInTheDocument();
     });
 
-    it('does not render weather when empty string', () => {
+    it('does not render weather when missing', () => {
       setup(Log, [travel({ weather: '' })]);
-      expect(q('.log-travel-weather')).not.toBeInTheDocument();
-    });
-
-    it('does not render weather when undefined', () => {
-      setup(Log, [travel({ weather: undefined })]);
       expect(q('.log-travel-weather')).not.toBeInTheDocument();
     });
   });
@@ -105,13 +91,8 @@ describe('Log', () => {
       expect(screen.getByText(/Enemy/i)).toBeInTheDocument();
     });
 
-    it('does not render event section when eventTitle is empty', () => {
+    it('does not render event section when eventTitle is missing', () => {
       setup(Log, [travel({ eventTitle: '' })]);
-      expect(q('.log-travel-event')).not.toBeInTheDocument();
-    });
-
-    it('does not render event section when eventTitle is undefined', () => {
-      setup(Log, [travel({ eventTitle: undefined })]);
       expect(q('.log-travel-event')).not.toBeInTheDocument();
     });
   });

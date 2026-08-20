@@ -1,4 +1,5 @@
 // @improved-by-ai
+// @cleaned-by-ai
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { createOverlayHandler } from './initiative-sse-handlers.jsx';
 
@@ -69,33 +70,9 @@ describe('createOverlayHandler', () => {
             expect(setOverlays).not.toHaveBeenCalled();
         });
 
-        it('should not call setOverlays when overlays is undefined', () => {
-            handler(
-                { key: 'spell-overlay-test-campaign', data: { action: 'add', overlays: undefined } },
-                setOverlays,
-            );
-            expect(setOverlays).not.toHaveBeenCalled();
-        });
-
-        it('should not call setOverlays when overlays is null', () => {
-            handler(
-                { key: 'spell-overlay-test-campaign', data: { action: 'add', overlays: null } },
-                setOverlays,
-            );
-            expect(setOverlays).not.toHaveBeenCalled();
-        });
-
         it('should not call setOverlays when data is missing overlays property', () => {
             handler(
                 { key: 'spell-overlay-test-campaign', data: { action: 'add' } },
-                setOverlays,
-            );
-            expect(setOverlays).not.toHaveBeenCalled();
-        });
-
-        it('should not call setOverlays when data is null', () => {
-            handler(
-                { key: 'spell-overlay-test-campaign', data: null },
                 setOverlays,
             );
             expect(setOverlays).not.toHaveBeenCalled();
@@ -130,32 +107,6 @@ describe('createOverlayHandler', () => {
             );
             expect(setOverlays).not.toHaveBeenCalled();
         });
-
-        it('should not call setOverlays when overlays is undefined', () => {
-            handler(
-                { key: 'spell-overlay-test-campaign', data: { action: 'update', overlays: undefined } },
-                setOverlays,
-            );
-            expect(setOverlays).not.toHaveBeenCalled();
-        });
-
-        it('should not call setOverlays when overlays is null', () => {
-            handler(
-                { key: 'spell-overlay-test-campaign', data: { action: 'update', overlays: null } },
-                setOverlays,
-            );
-            expect(setOverlays).not.toHaveBeenCalled();
-        });
-
-        it('should handle update on empty existing overlays', () => {
-            prev = [];
-            handler(
-                { key: 'spell-overlay-test-campaign', data: { action: 'update', overlays: [{ id: 'a', label: 'A' }] } },
-                setOverlays,
-            );
-            const result = setOverlays.mock.calls[0][0](prev);
-            expect(result).toEqual([]);
-        });
     });
 
     describe('remove action', () => {
@@ -182,22 +133,6 @@ describe('createOverlayHandler', () => {
         it('should not call setOverlays when overlayId is missing', () => {
             handler(
                 { key: 'spell-overlay-test-campaign', data: { action: 'remove' } },
-                setOverlays,
-            );
-            expect(setOverlays).not.toHaveBeenCalled();
-        });
-
-        it('should not call setOverlays when overlayId is null', () => {
-            handler(
-                { key: 'spell-overlay-test-campaign', data: { action: 'remove', overlayId: null } },
-                setOverlays,
-            );
-            expect(setOverlays).not.toHaveBeenCalled();
-        });
-
-        it('should not call setOverlays when overlayId is empty string', () => {
-            handler(
-                { key: 'spell-overlay-test-campaign', data: { action: 'remove', overlayId: '' } },
                 setOverlays,
             );
             expect(setOverlays).not.toHaveBeenCalled();

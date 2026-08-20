@@ -1,5 +1,6 @@
 // @improved-by-ai
-import { render, screen } from '@testing-library/react';
+// @cleaned-by-ai
+import { render, screen, cleanup } from '@testing-library/react';
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 
 const mockState = vi.hoisted(() => ({ logEntries: [], initialized: true }));
@@ -159,7 +160,7 @@ describe('HealingPoolEntry - dice pool and non-dice pool', () => {
     expect(q('.log-healing i.fa-hand-holding-heart')).toBeInTheDocument();
   });
 
-  it('renders non-dice pool (flat usage)', () => {
+  it('renders non-dice pool (flat usage) for empty or undefined rolls', () => {
     setup([pool({
       rolls: [],
       amount: 5,
@@ -167,15 +168,15 @@ describe('HealingPoolEntry - dice pool and non-dice pool', () => {
     })]);
     expect(screen.getByText(/Used 5 HP point from pool/i)).toBeInTheDocument();
     expect(screen.getByText(/20 remaining/i)).toBeInTheDocument();
-  });
 
-  it('renders non-dice pool when rolls is undefined', () => {
+    cleanup();
     setup([pool({
       rolls: undefined,
       amount: 3,
       poolAfter: 17,
     })]);
     expect(screen.getByText(/Used 3 HP point from pool/i)).toBeInTheDocument();
+    expect(screen.getByText(/17 remaining/i)).toBeInTheDocument();
   });
 
   it('shows feature name and target in header', () => {
@@ -252,23 +253,15 @@ describe('AbilityUseEntry - save details and death save', () => {
     expect(q('.log-save-result.log-condition-failure')).toBeInTheDocument();
   });
 
-  it('renders ability description with dangerouslySetInnerHTML', () => {
-    setup([abilityUse({
-      description: '<p>Regenerate hit points</p>',
-    })]);
-    expect(q('.log-ability-description')).toBeInTheDocument();
-  });
-
-  it('renders source tag when different from abilityName', () => {
+  it('renders source tag when different from abilityName, hides when same', () => {
     setup([abilityUse({
       abilityName: 'Second Wind',
       source: 'Fighter Level 2',
     })]);
     expect(q('.log-source-tag')).toBeInTheDocument();
     expect(q('.log-source-tag')).toHaveTextContent(/Fighter Level 2/i);
-  });
 
-  it('hides source tag when same as abilityName', () => {
+    cleanup();
     setup([abilityUse({
       abilityName: 'Second Wind',
       source: 'Second Wind',

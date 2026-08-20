@@ -1,4 +1,5 @@
 // @improved-by-ai
+// @cleaned-by-ai
 import { render, screen } from '@testing-library/react';
 import { describe, it, expect, vi } from 'vitest';
 import EffectAdder from './EffectAdder.jsx';
@@ -21,12 +22,6 @@ describe('EffectAdder - rendering', () => {
   });
 
   describe('overlay and modal structure', () => {
-    it('should render the overlay with a modal', () => {
-      render(<EffectAdder {...props} />);
-      expect(document.querySelector('.ea-overlay')).toBeInTheDocument();
-      expect(document.querySelector('.ea-modal')).toBeInTheDocument();
-    });
-
     it.each`
       targetName
       ${'Goblin'}

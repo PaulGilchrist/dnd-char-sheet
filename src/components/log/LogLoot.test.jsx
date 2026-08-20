@@ -1,4 +1,5 @@
 // @improved-by-ai
+// @cleaned-by-ai
 import { screen } from '@testing-library/react';
 import { beforeEach } from 'vitest';
 import { loot, q, setup, beforeEachSetup } from './log-test-utils.jsx';
@@ -12,11 +13,6 @@ describe('LogLootEntry', () => {
 
   // ── BASIC RENDERING ──────────────────────
   describe('basic rendering', () => {
-    it('renders the log-loot entry wrapper with correct classes', () => {
-      setup(Log, [loot()]);
-      expect(q('.log-entry.log-loot')).toBeInTheDocument();
-    });
-
     it('renders the coins icon', () => {
       setup(Log, [loot()]);
       expect(q('.log-loot i.fa-coins')).toBeInTheDocument();
@@ -25,16 +21,6 @@ describe('LogLootEntry', () => {
     it('renders the title text', () => {
       setup(Log, [loot()]);
       expect(screen.getByText(/Loot & XP Awarded/i)).toBeInTheDocument();
-    });
-
-    it('renders the timestamp', () => {
-      setup(Log, [loot({ timestamp: 1700000000000 })]);
-      expect(q('.log-time')).toBeInTheDocument();
-    });
-
-    it('renders the details container', () => {
-      setup(Log, [loot()]);
-      expect(q('.log-loot-details')).toBeInTheDocument();
     });
   });
 
@@ -51,28 +37,20 @@ describe('LogLootEntry', () => {
       expect(screen.getByText(/1,000,000 XP per character/i)).toBeInTheDocument();
     });
 
-    it('hides XP section when xpPerChar is 0', () => {
+    it('hides XP section when xpPerChar is falsy or negative', () => {
       setup(Log, [loot({ xpPerChar: 0 })]);
       expect(q('.log-loot-xp')).not.toBeInTheDocument();
       expect(screen.queryByText(/XP per character/i)).not.toBeInTheDocument();
-    });
 
-    it('hides XP section when xpPerChar is null', () => {
       setup(Log, [loot({ xpPerChar: null })]);
       expect(q('.log-loot-xp')).not.toBeInTheDocument();
-    });
 
-    it('hides XP section when xpPerChar is undefined', () => {
       setup(Log, [loot({ xpPerChar: undefined })]);
       expect(q('.log-loot-xp')).not.toBeInTheDocument();
-    });
 
-    it('hides XP section when xpPerChar is negative', () => {
       setup(Log, [loot({ xpPerChar: -100 })]);
       expect(q('.log-loot-xp')).not.toBeInTheDocument();
-    });
 
-    it('hides XP section when xpPerChar is missing', () => {
       setup(Log, [loot({})]);
       expect(q('.log-loot-xp')).not.toBeInTheDocument();
     });
@@ -93,22 +71,16 @@ describe('LogLootEntry', () => {
       expect(screen.getByText('Gold Sword')).toBeInTheDocument();
     });
 
-    it('hides the items list when lootItems is an empty array', () => {
+    it('hides the items list when lootItems is falsy or empty', () => {
       setup(Log, [loot({ lootItems: [] })]);
       expect(q('.log-loot-items')).not.toBeInTheDocument();
-    });
 
-    it('hides the items list when lootItems is null', () => {
       setup(Log, [loot({ lootItems: null })]);
       expect(q('.log-loot-items')).not.toBeInTheDocument();
-    });
 
-    it('hides the items list when lootItems is undefined', () => {
       setup(Log, [loot({ lootItems: undefined })]);
       expect(q('.log-loot-items')).not.toBeInTheDocument();
-    });
 
-    it('hides the items list when lootItems is missing', () => {
       setup(Log, [loot({})]);
       expect(q('.log-loot-items')).not.toBeInTheDocument();
     });

@@ -1,4 +1,5 @@
 // @improved-by-ai
+// @cleaned-by-ai
 import { render, screen, fireEvent } from '@testing-library/react';
 import { describe, it, expect, beforeEach } from 'vitest';
 import EffectAdder from './EffectAdder.jsx';
@@ -22,54 +23,36 @@ describe('EffectAdder - effects config view', () => {
   });
 
   describe('config header and description', () => {
-    it('should show effect icon and label in config header', () => {
+    it.each`
+      effectLabel          | iconClass       | hasSource
+      ${'Goad'}            | ${'fa-bullseye'}| ${true}
+      ${"Tasha's Hideous Laughter"} | ${'fa-music'} | ${true}
+    `('should show effect icon, label, description, and buttons for "$effectLabel"', ({ effectLabel, iconClass, hasSource }) => {
       render(<EffectAdder {...props} initialTab='conditions' />);
       fireEvent.click(screen.getByRole('button', { name: 'Effects' }));
-      fireEvent.click(screen.getByText('Goad'));
+      fireEvent.click(screen.getByText(effectLabel));
       const header = document.querySelector('.ea-config-header');
       expect(header).toBeInTheDocument();
-      expect(header.querySelector('i')).toHaveClass('fa-bullseye');
-      expect(header.querySelector('strong')).toHaveTextContent('Goad');
-    });
-
-    it('should show the effect description in the config view', () => {
-      render(<EffectAdder {...props} initialTab='conditions' />);
-      fireEvent.click(screen.getByRole('button', { name: 'Effects' }));
-      fireEvent.click(screen.getByText('Goad'));
-      const def = TARGET_EFFECT_DEFINITIONS.find(d => d.label === 'Goad');
+      expect(header.querySelector('i')).toHaveClass(iconClass);
+      expect(header.querySelector('strong')).toHaveTextContent(effectLabel);
+      const def = TARGET_EFFECT_DEFINITIONS.find(d => d.label === effectLabel);
       expect(document.querySelector('.ea-config-desc')).toHaveTextContent(def.description);
-    });
-
-    it('should show Back and Apply buttons in config view', () => {
-      render(<EffectAdder {...props} initialTab='conditions' />);
-      fireEvent.click(screen.getByRole('button', { name: 'Effects' }));
-      fireEvent.click(screen.getByText('Goad'));
       expect(screen.getByRole('button', { name: 'Back' })).toBeInTheDocument();
       expect(screen.getByRole('button', { name: 'Apply' })).toBeInTheDocument();
+      if (hasSource) {
+        expect(screen.getByText('Source (who caused this):')).toBeInTheDocument();
+      }
     });
   });
 
   describe('source field', () => {
-    it('should show source dropdown when effect has source field', () => {
-      render(<EffectAdder {...props} initialTab='conditions' />);
-      fireEvent.click(screen.getByRole('button', { name: 'Effects' }));
-      fireEvent.click(screen.getByText('Goad'));
-      expect(screen.getByText('Source (who caused this):')).toBeInTheDocument();
-    });
-
-    it('should populate creature names in source dropdown', () => {
+    it('should populate creature names and have "Other" option when effect has source field', () => {
       render(<EffectAdder {...props} initialTab='conditions' />);
       fireEvent.click(screen.getByRole('button', { name: 'Effects' }));
       fireEvent.click(screen.getByText('Goad'));
       expect(screen.getByText('Alice')).toBeInTheDocument();
       expect(screen.getByText('Bob')).toBeInTheDocument();
       expect(screen.getByText('Dragon')).toBeInTheDocument();
-    });
-
-    it('should have an "Other…" option in source dropdown', () => {
-      render(<EffectAdder {...props} initialTab='conditions' />);
-      fireEvent.click(screen.getByRole('button', { name: 'Effects' }));
-      fireEvent.click(screen.getByText('Goad'));
       expect(screen.getByText('Other…')).toBeInTheDocument();
     });
 
@@ -91,17 +74,13 @@ describe('EffectAdder - effects config view', () => {
   });
 
   describe('value field', () => {
-    it('should show value field when effect has value field', () => {
+    it('should show value field with effect defaults for effects with value field', () => {
       render(<EffectAdder {...props} initialTab='conditions' />);
       fireEvent.click(screen.getByRole('button', { name: 'Effects' }));
       fireEvent.click(screen.getByText('Next Attack +N Bonus'));
       expect(screen.getByText('Value:')).toBeInTheDocument();
       expect(screen.getByLabelText('Value:')).toHaveValue(5);
-    });
-
-    it('should use effect defaults when selecting an effect', () => {
-      render(<EffectAdder {...props} initialTab='conditions' />);
-      fireEvent.click(screen.getByRole('button', { name: 'Effects' }));
+      fireEvent.click(screen.getByRole('button', { name: 'Back' }));
       fireEvent.click(screen.getByText('AC Penalty'));
       expect(screen.getByLabelText('Value:')).toHaveValue(2);
     });
@@ -111,44 +90,35 @@ describe('EffectAdder - effects config view', () => {
       fireEvent.click(screen.getByRole('button', { name: 'Effects' }));
       fireEvent.click(screen.getByText('Next Attack +N Bonus'));
       expect(screen.getByLabelText('Value:')).toHaveValue(5);
-
       fireEvent.change(screen.getByLabelText('Value:'), { target: { value: '99' } });
       expect(screen.getByLabelText('Value:')).toHaveValue(99);
-
       fireEvent.click(screen.getByRole('button', { name: 'Back' }));
       fireEvent.click(screen.getByText('AC Penalty'));
       expect(screen.getByLabelText('Value:')).toHaveValue(2);
     });
 
-    it('should allow changing value input', () => {
+    it('should allow changing value input and handle invalid input defaulting to 0', () => {
       render(<EffectAdder {...props} initialTab='conditions' />);
       fireEvent.click(screen.getByRole('button', { name: 'Effects' }));
       fireEvent.click(screen.getByText('AC Penalty'));
       const valueInput = screen.getByLabelText('Value:');
       fireEvent.change(valueInput, { target: { value: '7' } });
       expect(valueInput).toHaveValue(7);
-    });
-
-    it('should handle invalid value input defaulting to 0', () => {
-      render(<EffectAdder {...props} initialTab='conditions' />);
-      fireEvent.click(screen.getByRole('button', { name: 'Effects' }));
-      fireEvent.click(screen.getByText('AC Penalty'));
-      const valueInput = screen.getByLabelText('Value:');
       fireEvent.change(valueInput, { target: { value: 'abc' } });
       expect(valueInput).toHaveValue(0);
     });
   });
 
   describe('ability field', () => {
-    it('should show ability field when effect has ability field', () => {
+    it('should show ability field with correct default for effects with ability field', () => {
       render(<EffectAdder {...props} initialTab='conditions' />);
       fireEvent.click(screen.getByRole('button', { name: 'Effects' }));
       fireEvent.click(screen.getByText('Check Disadv'));
       const abilitySelect = screen.getByLabelText('Ability:');
       expect(abilitySelect).toBeInTheDocument();
+      expect(abilitySelect.value).toBe('wis');
       const optionValues = Array.from(abilitySelect.options).map(o => o.value);
       expect(optionValues).toContain('wis');
-      expect(abilitySelect.value).toBe('wis');
     });
 
     it('should allow changing ability in effect config', () => {
@@ -162,7 +132,7 @@ describe('EffectAdder - effects config view', () => {
   });
 
   describe('DC field', () => {
-    it('should show DC field when effect has dc field', () => {
+    it('should show DC field with correct default for effects with dc field', () => {
       render(<EffectAdder {...props} initialTab='conditions' />);
       fireEvent.click(screen.getByRole('button', { name: 'Effects' }));
       fireEvent.click(screen.getByText("Tasha's Hideous Laughter"));
@@ -170,38 +140,25 @@ describe('EffectAdder - effects config view', () => {
       expect(screen.getByLabelText('Save DC:')).toHaveValue(15);
     });
 
-    it('should allow changing DC in effect config', () => {
+    it('should allow changing DC and handle invalid input defaulting to 10', () => {
       render(<EffectAdder {...props} initialTab='conditions' />);
       fireEvent.click(screen.getByRole('button', { name: 'Effects' }));
       fireEvent.click(screen.getByText("Tasha's Hideous Laughter"));
       const dcInput = screen.getByLabelText('Save DC:');
       fireEvent.change(dcInput, { target: { value: '20' } });
       expect(dcInput).toHaveValue(20);
-    });
-
-    it('should handle invalid DC input defaulting to 10', () => {
-      render(<EffectAdder {...props} initialTab='conditions' />);
-      fireEvent.click(screen.getByRole('button', { name: 'Effects' }));
-      fireEvent.click(screen.getByText("Tasha's Hideous Laughter"));
-      const dcInput = screen.getByLabelText('Save DC:');
       fireEvent.change(dcInput, { target: { value: 'abc' } });
       expect(dcInput).toHaveValue(10);
     });
   });
 
   describe('notes field', () => {
-    it('should show notes textarea always', () => {
-      render(<EffectAdder {...props} initialTab='conditions' />);
-      fireEvent.click(screen.getByRole('button', { name: 'Effects' }));
-      fireEvent.click(screen.getByText('Goad'));
-      expect(screen.getByPlaceholderText('GM notes about this effect…')).toBeInTheDocument();
-    });
-
-    it('should allow entering notes', () => {
+    it('should show notes textarea and allow entering notes', () => {
       render(<EffectAdder {...props} initialTab='conditions' />);
       fireEvent.click(screen.getByRole('button', { name: 'Effects' }));
       fireEvent.click(screen.getByText('Goad'));
       const textarea = screen.getByPlaceholderText('GM notes about this effect…');
+      expect(textarea).toBeInTheDocument();
       fireEvent.change(textarea, { target: { value: 'GM note here' } });
       expect(textarea).toHaveValue('GM note here');
     });
@@ -220,92 +177,45 @@ describe('EffectAdder - effects config view', () => {
   });
 
   describe('onApply callback', () => {
-    it('should call onApply with source for effect with source field', () => {
+    it.each`
+      effectLabel                    | sourceValue | sourceExpected     | valueExpected | dcExpected | notesExpected
+      ${'Goad'}                      | ${'Alice'}  | ${'Alice'}         | ${undefined}  | ${undefined} | ${undefined}
+      ${'Goad'}                      | ${'__other__'} | ${'Mysterious Stranger'} | ${undefined} | ${undefined} | ${undefined}
+      ${'Goad'}                      | ${''}       | ${undefined}       | ${undefined}  | ${undefined} | ${undefined}
+      ${'Next Attack +N Bonus'}      | ${undefined}| ${undefined}       | ${8}          | ${undefined} | ${undefined}
+      ${"Tasha's Hideous Laughter"}  | ${'Bob'}    | ${'Bob'}           | ${undefined}  | ${18}      | ${'Boss spell'}
+    `('should call onApply with correct data for "$effectLabel"', ({ effectLabel, sourceValue, sourceExpected, valueExpected, dcExpected, notesExpected }) => {
       render(<EffectAdder {...props} initialTab='conditions' />);
       fireEvent.click(screen.getByRole('button', { name: 'Effects' }));
-      fireEvent.click(screen.getByText('Goad'));
-      const select = screen.getByRole('combobox');
-      fireEvent.change(select, { target: { value: 'Alice' } });
+      fireEvent.click(screen.getByText(effectLabel));
+      if (sourceValue !== undefined) {
+        const select = screen.getByRole('combobox');
+        fireEvent.change(select, { target: { value: sourceValue } });
+      }
+      if (sourceValue === '__other__') {
+        const customInput = screen.getByPlaceholderText('Custom source name');
+        fireEvent.change(customInput, { target: { value: 'Mysterious Stranger' } });
+      }
+      if (valueExpected !== undefined) {
+        const valueInput = screen.getByLabelText('Value:');
+        fireEvent.change(valueInput, { target: { value: '8' } });
+      }
+      if (dcExpected !== undefined) {
+        const dcInput = screen.getByLabelText('Save DC:');
+        fireEvent.change(dcInput, { target: { value: '18' } });
+      }
+      if (notesExpected !== undefined) {
+        const textarea = screen.getByPlaceholderText('GM notes about this effect…');
+        fireEvent.change(textarea, { target: { value: 'Boss spell' } });
+      }
       fireEvent.click(screen.getByRole('button', { name: 'Apply' }));
       expect(props.onApply).toHaveBeenCalledWith('effects', {
-        effectKey: 'goad',
-        source: 'Alice',
-        value: undefined,
+        effectKey: expect.any(String),
+        source: sourceExpected,
+        value: valueExpected,
         ability: undefined,
-        dc: undefined,
-        notes: undefined,
-      });
-    });
-
-    it('should call onApply with custom source when "Other" is selected', () => {
-      render(<EffectAdder {...props} initialTab='conditions' />);
-      fireEvent.click(screen.getByRole('button', { name: 'Effects' }));
-      fireEvent.click(screen.getByText('Goad'));
-      const select = screen.getByRole('combobox');
-      fireEvent.change(select, { target: { value: '__other__' } });
-      const customInput = screen.getByPlaceholderText('Custom source name');
-      fireEvent.change(customInput, { target: { value: 'Mysterious Stranger' } });
-      fireEvent.click(screen.getByRole('button', { name: 'Apply' }));
-      expect(props.onApply).toHaveBeenCalledWith('effects', {
-        effectKey: 'goad',
-        source: 'Mysterious Stranger',
-        value: undefined,
-        ability: undefined,
-        dc: undefined,
-        notes: undefined,
-      });
-    });
-
-    it('should call onApply with undefined source when source is not selected', () => {
-      render(<EffectAdder {...props} initialTab='conditions' />);
-      fireEvent.click(screen.getByRole('button', { name: 'Effects' }));
-      fireEvent.click(screen.getByText('Goad'));
-      fireEvent.click(screen.getByRole('button', { name: 'Apply' }));
-      expect(props.onApply).toHaveBeenCalledWith('effects', {
-        effectKey: 'goad',
-        source: undefined,
-        value: undefined,
-        ability: undefined,
-        dc: undefined,
-        notes: undefined,
-      });
-    });
-
-    it('should call onApply with value when effect has value field', () => {
-      render(<EffectAdder {...props} initialTab='conditions' />);
-      fireEvent.click(screen.getByRole('button', { name: 'Effects' }));
-      fireEvent.click(screen.getByText('Next Attack +N Bonus'));
-      const valueInput = screen.getByLabelText('Value:');
-      fireEvent.change(valueInput, { target: { value: '8' } });
-      fireEvent.click(screen.getByRole('button', { name: 'Apply' }));
-      expect(props.onApply).toHaveBeenCalledWith('effects', {
-        effectKey: 'next_attack_bonus',
-        source: undefined,
-        value: 8,
-        ability: undefined,
-        dc: undefined,
-        notes: undefined,
-      });
-    });
-
-    it('should call onApply with all fields populated', () => {
-      render(<EffectAdder {...props} initialTab='conditions' />);
-      fireEvent.click(screen.getByRole('button', { name: 'Effects' }));
-      fireEvent.click(screen.getByText("Tasha's Hideous Laughter"));
-      const select = screen.getByRole('combobox');
-      fireEvent.change(select, { target: { value: 'Bob' } });
-      const dcInput = screen.getByLabelText('Save DC:');
-      fireEvent.change(dcInput, { target: { value: '18' } });
-      const textarea = screen.getByPlaceholderText('GM notes about this effect…');
-      fireEvent.change(textarea, { target: { value: 'Boss spell' } });
-      fireEvent.click(screen.getByRole('button', { name: 'Apply' }));
-      expect(props.onApply).toHaveBeenCalledWith('effects', {
-        effectKey: 'tashas_hideous_laughter',
-        source: 'Bob',
-        value: undefined,
-        ability: undefined,
-        dc: 18,
-        notes: 'Boss spell',
+        dc: dcExpected,
+        notes: notesExpected,
       });
     });
 

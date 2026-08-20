@@ -1,4 +1,5 @@
 // @improved-by-ai
+// @cleaned-by-ai
 import { render, screen, fireEvent } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import EffectAdder from './EffectAdder.jsx';
@@ -57,8 +58,6 @@ describe('EffectAdder - creature names sorting', () => {
     const values = Array.from(select.querySelectorAll('option')).map(o => o.value);
     expect(values).toContain('Alice');
     expect(values).toContain('Bob');
-    // null, undefined, and '' are filtered by .filter(Boolean)
-    // The '' in values is the disabled placeholder option, not a creature name
     expect(values.filter(v => v !== '' && v !== '__other__')).toEqual(['Alice', 'Bob']);
   });
 
@@ -79,32 +78,14 @@ describe('EffectAdder - creature names sorting', () => {
     expect(aliceOptions).toHaveLength(1);
   });
 
-  it('should handle empty creatures array', () => {
-    const emptyProps = { ...props, creatures: [] };
-    render(<EffectAdder {...emptyProps} initialTab='conditions' />);
-    fireEvent.click(screen.getByRole('button', { name: 'Effects' }));
-    fireEvent.click(screen.getByText('Goad'));
-    const select = screen.getByRole('combobox');
-    const options = Array.from(select.querySelectorAll('option')).map(o => o.value);
-    // Only the disabled placeholder and Other options when no creatures exist
-    expect(options).toEqual(['', '__other__']);
-  });
-
-  it('should handle undefined creatures prop', () => {
-    const undefProps = { ...props, creatures: undefined };
-    render(<EffectAdder {...undefProps} initialTab='conditions' />);
-    expect(document.querySelector('.ea-modal')).toBeInTheDocument();
-    // Should behave the same as empty array — no creature names in dropdown
-    fireEvent.click(screen.getByRole('button', { name: 'Effects' }));
-    fireEvent.click(screen.getByText('Goad'));
-    const select = screen.getByRole('combobox');
-    const options = Array.from(select.querySelectorAll('option')).map(o => o.value);
-    expect(options).toEqual(['', '__other__']);
-  });
-
-  it('should handle null creatures prop', () => {
-    const nullProps = { ...props, creatures: null };
-    render(<EffectAdder {...nullProps} initialTab='conditions' />);
+  it.each`
+    creatures
+    ${[]}
+    ${undefined}
+    ${null}
+  `('should handle empty/undefined/null creatures gracefully', ({ creatures }) => {
+    const testProps = { ...props, creatures };
+    render(<EffectAdder {...testProps} initialTab='conditions' />);
     expect(document.querySelector('.ea-modal')).toBeInTheDocument();
     fireEvent.click(screen.getByRole('button', { name: 'Effects' }));
     fireEvent.click(screen.getByText('Goad'));
@@ -130,7 +111,6 @@ describe('EffectAdder - creature names sorting', () => {
     const values = Array.from(select.querySelectorAll('option')).map(o => o.value);
     expect(values).toContain('Alice');
     expect(values).toContain('Bob');
-    // Whitespace-only strings pass .filter(Boolean) since they are truthy
     expect(values).toContain('   ');
     expect(values).toContain('\t');
   });

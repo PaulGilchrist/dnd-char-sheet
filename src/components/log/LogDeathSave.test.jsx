@@ -1,4 +1,5 @@
 // @improved-by-ai
+// @cleaned-by-ai
 import { screen } from '@testing-library/react';
 import { beforeEach } from 'vitest';
 import { ds, q, setup, beforeEachSetup } from './log-test-utils.jsx';
@@ -13,14 +14,12 @@ describe('Log', () => {
   describe('DeathSaveEntry', () => {
     // ── Core text rendering ──────────────────────────────────────
 
-    it('renders "Death Save Success" for normal success', () => {
-      setup(Log, [ds({ success: true })]);
-      expect(screen.getByText(/Death Save Success/i)).toBeInTheDocument();
-    });
-
-    it('renders "Death Save Failure" for normal failure', () => {
-      setup(Log, [ds({ success: false })]);
-      expect(screen.getByText(/Death Save Failure/i)).toBeInTheDocument();
+    it.each([
+      ['Death Save Success', 'success', true],
+      ['Death Save Failure', 'failure', false],
+    ])('renders "%s" for normal %s', (expectedText, _label, success) => {
+      setup(Log, [ds({ success })]);
+      expect(screen.getByText(new RegExp(expectedText, 'i'))).toBeInTheDocument();
     });
 
     it('renders "Stabilized!" when result is stable', () => {
@@ -47,14 +46,12 @@ describe('Log', () => {
 
     // ── CSS classes ──────────────────────────────────────────────
 
-    it('applies success CSS class for normal success', () => {
-      setup(Log, [ds({ success: true })]);
-      expect(q('.log-entry.log-death-save.log-death-save-success')).toBeInTheDocument();
-    });
-
-    it('applies failure CSS class for normal failure', () => {
-      setup(Log, [ds({ success: false })]);
-      expect(q('.log-entry.log-death-save.log-death-save-failure')).toBeInTheDocument();
+    it.each([
+      ['success', true],
+      ['failure', false],
+    ])('applies "%s" CSS class based on success value', (cls, success) => {
+      setup(Log, [ds({ success })]);
+      expect(q(`.log-entry.log-death-save.log-death-save-${cls}`)).toBeInTheDocument();
     });
 
     // ── Icon rendering ───────────────────────────────────────────
@@ -72,19 +69,18 @@ describe('Log', () => {
 
     // ── Roll display ─────────────────────────────────────────────
 
-    it('renders roll value in parens for non-stable/non-dead entries', () => {
-      setup(Log, [ds({ roll: 12 })]);
-      expect(screen.getByText(/\(12\)/)).toBeInTheDocument();
-    });
-
-    it('hides roll display when result is stable', () => {
-      setup(Log, [ds({ roll: 15, result: 'stable' })]);
-      expect(screen.queryByText(/\(15\)/)).not.toBeInTheDocument();
-    });
-
-    it('hides roll display when result is dead', () => {
-      setup(Log, [ds({ roll: 8, result: 'dead' })]);
-      expect(screen.queryByText(/\(8\)/)).not.toBeInTheDocument();
+    it.each([
+      ['non-stable/non-dead', 12, true, undefined],
+      ['stable', 15, false, 'stable'],
+      ['dead', 8, false, 'dead'],
+    ])('renders roll value in parens for %s entries', (_label, roll, shouldShow, result) => {
+      const entry = result ? ds({ roll, result }) : ds({ roll });
+      setup(Log, [entry]);
+      if (shouldShow) {
+        expect(screen.getByText(new RegExp(`\\(${roll}\\)`))).toBeInTheDocument();
+      } else {
+        expect(screen.queryByText(new RegExp(`\\(${roll}\\)`))).not.toBeInTheDocument();
+      }
     });
 
     // ── NAT badges ───────────────────────────────────────────────
@@ -107,19 +103,17 @@ describe('Log', () => {
 
     // ── Advantage / dual dice ────────────────────────────────────
 
-    it('shows ADVANTAGE badge when rolls array has 2 entries', () => {
-      setup(Log, [ds({ roll: 17, rolls: [17, 9], hasAdvantage: true })]);
-      expect(screen.getByText(/ADVANTAGE/i)).toBeInTheDocument();
-    });
-
-    it('hides ADVANTAGE badge when rolls array has fewer than 2 entries', () => {
-      setup(Log, [ds({ roll: 15, rolls: [15] })]);
-      expect(screen.queryByText(/ADVANTAGE/i)).not.toBeInTheDocument();
-    });
-
-    it('hides ADVANTAGE badge when rolls is undefined', () => {
-      setup(Log, [ds({ roll: 15 })]);
-      expect(screen.queryByText(/ADVANTAGE/i)).not.toBeInTheDocument();
+    it.each([
+      ['present', { roll: 17, rolls: [17, 9], hasAdvantage: true }, true],
+      ['single roll', { roll: 15, rolls: [15] }, false],
+      ['no rolls', { roll: 15 }, false],
+    ])('shows ADVANTAGE badge when %s', (_label, overrides, show) => {
+      setup(Log, [ds(overrides)]);
+      if (show) {
+        expect(screen.getByText(/ADVANTAGE/i)).toBeInTheDocument();
+      } else {
+        expect(screen.queryByText(/ADVANTAGE/i)).not.toBeInTheDocument();
+      }
     });
 
     it('shows both dice with selected/discarded labels for advantage', () => {
@@ -140,13 +134,10 @@ describe('Log', () => {
       expect(q('.log-die-selected')).toBeInTheDocument();
     });
 
-    it('hides dual dice display for stable entries', () => {
+    it('hides dual dice display for stable and dead entries', () => {
       setup(Log, [ds({ rolls: [17, 9], result: 'stable' })]);
       expect(screen.queryByText(/selected/i)).not.toBeInTheDocument();
       expect(screen.queryByText(/discarded/i)).not.toBeInTheDocument();
-    });
-
-    it('hides dual dice display for dead entries', () => {
       setup(Log, [ds({ rolls: [8, 3], result: 'dead' })]);
       expect(screen.queryByText(/selected/i)).not.toBeInTheDocument();
       expect(screen.queryByText(/discarded/i)).not.toBeInTheDocument();
@@ -154,17 +145,13 @@ describe('Log', () => {
 
     // ── Total successes/failures ─────────────────────────────────
 
-    it('renders total successes when present', () => {
+    it('renders total successes, failures, and both when present', () => {
       setup(Log, [ds({ totalSuccesses: 2 })]);
       expect(q('.log-death-save-total-successes')).toHaveTextContent(/^✓ 2$/);
-    });
-
-    it('renders total failures when present', () => {
+      beforeEachSetup();
       setup(Log, [ds({ totalFailures: 1 })]);
       expect(q('.log-death-save-total-failures')).toHaveTextContent(/^✗ 1$/);
-    });
-
-    it('renders both totals when both are present', () => {
+      beforeEachSetup();
       setup(Log, [ds({ totalSuccesses: 1, totalFailures: 2 })]);
       expect(q('.log-death-save-total-successes')).toHaveTextContent(/^✓ 1$/);
       expect(q('.log-death-save-total-failures')).toHaveTextContent(/^✗ 2$/);

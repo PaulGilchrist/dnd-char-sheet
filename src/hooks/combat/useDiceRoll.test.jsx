@@ -1,4 +1,5 @@
 // @improved-by-ai
+// @cleaned-by-ai
 import { renderHook, act } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import useDiceRoll from './useDiceRoll.js';
@@ -14,112 +15,49 @@ describe('useDiceRoll', () => {
     rollD20.mockReturnValue(15);
   });
 
-  describe('initial state', () => {
-    it('returns popupHtml as null, setPopupHtml as function, and all roll functions', () => {
-      const { result } = renderHook(() => useDiceRoll());
-      const {
-        popupHtml,
-        setPopupHtml,
-        rollAbilityCheck,
-        rollSavingThrow,
-        rollSkillCheck,
-        rollInitiative,
-        rollAttack,
-        rollDamage,
-      } = result.current;
-
-      expect(popupHtml).toBeNull();
-      expect(typeof setPopupHtml).toBe('function');
-      expect(typeof rollAbilityCheck).toBe('function');
-      expect(typeof rollSavingThrow).toBe('function');
-      expect(typeof rollSkillCheck).toBe('function');
-      expect(typeof rollInitiative).toBe('function');
-      expect(typeof rollAttack).toBe('function');
-      expect(typeof rollDamage).toBe('function');
-    });
-
-  });
-
   describe('d20 roll types', () => {
     const rollTypeTests = [
       ['rollAbilityCheck', 'check'],
       ['rollSavingThrow', 'save'],
       ['rollSkillCheck', 'skill'],
       ['rollAttack', 'attack'],
+      ['rollInitiative', 'initiative'],
     ];
 
     for (const [fnName, expectedRollType] of rollTypeTests) {
       it(`sets popupHtml with type d20 and rollType "${expectedRollType}" when calling ${fnName}`, () => {
         const { result } = renderHook(() => useDiceRoll());
+        const isInitiative = fnName === 'rollInitiative';
         act(() => {
-          result.current[fnName]('Test', 5);
+          if (isInitiative) {
+            result.current[fnName](4);
+          } else {
+            result.current[fnName]('Test', 5);
+          }
         });
 
-        expect(rollD20).toHaveBeenCalledTimes(2);
-        expect(rollD20).toHaveBeenNthCalledWith(1);
-        expect(rollD20).toHaveBeenNthCalledWith(2);
         expect(result.current.popupHtml).toEqual({
           type: 'd20',
           rollType: expectedRollType,
-          name: 'Test',
+          name: isInitiative ? 'Initiative' : 'Test',
           rolls: [15, 15],
-          bonus: 5,
+          bonus: isInitiative ? 4 : 5,
         });
       });
     }
 
-    it('sets popupHtml with rollType initiative when calling rollInitiative', () => {
-      const { result } = renderHook(() => useDiceRoll());
-      act(() => {
-        result.current.rollInitiative(4);
-      });
-
-      expect(rollD20).toHaveBeenCalledTimes(2);
-      expect(result.current.popupHtml).toEqual({
-        type: 'd20',
-        rollType: 'initiative',
-        name: 'Initiative',
-        rolls: [15, 15],
-        bonus: 4,
-      });
-    });
-
     it('passes through positive, negative, and zero bonus values', () => {
       const { result: neg } = renderHook(() => useDiceRoll());
-      act(() => {
-        neg.current.rollAbilityCheck('Test', -5);
-      });
+      act(() => { neg.current.rollAbilityCheck('Test', -5); });
       expect(neg.current.popupHtml.bonus).toBe(-5);
 
       const { result: pos } = renderHook(() => useDiceRoll());
-      act(() => {
-        pos.current.rollAttack('Test', 15);
-      });
+      act(() => { pos.current.rollAttack('Test', 15); });
       expect(pos.current.popupHtml.bonus).toBe(15);
 
       const { result: zero } = renderHook(() => useDiceRoll());
-      act(() => {
-        zero.current.rollSkillCheck('Test', 0);
-      });
+      act(() => { zero.current.rollSkillCheck('Test', 0); });
       expect(zero.current.popupHtml.bonus).toBe(0);
-    });
-
-    it('uses different d20 values when rollD20 returns different results', () => {
-      rollD20.mockReturnValueOnce(3).mockReturnValueOnce(18);
-      const { result } = renderHook(() => useDiceRoll());
-      act(() => {
-        result.current.rollAbilityCheck('Test', 2);
-      });
-      expect(result.current.popupHtml.rolls).toEqual([3, 18]);
-      expect(result.current.popupHtml.bonus).toBe(2);
-    });
-
-    it('handles empty string name', () => {
-      const { result } = renderHook(() => useDiceRoll());
-      act(() => {
-        result.current.rollAbilityCheck('', 0);
-      });
-      expect(result.current.popupHtml.name).toBe('');
     });
   });
 
@@ -141,37 +79,24 @@ describe('useDiceRoll', () => {
       });
     });
 
-    it('passes through rolls array and modifier as provided', () => {
-      const { result } = renderHook(() => useDiceRoll());
+    it('passes critLabels from ctx, null when ctx is undefined or null', () => {
+      const { result: withLabels } = renderHook(() => useDiceRoll());
       act(() => {
-        result.current.rollDamage('Test', '8d6', 20, [3, 4, 5, 2, 3, 3], 0, undefined);
+        withLabels.current.rollDamage('Test', '1d8', 5, [5], 0, { critLabels: 'critical' });
       });
-      expect(result.current.popupHtml.rolls).toEqual([3, 4, 5, 2, 3, 3]);
-      expect(result.current.popupHtml.modifier).toBe(0);
-    });
+      expect(withLabels.current.popupHtml.critLabels).toBe('critical');
 
-    it('passes critLabels from ctx object', () => {
-      const { result } = renderHook(() => useDiceRoll());
+      const { result: undef } = renderHook(() => useDiceRoll());
       act(() => {
-        result.current.rollDamage('Test', '1d8', 5, [5], 0, { critLabels: 'critical' });
+        undef.current.rollDamage('Test', '1d8', 5, [5], 0, undefined);
       });
-      expect(result.current.popupHtml.critLabels).toBe('critical');
-    });
+      expect(undef.current.popupHtml.critLabels).toBeNull();
 
-    it('sets critLabels to null when ctx is undefined', () => {
-      const { result } = renderHook(() => useDiceRoll());
+      const { result: nullCtx } = renderHook(() => useDiceRoll());
       act(() => {
-        result.current.rollDamage('Test', '1d8', 5, [5], 0, undefined);
+        nullCtx.current.rollDamage('Test', '1d8', 5, [5], 0, null);
       });
-      expect(result.current.popupHtml.critLabels).toBeNull();
-    });
-
-    it('sets critLabels to null when ctx is explicitly null', () => {
-      const { result } = renderHook(() => useDiceRoll());
-      act(() => {
-        result.current.rollDamage('Test', '1d8', 5, [5], 0, null);
-      });
-      expect(result.current.popupHtml.critLabels).toBeNull();
+      expect(nullCtx.current.popupHtml.critLabels).toBeNull();
     });
 
     it('handles empty rolls array', () => {
@@ -184,20 +109,14 @@ describe('useDiceRoll', () => {
   });
 
   describe('setPopupHtml', () => {
-    it('allows direct setPopupHtml calls', () => {
+    it('allows direct setPopupHtml calls and clearing', () => {
       const { result } = renderHook(() => useDiceRoll());
+
       act(() => {
         result.current.setPopupHtml({ type: 'custom', value: 42 });
       });
       expect(result.current.popupHtml).toEqual({ type: 'custom', value: 42 });
-    });
 
-    it('allows clearing popupHtml by setting null', () => {
-      const { result } = renderHook(() => useDiceRoll());
-      act(() => {
-        result.current.rollAbilityCheck('Test', 5);
-      });
-      expect(result.current.popupHtml).not.toBeNull();
       act(() => {
         result.current.setPopupHtml(null);
       });

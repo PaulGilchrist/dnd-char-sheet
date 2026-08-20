@@ -1,4 +1,5 @@
 // @improved-by-ai
+// @cleaned-by-ai
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { createNpcClickHandler } from './initiative-npc-click-handler.jsx';
 import { loadMonsters } from '../../services/ui/dataLoader.js';
@@ -125,8 +126,33 @@ describe('createNpcClickHandler - NPC stat block path', () => {
         expect(setViewingMonster).toHaveBeenCalledWith(fallbackMonster);
     });
 
-    it('should skip npcToMonsterFormat when campaignNpcs is empty', async () => {
-        campaignNpcs = [];
+    it('should skip npcToMonsterFormat and fall to getMonsterData when NPC lookup fails (empty list, null name, missing name)', async () => {
+        const fallbackMonster = { index: 'goblin', name: 'Goblin' };
+        vi.mocked(getMonsterData).mockResolvedValue(fallbackMonster);
+
+        // Empty campaignNpcs
+        handler = createNpcClickHandler({
+            isLocalhost: true,
+            campaignNpcs: [],
+            campaignName: 'test-campaign',
+            characters,
+            setViewingMonster,
+            setViewingMonsterCreatureName,
+        });
+        await handler({ name: 'Goblin' });
+        expect(npcToMonsterFormat).not.toHaveBeenCalled();
+        expect(getMonsterData).toHaveBeenCalledWith('Goblin');
+        vi.clearAllMocks();
+        vi.mocked(getMonsterData).mockResolvedValue(fallbackMonster);
+
+        // campaignNpcs with NPC that has no name property
+        campaignNpcs = [
+            {
+                armorClass: 15,
+                hitPoints: 7,
+                abilityScores: {},
+            },
+        ];
         handler = createNpcClickHandler({
             isLocalhost: true,
             campaignNpcs,
@@ -135,16 +161,13 @@ describe('createNpcClickHandler - NPC stat block path', () => {
             setViewingMonster,
             setViewingMonsterCreatureName,
         });
-        const fallbackMonster = { index: 'goblin', name: 'Goblin' };
-        vi.mocked(getMonsterData).mockResolvedValue(fallbackMonster);
-
         await handler({ name: 'Goblin' });
-
         expect(npcToMonsterFormat).not.toHaveBeenCalled();
         expect(getMonsterData).toHaveBeenCalledWith('Goblin');
-    });
+        vi.clearAllMocks();
+        vi.mocked(getMonsterData).mockResolvedValue(fallbackMonster);
 
-    it('should skip npcToMonsterFormat when NPC name is null', async () => {
+        // campaignNpcs with NPC that has null name
         campaignNpcs = [
             {
                 name: null,
@@ -161,36 +184,7 @@ describe('createNpcClickHandler - NPC stat block path', () => {
             setViewingMonster,
             setViewingMonsterCreatureName,
         });
-        const fallbackMonster = { index: 'goblin', name: 'Goblin' };
-        vi.mocked(getMonsterData).mockResolvedValue(fallbackMonster);
-
         await handler({ name: 'Goblin' });
-
-        expect(npcToMonsterFormat).not.toHaveBeenCalled();
-        expect(getMonsterData).toHaveBeenCalledWith('Goblin');
-    });
-
-    it('should skip npcToMonsterFormat when NPC has no name property', async () => {
-        campaignNpcs = [
-            {
-                armorClass: 15,
-                hitPoints: 7,
-                abilityScores: {},
-            },
-        ];
-        handler = createNpcClickHandler({
-            isLocalhost: true,
-            campaignNpcs,
-            campaignName: 'test-campaign',
-            characters,
-            setViewingMonster,
-            setViewingMonsterCreatureName,
-        });
-        const fallbackMonster = { index: 'goblin', name: 'Goblin' };
-        vi.mocked(getMonsterData).mockResolvedValue(fallbackMonster);
-
-        await handler({ name: 'Goblin' });
-
         expect(npcToMonsterFormat).not.toHaveBeenCalled();
         expect(getMonsterData).toHaveBeenCalledWith('Goblin');
     });

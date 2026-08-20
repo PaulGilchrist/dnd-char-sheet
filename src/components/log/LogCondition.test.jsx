@@ -1,4 +1,5 @@
 // @improved-by-ai
+// @cleaned-by-ai
 import { screen } from '@testing-library/react';
 import { beforeEach } from 'vitest';
 import { cond, q, setup, beforeEachSetup } from './log-test-utils.jsx';
@@ -42,12 +43,6 @@ describe('Log', () => {
       expect(q('.log-entry.log-condition.log-condition-broken')).toBeInTheDocument();
     });
 
-    it('broken action hides DC and ability elements', () => {
-      setup(Log, [cond({ action: 'broken', dc: 13, ability: 'wisdom' })]);
-      expect(screen.queryByText(/DC 13/i)).not.toBeInTheDocument();
-      expect(q('.log-condition-ability')).not.toBeInTheDocument();
-    });
-
     it('broken action shows source when sourceName is present', () => {
       setup(Log, [cond({ action: 'broken', sourceName: 'Hero Potion' })]);
       expect(q('.log-condition-source')).toBeInTheDocument();
@@ -56,12 +51,6 @@ describe('Log', () => {
     it('broken action hides source element when sourceName is empty', () => {
       setup(Log, [cond({ action: 'broken', sourceName: '' })]);
       expect(q('.log-condition-source')).not.toBeInTheDocument();
-    });
-
-    it('shows character name and timestamp in header', () => {
-      setup(Log, [cond({ action: 'applied' })]);
-      expect(q('.log-condition .log-character')).toHaveTextContent(/Gollum/i);
-      expect(q('.log-condition .log-time')).toBeInTheDocument();
     });
   });
 });

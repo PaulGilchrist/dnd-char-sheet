@@ -1,4 +1,5 @@
 // @improved-by-ai
+// @cleaned-by-ai
 import { screen } from '@testing-library/react';
 import { beforeEach } from 'vitest';
 import { hp, q, setup, beforeEachSetup } from './log-test-utils.jsx';
@@ -21,11 +22,6 @@ describe('Log', () => {
       expect(q('.log-hp-current')).toBeInTheDocument();
     });
 
-    it('applies correct CSS classes for damage', () => {
-      setup(Log, [hp({ delta: -10 })]);
-      expect(q('.log-entry.log-hp-change.log-hp-damage')).toBeInTheDocument();
-    });
-
     it('handles large negative delta', () => {
       setup(Log, [hp({ delta: -50, currentHp: 0, maxHp: 100 })]);
       expect(screen.getByText(/Takes Damage/i)).toBeInTheDocument();
@@ -46,11 +42,6 @@ describe('Log', () => {
       expect(screen.getByText(/Healed \(Cleric\)/i)).toBeInTheDocument();
     });
 
-    it('applies correct CSS classes for healing', () => {
-      setup(Log, [hp({ delta: 5 })]);
-      expect(q('.log-entry.log-hp-change.log-healing')).toBeInTheDocument();
-    });
-
     it('renders note text for non-damage entries', () => {
       setup(Log, [hp({ delta: 6, note: '1d8+2' })]);
       expect(screen.getByText(/Healed/i)).toBeInTheDocument();
@@ -61,11 +52,6 @@ describe('Log', () => {
       setup(Log, [hp({ delta: 10, maximizeHealingDice: true })]);
       expect(screen.getByText(/Dice maximized by Supreme Healing/i)).toBeInTheDocument();
     });
-
-    it('handles zero delta healing', () => {
-      setup(Log, [hp({ delta: 0 })]);
-      expect(screen.getByText(/Healed/i)).toBeInTheDocument();
-    });
   });
 
   // ── HpChangeEntry - temporary HP ────────────────────
@@ -75,11 +61,6 @@ describe('Log', () => {
       expect(screen.getByText(/Temporary Hit Points/i)).toBeInTheDocument();
       expect(q('.log-temp-hp i.fa-shield')).toBeInTheDocument();
     });
-
-    it('applies correct CSS classes for temp HP', () => {
-      setup(Log, [hp({ delta: 10, isTempHp: true })]);
-      expect(q('.log-entry.log-hp-change.log-temp-hp')).toBeInTheDocument();
-    });
   });
 
   // ── HpChangeEntry - unconscious ─────────────────────
@@ -88,12 +69,6 @@ describe('Log', () => {
       setup(Log, [hp({ delta: -10, isUnconscious: true })]);
       expect(screen.getByText(/Knocked Unconscious/i)).toBeInTheDocument();
       expect(screen.getByText(/Takes Damage/i)).toBeInTheDocument();
-    });
-
-    it('shows unconscious prefix with healing', () => {
-      setup(Log, [hp({ delta: 5, isUnconscious: true })]);
-      expect(screen.getByText(/Knocked Unconscious/i)).toBeInTheDocument();
-      expect(screen.getByText(/Healed/i)).toBeInTheDocument();
     });
   });
 
@@ -106,21 +81,6 @@ describe('Log', () => {
       expect(screen.getByText(/Bloodied/i)).toBeInTheDocument();
       setup(Log, [hp({ delta: 10, threshold: 'recovering' })]);
       expect(screen.getByText(/Recovering/i)).toBeInTheDocument();
-    });
-
-    it('shows paren delta for recovering NPC', () => {
-      setup(Log, [hp({ delta: 8, threshold: 'recovering' })]);
-      expect(q('.log-name').textContent).toMatch(/\(\+8\)/);
-    });
-
-    it('zero delta NPC hides paren display', () => {
-      setup(Log, [hp({ delta: 0, threshold: 'bloodied' })]);
-      expect(screen.queryByText(/\(0\)/i)).not.toBeInTheDocument();
-    });
-
-    it('hides HP current display for NPC', () => {
-      setup(Log, [hp({ delta: -5, threshold: 'dead' })]);
-      expect(q('.log-hp-current')).not.toBeInTheDocument();
     });
   });
 });

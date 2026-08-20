@@ -1,4 +1,5 @@
 // @improved-by-ai
+// @cleaned-by-ai
 import { screen } from '@testing-library/react';
 import { describe, it, expect, beforeEach } from 'vitest';
 import {
@@ -49,15 +50,6 @@ describe('RestEntry - long and short rest', () => {
       message: 'Frodo. Rested well.',
     })]);
     expect(q('.log-character')).toHaveTextContent(/Frodo/i);
-  });
-
-  it('falls back to full message when no pipe or period-space separator', () => {
-    setup(Log, [rest({
-      type: 'long_rest',
-      message: 'Full rest | HP restored',
-    })]);
-    // When message has pipe, character is the part before pipe
-    expect(q('.log-character')).toHaveTextContent(/Full rest/i);
   });
 
   it('handles missing message gracefully', () => {

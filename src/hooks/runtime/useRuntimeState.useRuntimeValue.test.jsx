@@ -1,4 +1,5 @@
 // @improved-by-ai
+// @cleaned-by-ai
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { renderHook, act } from '@testing-library/react';
 import {
@@ -15,51 +16,39 @@ describe('useRuntimeValue', () => {
   });
 
   describe('initial value', () => {
-    it('returns null for an untracked property', () => {
-      const { result } = renderHook(() =>
+    it('returns null for an untracked property, seeded values (truthy, falsy, and complex)', () => {
+      const { result: untrackedResult } = renderHook(() =>
         useRuntimeValue('test-char', 'hp', 'test-campaign')
       );
-      expect(result.current).toBeNull();
-    });
+      expect(untrackedResult.current).toBeNull();
 
-    it('returns the seeded value from the store', () => {
-      seedTrackedResources('test-char', { hp: 15 });
-      const { result } = renderHook(() =>
-        useRuntimeValue('test-char', 'hp', 'test-campaign')
-      );
-      expect(result.current).toBe(15);
-    });
-
-    it('returns 0 and empty array (falsy but valid values)', () => {
-      seedTrackedResources('test-char', { hp: 0, spells: [] });
+      seedTrackedResources('test-char', {
+        hp: 0,
+        spells: [1, 2, 3],
+        stats: { str: 18, dex: 14 },
+        empty: [],
+      });
       const { result: hpResult } = renderHook(() =>
         useRuntimeValue('test-char', 'hp', 'test-campaign')
       );
       const { result: spellsResult } = renderHook(() =>
         useRuntimeValue('test-char', 'spells', 'test-campaign')
       );
-      expect(hpResult.current).toBe(0);
-      expect(spellsResult.current).toEqual([]);
-    });
-
-    it('returns complex values (arrays and objects)', () => {
-      seedTrackedResources('test-char', {
-        spells: [1, 2, 3],
-        stats: { str: 18, dex: 14 },
-      });
-      const { result: spellsResult } = renderHook(() =>
-        useRuntimeValue('test-char', 'spells', 'test-campaign')
-      );
       const { result: statsResult } = renderHook(() =>
         useRuntimeValue('test-char', 'stats', 'test-campaign')
       );
+      const { result: emptyResult } = renderHook(() =>
+        useRuntimeValue('test-char', 'empty', 'test-campaign')
+      );
+      expect(hpResult.current).toBe(0);
       expect(spellsResult.current).toEqual([1, 2, 3]);
       expect(statsResult.current).toEqual({ str: 18, dex: 14 });
+      expect(emptyResult.current).toEqual([]);
     });
   });
 
   describe('subscription to changes', () => {
-    it('updates when the value changes via setRuntimeValue', () => {
+    it('updates via setRuntimeValue and seedTrackedResources, supports sequential and rapid changes', () => {
       seedTrackedResources('test-char', { hp: 15 });
       const { result } = renderHook(() =>
         useRuntimeValue('test-char', 'hp', 'test-campaign')
@@ -69,25 +58,32 @@ describe('useRuntimeValue', () => {
       act(() => {
         setRuntimeValue('test-char', 'hp', 20, 'test-campaign');
       });
-
       expect(result.current).toBe(20);
-    });
 
-    it('updates when the value changes via seedTrackedResources', () => {
-      seedTrackedResources('test-char', { hp: 15 });
-      const { result } = renderHook(() =>
-        useRuntimeValue('test-char', 'hp', 'test-campaign')
-      );
+      act(() => {
+        setRuntimeValue('test-char', 'hp', 15, 'test-campaign');
+      });
       expect(result.current).toBe(15);
+
+      act(() => {
+        setRuntimeValue('test-char', 'hp', 0, 'test-campaign');
+      });
+      expect(result.current).toBe(0);
 
       act(() => {
         seedTrackedResources('test-char', { hp: 25 });
       });
-
       expect(result.current).toBe(25);
+
+      // Rapid sequential updates in a single act block
+      act(() => {
+        setRuntimeValue('test-char', 'hp', 30, 'test-campaign');
+        setRuntimeValue('test-char', 'hp', 40, 'test-campaign');
+      });
+      expect(result.current).toBe(40);
     });
 
-    it('does not re-render when setting the same value', () => {
+    it('does not re-render when setting the same value (setRuntimeValue)', () => {
       let renderCount = 0;
       seedTrackedResources('test-char', { hp: 15 });
       const { result } = renderHook(() => {
@@ -105,26 +101,25 @@ describe('useRuntimeValue', () => {
       expect(result.current).toBe(15);
     });
 
-    it('updates through multiple sequential changes', () => {
-      seedTrackedResources('test-char', { hp: 20 });
-      const { result } = renderHook(() =>
-        useRuntimeValue('test-char', 'hp', 'test-campaign')
-      );
-
-      expect(result.current).toBe(20);
-
-      act(() => {
-        setRuntimeValue('test-char', 'hp', 15, 'test-campaign');
+    it('does not re-render when setting the same value (seedTrackedResources)', () => {
+      let renderCount = 0;
+      seedTrackedResources('test-char', { hp: 15 });
+      const { result } = renderHook(() => {
+        renderCount++;
+        return useRuntimeValue('test-char', 'hp', 'test-campaign');
       });
       expect(result.current).toBe(15);
+      const initialRenders = renderCount;
 
       act(() => {
-        setRuntimeValue('test-char', 'hp', 0, 'test-campaign');
+        seedTrackedResources('test-char', { hp: 15 });
       });
-      expect(result.current).toBe(0);
+
+      expect(renderCount).toBe(initialRenders);
+      expect(result.current).toBe(15);
     });
 
-    it('updates when value changes from null to a number and back', () => {
+    it('does not re-render when value changes from null to a number and back', () => {
       seedTrackedResources('test-char', { hp: null });
       const { result } = renderHook(() =>
         useRuntimeValue('test-char', 'hp', 'test-campaign')
@@ -140,21 +135,6 @@ describe('useRuntimeValue', () => {
         setRuntimeValue('test-char', 'hp', null, 'test-campaign');
       });
       expect(result.current).toBeNull();
-    });
-
-    it('handles rapid sequential updates', () => {
-      seedTrackedResources('test-char', { hp: 10 });
-      const { result } = renderHook(() =>
-        useRuntimeValue('test-char', 'hp', 'test-campaign')
-      );
-
-      act(() => {
-        setRuntimeValue('test-char', 'hp', 20, 'test-campaign');
-        setRuntimeValue('test-char', 'hp', 30, 'test-campaign');
-        setRuntimeValue('test-char', 'hp', 40, 'test-campaign');
-      });
-
-      expect(result.current).toBe(40);
     });
 
     it('subscribes to changes from other properties in the same store', () => {
@@ -178,26 +158,6 @@ describe('useRuntimeValue', () => {
       expect(result.current).toBe(25);
     });
 
-    it('skips re-render when the underlying value is unchanged (seedTrackedResources)', () => {
-      let renderCount = 0;
-      seedTrackedResources('test-char', { hp: 15 });
-      const { result } = renderHook(() => {
-        renderCount++;
-        return useRuntimeValue('test-char', 'hp', 'test-campaign');
-      });
-      expect(result.current).toBe(15);
-      const initialRenders = renderCount;
-
-      // seedTrackedResources with the same value should fire the listener
-      // but the equality guard inside the hook prevents setValue.
-      act(() => {
-        seedTrackedResources('test-char', { hp: 15 });
-      });
-
-      expect(renderCount).toBe(initialRenders);
-      expect(result.current).toBe(15);
-    });
-
     it('prevents update when number-string equality matches', () => {
       let renderCount = 0;
       seedTrackedResources('test-char', { hp: 15 });
@@ -219,32 +179,25 @@ describe('useRuntimeValue', () => {
   });
 
   describe('prop changes', () => {
-    it('re-reads when characterKey changes', () => {
+    it('re-reads when characterKey or propertyName changes', () => {
       seedTrackedResources('char-a', { hp: 10 });
       seedTrackedResources('char-b', { hp: 20 });
+      seedTrackedResources('test-char', { hp: 15, sp: 8 });
 
       const { result, rerender } = renderHook(
-        ({ charKey }) => useRuntimeValue(charKey, 'hp', 'test-campaign'),
-        { initialProps: { charKey: 'char-a' } }
+        ({ charKey, prop }) => useRuntimeValue(charKey, prop, 'test-campaign'),
+        { initialProps: { charKey: 'char-a', prop: 'hp' } }
       );
 
       expect(result.current).toBe(10);
 
-      rerender({ charKey: 'char-b' });
+      rerender({ charKey: 'char-b', prop: 'hp' });
       expect(result.current).toBe(20);
-    });
 
-    it('re-reads when propertyName changes', () => {
-      seedTrackedResources('test-char', { hp: 15, sp: 8 });
-
-      const { result, rerender } = renderHook(
-        ({ prop }) => useRuntimeValue('test-char', prop, 'test-campaign'),
-        { initialProps: { prop: 'hp' } }
-      );
-
+      rerender({ charKey: 'test-char', prop: 'hp' });
       expect(result.current).toBe(15);
 
-      rerender({ prop: 'sp' });
+      rerender({ charKey: 'test-char', prop: 'sp' });
       expect(result.current).toBe(8);
     });
   });
@@ -286,26 +239,24 @@ describe('useRuntimeValue', () => {
   });
 
   describe('falsy characterKey / propertyName guards', () => {
-    it('does not subscribe when characterKey is an empty string', () => {
+    it('does not subscribe when characterKey or propertyName is an empty string', () => {
       seedTrackedResources('test-char', { hp: 15 });
-      const { result } = renderHook(() =>
+
+      const { result: charKeyResult } = renderHook(() =>
         useRuntimeValue('', 'hp', 'test-campaign')
       );
-      expect(result.current).toBeNull();
-    });
+      expect(charKeyResult.current).toBeNull();
 
-    it('does not subscribe when propertyName is an empty string', () => {
-      seedTrackedResources('test-char', { hp: 15 });
-      const { result } = renderHook(() =>
+      const { result: propResult } = renderHook(() =>
         useRuntimeValue('test-char', '', 'test-campaign')
       );
-      // Initial read returns null because '' key doesn't exist
-      expect(result.current).toBeNull();
-      // Guard prevents subscription: changes to 'hp' are not reflected
+      expect(propResult.current).toBeNull();
+
+      // Guard prevents subscription: changes to 'hp' are not reflected for '' prop
       act(() => {
         seedTrackedResources('test-char', { hp: 99 });
       });
-      expect(result.current).toBeNull();
+      expect(propResult.current).toBeNull();
     });
   });
 });

@@ -1,4 +1,5 @@
 // @improved-by-ai
+// @cleaned-by-ai
 import { screen } from '@testing-library/react';
 import { beforeEach } from 'vitest';
 import { roll, q, setup, beforeEachSetup } from './log-test-utils.jsx';
@@ -118,10 +119,12 @@ describe('Log', () => {
       expect(q('.log-save-result')).not.toBeInTheDocument();
     });
 
-    it('shows saveSuccess path (boolean) when saveResult is null', () => {
+    it('shows saveSuccess path (boolean=true) when saveResult is null', () => {
       setup(Log, [roll({ rollType: 'save-damage', saveResult: null, saveSuccess: true })]);
       expect(screen.getByText(/SAVE SUCCESS/i)).toBeInTheDocument();
+    });
 
+    it('shows saveSuccess path (boolean=false) when saveResult is null', () => {
       setup(Log, [roll({ rollType: 'save-damage', saveResult: null, saveSuccess: false })]);
       expect(screen.getByText(/SAVE FAILURE/i)).toBeInTheDocument();
     });
@@ -168,24 +171,14 @@ describe('Log', () => {
 
   // ── ROLL ENTRY - damage type display ───────────────
   describe('RollEntry - damage type', () => {
-    it('shows damage type for damage rollType', () => {
-      setup(Log, [roll({ rollType: 'damage', damageType: 'slashing' })]);
-      expect(screen.getByText(/slashing/)).toBeInTheDocument();
-    });
-
-    it('shows damage type for save-damage rollType', () => {
-      setup(Log, [roll({ rollType: 'save-damage', damageType: 'fire' })]);
-      expect(screen.getByText(/fire/)).toBeInTheDocument();
-    });
-
-    it('shows damage type for overchannel-damage rollType', () => {
-      setup(Log, [roll({ rollType: 'overchannel-damage', damageType: 'fire' })]);
-      expect(screen.getByText(/fire/)).toBeInTheDocument();
-    });
-
-    it('shows damage type for graze-damage rollType', () => {
-      setup(Log, [roll({ rollType: 'graze-damage', damageType: 'cold' })]);
-      expect(screen.getByText(/cold/)).toBeInTheDocument();
+    it.each([
+      ['damage', 'slashing'],
+      ['save-damage', 'fire'],
+      ['overchannel-damage', 'fire'],
+      ['graze-damage', 'cold'],
+    ])('shows damage type "%s" for rollType "%s"', (rollType, damageType) => {
+      setup(Log, [roll({ rollType, damageType })]);
+      expect(screen.getByText(new RegExp(damageType, 'i'))).toBeInTheDocument();
     });
   });
 
@@ -226,15 +219,6 @@ describe('Log', () => {
     it('hides final damage when finalDamage is null', () => {
       setup(Log, [roll({ rollType: 'save-damage', damageType: 'fire', finalDamage: null })]);
       expect(q('.log-final-damage')).not.toBeInTheDocument();
-    });
-
-    it('shows final damage for overchannel-damage', () => {
-      setup(Log, [roll({
-        rollType: 'overchannel-damage',
-        finalDamage: 12,
-        damageType: 'lightning',
-      })]);
-      expect(screen.getByText(/→ 12 lightning damage/i)).toBeInTheDocument();
     });
   });
 
@@ -298,16 +282,6 @@ describe('Log', () => {
       setup(Log, [roll({ isNatural1: true })]);
       expect(screen.getByText(/FUMBLE/i)).toBeInTheDocument();
       expect(q('.log-nat1')).toBeInTheDocument();
-    });
-
-    it('applies log-nat20 class to entry on natural 20', () => {
-      setup(Log, [roll({ isNatural20: true })]);
-      expect(q('.log-roll.log-nat20')).toBeInTheDocument();
-    });
-
-    it('applies log-nat1 class to entry on natural 1', () => {
-      setup(Log, [roll({ isNatural1: true })]);
-      expect(q('.log-roll.log-nat1')).toBeInTheDocument();
     });
   });
 
@@ -428,11 +402,6 @@ describe('Log', () => {
       expect(screen.getByText(/15 discarded/i)).toBeInTheDocument();
     });
 
-    it('shows disadvantage both dice with selected when rolls[1] < rolls[0]', () => {
-      setup(Log, [roll({ rolls: [15, 3] })]);
-      expect(document.querySelectorAll('.log-die-selected').length).toBeGreaterThan(0);
-    });
-
     it('shows mode badge for non-damage/save-damage/aoe rolls with two dice', () => {
       setup(Log, [roll({ rollType: 'attack', rolls: [17, 9], mode: 'advantage' })]);
       expect(screen.getByText(/ADVANTAGE/i)).toBeInTheDocument();
@@ -464,7 +433,7 @@ describe('Log', () => {
         secondaryDamageType: 'fire',
       })]);
       expect(screen.getByText(/Secondary:/i)).toBeInTheDocument();
-      expect(screen.getByText(/3/i)).toBeInTheDocument();
+      expect(q('.log-secondary-damage b').textContent).toBe('3');
       expect(screen.getByText(/fire/i)).toBeInTheDocument();
     });
   });

@@ -2,6 +2,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { createConcentrationHandlers } from './initiative-concentration.jsx';
 
 // @improved-by-ai
+// @cleaned-by-ai
 vi.mock('../../services/ui/storage.js', () => ({
     default: {
         get: vi.fn(),

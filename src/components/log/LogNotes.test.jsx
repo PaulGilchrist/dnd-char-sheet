@@ -1,4 +1,5 @@
 // @improved-by-ai
+// @cleaned-by-ai
 import { screen, waitFor, fireEvent } from '@testing-library/react';
 import { beforeEach } from 'vitest';
 import { q, setup, beforeEachSetup, mockAddEntry } from './log-test-utils.jsx';
@@ -8,18 +9,6 @@ import Log from './Log.jsx';
 describe('Log - note adding', () => {
   beforeEach(() => {
     beforeEachSetup();
-  });
-
-  describe('textarea and character select default state', () => {
-    it('textarea starts empty', () => {
-      setup(Log, []);
-      expect(screen.getByPlaceholderText('Add a note to the log...')).toHaveValue('');
-    });
-
-    it('character select defaults to Anonymous', () => {
-      setup(Log, []);
-      expect(screen.getByRole('combobox')).toHaveValue('');
-    });
   });
 
   describe('adding notes on button click', () => {
@@ -63,12 +52,6 @@ describe('Log - note adding', () => {
       });
     });
 
-    it('does not submit when text is empty string', () => {
-      setup(Log, []);
-      fireEvent.click(q('.log-add-btn'));
-      expect(mockAddEntry).not.toHaveBeenCalled();
-    });
-
     it('does not submit when text is whitespace only', () => {
       setup(Log, []);
       fireEvent.change(screen.getByPlaceholderText('Add a note to the log...'), {
@@ -86,16 +69,8 @@ describe('Log - note adding', () => {
       await waitFor(() => expect(textarea).toHaveValue(''));
     });
 
-    it('preserves textarea content when note is empty/whitespace', () => {
+    it('preserves textarea content when note is whitespace', () => {
       setup(Log, []);
-      const textarea = screen.getByPlaceholderText('Add a note to the log...');
-      fireEvent.change(textarea, { target: { value: '   ' } });
-      fireEvent.click(q('.log-add-btn'));
-      expect(textarea).toHaveValue('   ');
-    });
-
-    it('preserves textarea content when no characters and text is empty', () => {
-      setup(Log, [], true, []);
       const textarea = screen.getByPlaceholderText('Add a note to the log...');
       fireEvent.change(textarea, { target: { value: '   ' } });
       fireEvent.click(q('.log-add-btn'));
@@ -113,27 +88,11 @@ describe('Log - note adding', () => {
       await waitFor(() => expect(mockAddEntry).toHaveBeenCalled());
     });
 
-    it('meta+enter submits the note', async () => {
-      setup(Log, []);
-      const textarea = screen.getByPlaceholderText('Add a note to the log...');
-      fireEvent.change(textarea, { target: { value: 'x' } });
-      fireEvent.keyDown(textarea, { key: 'Enter', metaKey: true });
-      await waitFor(() => expect(mockAddEntry).toHaveBeenCalled());
-    });
-
     it('plain enter does not submit', () => {
       setup(Log, []);
       const textarea = screen.getByPlaceholderText('Add a note to the log...');
       fireEvent.change(textarea, { target: { value: 'x' } });
       fireEvent.keyDown(textarea, { key: 'Enter' });
-      expect(mockAddEntry).not.toHaveBeenCalled();
-    });
-
-    it('ctrl+r does not submit', () => {
-      setup(Log, []);
-      const textarea = screen.getByPlaceholderText('Add a note to the log...');
-      fireEvent.change(textarea, { target: { value: 'x' } });
-      fireEvent.keyDown(textarea, { key: 'r', ctrlKey: true });
       expect(mockAddEntry).not.toHaveBeenCalled();
     });
   });

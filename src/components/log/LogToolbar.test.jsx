@@ -1,7 +1,8 @@
 // @improved-by-ai
-import { screen, fireEvent } from '@testing-library/react';
+// @cleaned-by-ai
+import { screen } from '@testing-library/react';
 import { beforeEach } from 'vitest';
-import { setup, beforeEachSetup, mockAddEntry } from './log-test-utils.jsx';
+import { setup, beforeEachSetup } from './log-test-utils.jsx';
 
 import Log from './Log.jsx';
 
@@ -23,18 +24,7 @@ describe('Log', () => {
 
     it('hides character select when no characters provided', () => {
       setup(Log, [], true, []);
-      expect(() => screen.getByRole('combobox')).toThrow();
-    });
-
-    it('add button submits note when clicked', async () => {
-      setup(Log, []);
-      const textarea = screen.getByPlaceholderText('Add a note to the log...');
-      fireEvent.change(textarea, { target: { value: 'Test note' } });
-      fireEvent.click(screen.getByRole('button'));
-      await screen.findByText('Test note');
-      expect(mockAddEntry).toHaveBeenCalledWith(
-        expect.objectContaining({ type: 'note', noteText: 'Test note' }),
-      );
+      expect(screen.queryByRole('combobox')).not.toBeInTheDocument();
     });
   });
 });

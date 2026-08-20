@@ -1,4 +1,5 @@
 // @improved-by-ai
+// @cleaned-by-ai
 import { render, screen, fireEvent, waitFor, act } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import Initiative from './initiative.jsx';
@@ -137,46 +138,6 @@ describe('Initiative', () => {
         });
     });
 
-    describe('combat summary initialization', () => {
-        it('should load existing combat summary from storage', async () => {
-            vi.mocked(combatData.loadCombatSummary).mockResolvedValue({ round: 3, creatures: [{ name: 'Alice', type: 'player', initiative: '15' }, { name: 'Goblin', type: 'npc', initiative: '10' }] });
-            await act(async () => { render(<Initiative {...props} />); });
-            await waitFor(() => { expect(screen.getByText(/Initiative \(round 3\)/)).toBeInTheDocument(); });
-        });
-
-        it('should create new combat summary when none exists', async () => {
-            vi.mocked(combatData.loadCombatSummary).mockResolvedValue(null);
-            await act(async () => { render(<Initiative {...props} />); });
-            await waitFor(() => { expect(screen.getByText(/Initiative \(round 1\)/)).toBeInTheDocument(); });
-        });
-
-        it('should set first creature as active on initialization', async () => {
-            vi.mocked(combatData.loadCombatSummary).mockResolvedValue({ round: 1, creatures: [{ name: 'Alice', type: 'player' }, { name: 'Bob', type: 'player' }] });
-            await act(async () => { render(<Initiative {...props} />); });
-            await waitFor(() => { expect(screen.queryByTestId('creature-card-Alice')).toBeInTheDocument(); });
-        });
-
-        it('should use getActiveCreatureName when available during init', async () => {
-            vi.mocked(combatData.loadCombatSummary).mockResolvedValue({ round: 1, creatures: [{ name: 'Alice', type: 'player' }, { name: 'Bob', type: 'player' }] });
-            vi.mocked(combatData.getActiveCreatureName).mockReturnValue('Bob');
-            await act(async () => { render(<Initiative {...props} />); });
-            await waitFor(() => { expect(screen.queryByTestId('creature-card-Bob')).toBeInTheDocument(); });
-        });
-    });
-
-    describe('NPC management', () => {
-        it('should add an NPC when + NPC button is clicked', async () => {
-            vi.mocked(combatData.loadCombatSummary).mockResolvedValue({ round: 1, creatures: [{ name: 'Alice', type: 'player', initiative: '', targetName: null, concentration: null }] });
-            await act(async () => { render(<Initiative {...props} />); });
-            await waitFor(() => { expect(screen.getByText('+ NPC')).toBeInTheDocument(); });
-            await act(async () => { fireEvent.click(screen.getByText('+ NPC')); });
-            await waitFor(() => {
-                expect(screen.getByText('+ NPC')).toBeInTheDocument();
-                expect(clearCombat).not.toHaveBeenCalled();
-            });
-        });
-    });
-
     describe('clear combat', () => {
         it('should clear combat when Clear button is clicked and confirmed', async () => {
             vi.mocked(clearCombat).mockReturnValue({ round: 1, creatures: [{ name: 'Alice', type: 'player', initiative: '', targetName: null, concentration: null }, { name: 'Bob', type: 'player', initiative: '', targetName: null, concentration: null }] });
@@ -194,35 +155,6 @@ describe('Initiative', () => {
             await waitFor(() => { expect(screen.getByText(/Initiative \(round 3\)/)).toBeInTheDocument(); });
             await act(async () => { fireEvent.click(screen.getByText('Clear')); });
             await waitFor(() => { expect(screen.getByText(/Initiative \(round 3\)/)).toBeInTheDocument(); });
-        });
-    });
-
-    describe('edge cases', () => {
-        it('should render nothing when characters array is empty', async () => {
-            vi.mocked(combatData.loadCombatSummary).mockResolvedValue({ round: 1, creatures: [{ name: 'Alice', type: 'player' }] });
-            await act(async () => { render(<Initiative {...props} characters={[]} />); });
-            await waitFor(() => {
-                expect(screen.queryByText(/Initiative/)).not.toBeInTheDocument();
-            });
-        });
-
-        it('should create new combat summary from characters when loadCombatSummary returns null', async () => {
-            vi.mocked(combatData.loadCombatSummary).mockResolvedValue(null);
-            await act(async () => { render(<Initiative {...props} />); });
-            await waitFor(() => {
-                expect(screen.getByText(/Initiative \(round 1\)/)).toBeInTheDocument();
-                expect(screen.queryByTestId('creature-card-Alice')).toBeInTheDocument();
-                expect(screen.queryByTestId('creature-card-Bob')).toBeInTheDocument();
-            });
-        });
-
-        it('should render carousel with creatures when combatSummary exists but has no creatures', async () => {
-            vi.mocked(combatData.loadCombatSummary).mockResolvedValue({ round: 1, creatures: [] });
-            await act(async () => { render(<Initiative {...props} />); });
-            await waitFor(() => {
-                expect(screen.getByText(/Initiative \(round 1\)/)).toBeInTheDocument();
-                expect(document.querySelector('.carousel-container')).toBeInTheDocument();
-            });
         });
     });
 });

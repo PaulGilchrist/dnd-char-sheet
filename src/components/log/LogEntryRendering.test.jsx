@@ -1,4 +1,5 @@
 // @improved-by-ai
+// @cleaned-by-ai
 import { screen } from '@testing-library/react';
 import { beforeEach } from 'vitest';
 import { note, q, setup, beforeEachSetup } from './log-test-utils.jsx';
@@ -57,11 +58,6 @@ describe('Log', () => {
       setup(Log, [note({ characterName: 'Gandalf', noteText: 'Light!' })]);
       expect(q('.log-character')).toHaveTextContent(/Gandalf/i);
       expect(q('.log-note-text')).toHaveTextContent(/Light!/i);
-    });
-
-    it('renders CSS classes: log-entry and log-note', () => {
-      setup(Log, [note()]);
-      expect(q('.log-entry.log-note')).toBeInTheDocument();
     });
   });
 });

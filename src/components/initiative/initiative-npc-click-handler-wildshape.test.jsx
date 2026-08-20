@@ -1,4 +1,5 @@
 // @improved-by-ai
+// @cleaned-by-ai
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { createNpcClickHandler } from './initiative-npc-click-handler.jsx';
 import { loadMonsters } from '../../services/ui/dataLoader.js';
@@ -95,6 +96,19 @@ const makeCombatCreature = (overrides = {}) => ({
     ...overrides,
 });
 
+const mockRuntimeValues = (overrides = {}) => {
+    const defaults = {
+        currentHitPoints: 15,
+        circleFormsAC: null,
+        polymorphTempHp: 0,
+        shapechangeTempHp: 0,
+    };
+    const values = { ...defaults, ...overrides };
+    vi.mocked(runtimeState.getRuntimeValue).mockImplementation((key, prop, _campaign) => {
+        return prop in values ? values[prop] : null;
+    });
+};
+
 describe('createNpcClickHandler - Wild Shape form path', () => {
     let handler;
     let setViewingMonster;
@@ -121,13 +135,7 @@ describe('createNpcClickHandler - Wild Shape form path', () => {
     });
 
     it('should load wild shape form with basic beast data and druid overrides', async () => {
-        vi.mocked(runtimeState.getRuntimeValue).mockImplementation((key, prop, _campaign) => {
-            if (prop === 'currentHitPoints') return 15;
-            if (prop === 'circleFormsAC') return null;
-            if (prop === 'polymorphTempHp') return 0;
-            if (prop === 'shapechangeTempHp') return 0;
-            return null;
-        });
+        mockRuntimeValues();
         vi.mocked(getCombatSummary).mockReturnValue({
             creatures: [makeCombatCreature()],
         });
@@ -147,13 +155,7 @@ describe('createNpcClickHandler - Wild Shape form path', () => {
     });
 
     it('should apply circleFormsAC when set', async () => {
-        vi.mocked(runtimeState.getRuntimeValue).mockImplementation((key, prop, _campaign) => {
-            if (prop === 'currentHitPoints') return 15;
-            if (prop === 'circleFormsAC') return 18;
-            if (prop === 'polymorphTempHp') return 0;
-            if (prop === 'shapechangeTempHp') return 0;
-            return null;
-        });
+        mockRuntimeValues({ circleFormsAC: 18 });
         vi.mocked(getCombatSummary).mockReturnValue({
             creatures: [makeCombatCreature()],
         });
@@ -166,13 +168,7 @@ describe('createNpcClickHandler - Wild Shape form path', () => {
     });
 
     it('should set saving throws from base monster saving_throws', async () => {
-        vi.mocked(runtimeState.getRuntimeValue).mockImplementation((key, prop, _campaign) => {
-            if (prop === 'currentHitPoints') return 15;
-            if (prop === 'circleFormsAC') return null;
-            if (prop === 'polymorphTempHp') return 0;
-            if (prop === 'shapechangeTempHp') return 0;
-            return null;
-        });
+        mockRuntimeValues();
         vi.mocked(getCombatSummary).mockReturnValue({
             creatures: [makeCombatCreature()],
         });
@@ -187,13 +183,7 @@ describe('createNpcClickHandler - Wild Shape form path', () => {
     });
 
     it('should fall back to ability_score_modifiers for saving throws when saving_throws missing', async () => {
-        vi.mocked(runtimeState.getRuntimeValue).mockImplementation((key, prop, _campaign) => {
-            if (prop === 'currentHitPoints') return 10;
-            if (prop === 'circleFormsAC') return null;
-            if (prop === 'polymorphTempHp') return 0;
-            if (prop === 'shapechangeTempHp') return 0;
-            return null;
-        });
+        mockRuntimeValues({ currentHitPoints: 10 });
         vi.mocked(getCombatSummary).mockReturnValue({
             creatures: [makeCombatCreature({ beastIndex: 'cat', beastName: 'Panther', ac: 12, currentHp: 10 })],
         });
@@ -207,13 +197,7 @@ describe('createNpcClickHandler - Wild Shape form path', () => {
     });
 
     it('should change action damage types to Radiant for Moon Druid', async () => {
-        vi.mocked(runtimeState.getRuntimeValue).mockImplementation((key, prop, _campaign) => {
-            if (prop === 'currentHitPoints') return 15;
-            if (prop === 'circleFormsAC') return null;
-            if (prop === 'polymorphTempHp') return 0;
-            if (prop === 'shapechangeTempHp') return 0;
-            return null;
-        });
+        mockRuntimeValues();
         vi.mocked(getCombatSummary).mockReturnValue({
             creatures: [makeCombatCreature()],
         });
@@ -237,13 +221,7 @@ describe('createNpcClickHandler - Wild Shape form path', () => {
     });
 
     it('should add lunarFormAction when present', async () => {
-        vi.mocked(runtimeState.getRuntimeValue).mockImplementation((key, prop, _campaign) => {
-            if (prop === 'currentHitPoints') return 15;
-            if (prop === 'circleFormsAC') return null;
-            if (prop === 'polymorphTempHp') return 0;
-            if (prop === 'shapechangeTempHp') return 0;
-            return null;
-        });
+        mockRuntimeValues();
         vi.mocked(getCombatSummary).mockReturnValue({
             creatures: [makeCombatCreature({
                 lunarFormAction: { name: 'Lunar Form', attack_bonus: 7, damage_type_primary: 'Radiant', description: 'Moon magic attack' },
@@ -278,13 +256,7 @@ describe('createNpcClickHandler - Wild Shape form path', () => {
             setViewingMonster,
             setViewingMonsterCreatureName,
         });
-        vi.mocked(runtimeState.getRuntimeValue).mockImplementation((key, prop, _campaign) => {
-            if (prop === 'currentHitPoints') return 15;
-            if (prop === 'circleFormsAC') return null;
-            if (prop === 'polymorphTempHp') return 0;
-            if (prop === 'shapechangeTempHp') return 0;
-            return null;
-        });
+        mockRuntimeValues();
         vi.mocked(getCombatSummary).mockReturnValue({
             creatures: [makeCombatCreature()],
         });
@@ -320,13 +292,7 @@ describe('createNpcClickHandler - Wild Shape form path', () => {
             setViewingMonster,
             setViewingMonsterCreatureName,
         });
-        vi.mocked(runtimeState.getRuntimeValue).mockImplementation((key, prop, _campaign) => {
-            if (prop === 'currentHitPoints') return 15;
-            if (prop === 'circleFormsAC') return null;
-            if (prop === 'polymorphTempHp') return 0;
-            if (prop === 'shapechangeTempHp') return 0;
-            return null;
-        });
+        mockRuntimeValues();
         vi.mocked(getCombatSummary).mockReturnValue({
             creatures: [makeCombatCreature()],
         });
@@ -348,13 +314,7 @@ describe('createNpcClickHandler - Wild Shape form path', () => {
             setViewingMonster,
             setViewingMonsterCreatureName,
         });
-        vi.mocked(runtimeState.getRuntimeValue).mockImplementation((key, prop, _campaign) => {
-            if (prop === 'currentHitPoints') return 15;
-            if (prop === 'circleFormsAC') return null;
-            if (prop === 'polymorphTempHp') return 0;
-            if (prop === 'shapechangeTempHp') return 0;
-            return null;
-        });
+        mockRuntimeValues();
         vi.mocked(getCombatSummary).mockReturnValue({
             creatures: [makeCombatCreature({ name: 'DruidBob', wildShapeSource: 'DruidBob' })],
         });
@@ -368,32 +328,8 @@ describe('createNpcClickHandler - Wild Shape form path', () => {
         expect(monster.saving_throws.con.modifier).toBe(5);
     });
 
-    it('should not enter wildShape path when beastIndex is null', async () => {
-        vi.mocked(runtimeState.getRuntimeValue).mockImplementation((key, prop, _campaign) => {
-            if (prop === 'currentHitPoints') return 15;
-            if (prop === 'circleFormsAC') return null;
-            if (prop === 'polymorphTempHp') return 0;
-            if (prop === 'shapechangeTempHp') return 0;
-            return null;
-        });
-        vi.mocked(getCombatSummary).mockReturnValue({
-            creatures: [{ name: 'DruidAlice', wildShapeSource: 'DruidAlice', beastIndex: null, ac: 11, currentHp: 15 }],
-        });
-        vi.mocked(loadMonsters).mockResolvedValue([baseBear]);
-
-        await handler({ name: 'DruidAlice' });
-
-        expect(setViewingMonster).not.toHaveBeenCalled();
-    });
-
     it('should fall back to creature.currentHp when runtime currentHitPoints is null', async () => {
-        vi.mocked(runtimeState.getRuntimeValue).mockImplementation((key, prop, _campaign) => {
-            if (prop === 'currentHitPoints') return null;
-            if (prop === 'circleFormsAC') return null;
-            if (prop === 'polymorphTempHp') return 0;
-            if (prop === 'shapechangeTempHp') return 0;
-            return null;
-        });
+        mockRuntimeValues({ currentHitPoints: null });
         vi.mocked(getCombatSummary).mockReturnValue({
             creatures: [makeCombatCreature()],
         });

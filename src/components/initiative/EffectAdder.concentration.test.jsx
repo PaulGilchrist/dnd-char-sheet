@@ -1,4 +1,5 @@
 // @improved-by-ai
+// @cleaned-by-ai
 import { render, screen, fireEvent } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import EffectAdder from './EffectAdder.jsx';
@@ -20,37 +21,20 @@ describe('EffectAdder - concentration tab', () => {
     };
   });
 
-  it('should render spell name input and DC field with correct labels and placeholder', () => {
+  it('should render spell name input, DC field, and placeholder', () => {
     render(<EffectAdder {...props} initialTab='conditions' />);
     fireEvent.click(screen.getByRole('button', { name: 'Concentration' }));
     expect(screen.getByText('Spell Name')).toBeInTheDocument();
     expect(screen.getByText('DC')).toBeInTheDocument();
     expect(screen.getByPlaceholderText('e.g. Hold Person')).toBeInTheDocument();
+    expect(screen.getByPlaceholderText('e.g. Hold Person')).toHaveFocus();
+    expect(screen.getByLabelText('DC')).toHaveValue(10);
   });
 
-  it('should auto-focus the spell name input', () => {
-    render(<EffectAdder {...props} initialTab='conditions' />);
-    fireEvent.click(screen.getByRole('button', { name: 'Concentration' }));
-    const spellInput = screen.getByPlaceholderText('e.g. Hold Person');
-    expect(spellInput).toHaveFocus();
-  });
-
-  it('should have DC input defaulting to 10', () => {
-    render(<EffectAdder {...props} initialTab='conditions' />);
-    fireEvent.click(screen.getByRole('button', { name: 'Concentration' }));
-    const dcInput = screen.getByLabelText('DC');
-    expect(dcInput).toHaveValue(10);
-  });
-
-  it('should disable Apply when spell name is empty', () => {
+  it('should disable Apply with empty spell name and enable when entered', () => {
     render(<EffectAdder {...props} initialTab='conditions' />);
     fireEvent.click(screen.getByRole('button', { name: 'Concentration' }));
     expect(screen.getByRole('button', { name: 'Apply' })).toBeDisabled();
-  });
-
-  it('should enable Apply when spell name is entered', () => {
-    render(<EffectAdder {...props} initialTab='conditions' />);
-    fireEvent.click(screen.getByRole('button', { name: 'Concentration' }));
     const spellInput = screen.getByPlaceholderText('e.g. Hold Person');
     fireEvent.change(spellInput, { target: { value: 'Fireball' } });
     expect(screen.getByRole('button', { name: 'Apply' })).toBeEnabled();
@@ -64,31 +48,17 @@ describe('EffectAdder - concentration tab', () => {
     expect(screen.getByRole('button', { name: 'Apply' })).toBeDisabled();
   });
 
-  it('should allow changing DC to a valid value', () => {
-    render(<EffectAdder {...props} initialTab='conditions' />);
-    fireEvent.click(screen.getByRole('button', { name: 'Concentration' }));
-    const dcInput = screen.getByLabelText('DC');
-    fireEvent.change(dcInput, { target: { value: '18' } });
-    expect(dcInput).toHaveValue(18);
-  });
-
-  it('should default DC to 10 when entering invalid text', () => {
+  it('should default DC to 10 when entering invalid text or 0', () => {
     render(<EffectAdder {...props} initialTab='conditions' />);
     fireEvent.click(screen.getByRole('button', { name: 'Concentration' }));
     const dcInput = screen.getByLabelText('DC');
     fireEvent.change(dcInput, { target: { value: 'xyz' } });
     expect(dcInput).toHaveValue(10);
-  });
-
-  it('should default DC to 10 when entering 0', () => {
-    render(<EffectAdder {...props} initialTab='conditions' />);
-    fireEvent.click(screen.getByRole('button', { name: 'Concentration' }));
-    const dcInput = screen.getByLabelText('DC');
     fireEvent.change(dcInput, { target: { value: '0' } });
     expect(dcInput).toHaveValue(10);
   });
 
-  it('should call onApply with trimmed spell name and correct DC', () => {
+  it('should call onApply with trimmed spell name and DC when applying', () => {
     render(<EffectAdder {...props} initialTab='conditions' />);
     fireEvent.click(screen.getByRole('button', { name: 'Concentration' }));
     const spellInput = screen.getByPlaceholderText('e.g. Hold Person');
@@ -102,9 +72,11 @@ describe('EffectAdder - concentration tab', () => {
     });
   });
 
-  it('should not call onApply when Apply is clicked with whitespace-only spell name', () => {
+  it('should not call onApply when Apply is clicked with empty or whitespace spell name', () => {
     render(<EffectAdder {...props} initialTab='conditions' />);
     fireEvent.click(screen.getByRole('button', { name: 'Concentration' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Apply' }));
+    expect(props.onApply).not.toHaveBeenCalled();
     const spellInput = screen.getByPlaceholderText('e.g. Hold Person');
     fireEvent.change(spellInput, { target: { value: '   ' } });
     fireEvent.click(screen.getByRole('button', { name: 'Apply' }));
@@ -116,12 +88,5 @@ describe('EffectAdder - concentration tab', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Concentration' }));
     fireEvent.click(screen.getByRole('button', { name: 'Cancel' }));
     expect(props.onCancel).toHaveBeenCalled();
-  });
-
-  it('should not call onApply when Apply is clicked without spell name', () => {
-    render(<EffectAdder {...props} initialTab='conditions' />);
-    fireEvent.click(screen.getByRole('button', { name: 'Concentration' }));
-    fireEvent.click(screen.getByRole('button', { name: 'Apply' }));
-    expect(props.onApply).not.toHaveBeenCalled();
   });
 });

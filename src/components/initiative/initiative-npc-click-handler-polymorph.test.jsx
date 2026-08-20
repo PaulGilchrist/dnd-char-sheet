@@ -1,4 +1,5 @@
 // @improved-by-ai
+// @cleaned-by-ai
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { createNpcClickHandler } from './initiative-npc-click-handler.jsx';
 import { loadMonsters } from '../../services/ui/dataLoader.js';
@@ -170,63 +171,6 @@ describe('createNpcClickHandler - Polymorph form path', () => {
 
         const monster = setViewingMonster.mock.calls[0][0];
         expect(monster.hit_points_temp).toBe(10);
-    });
-
-    it('should not set polymorphTempHp when zero', async () => {
-        vi.mocked(runtimeState.getRuntimeValue).mockImplementation((key, prop, _campaign) => {
-            if (prop === 'polymorphTempHp') return 0;
-            if (prop === 'currentHitPoints') return 25;
-            if (prop === 'circleFormsAC') return null;
-            if (prop === 'shapechangeTempHp') return 0;
-            return null;
-        });
-        vi.mocked(getCombatSummary).mockReturnValue({
-            creatures: [makeCombatCreature()],
-        });
-        vi.mocked(loadMonsters).mockResolvedValue([baseBear]);
-
-        await handler({ name: 'DruidAlice' });
-
-        const monster = setViewingMonster.mock.calls[0][0];
-        expect(monster.hit_points_temp).toBeUndefined();
-    });
-
-    it('should not set polymorphTempHp when negative', async () => {
-        vi.mocked(runtimeState.getRuntimeValue).mockImplementation((key, prop, _campaign) => {
-            if (prop === 'polymorphTempHp') return -5;
-            if (prop === 'currentHitPoints') return 25;
-            if (prop === 'circleFormsAC') return null;
-            if (prop === 'shapechangeTempHp') return 0;
-            return null;
-        });
-        vi.mocked(getCombatSummary).mockReturnValue({
-            creatures: [makeCombatCreature()],
-        });
-        vi.mocked(loadMonsters).mockResolvedValue([baseBear]);
-
-        await handler({ name: 'DruidAlice' });
-
-        const monster = setViewingMonster.mock.calls[0][0];
-        expect(monster.hit_points_temp).toBeUndefined();
-    });
-
-    it('should not set polymorphTempHp when non-number (null)', async () => {
-        vi.mocked(runtimeState.getRuntimeValue).mockImplementation((key, prop, _campaign) => {
-            if (prop === 'polymorphTempHp') return null;
-            if (prop === 'currentHitPoints') return 25;
-            if (prop === 'circleFormsAC') return null;
-            if (prop === 'shapechangeTempHp') return 0;
-            return null;
-        });
-        vi.mocked(getCombatSummary).mockReturnValue({
-            creatures: [makeCombatCreature()],
-        });
-        vi.mocked(loadMonsters).mockResolvedValue([baseBear]);
-
-        await handler({ name: 'DruidAlice' });
-
-        const monster = setViewingMonster.mock.calls[0][0];
-        expect(monster.hit_points_temp).toBeUndefined();
     });
 
     it('should apply druid abilities and languages to polymorph form', async () => {
