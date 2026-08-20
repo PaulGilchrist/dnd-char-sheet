@@ -8,7 +8,7 @@ You are building a coverage manifest of every combat automation defined in dnd-c
 ## What to do
 
 1. Read every JSON file in `public/data/2024/`. Each automation entry should have at minimum: a name, a description (which describes its expected behavior — this is your source of truth for what "correct" looks like), and its trigger conditions (class, subclass, race, subrace, feat, background — whichever apply, however they're represented in the JSON schema).
-2. For each automation, extract into `docs/automations-manifest.md` as a table:
+2. For each automation, extract into `docs/automations-manifest.json` as a table:
    - Name
    - Source file (e.g. `public/data/2024/feats.json`)
    - Trigger conditions (exact class/subclass/race/subrace/feat/background combination needed)
