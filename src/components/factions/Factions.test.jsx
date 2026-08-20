@@ -1,3 +1,4 @@
+// @improved-by-ai
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import Factions from './Factions.jsx';
@@ -18,7 +19,12 @@ vi.mock('../common/PreviewToggle.jsx', () => ({
   default: ({ id, value, onChange, placeholder, label }) => (
     <div data-testid={`preview-toggle-${id}`}>
       <label>{label}</label>
-      <textarea data-testid={`faction-field-${id}`} value={value} onChange={(e) => onChange(e.target.value)} placeholder={placeholder} />
+      <textarea
+        data-testid={`faction-field-${id}`}
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+        placeholder={placeholder}
+      />
     </div>
   ),
 }));
@@ -28,7 +34,11 @@ describe('Factions', () => {
 
   beforeEach(() => {
     vi.clearAllMocks();
-    factionsState = { factions: [], loading: false, loadFactionsList: vi.fn(), saveFactionsList: vi.fn(), deleteFactionAction: vi.fn() };
+    factionsState.factions = [];
+    factionsState.loading = false;
+    factionsState.loadFactionsList = vi.fn();
+    factionsState.saveFactionsList = vi.fn();
+    factionsState.deleteFactionAction = vi.fn();
     window.confirm = vi.fn(() => true);
   });
 
@@ -66,7 +76,7 @@ describe('Factions', () => {
       expect(screen.queryByRole('heading', { name: 'New Faction' })).not.toBeInTheDocument();
     });
 
-    it('closes modal when X or overlay clicked', () => {
+    it('closes modal when X button clicked', () => {
       render(<Factions {...defaultProps} />);
       fireEvent.click(screen.getByRole('button', { name: /New Faction/ }));
       fireEvent.click(screen.getByLabelText('Close'));
@@ -95,6 +105,30 @@ describe('Factions', () => {
       expect(screen.getByRole('button', { name: 'Save' })).toBeDisabled();
       fireEvent.change(screen.getByRole('textbox', { name: 'Faction Name *' }), { target: { value: 'Test' } });
       expect(screen.getByRole('button', { name: 'Save' })).not.toBeDisabled();
+    });
+
+    it('disables save button when name is whitespace-only', () => {
+      render(<Factions {...defaultProps} />);
+      fireEvent.click(screen.getByRole('button', { name: /New Faction/ }));
+      fireEvent.change(screen.getByRole('textbox', { name: 'Faction Name *' }), { target: { value: '   ' } });
+      expect(screen.getByRole('button', { name: 'Save' })).toBeDisabled();
+    });
+
+    it('shows Edit Faction heading when editing existing faction', () => {
+      factionsState.factions = [{ id: 'f1', name: 'Old Name', description: 'A faction', goals: '', influence: 5, notes: '' }];
+      render(<Factions {...defaultProps} />);
+      fireEvent.click(screen.getByText('Old Name'));
+      expect(screen.getByRole('heading', { name: 'Edit Faction' })).toBeInTheDocument();
+    });
+
+    it('pre-fills modal fields when editing existing faction', () => {
+      factionsState.factions = [{ id: 'f1', name: 'Test Faction', description: 'Some desc', goals: 'Goals here', influence: 7, notes: 'Extra notes' }];
+      render(<Factions {...defaultProps} />);
+      fireEvent.click(screen.getByText('Test Faction'));
+      expect(screen.getByRole('textbox', { name: 'Faction Name *' })).toHaveValue('Test Faction');
+      expect(screen.getByTestId('faction-field-faction-description')).toHaveValue('Some desc');
+      expect(screen.getByTestId('faction-field-faction-goals')).toHaveValue('Goals here');
+      expect(screen.getByTestId('faction-field-faction-notes')).toHaveValue('Extra notes');
     });
   });
 
@@ -132,10 +166,19 @@ describe('Factions', () => {
       fireEvent.click(screen.getByRole('button', { name: 'Save' }));
       await waitFor(() => expect(factionsState.saveFactionsList).toHaveBeenCalled());
     });
+
+    it('closes modal after successful save', async () => {
+      render(<Factions {...defaultProps} />);
+      fireEvent.click(screen.getByRole('button', { name: /New Faction/ }));
+      fireEvent.change(screen.getByRole('textbox', { name: 'Faction Name *' }), { target: { value: 'The Silver Hand' } });
+      fireEvent.click(screen.getByRole('button', { name: 'Save' }));
+      await waitFor(() => expect(factionsState.saveFactionsList).toHaveBeenCalled());
+      expect(screen.queryByRole('heading', { name: 'New Faction' })).not.toBeInTheDocument();
+    });
   });
 
   describe('delete', () => {
-    it('deletes when confirmed, skips when cancelled', async () => {
+    it('deletes when confirmed', async () => {
       factionsState.deleteFactionAction = vi.fn().mockResolvedValue(undefined);
       factionsState.factions = [{ id: 'f1', name: 'ToDelete', description: '', goals: '', influence: 5, notes: '' }];
       render(<Factions {...defaultProps} />);
@@ -163,15 +206,51 @@ describe('Factions', () => {
       fireEvent.click(screen.getByRole('button', { name: /New Faction/ }));
       expect(screen.queryByRole('button', { name: /Delete/ })).not.toBeInTheDocument();
     });
+
+    it('disables delete button while deleting', async () => {
+      factionsState.deleteFactionAction = vi.fn().mockImplementation(() => new Promise((resolve) => setTimeout(resolve, 100)));
+      factionsState.factions = [{ id: 'f1', name: 'ToDelete', description: '', goals: '', influence: 5, notes: '' }];
+      render(<Factions {...defaultProps} />);
+      await waitFor(() => expect(screen.getByText('ToDelete')).toBeInTheDocument());
+      fireEvent.click(screen.getByText('ToDelete'));
+      const deleteButtons = screen.getAllByRole('button', { name: /Delete/ });
+      fireEvent.click(deleteButtons[deleteButtons.length - 1]);
+      expect(deleteButtons[deleteButtons.length - 1]).toBeDisabled();
+      expect(deleteButtons[deleteButtons.length - 1]).toHaveTextContent(/Deleting/);
+    });
   });
 
   describe('search and filtering', () => {
-    it('filters factions by search query', async () => {
-      factionsState.factions = [{ id: 'f1', name: 'The Silver Hand', description: '', goals: '', influence: 5, notes: '' }];
+    it('filters factions by search query matching name', async () => {
+      factionsState.factions = [
+        { id: 'f1', name: 'The Silver Hand', description: '', goals: '', influence: 5, notes: '' },
+        { id: 'f2', name: 'Black Lotus', description: '', goals: '', influence: 3, notes: '' },
+      ];
       render(<Factions {...defaultProps} />);
       await waitFor(() => expect(screen.getByText('The Silver Hand')).toBeInTheDocument());
       fireEvent.change(screen.getByPlaceholderText(/Search factions/), { target: { value: 'silver' } });
       expect(screen.getByText('The Silver Hand')).toBeInTheDocument();
+      expect(screen.queryByText('Black Lotus')).not.toBeInTheDocument();
+    });
+
+    it('filters factions case-insensitively', async () => {
+      factionsState.factions = [{ id: 'f1', name: 'The Silver Hand', description: '', goals: '', influence: 5, notes: '' }];
+      render(<Factions {...defaultProps} />);
+      await waitFor(() => expect(screen.getByText('The Silver Hand')).toBeInTheDocument());
+      fireEvent.change(screen.getByPlaceholderText(/Search factions/), { target: { value: 'SILVER' } });
+      expect(screen.getByText('The Silver Hand')).toBeInTheDocument();
+    });
+
+    it('filters factions by name field only', async () => {
+      factionsState.factions = [
+        { id: 'f1', name: 'Order of Guardians', description: 'Protectors of the realm', goals: '', influence: 5, notes: '' },
+        { id: 'f2', name: 'Dark Brotherhood', description: 'Assassins from the shadows', goals: '', influence: 3, notes: '' },
+      ];
+      render(<Factions {...defaultProps} />);
+      await waitFor(() => expect(screen.getByText('Order of Guardians')).toBeInTheDocument());
+      fireEvent.change(screen.getByPlaceholderText(/Search factions/), { target: { value: 'dark' } });
+      expect(screen.queryByText('Order of Guardians')).not.toBeInTheDocument();
+      expect(screen.getByText('Dark Brotherhood')).toBeInTheDocument();
     });
 
     it('shows no results message when search matches nothing', async () => {
@@ -180,6 +259,20 @@ describe('Factions', () => {
       await waitFor(() => expect(screen.getByText('The Silver Hand')).toBeInTheDocument());
       fireEvent.change(screen.getByPlaceholderText(/Search factions/), { target: { value: 'dragons' } });
       expect(screen.getByText(/No factions found matching/)).toBeInTheDocument();
+    });
+
+    it('shows all factions again when search is cleared', async () => {
+      factionsState.factions = [
+        { id: 'f1', name: 'Silver Hand', description: '', goals: '', influence: 5, notes: '' },
+        { id: 'f2', name: 'Black Lotus', description: '', goals: '', influence: 3, notes: '' },
+      ];
+      render(<Factions {...defaultProps} />);
+      await waitFor(() => expect(screen.getByText('Silver Hand')).toBeInTheDocument());
+      fireEvent.change(screen.getByPlaceholderText(/Search factions/), { target: { value: 'silver' } });
+      expect(screen.queryByText('Black Lotus')).not.toBeInTheDocument();
+      fireEvent.click(screen.getByLabelText('Clear search'));
+      expect(screen.getByText('Silver Hand')).toBeInTheDocument();
+      expect(screen.getByText('Black Lotus')).toBeInTheDocument();
     });
 
     it('clears search when clear button clicked', () => {
@@ -215,6 +308,27 @@ describe('Factions', () => {
       await waitFor(() => expect(screen.getByText('Mysterious')).toBeInTheDocument());
       expect(screen.queryByTitle(/Influence:/)).not.toBeInTheDocument();
     });
+
+    it('applies correct influence color for low influence', () => {
+      factionsState.factions = [{ id: 'f1', name: 'Weak Faction', description: '', goals: '', influence: 2, notes: '' }];
+      render(<Factions {...defaultProps} />);
+      expect(screen.getByTitle('Influence: 2')).toBeInTheDocument();
+    });
+
+    it('applies correct influence color for extreme influence', () => {
+      factionsState.factions = [{ id: 'f1', name: 'Powerful Faction', description: '', goals: '', influence: 10, notes: '' }];
+      render(<Factions {...defaultProps} />);
+      expect(screen.getByTitle('Influence: 10')).toBeInTheDocument();
+    });
+
+    it('renders truncated description preview in list', async () => {
+      factionsState.factions = [{ id: 'f1', name: 'Long Desc Faction', description: 'A very long description that should be truncated in the list view because it exceeds the maximum length', goals: '', influence: 5, notes: '' }];
+      render(<Factions {...defaultProps} />);
+      await waitFor(() => expect(screen.getByText('Long Desc Faction')).toBeInTheDocument());
+      const preview = screen.getByText(/A very long description that should be truncated/);
+      expect(preview).toBeInTheDocument();
+      expect(preview.textContent).toContain('…');
+    });
   });
 
   describe('keyboard accessibility', () => {
@@ -223,6 +337,14 @@ describe('Factions', () => {
       render(<Factions {...defaultProps} />);
       await waitFor(() => expect(screen.getByText('Test')).toBeInTheDocument());
       fireEvent.keyDown(screen.getByRole('button', { name: /Edit faction: Test/ }), { key: 'Enter' });
+      expect(screen.getByText('Edit Faction')).toBeInTheDocument();
+    });
+
+    it('opens edit modal with Space key', async () => {
+      factionsState.factions = [{ id: 'f1', name: 'Space Test', description: '', goals: '', influence: 5, notes: '' }];
+      render(<Factions {...defaultProps} />);
+      await waitFor(() => expect(screen.getByText('Space Test')).toBeInTheDocument());
+      fireEvent.keyDown(screen.getByRole('button', { name: /Edit faction: Space Test/ }), { key: ' ' });
       expect(screen.getByText('Edit Faction')).toBeInTheDocument();
     });
   });
@@ -239,6 +361,38 @@ describe('Factions', () => {
       fireEvent.click(screen.getByRole('button', { name: 'Save' }));
       await waitFor(() => expect(consoleSpy).toHaveBeenCalledWith('Failed to save faction:', expect.any(Error)));
       consoleSpy.mockRestore();
+    });
+
+    it('handles delete error gracefully', async () => {
+      const consoleSpy = vi.spyOn(console, 'error');
+      factionsState.deleteFactionAction = vi.fn().mockRejectedValue(new Error('Delete failed'));
+      factionsState.factions = [{ id: 'f1', name: 'ToDelete', description: '', goals: '', influence: 5, notes: '' }];
+      render(<Factions {...defaultProps} />);
+      await waitFor(() => expect(screen.getByText('ToDelete')).toBeInTheDocument());
+      fireEvent.click(screen.getByText('ToDelete'));
+      const deleteButtons = screen.getAllByRole('button', { name: /Delete/ });
+      fireEvent.click(deleteButtons[deleteButtons.length - 1]);
+      await waitFor(() => expect(consoleSpy).toHaveBeenCalledWith('Failed to delete faction:', expect.any(Error)));
+      consoleSpy.mockRestore();
+    });
+  });
+
+  describe('influence slider', () => {
+    it('renders influence slider with correct range', () => {
+      render(<Factions {...defaultProps} />);
+      fireEvent.click(screen.getByRole('button', { name: /New Faction/ }));
+      const slider = screen.getByRole('slider');
+      expect(slider).toHaveAttribute('min', '1');
+      expect(slider).toHaveAttribute('max', '10');
+      expect(slider).toHaveValue('1');
+    });
+
+    it('updates influence value when slider changes', () => {
+      render(<Factions {...defaultProps} />);
+      fireEvent.click(screen.getByRole('button', { name: /New Faction/ }));
+      const slider = screen.getByRole('slider');
+      fireEvent.change(slider, { target: { value: '8' } });
+      expect(screen.getByRole('slider')).toHaveValue('8');
     });
   });
 });

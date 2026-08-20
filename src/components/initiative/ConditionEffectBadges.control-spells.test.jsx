@@ -1,3 +1,4 @@
+// @improved-by-ai
 import { render, screen, fireEvent } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import ConditionEffectBadges from './ConditionEffectBadges.jsx';
@@ -66,10 +67,63 @@ function makeEffects(overrides = {}) {
 }
 
 vi.mock('../../services/combat/conditions/conditionEffects.js', () => ({
-    computeConditionEffects: vi.fn((_conditions, _saveModifiers, targetEffects) => {
-        return makeEffects(targetEffects && targetEffects.length ? { targetAdvantageCount: 1 } : {});
-    }),
+    computeConditionEffects: vi.fn(() => makeEffects({})),
 }));
+
+const CREATURE_NAME = 'Alice';
+const CAMPAIGN_NAME = 'test-campaign';
+
+function renderWithTargetEffect(targetEffect, overrides = {}) {
+    getRuntimeValue.mockImplementation((name, key) => {
+        if (name === CREATURE_NAME && key === 'activeBuffs') return [];
+        return null;
+    });
+    computeConditionEffects.mockReturnValue(makeEffects(overrides));
+    return render(
+        <ConditionEffectBadges
+            conditions={[]}
+            targetEffects={targetEffect ? [targetEffect] : []}
+            creatureName={CREATURE_NAME}
+            campaignName={CAMPAIGN_NAME}
+            isLocalhost={true}
+            {...overrides}
+        />
+    );
+}
+
+function renderWithTargetEffectWrongTarget(targetEffect) {
+    getRuntimeValue.mockImplementation((name, key) => {
+        if (name === CREATURE_NAME && key === 'activeBuffs') return [];
+        return null;
+    });
+    computeConditionEffects.mockReturnValue(makeEffects({}));
+    return render(
+        <ConditionEffectBadges
+            conditions={[]}
+            targetEffects={targetEffect ? [targetEffect] : []}
+            creatureName={CREATURE_NAME}
+            campaignName={CAMPAIGN_NAME}
+            isLocalhost={true}
+        />
+    );
+}
+
+function renderWithTargetEffectNoCallback(targetEffect) {
+    getRuntimeValue.mockImplementation((name, key) => {
+        if (name === CREATURE_NAME && key === 'activeBuffs') return [];
+        return null;
+    });
+    computeConditionEffects.mockReturnValue(makeEffects({}));
+    return render(
+        <ConditionEffectBadges
+            conditions={[]}
+            targetEffects={targetEffect ? [targetEffect] : []}
+            creatureName={CREATURE_NAME}
+            campaignName={CAMPAIGN_NAME}
+            isLocalhost={true}
+        />
+    );
+}
 
 describe('ConditionEffectBadges - Control Spell Badges', () => {
     beforeEach(() => {
@@ -77,183 +131,187 @@ describe('ConditionEffectBadges - Control Spell Badges', () => {
     });
 
     describe("Tasha's Hideous Laughter badge", () => {
-        it('should render Tasha\'s Hideous Laughter badge when tashas_hideous_laughter targetEffect is present', () => {
-            getRuntimeValue.mockImplementation((name, key) => {
-                if (name === 'Alice' && key === 'activeBuffs') return [];
-                return null;
-            });
-            computeConditionEffects.mockReturnValue(makeEffects({}));
-            render(
-                <ConditionEffectBadges
-                    conditions={[]}
-                    targetEffects={[{ target: 'Alice', effect: 'tashas_hideous_laughter', source: 'Wizard', dc: 15 }]}
-                    creatureName="Alice"
-                    campaignName="test-campaign"
-                    isLocalhost={true}
-                />
-            );
+        it('should render when tashas_hideous_laughter targetEffect is present for this creature', () => {
+            renderWithTargetEffect({ target: CREATURE_NAME, effect: 'tashas_hideous_laughter', source: 'Wizard', dc: 15 });
             expect(screen.getByText("Tasha's Hideous Laughter")).toBeInTheDocument();
         });
 
-        it('should roll the WIS reroll save when the Tasha badge is clicked', () => {
+        it('should not render when tashas_hideous_laughter targetEffect is for a different creature', () => {
+            renderWithTargetEffectWrongTarget({ target: 'Bob', effect: 'tashas_hideous_laughter', source: 'Wizard', dc: 15 });
+            expect(screen.queryByText("Tasha's Hideous Laughter")).not.toBeInTheDocument();
+        });
+
+        it('should roll the WIS reroll save when the badge is clicked with onRollConditionSave callback', () => {
             const onRollConditionSave = vi.fn();
             getRuntimeValue.mockImplementation((name, key) => {
-                if (name === 'Alice' && key === 'activeBuffs') return [];
+                if (name === CREATURE_NAME && key === 'activeBuffs') return [];
                 return null;
             });
             computeConditionEffects.mockReturnValue(makeEffects({}));
             render(
                 <ConditionEffectBadges
                     conditions={[]}
-                    targetEffects={[{ target: 'Alice', effect: 'tashas_hideous_laughter', source: 'Wizard', dc: 15 }]}
-                    creatureName="Alice"
-                    campaignName="test-campaign"
+                    targetEffects={[{ target: CREATURE_NAME, effect: 'tashas_hideous_laughter', source: 'Wizard', dc: 15 }]}
+                    creatureName={CREATURE_NAME}
+                    campaignName={CAMPAIGN_NAME}
                     isLocalhost={true}
                     onRollConditionSave={onRollConditionSave}
                 />
             );
             fireEvent.click(screen.getByText("Tasha's Hideous Laughter"));
-            expect(onRollConditionSave).toHaveBeenCalledWith('Alice', { key: 'prone', label: 'Prone', dc: 15, ability: 'wis' });
+            expect(onRollConditionSave).toHaveBeenCalledWith(CREATURE_NAME, { key: 'prone', label: 'Prone', dc: 15, ability: 'wis' });
+        });
+
+        it('should render as a non-clickable span when onRollConditionSave is not provided', () => {
+            renderWithTargetEffectNoCallback({ target: CREATURE_NAME, effect: 'tashas_hideous_laughter', source: 'Wizard', dc: 15 });
+            const badge = screen.getByText("Tasha's Hideous Laughter");
+            expect(badge.tagName).toBe('SPAN');
+        });
+
+        it('should render with tooltip containing caster name and DC', () => {
+            renderWithTargetEffect({ target: CREATURE_NAME, effect: 'tashas_hideous_laughter', source: 'Wizard', dc: 12 });
+            expect(screen.getByTitle(/Tasha's Hideous Laughter from Wizard/)).toBeInTheDocument();
+            expect(screen.getByTitle(/DC 12/)).toBeInTheDocument();
         });
     });
 
     describe('Banishment badge', () => {
-        it('should render Banished badge when banishment targetEffect is present', () => {
-            getRuntimeValue.mockImplementation((name, key) => {
-                if (name === 'Alice' && key === 'activeBuffs') return [];
-                return null;
-            });
-            computeConditionEffects.mockReturnValue(makeEffects({}));
-            render(
-                <ConditionEffectBadges
-                    conditions={[]}
-                    targetEffects={[{ target: 'Alice', effect: 'banishment', source: 'Cleric' }]}
-                    creatureName="Alice"
-                    campaignName="test-campaign"
-                    isLocalhost={true}
-                />
-            );
+        it('should render when banishment targetEffect is present for this creature', () => {
+            renderWithTargetEffect({ target: CREATURE_NAME, effect: 'banishment', source: 'Cleric' });
             expect(screen.getByText('Banished')).toBeInTheDocument();
         });
 
+        it('should not render when banishment targetEffect is for a different creature', () => {
+            renderWithTargetEffectWrongTarget({ target: 'Bob', effect: 'banishment', source: 'Cleric' });
+            expect(screen.queryByText('Banished')).not.toBeInTheDocument();
+        });
+
         it('should indicate permanent banishment in tooltip', () => {
-            getRuntimeValue.mockImplementation((name, key) => {
-                if (name === 'Alice' && key === 'activeBuffs') return [];
-                return null;
-            });
-            computeConditionEffects.mockReturnValue(makeEffects({}));
-            render(
-                <ConditionEffectBadges
-                    conditions={[]}
-                    targetEffects={[{ target: 'Alice', effect: 'banishment', source: 'Cleric', permanent: true }]}
-                    creatureName="Alice"
-                    campaignName="test-campaign"
-                    isLocalhost={true}
-                />
-            );
+            renderWithTargetEffect({ target: CREATURE_NAME, effect: 'banishment', source: 'Cleric', permanent: true });
             expect(screen.getByTitle(/Permanent banishment/)).toBeInTheDocument();
+        });
+
+        it('should indicate concentration-based banishment when not permanent', () => {
+            renderWithTargetEffect({ target: CREATURE_NAME, effect: 'banishment', source: 'Cleric', permanent: false });
+            expect(screen.getByTitle(/Concentration/)).toBeInTheDocument();
+            expect(screen.queryByTitle(/Permanent banishment/)).not.toBeInTheDocument();
+        });
+
+        it('should render with tooltip containing caster name', () => {
+            renderWithTargetEffect({ target: CREATURE_NAME, effect: 'banishment', source: 'Paladin' });
+            expect(screen.getByTitle(/Banished by Paladin/)).toBeInTheDocument();
         });
     });
 
     describe('Maze badge', () => {
-        it('should render Mazed badge when maze targetEffect is present', () => {
-            getRuntimeValue.mockImplementation((name, key) => {
-                if (name === 'Alice' && key === 'activeBuffs') return [];
-                return null;
-            });
-            computeConditionEffects.mockReturnValue(makeEffects({}));
-            render(
-                <ConditionEffectBadges
-                    conditions={[]}
-                    targetEffects={[{ target: 'Alice', effect: 'maze', source: 'Wizard', dc: 20 }]}
-                    creatureName="Alice"
-                    campaignName="test-campaign"
-                    isLocalhost={true}
-                />
-            );
+        it('should render Mazed badge when maze targetEffect is present for this creature', () => {
+            renderWithTargetEffect({ target: CREATURE_NAME, effect: 'maze', source: 'Wizard', dc: 20 });
             expect(screen.getByText('Mazed')).toBeInTheDocument();
         });
 
-        it('should roll the INT escape check when the Maze badge is clicked', () => {
+        it('should not render when maze targetEffect is for a different creature', () => {
+            renderWithTargetEffectWrongTarget({ target: 'Bob', effect: 'maze', source: 'Wizard', dc: 20 });
+            expect(screen.queryByText('Mazed')).not.toBeInTheDocument();
+        });
+
+        it('should roll the INT escape check when the badge is clicked with onRollConditionSave callback', () => {
             const onRollConditionSave = vi.fn();
             getRuntimeValue.mockImplementation((name, key) => {
-                if (name === 'Alice' && key === 'activeBuffs') return [];
+                if (name === CREATURE_NAME && key === 'activeBuffs') return [];
                 return null;
             });
             computeConditionEffects.mockReturnValue(makeEffects({}));
             render(
                 <ConditionEffectBadges
                     conditions={[]}
-                    targetEffects={[{ target: 'Alice', effect: 'maze', source: 'Wizard', dc: 20 }]}
-                    creatureName="Alice"
-                    campaignName="test-campaign"
+                    targetEffects={[{ target: CREATURE_NAME, effect: 'maze', source: 'Wizard', dc: 20 }]}
+                    creatureName={CREATURE_NAME}
+                    campaignName={CAMPAIGN_NAME}
                     isLocalhost={true}
                     onRollConditionSave={onRollConditionSave}
                 />
             );
             fireEvent.click(screen.getByText('Mazed'));
-            expect(onRollConditionSave).toHaveBeenCalledWith('Alice', { key: 'incapacitated', label: 'Incapacitated', dc: 20, ability: 'int' });
+            expect(onRollConditionSave).toHaveBeenCalledWith(CREATURE_NAME, { key: 'incapacitated', label: 'Incapacitated', dc: 20, ability: 'int' });
+        });
+
+        it('should render as a non-clickable span when onRollConditionSave is not provided', () => {
+            renderWithTargetEffectNoCallback({ target: CREATURE_NAME, effect: 'maze', source: 'Wizard', dc: 20 });
+            const badge = screen.getByText('Mazed');
+            expect(badge.tagName).toBe('SPAN');
+        });
+
+        it('should render with tooltip containing caster name and DC', () => {
+            renderWithTargetEffect({ target: CREATURE_NAME, effect: 'maze', source: 'Wizard', dc: 18 });
+            expect(screen.getByTitle(/Mazed by Wizard/)).toBeInTheDocument();
+            expect(screen.getByTitle(/DC 18/)).toBeInTheDocument();
         });
     });
 
     describe('Imprisonment badge', () => {
-        it('should render Imprisoned badge when imprisonment targetEffect is present', () => {
-            getRuntimeValue.mockImplementation((name, key) => {
-                if (name === 'Alice' && key === 'activeBuffs') return [];
-                return null;
-            });
-            computeConditionEffects.mockReturnValue(makeEffects({}));
-            render(
-                <ConditionEffectBadges
-                    conditions={[]}
-                    targetEffects={[{ target: 'Alice', effect: 'imprisonment', source: 'Wizard', prisonType: 'Buried' }]}
-                    creatureName="Alice"
-                    campaignName="test-campaign"
-                    isLocalhost={true}
-                />
-            );
+        it('should render Imprisoned badge when imprisonment targetEffect is present for this creature', () => {
+            renderWithTargetEffect({ target: CREATURE_NAME, effect: 'imprisonment', source: 'Wizard', prisonType: 'Buried' });
             expect(screen.getByText('Imprisoned')).toBeInTheDocument();
+        });
+
+        it('should not render when imprisonment targetEffect is for a different creature', () => {
+            renderWithTargetEffectWrongTarget({ target: 'Bob', effect: 'imprisonment', source: 'Wizard', prisonType: 'Buried' });
+            expect(screen.queryByText('Imprisoned')).not.toBeInTheDocument();
+        });
+
+        it('should include prisonType in tooltip', () => {
+            renderWithTargetEffect({ target: CREATURE_NAME, effect: 'imprisonment', source: 'Wizard', prisonType: 'Slumber' });
+            expect(screen.getByTitle(/Slumber/)).toBeInTheDocument();
+        });
+
+        it('should include duration in tooltip when present', () => {
+            renderWithTargetEffect({ target: CREATURE_NAME, effect: 'imprisonment', source: 'Wizard', prisonType: 'Buried', duration: 'Until dispelled' });
+            expect(screen.getByTitle(/Until dispelled/)).toBeInTheDocument();
         });
     });
 
     describe('Confusion badge', () => {
-        it('should render Confused badge when confusion targetEffect is present', () => {
-            getRuntimeValue.mockImplementation((name, key) => {
-                if (name === 'Alice' && key === 'activeBuffs') return [];
-                return null;
-            });
-            computeConditionEffects.mockReturnValue(makeEffects({}));
-            render(
-                <ConditionEffectBadges
-                    conditions={[]}
-                    targetEffects={[{ target: 'Alice', effect: 'confusion', source: 'Wizard', dc: 15 }]}
-                    creatureName="Alice"
-                    campaignName="test-campaign"
-                    isLocalhost={true}
-                />
-            );
+        it('should render Confused badge when confusion targetEffect is present for this creature', () => {
+            renderWithTargetEffect({ target: CREATURE_NAME, effect: 'confusion', source: 'Wizard', dc: 15 });
             expect(screen.getByText('Confused')).toBeInTheDocument();
         });
 
-        it('should roll the WIS save when the Confused badge is clicked', () => {
+        it('should not render when confusion targetEffect is for a different creature', () => {
+            renderWithTargetEffectWrongTarget({ target: 'Bob', effect: 'confusion', source: 'Wizard', dc: 15 });
+            expect(screen.queryByText('Confused')).not.toBeInTheDocument();
+        });
+
+        it('should roll the WIS save when the badge is clicked with onRollConditionSave callback', () => {
             const onRollConditionSave = vi.fn();
             getRuntimeValue.mockImplementation((name, key) => {
-                if (name === 'Alice' && key === 'activeBuffs') return [];
+                if (name === CREATURE_NAME && key === 'activeBuffs') return [];
                 return null;
             });
             computeConditionEffects.mockReturnValue(makeEffects({}));
             render(
                 <ConditionEffectBadges
                     conditions={[]}
-                    targetEffects={[{ target: 'Alice', effect: 'confusion', source: 'Wizard', dc: 15 }]}
-                    creatureName="Alice"
-                    campaignName="test-campaign"
+                    targetEffects={[{ target: CREATURE_NAME, effect: 'confusion', source: 'Wizard', dc: 15 }]}
+                    creatureName={CREATURE_NAME}
+                    campaignName={CAMPAIGN_NAME}
                     isLocalhost={true}
                     onRollConditionSave={onRollConditionSave}
                 />
             );
             fireEvent.click(screen.getByText('Confused'));
-            expect(onRollConditionSave).toHaveBeenCalledWith('Alice', { key: 'confused', label: 'Confused', dc: 15, ability: 'wis' });
+            expect(onRollConditionSave).toHaveBeenCalledWith(CREATURE_NAME, { key: 'confused', label: 'Confused', dc: 15, ability: 'wis' });
+        });
+
+        it('should render as a non-clickable span when onRollConditionSave is not provided', () => {
+            renderWithTargetEffectNoCallback({ target: CREATURE_NAME, effect: 'confusion', source: 'Wizard', dc: 15 });
+            const badge = screen.getByText('Confused');
+            expect(badge.tagName).toBe('SPAN');
+        });
+
+        it('should render with tooltip containing caster name and DC', () => {
+            renderWithTargetEffect({ target: CREATURE_NAME, effect: 'confusion', source: 'Bard', dc: 16 });
+            expect(screen.getByTitle(/Confused by Bard/)).toBeInTheDocument();
+            expect(screen.getByTitle(/DC 16/)).toBeInTheDocument();
         });
     });
 });

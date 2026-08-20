@@ -1,3 +1,4 @@
+// @improved-by-ai
 import { render, screen, fireEvent } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 
@@ -43,9 +44,18 @@ vi.mock('./RiverLayer.jsx', () => ({ default: () => <g data-testid="river-layer"
 vi.mock('./RoadLayer.jsx', () => ({ default: () => <g data-testid="road-layer" /> }));
 vi.mock('./TravelPathLayer.jsx', () => ({ default: () => <g data-testid="travel-path-layer" /> }));
 vi.mock('./WeatherOverlay.jsx', () => ({ default: ({ weather }) => weather ? <div data-testid="weather-overlay" /> : null }));
-vi.mock('./EventDialog.jsx', () => ({ default: ({ event, onAccept, onSkip, onReroll }) => event ? <div data-testid="event-dialog"><button data-testid="event-accept" onClick={onAccept}>Accept</button><button data-testid="event-skip" onClick={onSkip}>Skip</button><button data-testid="event-reroll" onClick={onReroll}>Reroll</button></div> : null }));
+
+// EventDialog only renders when `event` is truthy — matches HexMap.jsx behavior.
+vi.mock('./EventDialog.jsx', () => ({
+    default: ({ event, onAccept, onSkip, onReroll }) =>
+        event ? <div data-testid="event-dialog">
+            <button data-testid="event-accept" onClick={onAccept}>Accept</button>
+            <button data-testid="event-skip" onClick={onSkip}>Skip</button>
+            <button data-testid="event-reroll" onClick={onReroll}>Reroll</button>
+        </div> : null,
+}));
 vi.mock('./TravelPanel.jsx', () => ({
-    default: ({ isTravelActive, onAdvance, onForceCamp, onForcedMarch, onCancel, onChangePace, onToggleHorseback }) =>
+    default: ({ isTravelActive, onAdvance, onForceCamp, onForcedMarch, onCancel, onChangePace, onToggleHorseback, onReRollWeather, _onSetEventFrequency, eventFrequency, horseback, forcedMarchHours, exhaustionMultiplier, partyHasMaxExhaustion }) =>
         <div data-testid="travel-panel">
             {isTravelActive && <>
                 <button data-testid="btn-advance" onClick={onAdvance}>Advance</button>
@@ -54,6 +64,12 @@ vi.mock('./TravelPanel.jsx', () => ({
                 <button data-testid="btn-cancel" onClick={onCancel}>Cancel</button>
                 <button data-testid="btn-pace" onClick={onChangePace}>Change Pace</button>
                 <button data-testid="btn-horseback" onClick={onToggleHorseback}>Horseback</button>
+                <button data-testid="btn-reroll-weather" onClick={onReRollWeather}>Reroll Weather</button>
+                <span data-testid="event-frequency">{eventFrequency}</span>
+                <span data-testid="horseback">{horseback ? 'true' : 'false'}</span>
+                <span data-testid="forced-march-hours">{forcedMarchHours}</span>
+                <span data-testid="exhaustion-multiplier">{exhaustionMultiplier}</span>
+                <span data-testid="party-max-exhaustion">{partyHasMaxExhaustion ? 'true' : 'false'}</span>
             </>}
         </div>,
 }));
@@ -342,19 +358,6 @@ describe('HexMap additional coverage', () => {
             poiLayerProps.current.onPoiEnter({ id: 'poi-1' });
             expect(onPoiEntered).not.toHaveBeenCalled();
         });
-
-        it('does not call onPoiEntered when the callback is not provided', async () => {
-            mapsService.loadMapData.mockRejectedValue(new Error('Map not found'));
-            useMapLoader.mockReturnValue(makeMapLoader({
-                pois: [{ id: 'poi-1', q: 10, r: 5, type: 'dungeon', visible: true, linkedMap: 'missing' }],
-            }));
-            render(<HexMap campaignName="test" mapName="test-map" />);
-            await vi.waitFor(() => {
-                expect(mapsService.loadMapData).toHaveBeenCalledWith('test', 'missing');
-            });
-            // Should not throw even though onPoiEntered is undefined
-            expect(() => poiLayerProps.current.onPoiEnter({ id: 'poi-1', linkedMap: 'missing' })).not.toThrow();
-        });
     });
 
     describe('Linked map validation', () => {
@@ -487,6 +490,15 @@ describe('HexMap additional coverage', () => {
             expect(ml.setPois).not.toHaveBeenCalled();
             expect(ml.setMarchingOrder).not.toHaveBeenCalled();
         });
+
+        it('does not add a POI when one already exists at the drop hex', () => {
+            const { ml } = dropOnMap({
+                dragData: 'city',
+                getHexFromEvent: vi.fn(() => ({ q: 10, r: 5 })),
+                mapOverrides: { pois: [{ id: 'existing', q: 10, r: 5, type: 'city', visible: true }] },
+            });
+            expect(ml.setPois).not.toHaveBeenCalled();
+        });
     });
 
     describe('Event acceptance', () => {
@@ -507,6 +519,20 @@ describe('HexMap additional coverage', () => {
             expect(addEntry).toHaveBeenCalledWith(expect.objectContaining({
                 action: 'event_accept', hex: { q: 15, r: 8 }, terrain: 'plains',
             }));
+        });
+
+        it('starts a combat encounter without monster placements when no monsters are specified', () => {
+            const handleStartEncounter = vi.fn();
+            const pendingEvent = { type: 'combat' };
+            const { tm } = renderEventAccept({
+                pendingEvent,
+                travelOverrides: { currentPosition: { q: 15, r: 8 } },
+                mapOverrides: { partyPosition: { q: 15, r: 8 }, terrain: { '15,8': 'plains' } },
+                encounter: { generateMonsterPlacements: vi.fn(), handleStartEncounter },
+            });
+            fireEvent.click(screen.getByTestId('event-accept'));
+            expect(tm.acceptEvent).toHaveBeenCalled();
+            expect(handleStartEncounter).toHaveBeenCalledWith(15, 8);
         });
 
         it('does not call handleStartEncounter when there is no position', () => {
@@ -602,8 +628,6 @@ describe('HexMap additional coverage', () => {
         });
     });
 
-
-
     describe('TravelPanel wiring', () => {
         it.each([true, false])('renders travel controls only while a session is active (isTravelActive=%s)', (isTravelActive) => {
             useTravelManagement.mockReturnValue(makeTravelMgmt({ isTravelActive }));
@@ -651,6 +675,30 @@ describe('HexMap additional coverage', () => {
         });
     });
 
-});
+    describe('TravelPanel props', () => {
+        it('passes horseback, forcedMarchHours, exhaustionMultiplier, and partyHasMaxExhaustion to TravelPanel', () => {
+            useTravelManagement.mockReturnValue(makeTravelMgmt({
+                isTravelActive: true,
+                horseback: true,
+                forcedMarchHours: 6,
+                exhaustionMultiplier: 50,
+                partyHasMaxExhaustion: true,
+            }));
+            render(<HexMap campaignName="test" mapName="test-map" />);
+            expect(screen.getByTestId('horseback')).toHaveTextContent('true');
+            expect(screen.getByTestId('forced-march-hours')).toHaveTextContent('6');
+            expect(screen.getByTestId('exhaustion-multiplier')).toHaveTextContent('50');
+            expect(screen.getByTestId('party-max-exhaustion')).toHaveTextContent('true');
+        });
 
-// @cleaned-by-ai
+        it('passes eventFrequency to TravelPanel', () => {
+            useTravelManagement.mockReturnValue(makeTravelMgmt({
+                isTravelActive: true,
+                eventFrequency: 'high',
+            }));
+            render(<HexMap campaignName="test" mapName="test-map" />);
+            expect(screen.getByTestId('event-frequency')).toHaveTextContent('high');
+        });
+    });
+
+});

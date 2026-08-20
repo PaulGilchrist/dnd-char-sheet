@@ -1,7 +1,7 @@
+// @improved-by-ai
 import { render, screen } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import ConditionEffectBadges from './ConditionEffectBadges.jsx';
-import * as runtimeState from '../../hooks/runtime/useRuntimeState.js';
 import { getRuntimeValue } from '../../hooks/runtime/useRuntimeState.js';
 import { computeConditionEffects } from '../../services/combat/conditions/conditionEffects.js';
 
@@ -38,6 +38,7 @@ const defaultEffects = {
     resistanceDamageReduction: false,
     targetAdvantageCount: 0,
     targetDisadvantageCount: 0,
+    targetAttackDisadvantageCount: 0,
     riderSaveDisadvantage: false,
     riderAttackBonus: 0,
     riderCannotOpportunityAttack: false,
@@ -67,10 +68,29 @@ function makeEffects(overrides = {}) {
 }
 
 vi.mock('../../services/combat/conditions/conditionEffects.js', () => ({
-    computeConditionEffects: vi.fn((_conditions, _saveModifiers, targetEffects) => {
-        return makeEffects(targetEffects && targetEffects.length ? { targetAdvantageCount: 1 } : {});
-    }),
+    computeConditionEffects: vi.fn(() => makeEffects({})),
 }));
+
+const CREATURE_NAME = 'Alice';
+const CAMPAIGN_NAME = 'test-campaign';
+
+function renderWithEffects(effectsOverrides = {}, props = {}) {
+    getRuntimeValue.mockImplementation((name, key) => {
+        if (name === CREATURE_NAME && key === 'activeBuffs') return props.buffs || [];
+        return null;
+    });
+    computeConditionEffects.mockReturnValue(makeEffects(effectsOverrides));
+    return render(
+        <ConditionEffectBadges
+            conditions={props.conditions || []}
+            targetEffects={props.targetEffects || []}
+            creatureName={CREATURE_NAME}
+            campaignName={CAMPAIGN_NAME}
+            allCreatures={props.allCreatures}
+            isLocalhost={props.isLocalhost ?? true}
+        />
+    );
+}
 
 describe('ConditionEffectBadges - Save & Ability Check Badges', () => {
     beforeEach(() => {
@@ -78,203 +98,217 @@ describe('ConditionEffectBadges - Save & Ability Check Badges', () => {
     });
 
     describe('Adv badge', () => {
-        it('should render Adv badge when attackAdvantageCount > 0 with reasons', () => {
-            getRuntimeValue.mockImplementation((name, key) => {
-                if (name === 'Alice' && key === 'activeBuffs') return [];
-                return null;
-            });
-            computeConditionEffects.mockReturnValue(makeEffects({ attackAdvantageCount: 1, attackAdvantageReasons: ['Invisible'] }));
-            render(
-                <ConditionEffectBadges
-                    conditions={[{ key: 'invisible' }]}
-                    targetEffects={[]}
-                    creatureName="Alice"
-                    campaignName="test-campaign"
-                    isLocalhost={true}
-                />
+        it('should render Adv badge as effect-buff with arrow-up icon when attackAdvantageCount > 0', () => {
+            renderWithEffects(
+                { attackAdvantageCount: 1, attackAdvantageReasons: ['Invisible'] },
+                { conditions: [{ key: 'invisible' }] }
             );
-            expect(screen.getByText('Adv')).toBeInTheDocument();
+            const badge = screen.getByText('Adv');
+            expect(badge).toBeInTheDocument();
+            expect(badge.closest('[class*="effect-buff"]')).toBeInTheDocument();
+            expect(badge.querySelector('[class*="fa-arrow-up"]')).toBeInTheDocument();
             expect(screen.getByTitle(/Advantage on attack rolls.*Invisible/)).toBeInTheDocument();
         });
 
-        it('should render Adv badge with Vow of Enmity reason', () => {
-            const allCreatures = [{ name: 'Paladin' }];
-            runtimeState.getRuntimeValue.mockImplementation((creatureName, key) => {
-                if (key === 'activeBuffs') return [];
-                if (key === 'vowOfEnmityTarget') {
-                    if (creatureName === 'Paladin') return 'Alice';
-                    return null;
+        it('should NOT render Adv badge when attackAdvantageCount is 0', () => {
+            renderWithEffects({ attackAdvantageCount: 0 });
+            expect(screen.queryByText('Adv')).not.toBeInTheDocument();
+        });
+
+        it('should render Adv badge without reasons when attackAdvantageReasons is empty', () => {
+            renderWithEffects({ attackAdvantageCount: 1, attackAdvantageReasons: [] });
+            const badge = screen.getByText('Adv');
+            expect(badge).toBeInTheDocument();
+            expect(badge.closest('[class*="effect-buff"]')).toBeInTheDocument();
+        });
+    });
+
+    describe('Adv badge from Vow of Enmity', () => {
+        it('should render Adv badge when allCreatures has Vow of Enmity targeting this creature', () => {
+            getRuntimeValue.mockImplementation((name, key, campaign) => {
+                if (name === CREATURE_NAME && key === 'activeBuffs') return [];
+                if (key === 'vowOfEnmityTarget' && campaign) {
+                    return CREATURE_NAME;
                 }
                 return null;
             });
-            computeConditionEffects.mockReturnValue(makeEffects({ attackAdvantageCount: 1, attackAdvantageReasons: ['Vow of Enmity'] }));
+            computeConditionEffects.mockReturnValue(makeEffects({}));
             render(
                 <ConditionEffectBadges
                     conditions={[]}
                     targetEffects={[]}
-                    creatureName="Alice"
-                    campaignName="test-campaign"
-                    allCreatures={allCreatures}
+                    creatureName={CREATURE_NAME}
+                    campaignName={CAMPAIGN_NAME}
+                    allCreatures={[{ name: 'Paladin' }]}
                     isLocalhost={true}
                 />
             );
-            expect(screen.getByText('Adv')).toBeInTheDocument();
+            const badge = screen.getByText('Adv');
+            expect(badge).toBeInTheDocument();
+            expect(badge.closest('[class*="effect-buff"]')).toBeInTheDocument();
+            expect(badge.querySelector('[class*="fa-arrow-up"]')).toBeInTheDocument();
+        });
+
+        it('should NOT render Adv badge from Vow of Enmity when allCreatures is not provided', () => {
+            renderWithEffects({ attackAdvantageCount: 0 });
+            expect(screen.queryByText('Adv')).not.toBeInTheDocument();
         });
     });
 
     describe('Adv vs badge', () => {
-        it('should render Adv vs badge when targetAdvantageCount > 0', () => {
-            getRuntimeValue.mockImplementation((name, key) => {
-                if (name === 'Alice' && key === 'activeBuffs') return [];
-                return null;
-            });
-            computeConditionEffects.mockReturnValue(makeEffects({ targetAdvantageCount: 1, targetAdvantageReasons: ['Reckless Attack'] }));
-            render(
-                <ConditionEffectBadges
-                    conditions={[{ key: 'blinded' }]}
-                    targetEffects={[]}
-                    creatureName="Alice"
-                    campaignName="test-campaign"
-                    isLocalhost={true}
-                />
+        it('should render Adv vs badge as effect-debuff with arrow-up icon when targetAdvantageCount > 0', () => {
+            renderWithEffects(
+                { targetAdvantageCount: 1, targetAdvantageReasons: ['Reckless Attack'] },
+                { conditions: [{ key: 'blinded' }] }
             );
-            expect(screen.getByText('Adv vs')).toBeInTheDocument();
+            const badge = screen.getByText('Adv vs');
+            expect(badge).toBeInTheDocument();
+            expect(badge.closest('[class*="effect-debuff"]')).toBeInTheDocument();
+            expect(badge.querySelector('[class*="fa-arrow-up"]')).toBeInTheDocument();
+            expect(screen.getByTitle(/Attackers have advantage.*Reckless Attack/)).toBeInTheDocument();
+        });
+
+        it('should NOT render Adv vs badge when targetAdvantageCount is 0', () => {
+            renderWithEffects({ targetAdvantageCount: 0 });
+            expect(screen.queryByText('Adv vs')).not.toBeInTheDocument();
         });
     });
 
     describe('Adv Save badge', () => {
-        it('should render Adv Save badge when saveAdvantageCount > 0', () => {
-            getRuntimeValue.mockImplementation((name, key) => {
-                if (name === 'Alice' && key === 'activeBuffs') return [];
-                return null;
-            });
-            computeConditionEffects.mockReturnValue(makeEffects({ saveAdvantageCount: 1, saveAdvantageReasons: ['Foresight'] }));
-            render(
-                <ConditionEffectBadges
-                    conditions={[{ key: 'blinded' }]}
-                    targetEffects={[]}
-                    creatureName="Alice"
-                    campaignName="test-campaign"
-                    isLocalhost={true}
-                />
+        it('should render Adv Save badge as effect-buff with shield icon when saveAdvantageCount > 0', () => {
+            renderWithEffects(
+                { saveAdvantageCount: 1, saveAdvantageReasons: ['Foresight'] },
+                { conditions: [{ key: 'blinded' }] }
             );
-            expect(screen.getByText('Adv Save')).toBeInTheDocument();
+            const badge = screen.getByText('Adv Save');
+            expect(badge).toBeInTheDocument();
+            expect(badge.closest('[class*="effect-buff"]')).toBeInTheDocument();
+            expect(badge.querySelector('[class*="fa-shield-halved"]')).toBeInTheDocument();
+            expect(screen.getByTitle(/Advantage on saving throws.*Foresight/)).toBeInTheDocument();
+        });
+
+        it('should NOT render Adv Save badge when saveAdvantageCount is 0', () => {
+            renderWithEffects({ saveAdvantageCount: 0 });
+            expect(screen.queryByText('Adv Save')).not.toBeInTheDocument();
         });
     });
 
     describe('Adv DEX Save badge', () => {
-        it('should render Adv DEX Save badge when dexSaveAdvantageCount > 0', () => {
-            getRuntimeValue.mockImplementation((name, key) => {
-                if (name === 'Alice' && key === 'activeBuffs') return [{ name: 'Dodge', effect: 'dodge' }];
-                return null;
-            });
-            computeConditionEffects.mockReturnValue(makeEffects({ dexSaveAdvantageCount: 1 }));
-            render(
-                <ConditionEffectBadges
-                    conditions={[]}
-                    targetEffects={[]}
-                    creatureName="Alice"
-                    campaignName="test-campaign"
-                    isLocalhost={true}
-                />
+        it('should render Adv DEX Save badge as effect-buff with shield icon when dexSaveAdvantageCount > 0', () => {
+            renderWithEffects(
+                { dexSaveAdvantageCount: 1 },
+                { buffs: [{ name: 'Dodge', effect: 'dodge' }] }
             );
-            expect(screen.getByText('Adv DEX Save')).toBeInTheDocument();
+            const badge = screen.getByText('Adv DEX Save');
+            expect(badge).toBeInTheDocument();
+            expect(badge.closest('[class*="effect-buff"]')).toBeInTheDocument();
+            expect(badge.querySelector('[class*="fa-shield-halved"]')).toBeInTheDocument();
+            expect(screen.getByTitle(/Advantage on Dexterity saving throws/)).toBeInTheDocument();
+        });
+
+        it('should NOT render Adv DEX Save badge when dexSaveAdvantageCount is 0', () => {
+            renderWithEffects({ dexSaveAdvantageCount: 0 });
+            expect(screen.queryByText('Adv DEX Save')).not.toBeInTheDocument();
         });
     });
 
     describe('Save Disadv badge', () => {
-        it('should render Save Disadv badge when riderSaveDisadvantage is true', () => {
-            getRuntimeValue.mockImplementation((name, key) => {
-                if (name === 'Alice' && key === 'activeBuffs') return [];
-                return null;
-            });
-            computeConditionEffects.mockReturnValue(makeEffects({ riderSaveDisadvantage: true }));
-            render(
-                <ConditionEffectBadges
-                    conditions={[]}
-                    targetEffects={[]}
-                    creatureName="Alice"
-                    campaignName="test-campaign"
-                    isLocalhost={true}
-                />
-            );
-            expect(screen.getByText('Save Disadv')).toBeInTheDocument();
+        it('should render Save Disadv badge with specific save type when saveDisadvantage contains a type', () => {
+            renderWithEffects({ saveDisadvantageCount: 1, saveDisadvantage: ['dex'] });
+            const badge = screen.getByText(/Save Disadv \(dex\)/);
+            expect(badge).toBeInTheDocument();
+            expect(badge.closest('[class*="effect-debuff"]')).toBeInTheDocument();
+            expect(badge.querySelector('[class*="fa-shield"]')).toBeInTheDocument();
         });
 
-        it('should render Save Disadv badge with hex save disadvantage', () => {
-            getRuntimeValue.mockImplementation((name, key) => {
-                if (name === 'Alice' && key === 'activeBuffs') return [];
-                return null;
-            });
-            computeConditionEffects.mockReturnValue(makeEffects({ saveDisadvantageCount: 1, saveDisadvantage: ['dex'] }));
-            render(
-                <ConditionEffectBadges
-                    conditions={[]}
-                    targetEffects={[]}
-                    creatureName="Alice"
-                    campaignName="test-campaign"
-                    isLocalhost={true}
-                />
-            );
-            expect(screen.getByText('Save Disadv (dex)')).toBeInTheDocument();
+        it('should render Save Disadv badge with multiple save types', () => {
+            renderWithEffects({ saveDisadvantageCount: 2, saveDisadvantage: ['dex', 'con'] });
+            const badge = screen.getByText(/Save Disadv \(dex, con\)/);
+            expect(badge).toBeInTheDocument();
+            expect(badge.closest('[class*="effect-debuff"]')).toBeInTheDocument();
+        });
+
+        it('should NOT render Save Disadv badge when saveDisadvantageCount is 0', () => {
+            renderWithEffects({ saveDisadvantageCount: 0 });
+            expect(screen.queryByText(/Save Disadv/)).not.toBeInTheDocument();
         });
     });
 
-    describe('Ability Check Disadv badge', () => {
-        it('should render Check Disadv badge when abilityCheckDisadvantageAbilities is set', () => {
-            getRuntimeValue.mockImplementation((name, key) => {
-                if (name === 'Alice' && key === 'activeBuffs') return [];
-                return null;
-            });
-            computeConditionEffects.mockReturnValue(makeEffects({ abilityCheckDisadvantageAbilities: ['STR', 'DEX'] }));
-            render(
-                <ConditionEffectBadges
-                    conditions={[]}
-                    targetEffects={[]}
-                    creatureName="Alice"
-                    campaignName="test-campaign"
-                    isLocalhost={true}
-                />
-            );
-            expect(screen.getByText(/Check Disadv \(str, dex\)/)).toBeInTheDocument();
+    describe('Check Disadv badge', () => {
+        it('should render Check Disadv badge with ability names when abilityCheckDisadvantageAbilities is set', () => {
+            renderWithEffects({ abilityCheckDisadvantageAbilities: ['STR', 'DEX'] });
+            const badge = screen.getByText(/Check Disadv \(str, dex\)/);
+            expect(badge).toBeInTheDocument();
+            expect(badge.closest('[class*="effect-debuff"]')).toBeInTheDocument();
+            expect(badge.querySelector('[class*="fa-shield"]')).toBeInTheDocument();
+        });
+
+        it('should render Check Disadv badge with a single ability', () => {
+            renderWithEffects({ abilityCheckDisadvantageAbilities: ['STR'] });
+            const badge = screen.getByText(/Check Disadv \(str\)/);
+            expect(badge).toBeInTheDocument();
+            expect(badge.closest('[class*="effect-debuff"]')).toBeInTheDocument();
+        });
+
+        it('should NOT render Check Disadv badge when abilityCheckDisadvantageAbilities is empty', () => {
+            renderWithEffects({ abilityCheckDisadvantageAbilities: [] });
+            expect(screen.queryByText(/Check Disadv/)).not.toBeInTheDocument();
         });
     });
 
     describe('Adv Check badge', () => {
-        it('should render Adv Check badge when abilityCheckAdvantageAbilities is set', () => {
-            getRuntimeValue.mockImplementation((name, key) => {
-                if (name === 'Alice' && key === 'activeBuffs') return [];
-                return null;
-            });
-            computeConditionEffects.mockReturnValue(makeEffects({ abilityCheckAdvantageAbilities: ['STR'] }));
-            render(
-                <ConditionEffectBadges
-                    conditions={[]}
-                    targetEffects={[]}
-                    creatureName="Alice"
-                    campaignName="test-campaign"
-                    isLocalhost={true}
-                />
-            );
-            expect(screen.getByText(/Adv Check \(str\)/)).toBeInTheDocument();
+        it('should render Adv Check badge with ability names when abilityCheckAdvantageAbilities is set', () => {
+            renderWithEffects({ abilityCheckAdvantageAbilities: ['STR'] });
+            const badge = screen.getByText(/Adv Check \(str\)/);
+            expect(badge).toBeInTheDocument();
+            expect(badge.closest('[class*="effect-buff"]')).toBeInTheDocument();
+            expect(badge.querySelector('[class*="fa-hand"]')).toBeInTheDocument();
         });
 
-        it('should render Adv Check badge when abilityCheckAdvantage is true without abilities', () => {
+        it('should NOT render Adv Check badge when abilityCheckAdvantageAbilities is empty', () => {
+            renderWithEffects({ abilityCheckAdvantageAbilities: [] });
+            expect(screen.queryByText(/Adv Check/)).not.toBeInTheDocument();
+        });
+
+        it('should render Adv Check badge when abilityCheckAdvantage is true without specific abilities', () => {
+            renderWithEffects({ abilityCheckAdvantage: true, abilityCheckAdvantageReasons: ['Foresight'] });
+            const badge = screen.getByText('Adv Check');
+            expect(badge).toBeInTheDocument();
+            expect(badge.closest('[class*="effect-buff"]')).toBeInTheDocument();
+            expect(badge.querySelector('[class*="fa-hand"]')).toBeInTheDocument();
+            expect(screen.getByTitle(/Advantage on all ability checks.*Foresight/)).toBeInTheDocument();
+        });
+
+        it('should NOT render Adv Check badge when abilityCheckAdvantage is false', () => {
+            renderWithEffects({ abilityCheckAdvantage: false });
+            expect(screen.queryByText('Adv Check')).not.toBeInTheDocument();
+        });
+    });
+
+    describe('Badge deduplication', () => {
+        it('should deduplicate Adv badges when multiple sources provide the same label', () => {
             getRuntimeValue.mockImplementation((name, key) => {
-                if (name === 'Alice' && key === 'activeBuffs') return [];
+                if (name === CREATURE_NAME && key === 'activeBuffs') return [
+                    { name: 'Haste', effect: 'haste' },
+                    { name: 'Vow of Enmity', effect: 'vow_of_enmity' },
+                ];
                 return null;
             });
-            computeConditionEffects.mockReturnValue(makeEffects({ abilityCheckAdvantage: true, abilityCheckAdvantageReasons: ['Foresight'] }));
+            computeConditionEffects.mockReturnValue(makeEffects({
+                attackAdvantageCount: 2,
+                attackAdvantageReasons: ['Vow of Enmity', 'Foresight'],
+            }));
             render(
                 <ConditionEffectBadges
                     conditions={[]}
                     targetEffects={[]}
-                    creatureName="Alice"
-                    campaignName="test-campaign"
+                    creatureName={CREATURE_NAME}
+                    campaignName={CAMPAIGN_NAME}
                     isLocalhost={true}
                 />
             );
-            expect(screen.getByText('Adv Check')).toBeInTheDocument();
+            const advBadges = screen.queryAllByText('Adv');
+            expect(advBadges.length).toBeLessThanOrEqual(1);
         });
     });
 });

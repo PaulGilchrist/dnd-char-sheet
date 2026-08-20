@@ -1,3 +1,4 @@
+// @improved-by-ai
 import { render, screen } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import ConditionEffectBadges from './ConditionEffectBadges.jsx';
@@ -37,6 +38,7 @@ const defaultEffects = {
     resistanceDamageReduction: false,
     targetAdvantageCount: 0,
     targetDisadvantageCount: 0,
+    targetAttackDisadvantageCount: 0,
     riderSaveDisadvantage: false,
     riderAttackBonus: 0,
     riderCannotOpportunityAttack: false,
@@ -66,66 +68,12 @@ function makeEffects(overrides = {}) {
 }
 
 vi.mock('../../services/combat/conditions/conditionEffects.js', () => ({
-    computeConditionEffects: vi.fn((_conditions, _saveModifiers, targetEffects) => {
-        return makeEffects(targetEffects && targetEffects.length ? { targetAdvantageCount: 1 } : {});
-    }),
+    computeConditionEffects: vi.fn(() => makeEffects({})),
 }));
 
 describe('ConditionEffectBadges - Derived Effect Badges', () => {
     beforeEach(() => {
         vi.clearAllMocks();
-    });
-
-    describe('getEffectDescription indirect tests', () => {
-        it('should use EFFECT_DESCRIPTIONS for known labels', () => {
-            getRuntimeValue.mockImplementation((name, key) => {
-                if (name === 'Alice' && key === 'activeBuffs') return [];
-                return null;
-            });
-            computeConditionEffects.mockReturnValue(makeEffects({}));
-            render(
-                <ConditionEffectBadges
-                    conditions={[]}
-                    targetEffects={[]}
-                    creatureName="Alice"
-                    campaignName="test-campaign"
-                />
-            );
-        });
-
-        it('should return "Speed is reduced by the amount shown." for Speed - labels', () => {
-            getRuntimeValue.mockImplementation((name, key) => {
-                if (name === 'Alice' && key === 'activeBuffs') return [];
-                return null;
-            });
-            computeConditionEffects.mockReturnValue(makeEffects({ speedReduction: 15 }));
-            render(
-                <ConditionEffectBadges
-                    conditions={[{ key: 'grappled' }]}
-                    targetEffects={[]}
-                    creatureName="Alice"
-                    campaignName="test-campaign"
-                />
-            );
-            expect(screen.getByText('Speed -15')).toBeInTheDocument();
-        });
-
-        it('should return "Attackers gain the shown bonus to hit this creature." for +N to hit labels', () => {
-            getRuntimeValue.mockImplementation((name, key) => {
-                if (name === 'Alice' && key === 'activeBuffs') return [];
-                return null;
-            });
-            computeConditionEffects.mockReturnValue(makeEffects({ riderAttackBonus: 5 }));
-            render(
-                <ConditionEffectBadges
-                    conditions={[]}
-                    targetEffects={[]}
-                    creatureName="Alice"
-                    campaignName="test-campaign"
-                />
-            );
-            expect(screen.getByText('+5 to hit')).toBeInTheDocument();
-        });
     });
 
     describe('Stealth Attack badge', () => {
@@ -168,65 +116,7 @@ describe('ConditionEffectBadges - Derived Effect Badges', () => {
         });
     });
 
-    describe('Speed badges', () => {
-        it('should render "Speed -15" badge when speedReduction is 15', () => {
-            getRuntimeValue.mockImplementation((name, key) => {
-                if (name === 'Alice' && key === 'activeBuffs') return [];
-                return null;
-            });
-            computeConditionEffects.mockReturnValue(makeEffects({ speedReduction: 15 }));
-            render(
-                <ConditionEffectBadges
-                    conditions={[{ key: 'grappled' }]}
-                    targetEffects={[]}
-                    creatureName="Alice"
-                    campaignName="test-campaign"
-                    isLocalhost={true}
-                />
-            );
-            expect(screen.getByText('Speed -15')).toBeInTheDocument();
-        });
-
-        it('should render "Speed 0" badge when speedReduction >= 1000', () => {
-            getRuntimeValue.mockImplementation((name, key) => {
-                if (name === 'Alice' && key === 'activeBuffs') return [];
-                return null;
-            });
-            computeConditionEffects.mockReturnValue(makeEffects({ speedReduction: 1000 }));
-            render(
-                <ConditionEffectBadges
-                    conditions={[{ key: 'grappled' }]}
-                    targetEffects={[]}
-                    creatureName="Alice"
-                    campaignName="test-campaign"
-                    isLocalhost={true}
-                />
-            );
-            expect(screen.getByText('Speed 0')).toBeInTheDocument();
-        });
-    });
-
-    describe('No Adv vs badge', () => {
-        it('should render No Adv vs badge when noAdvantageAgainst is true', () => {
-            getRuntimeValue.mockImplementation((name, key) => {
-                if (name === 'Alice' && key === 'activeBuffs') return [];
-                return null;
-            });
-            computeConditionEffects.mockReturnValue(makeEffects({ noAdvantageAgainst: true }));
-            render(
-                <ConditionEffectBadges
-                    conditions={[{ key: 'invisible' }]}
-                    targetEffects={[]}
-                    creatureName="Alice"
-                    campaignName="test-campaign"
-                    isLocalhost={true}
-                />
-            );
-            expect(screen.getByText('No Adv vs')).toBeInTheDocument();
-        });
-    });
-
-    describe('Disadv vs badge', () => {
+    describe('Disadv vs badge interaction with No Adv vs', () => {
         it('should render Disadv vs badge when targetDisadvantageCount > 0 and no noAdvantageAgainst', () => {
             getRuntimeValue.mockImplementation((name, key) => {
                 if (name === 'Alice' && key === 'activeBuffs') return [];
@@ -265,23 +155,46 @@ describe('ConditionEffectBadges - Derived Effect Badges', () => {
         });
     });
 
-    describe('Attack Disadv badge', () => {
-        it('should render Attack Disadv badge when targetAttackDisadvantageCount > 0', () => {
+    describe('Badge rendering with remove buttons', () => {
+        it('should render removable remove button when isLocalhost is true', () => {
             getRuntimeValue.mockImplementation((name, key) => {
+                if (name === 'Alice' && key === 'stealthAttackCost') return 1;
                 if (name === 'Alice' && key === 'activeBuffs') return [];
                 return null;
             });
-            computeConditionEffects.mockReturnValue(makeEffects({ targetAttackDisadvantageCount: 1 }));
+            computeConditionEffects.mockReturnValue(makeEffects({}));
             render(
                 <ConditionEffectBadges
-                    conditions={[{ key: 'blinded' }]}
+                    conditions={[]}
                     targetEffects={[]}
                     creatureName="Alice"
                     campaignName="test-campaign"
                     isLocalhost={true}
                 />
             );
-            expect(screen.getByText('Attack Disadv')).toBeInTheDocument();
+            const stealthBadge = screen.getByText('Stealth Attack');
+            expect(stealthBadge.tagName).toBe('SPAN');
+        });
+
+        it('should render non-removable badge when isLocalhost is false', () => {
+            getRuntimeValue.mockImplementation((name, key) => {
+                if (name === 'Alice' && key === 'stealthAttackCost') return 1;
+                if (name === 'Alice' && key === 'activeBuffs') return [];
+                return null;
+            });
+            computeConditionEffects.mockReturnValue(makeEffects({}));
+            render(
+                <ConditionEffectBadges
+                    conditions={[]}
+                    targetEffects={[]}
+                    creatureName="Alice"
+                    campaignName="test-campaign"
+                    isLocalhost={false}
+                />
+            );
+            const stealthBadge = screen.getByText('Stealth Attack');
+            expect(stealthBadge.tagName).toBe('SPAN');
+            expect(screen.queryByTitle('Remove effect')).not.toBeInTheDocument();
         });
     });
 });

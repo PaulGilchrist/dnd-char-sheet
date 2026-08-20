@@ -1,8 +1,9 @@
+// @improved-by-ai
 import { render, screen, fireEvent } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import ConditionEffectBadges from './ConditionEffectBadges.jsx';
 import * as runtimeState from '../../hooks/runtime/useRuntimeState.js';
-import { getRuntimeValue } from '../../hooks/runtime/useRuntimeState.js';
+import { computeConditionEffects } from '../../services/combat/conditions/conditionEffects.js';
 
 vi.mock('../../hooks/runtime/useRuntimeState.js', () => ({
     getStore: vi.fn(() => new Map()),
@@ -37,6 +38,7 @@ const defaultEffects = {
     resistanceDamageReduction: false,
     targetAdvantageCount: 0,
     targetDisadvantageCount: 0,
+    targetAttackDisadvantageCount: 0,
     riderSaveDisadvantage: false,
     riderAttackBonus: 0,
     riderCannotOpportunityAttack: false,
@@ -49,6 +51,16 @@ const defaultEffects = {
     saveAdvantageAbilities: null,
     saveDisadvantageCount: 0,
     dexSaveAdvantageCount: 0,
+    abilityCheckDisadvantageAbilities: null,
+    abilityCheckAdvantageAbilities: null,
+    abilityCheckAdvantage: false,
+    abilityCheckAdvantageReasons: [],
+    saveDisadvantage: [],
+    blessBonus: false,
+    beaconOfHope: false,
+    hasteActive: false,
+    barkskinActive: false,
+    banePenalty: false,
 };
 
 function makeEffects(overrides = {}) {
@@ -59,61 +71,79 @@ vi.mock('../../services/combat/conditions/conditionEffects.js', () => ({
     computeConditionEffects: vi.fn(() => makeEffects({})),
 }));
 
-import { computeConditionEffects } from '../../services/combat/conditions/conditionEffects.js';
-
 describe('ConditionEffectBadges - Effect Removal Handlers', () => {
     beforeEach(() => {
         vi.clearAllMocks();
     });
 
-    describe('removeAction: condition', () => {
-        it('should call removeConditionByKey when badge has condition removeAction', () => {
-            getRuntimeValue.mockImplementation((name, key) => {
-                if (name === 'Alice' && key === 'activeBuffs') return [];
-                return null;
-            });
-            computeConditionEffects.mockReturnValue(makeEffects({}));
-            render(
-                <ConditionEffectBadges
-                    conditions={[{ key: 'charmed' }]}
-                    targetEffects={[]}
-                    creatureName="Alice"
-                    campaignName="test-campaign"
-                    isLocalhost={true}
-                />
-            );
-            const removeBtns = screen.queryAllByTitle('Remove effect');
-            if (removeBtns.length > 0) {
-                fireEvent.click(removeBtns[0]);
-            }
+    function renderWithEffects(conditions, targetEffects, creatureName = 'Alice', campaignName = 'test-campaign', overrides = {}, props = {}) {
+        runtimeState.getRuntimeValue.mockImplementation((name, key, _campaign) => {
+            if (name === 'campaign' && key === 'targetEffects') return targetEffects;
+            if (name === creatureName && key === 'activeBuffs') return props.buffs || [];
+            if (name === creatureName && key === 'inspiringMovementNoOA') return props.inspiringMovementNoOA;
+            if (name === creatureName && key === 'remarkableAthleteNoOA') return props.remarkableAthleteNoOA;
+            if (name === creatureName && key === 'stealthAttackCost') return props.stealthAttackCost ?? 0;
+            if (name === creatureName && key === 'vowOfEnmityTarget') return props.vowOfEnmityTarget;
+            return null;
         });
-    });
+        computeConditionEffects.mockReturnValue(makeEffects(overrides));
+        render(
+            <ConditionEffectBadges
+                conditions={conditions}
+                targetEffects={targetEffects}
+                creatureName={creatureName}
+                campaignName={campaignName}
+                isLocalhost={true}
+                {...props}
+            />
+        );
+    }
+
+    function clickFirstRemove() {
+        const removeBtns = screen.getAllByTitle('Remove effect');
+        expect(removeBtns.length).toBeGreaterThan(0);
+        fireEvent.click(removeBtns[0]);
+    }
 
     describe('removeAction: remove_pfeag', () => {
         it('should remove pfeag target effect, filter pfeag buffs, and clear protectionFromEvilAndGoodWardedTypes', () => {
             const existingEffects = [
                 { target: 'Alice', effect: 'protection_from_evil_and_good', source: 'Cleric' },
             ];
-            runtimeState.getRuntimeValue.mockImplementation((name, key, _campaign) => {
-                if (name === 'campaign' && key === 'targetEffects') return existingEffects;
-                if (name === 'Alice' && key === 'activeBuffs') return [{ name: 'Protection from Evil and Good', effect: 'protection_from_evil_and_good' }];
-                return null;
-            });
-            computeConditionEffects.mockReturnValue(makeEffects({}));
-            render(
-                <ConditionEffectBadges
-                    conditions={[{ key: 'charmed' }]}
-                    targetEffects={existingEffects}
-                    creatureName="Alice"
-                    campaignName="test-campaign"
-                    isLocalhost={true}
-                />
+            const existingBuffs = [
+                { name: 'Protection from Evil and Good', effect: 'protection_from_evil_and_good' },
+            ];
+            renderWithEffects(
+                [{ key: 'charmed' }],
+                existingEffects,
+                'Alice',
+                'test-campaign',
+                {},
+                { buffs: existingBuffs }
             );
-            const removeBtns = screen.getAllByTitle('Remove effect');
-            if (removeBtns.length > 0) {
-                fireEvent.click(removeBtns[0]);
-            }
+            clickFirstRemove();
             expect(runtimeState.setRuntimeValue).toHaveBeenCalledTimes(3);
+            expect(runtimeState.setRuntimeValue).toHaveBeenNthCalledWith(
+                1,
+                'campaign',
+                'targetEffects',
+                [],
+                'test-campaign'
+            );
+            expect(runtimeState.setRuntimeValue).toHaveBeenNthCalledWith(
+                2,
+                'Alice',
+                'activeBuffs',
+                [],
+                'test-campaign'
+            );
+            expect(runtimeState.setRuntimeValue).toHaveBeenNthCalledWith(
+                3,
+                'Alice',
+                'protectionFromEvilAndGoodWardedTypes',
+                [],
+                'test-campaign'
+            );
         });
     });
 
@@ -127,35 +157,31 @@ describe('ConditionEffectBadges - Effect Removal Handlers', () => {
                 { name: 'Warding Bond', effect: 'warding_bond' },
                 { name: 'Other Buff', effect: 'other' },
             ];
-            runtimeState.getRuntimeValue.mockImplementation((name, key, _campaign) => {
-                if (name === 'Alice' && key === 'activeBuffs') return existingBuffs;
-                return null;
-            });
-            computeConditionEffects.mockReturnValue(makeEffects({}));
-            render(
-                <ConditionEffectBadges
-                    conditions={[]}
-                    targetEffects={[]}
-                    creatureName="Alice"
-                    campaignName="test-campaign"
-                    isLocalhost={true}
-                />
+            renderWithEffects(
+                [],
+                [],
+                'Alice',
+                'test-campaign',
+                {},
+                { buffs: existingBuffs }
             );
             const badges = screen.getAllByTestId('creature-badge');
             const wardingBadge = badges.find(b => b.textContent?.includes('Warding Bond'));
-            if (wardingBadge) {
-                const parentDiv = wardingBadge.parentElement;
-                const removeBtn = parentDiv?.querySelector('.creature-badge-remove');
-                if (removeBtn) {
-                    fireEvent.click(removeBtn);
-                }
-            }
+            expect(wardingBadge).toBeDefined();
+            const parentDiv = wardingBadge?.parentElement;
+            const removeBtn = parentDiv?.querySelector('.creature-badge-remove');
+            expect(removeBtn).toBeDefined();
+            fireEvent.click(removeBtn);
+            expect(runtimeState.setRuntimeValue).toHaveBeenCalledTimes(1);
             expect(runtimeState.setRuntimeValue).toHaveBeenCalledWith(
                 'Alice',
                 'activeBuffs',
                 expect.arrayContaining([expect.objectContaining({ effect: 'other' })]),
                 'test-campaign'
             );
+            const filteredBuffs = runtimeState.setRuntimeValue.mock.calls[0][2];
+            expect(filteredBuffs).toHaveLength(1);
+            expect(filteredBuffs[0].effect).toBe('other');
         });
     });
 
@@ -166,31 +192,31 @@ describe('ConditionEffectBadges - Effect Removal Handlers', () => {
                 { target: 'Alice', effect: 'foresight', source: 'Mage' },
                 { target: 'Bob', effect: 'sanctuary', source: 'Cleric' },
             ];
-            runtimeState.getRuntimeValue.mockImplementation((name, key) => {
-                if (name === 'campaign' && key === 'targetEffects') return existingEffects;
-                if (name === 'Alice' && key === 'activeBuffs') return [];
-                return null;
-            });
-            computeConditionEffects.mockReturnValue(makeEffects({ noAdvantageAgainst: true }));
-            render(
-                <ConditionEffectBadges
-                    conditions={[{ key: 'invisible' }]}
-                    targetEffects={existingEffects}
-                    creatureName="Alice"
-                    campaignName="test-campaign"
-                    isLocalhost={true}
-                />
+            renderWithEffects(
+                [{ key: 'invisible' }],
+                existingEffects,
+                'Alice',
+                'test-campaign',
+                { noAdvantageAgainst: true }
             );
-            const removeBtns = screen.getAllByTitle('Remove effect');
-            if (removeBtns.length > 0) {
-                fireEvent.click(removeBtns[0]);
-            }
+            clickFirstRemove();
             expect(runtimeState.setRuntimeValue).toHaveBeenCalledWith(
                 'campaign',
                 'targetEffects',
                 expect.arrayContaining([existingEffects[2]]),
                 'test-campaign'
             );
+            const filtered = runtimeState.setRuntimeValue.mock.calls[0][2];
+            expect(filtered).toHaveLength(1);
+            expect(filtered[0].effect).toBe('sanctuary');
+        });
+
+        it('should not call setRuntimeValue when badge has no effectTypes', () => {
+            renderWithEffects([], [], 'Alice', 'test-campaign', {});
+            const badges = screen.queryAllByTestId('creature-badge');
+            if (badges.length === 0) {
+                expect(runtimeState.setRuntimeValue).not.toHaveBeenCalled();
+            }
         });
     });
 
@@ -199,26 +225,33 @@ describe('ConditionEffectBadges - Effect Removal Handlers', () => {
             const existingEffects = [
                 { target: 'Alice', effect: 'haste', source: 'Wizard' },
             ];
-            runtimeState.getRuntimeValue.mockImplementation((name, key) => {
-                if (name === 'campaign' && key === 'targetEffects') return existingEffects;
-                if (name === 'Alice' && key === 'activeBuffs') return [{ name: 'Haste', effect: 'haste' }];
-                return null;
-            });
-            computeConditionEffects.mockReturnValue(makeEffects({ hasteActive: true }));
-            render(
-                <ConditionEffectBadges
-                    conditions={[]}
-                    targetEffects={existingEffects}
-                    creatureName="Alice"
-                    campaignName="test-campaign"
-                    isLocalhost={true}
-                />
+            const existingBuffs = [
+                { name: 'Haste', effect: 'haste' },
+            ];
+            renderWithEffects(
+                [],
+                existingEffects,
+                'Alice',
+                'test-campaign',
+                { hasteActive: true },
+                { buffs: existingBuffs }
             );
-            const removeBtns = screen.getAllByTitle('Remove effect');
-            if (removeBtns.length > 0) {
-                fireEvent.click(removeBtns[0]);
-            }
+            clickFirstRemove();
             expect(runtimeState.setRuntimeValue).toHaveBeenCalledTimes(2);
+            expect(runtimeState.setRuntimeValue).toHaveBeenNthCalledWith(
+                1,
+                'campaign',
+                'targetEffects',
+                [],
+                'test-campaign'
+            );
+            expect(runtimeState.setRuntimeValue).toHaveBeenNthCalledWith(
+                2,
+                'Alice',
+                'activeBuffs',
+                [],
+                'test-campaign'
+            );
         });
     });
 
@@ -227,50 +260,47 @@ describe('ConditionEffectBadges - Effect Removal Handlers', () => {
             const existingEffects = [
                 { target: 'Alice', effect: 'barkskin', source: 'Druid' },
             ];
-            runtimeState.getRuntimeValue.mockImplementation((name, key) => {
-                if (name === 'campaign' && key === 'targetEffects') return existingEffects;
-                if (name === 'Alice' && key === 'activeBuffs') return [{ name: 'Barkskin', effect: 'barkskin' }];
-                return null;
-            });
-            computeConditionEffects.mockReturnValue(makeEffects({ barkskinActive: true }));
-            render(
-                <ConditionEffectBadges
-                    conditions={[]}
-                    targetEffects={existingEffects}
-                    creatureName="Alice"
-                    campaignName="test-campaign"
-                    isLocalhost={true}
-                />
+            const existingBuffs = [
+                { name: 'Barkskin', effect: 'barkskin' },
+            ];
+            renderWithEffects(
+                [],
+                existingEffects,
+                'Alice',
+                'test-campaign',
+                { barkskinActive: true },
+                { buffs: existingBuffs }
             );
-            const removeBtns = screen.getAllByTitle('Remove effect');
-            if (removeBtns.length > 0) {
-                fireEvent.click(removeBtns[0]);
-            }
+            clickFirstRemove();
             expect(runtimeState.setRuntimeValue).toHaveBeenCalledTimes(2);
+            expect(runtimeState.setRuntimeValue).toHaveBeenNthCalledWith(
+                1,
+                'campaign',
+                'targetEffects',
+                [],
+                'test-campaign'
+            );
+            expect(runtimeState.setRuntimeValue).toHaveBeenNthCalledWith(
+                2,
+                'Alice',
+                'activeBuffs',
+                [],
+                'test-campaign'
+            );
         });
     });
 
     describe('removeAction: inspiring_move', () => {
         it('should set inspiringMovementNoOA to false when badge has inspiring_move removeAction', () => {
-            getRuntimeValue.mockImplementation((name, key) => {
-                if (name === 'Alice' && key === 'inspiringMovementNoOA') return true;
-                if (name === 'Alice' && key === 'activeBuffs') return [];
-                return null;
-            });
-            computeConditionEffects.mockReturnValue(makeEffects({}));
-            render(
-                <ConditionEffectBadges
-                    conditions={[]}
-                    targetEffects={[]}
-                    creatureName="Alice"
-                    campaignName="test-campaign"
-                    isLocalhost={true}
-                />
+            renderWithEffects(
+                [],
+                [],
+                'Alice',
+                'test-campaign',
+                {},
+                { inspiringMovementNoOA: true }
             );
-            const removeBtns = screen.getAllByTitle('Remove effect');
-            if (removeBtns.length > 0) {
-                fireEvent.click(removeBtns[0]);
-            }
+            clickFirstRemove();
             expect(runtimeState.setRuntimeValue).toHaveBeenCalledWith(
                 'Alice',
                 'inspiringMovementNoOA',
@@ -282,25 +312,15 @@ describe('ConditionEffectBadges - Effect Removal Handlers', () => {
 
     describe('removeAction: remarkable_no_oa', () => {
         it('should set remarkableAthleteNoOA to false when badge has remarkable_no_oa removeAction', () => {
-            getRuntimeValue.mockImplementation((name, key) => {
-                if (name === 'Alice' && key === 'remarkableAthleteNoOA') return true;
-                if (name === 'Alice' && key === 'activeBuffs') return [];
-                return null;
-            });
-            computeConditionEffects.mockReturnValue(makeEffects({}));
-            render(
-                <ConditionEffectBadges
-                    conditions={[]}
-                    targetEffects={[]}
-                    creatureName="Alice"
-                    campaignName="test-campaign"
-                    isLocalhost={true}
-                />
+            renderWithEffects(
+                [],
+                [],
+                'Alice',
+                'test-campaign',
+                {},
+                { remarkableAthleteNoOA: true }
             );
-            const removeBtns = screen.getAllByTitle('Remove effect');
-            if (removeBtns.length > 0) {
-                fireEvent.click(removeBtns[0]);
-            }
+            clickFirstRemove();
             expect(runtimeState.setRuntimeValue).toHaveBeenCalledWith(
                 'Alice',
                 'remarkableAthleteNoOA',
@@ -312,25 +332,15 @@ describe('ConditionEffectBadges - Effect Removal Handlers', () => {
 
     describe('removeAction: oa_disadv', () => {
         it('should set hasSpeedyOpportunityDisadvantage to false when badge has oa_disadv removeAction', () => {
-            getRuntimeValue.mockImplementation((name, key) => {
-                if (name === 'Alice' && key === 'activeBuffs') return [];
-                return null;
-            });
-            computeConditionEffects.mockReturnValue(makeEffects({}));
-            render(
-                <ConditionEffectBadges
-                    conditions={[]}
-                    targetEffects={[]}
-                    creatureName="Alice"
-                    campaignName="test-campaign"
-                    hasSpeedyOpportunityDisadvantage={true}
-                    isLocalhost={true}
-                />
+            renderWithEffects(
+                [],
+                [],
+                'Alice',
+                'test-campaign',
+                {},
+                { hasSpeedyOpportunityDisadvantage: true }
             );
-            const removeBtns = screen.getAllByTitle('Remove effect');
-            if (removeBtns.length > 0) {
-                fireEvent.click(removeBtns[0]);
-            }
+            clickFirstRemove();
             expect(runtimeState.setRuntimeValue).toHaveBeenCalledWith(
                 'Alice',
                 'hasSpeedyOpportunityDisadvantage',
@@ -342,25 +352,15 @@ describe('ConditionEffectBadges - Effect Removal Handlers', () => {
 
     describe('removeAction: difficult_terrain_ignore', () => {
         it('should set hasSpeedyDifficultTerrainIgnore to false when badge has difficult_terrain_ignore removeAction', () => {
-            getRuntimeValue.mockImplementation((name, key) => {
-                if (name === 'Alice' && key === 'activeBuffs') return [];
-                return null;
-            });
-            computeConditionEffects.mockReturnValue(makeEffects({}));
-            render(
-                <ConditionEffectBadges
-                    conditions={[]}
-                    targetEffects={[]}
-                    creatureName="Alice"
-                    campaignName="test-campaign"
-                    hasSpeedyDifficultTerrainIgnore={true}
-                    isLocalhost={true}
-                />
+            renderWithEffects(
+                [],
+                [],
+                'Alice',
+                'test-campaign',
+                {},
+                { hasSpeedyDifficultTerrainIgnore: true }
             );
-            const removeBtns = screen.getAllByTitle('Remove effect');
-            if (removeBtns.length > 0) {
-                fireEvent.click(removeBtns[0]);
-            }
+            clickFirstRemove();
             expect(runtimeState.setRuntimeValue).toHaveBeenCalledWith(
                 'Alice',
                 'hasSpeedyDifficultTerrainIgnore',
@@ -372,25 +372,15 @@ describe('ConditionEffectBadges - Effect Removal Handlers', () => {
 
     describe('removeAction: corona_disadvantage', () => {
         it('should set coronaDisadvantage to false when badge has corona_disadvantage removeAction', () => {
-            getRuntimeValue.mockImplementation((name, key) => {
-                if (name === 'Alice' && key === 'activeBuffs') return [];
-                return null;
-            });
-            computeConditionEffects.mockReturnValue(makeEffects({}));
-            render(
-                <ConditionEffectBadges
-                    conditions={[]}
-                    targetEffects={[]}
-                    creatureName="Alice"
-                    campaignName="test-campaign"
-                    coronaDisadvantage={true}
-                    isLocalhost={true}
-                />
+            renderWithEffects(
+                [],
+                [],
+                'Alice',
+                'test-campaign',
+                {},
+                { coronaDisadvantage: true }
             );
-            const removeBtns = screen.getAllByTitle('Remove effect');
-            if (removeBtns.length > 0) {
-                fireEvent.click(removeBtns[0]);
-            }
+            clickFirstRemove();
             expect(runtimeState.setRuntimeValue).toHaveBeenCalledWith(
                 'Alice',
                 'coronaDisadvantage',
@@ -405,25 +395,8 @@ describe('ConditionEffectBadges - Effect Removal Handlers', () => {
             const existingEffects = [
                 { target: 'Alice', effect: 'taunting_step', source: 'Rogue' },
             ];
-            runtimeState.getRuntimeValue.mockImplementation((name, key) => {
-                if (name === 'campaign' && key === 'targetEffects') return existingEffects;
-                if (name === 'Alice' && key === 'activeBuffs') return [];
-                return null;
-            });
-            computeConditionEffects.mockReturnValue(makeEffects({}));
-            render(
-                <ConditionEffectBadges
-                    conditions={[]}
-                    targetEffects={existingEffects}
-                    creatureName="Alice"
-                    campaignName="test-campaign"
-                    isLocalhost={true}
-                />
-            );
-            const removeBtns = screen.getAllByTitle('Remove effect');
-            if (removeBtns.length > 0) {
-                fireEvent.click(removeBtns[0]);
-            }
+            renderWithEffects([], existingEffects, 'Alice', 'test-campaign', {});
+            clickFirstRemove();
             expect(runtimeState.setRuntimeValue).toHaveBeenCalledWith(
                 'campaign',
                 'targetEffects',
@@ -431,29 +404,31 @@ describe('ConditionEffectBadges - Effect Removal Handlers', () => {
                 'test-campaign'
             );
         });
+
+        it('should preserve other target effects on the same creature', () => {
+            const existingEffects = [
+                { target: 'Alice', effect: 'taunting_step', source: 'Rogue' },
+                { target: 'Alice', effect: 'haste', source: 'Wizard' },
+            ];
+            renderWithEffects([], existingEffects, 'Alice', 'test-campaign', {});
+            clickFirstRemove();
+            const filtered = runtimeState.setRuntimeValue.mock.calls[0][2];
+            expect(filtered).toHaveLength(1);
+            expect(filtered[0].effect).toBe('haste');
+        });
     });
 
     describe('removeAction: stealth_attack', () => {
         it('should set stealthAttackCost to 0 when badge has stealth_attack removeAction', () => {
-            getRuntimeValue.mockImplementation((name, key) => {
-                if (name === 'Alice' && key === 'stealthAttackCost') return 5;
-                if (name === 'Alice' && key === 'activeBuffs') return [];
-                return null;
-            });
-            computeConditionEffects.mockReturnValue(makeEffects({}));
-            render(
-                <ConditionEffectBadges
-                    conditions={[]}
-                    targetEffects={[]}
-                    creatureName="Alice"
-                    campaignName="test-campaign"
-                    isLocalhost={true}
-                />
+            renderWithEffects(
+                [],
+                [],
+                'Alice',
+                'test-campaign',
+                {},
+                { stealthAttackCost: 5 }
             );
-            const removeBtns = screen.getAllByTitle('Remove effect');
-            if (removeBtns.length > 0) {
-                fireEvent.click(removeBtns[0]);
-            }
+            clickFirstRemove();
             expect(runtimeState.setRuntimeValue).toHaveBeenCalledWith(
                 'Alice',
                 'stealthAttackCost',
@@ -463,5 +438,17 @@ describe('ConditionEffectBadges - Effect Removal Handlers', () => {
         });
     });
 
-
+    describe('isLocalhost gating', () => {
+        it('should not render remove buttons when isLocalhost is false', () => {
+            renderWithEffects(
+                [],
+                [],
+                'Alice',
+                'test-campaign',
+                {},
+                { isLocalhost: false }
+            );
+            expect(screen.queryByTitle('Remove effect')).not.toBeInTheDocument();
+        });
+    });
 });

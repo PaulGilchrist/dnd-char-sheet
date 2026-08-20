@@ -1,3 +1,4 @@
+// @improved-by-ai
 import { render, screen, fireEvent } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import ConditionEffectBadges from './ConditionEffectBadges.jsx';
@@ -37,6 +38,7 @@ const defaultEffects = {
     resistanceDamageReduction: false,
     targetAdvantageCount: 0,
     targetDisadvantageCount: 0,
+    targetAttackDisadvantageCount: 0,
     riderSaveDisadvantage: false,
     riderAttackBonus: 0,
     riderCannotOpportunityAttack: false,
@@ -49,6 +51,16 @@ const defaultEffects = {
     saveAdvantageAbilities: null,
     saveDisadvantageCount: 0,
     dexSaveAdvantageCount: 0,
+    hasteActive: false,
+    barkskinActive: false,
+    banePenalty: false,
+    blessBonus: false,
+    beaconOfHope: false,
+    abilityCheckDisadvantageAbilities: null,
+    abilityCheckAdvantageAbilities: null,
+    abilityCheckAdvantage: false,
+    abilityCheckAdvantageReasons: [],
+    saveDisadvantage: [],
 };
 
 function makeEffects(overrides = {}) {
@@ -64,10 +76,10 @@ describe('ConditionEffectBadges - target_effect removal', () => {
         vi.clearAllMocks();
     });
 
-    function renderWithEffects(conditions, targetEffects, creatureName = 'Alice', computeOverrides = {}) {
+    function renderWithEffects(conditions, targetEffects, creatureName = 'Alice', campaignName = 'test-campaign', computeOverrides = {}, props = {}) {
         runtimeState.getRuntimeValue.mockImplementation((name, key) => {
             if (name === 'campaign' && key === 'targetEffects') return targetEffects;
-            if (name === creatureName && key === 'activeBuffs') return [];
+            if (name === creatureName && key === 'activeBuffs') return props.buffs || [];
             return null;
         });
         computeConditionEffects.mockReturnValue(makeEffects(computeOverrides));
@@ -76,26 +88,61 @@ describe('ConditionEffectBadges - target_effect removal', () => {
                 conditions={conditions}
                 targetEffects={targetEffects}
                 creatureName={creatureName}
-                campaignName="test-campaign"
+                campaignName={campaignName}
                 isLocalhost={true}
+                {...props}
             />
         );
     }
 
     function clickFirstRemove() {
         const removeBtns = screen.getAllByTitle('Remove effect');
-        if (removeBtns.length > 0) {
-            fireEvent.click(removeBtns[0]);
-        }
+        expect(removeBtns.length).toBeGreaterThan(0);
+        fireEvent.click(removeBtns[0]);
     }
 
-    describe('removeAction: target_effect', () => {
-        it('should remove target effect when badge has target_effect removeAction', () => {
+    describe('removeAction: target_effect - single effect removal', () => {
+        const removableTargetEffects = [
+            'sanctuary',
+            'regenerate',
+            'aura_of_life',
+            'aura_of_purity',
+            'circle_of_power',
+            'heroism',
+            'holy_aura',
+            'protection_from_poison',
+            'banishment',
+            'maze',
+            'imprisonment',
+            'confusion',
+            'forcecage',
+        ];
+
+        it.each(removableTargetEffects)(
+            'should remove %s target effect when badge has target_effect removeAction',
+            (effectType) => {
+                const existingEffects = [
+                    { target: 'Alice', effect: effectType, source: 'Cleric' },
+                    { target: 'Bob', effect: 'sanctuary', source: 'Wizard' },
+                ];
+                renderWithEffects([], existingEffects, 'Alice');
+                clickFirstRemove();
+                expect(runtimeState.setRuntimeValue).toHaveBeenCalledWith(
+                    'campaign',
+                    'targetEffects',
+                    [existingEffects[1]],
+                    'test-campaign'
+                );
+            }
+        );
+
+        it('should remove slasher_enhanced_critical when Attack Disadv badge is clicked', () => {
             const existingEffects = [
                 { target: 'Alice', effect: 'slasher_enhanced_critical', source: 'Goblin' },
-                { target: 'Bob', effect: 'sanctuary', source: 'Cleric' },
+                { target: 'Bob', effect: 'sanctuary', source: 'Wizard' },
             ];
-            renderWithEffects([{ key: 'blinded' }], existingEffects, 'Alice', { targetAttackDisadvantageCount: 1 });
+            renderWithEffects([{ key: 'blinded' }], existingEffects, 'Alice', 'test-campaign', { targetAttackDisadvantageCount: 1 });
+            expect(screen.getByText('Attack Disadv')).toBeInTheDocument();
             clickFirstRemove();
             expect(runtimeState.setRuntimeValue).toHaveBeenCalledWith(
                 'campaign',
@@ -104,12 +151,29 @@ describe('ConditionEffectBadges - target_effect removal', () => {
                 'test-campaign'
             );
         });
+    });
 
-        it('should remove sanctuary effect when badge has target_effect removeAction', () => {
+    describe('removeAction: target_effect - preserves other effects on same creature', () => {
+        it('should remove only the clicked effect when multiple effects target the same creature', () => {
+            const existingEffects = [
+                { target: 'Alice', effect: 'sanctuary', source: 'Cleric' },
+                { target: 'Alice', effect: 'banishment', source: 'Wizard' },
+                { target: 'Bob', effect: 'haste', source: 'Druid' },
+            ];
+            renderWithEffects([], existingEffects, 'Alice');
+            clickFirstRemove();
+            const filtered = runtimeState.setRuntimeValue.mock.calls[0][2];
+            expect(filtered).toHaveLength(2);
+            expect(filtered.map(te => te.effect)).toEqual(['banishment', 'haste']);
+        });
+    });
+
+    describe('removeAction: target_effect - edge cases', () => {
+        it('should remove the only effect when it is the last one remaining', () => {
             const existingEffects = [
                 { target: 'Alice', effect: 'sanctuary', source: 'Cleric' },
             ];
-            renderWithEffects([], existingEffects);
+            renderWithEffects([], existingEffects, 'Alice');
             clickFirstRemove();
             expect(runtimeState.setRuntimeValue).toHaveBeenCalledWith(
                 'campaign',
@@ -119,172 +183,60 @@ describe('ConditionEffectBadges - target_effect removal', () => {
             );
         });
 
-        it('should remove regenerate effect when badge has target_effect removeAction', () => {
-            const existingEffects = [
-                { target: 'Alice', effect: 'regenerate', source: 'Cleric' },
-            ];
-            renderWithEffects([], existingEffects);
-            clickFirstRemove();
-            expect(runtimeState.setRuntimeValue).toHaveBeenCalledWith(
-                'campaign',
-                'targetEffects',
-                [],
-                'test-campaign'
-            );
-        });
-
-        it('should remove aura_of_life effect when badge has target_effect removeAction', () => {
-            const existingEffects = [
-                { target: 'Alice', effect: 'aura_of_life', source: 'Cleric' },
-            ];
-            renderWithEffects([], existingEffects);
-            clickFirstRemove();
-            expect(runtimeState.setRuntimeValue).toHaveBeenCalledWith(
-                'campaign',
-                'targetEffects',
-                [],
-                'test-campaign'
-            );
-        });
-
-        it('should remove aura_of_purity effect when badge has target_effect removeAction', () => {
-            const existingEffects = [
-                { target: 'Alice', effect: 'aura_of_purity', source: 'Paladin' },
-            ];
-            renderWithEffects([], existingEffects);
-            clickFirstRemove();
-            expect(runtimeState.setRuntimeValue).toHaveBeenCalledWith(
-                'campaign',
-                'targetEffects',
-                [],
-                'test-campaign'
-            );
-        });
-
-        it('should remove circle_of_power effect when badge has target_effect removeAction', () => {
-            const existingEffects = [
-                { target: 'Alice', effect: 'circle_of_power', source: 'Cleric' },
-            ];
-            renderWithEffects([], existingEffects);
-            clickFirstRemove();
-            expect(runtimeState.setRuntimeValue).toHaveBeenCalledWith(
-                'campaign',
-                'targetEffects',
-                [],
-                'test-campaign'
-            );
-        });
-
-        it('should remove heroism effect when badge has target_effect removeAction', () => {
-            const existingEffects = [
-                { target: 'Alice', effect: 'heroism', source: 'Paladin' },
-            ];
-            renderWithEffects([], existingEffects);
-            clickFirstRemove();
-            expect(runtimeState.setRuntimeValue).toHaveBeenCalledWith(
-                'campaign',
-                'targetEffects',
-                [],
-                'test-campaign'
-            );
-        });
-
-        it('should remove holy_aura effect when badge has target_effect removeAction', () => {
-            const existingEffects = [
-                { target: 'Alice', effect: 'holy_aura', source: 'Cleric' },
-            ];
-            renderWithEffects([], existingEffects);
-            clickFirstRemove();
-            expect(runtimeState.setRuntimeValue).toHaveBeenCalledWith(
-                'campaign',
-                'targetEffects',
-                [],
-                'test-campaign'
-            );
-        });
-
-        it('should remove protection_from_poison effect when badge has target_effect removeAction', () => {
-            const existingEffects = [
-                { target: 'Alice', effect: 'protection_from_poison', source: 'Cleric' },
-            ];
-            renderWithEffects([], existingEffects);
-            clickFirstRemove();
-            expect(runtimeState.setRuntimeValue).toHaveBeenCalledWith(
-                'campaign',
-                'targetEffects',
-                [],
-                'test-campaign'
-            );
-        });
-
-        it('should remove banishment effect when badge has target_effect removeAction', () => {
-            const existingEffects = [
-                { target: 'Alice', effect: 'banishment', source: 'Cleric' },
-            ];
-            renderWithEffects([], existingEffects);
-            clickFirstRemove();
-            expect(runtimeState.setRuntimeValue).toHaveBeenCalledWith(
-                'campaign',
-                'targetEffects',
-                [],
-                'test-campaign'
-            );
-        });
-
-        it('should remove maze effect when badge has target_effect removeAction', () => {
+        it('should preserve effects on other creatures when removing one effect', () => {
             const existingEffects = [
                 { target: 'Alice', effect: 'maze', source: 'Wizard', dc: 20 },
-            ];
-            renderWithEffects([], existingEffects);
-            clickFirstRemove();
-            expect(runtimeState.setRuntimeValue).toHaveBeenCalledWith(
-                'campaign',
-                'targetEffects',
-                [],
-                'test-campaign'
-            );
-        });
-
-        it('should remove imprisonment effect when badge has target_effect removeAction', () => {
-            const existingEffects = [
                 { target: 'Alice', effect: 'imprisonment', source: 'Wizard', prisonType: 'Slumber' },
+                { target: 'Bob', effect: 'sanctuary', source: 'Cleric' },
             ];
-            renderWithEffects([], existingEffects);
+            renderWithEffects([], existingEffects, 'Alice');
             clickFirstRemove();
-            expect(runtimeState.setRuntimeValue).toHaveBeenCalledWith(
-                'campaign',
-                'targetEffects',
-                [],
-                'test-campaign'
-            );
+            const filtered = runtimeState.setRuntimeValue.mock.calls[0][2];
+            expect(filtered).toHaveLength(2);
+            expect(filtered[0].effect).toBe('imprisonment');
+            expect(filtered[1].effect).toBe('sanctuary');
+        });
+    });
+
+    describe('rendering before removal', () => {
+        it('should render the badge with correct label before removal', () => {
+            const existingEffects = [
+                { target: 'Alice', effect: 'sanctuary', source: 'Cleric' },
+            ];
+            renderWithEffects([], existingEffects, 'Alice');
+            expect(screen.getByText('Sanctuary')).toBeInTheDocument();
         });
 
-        it('should remove confusion effect when badge has target_effect removeAction', () => {
+        it('should render the slasher_enhanced_critical badge with Attack Disadv label', () => {
             const existingEffects = [
-                { target: 'Alice', effect: 'confusion', source: 'Wizard', dc: 15 },
+                { target: 'Alice', effect: 'slasher_enhanced_critical', source: 'Goblin' },
             ];
-            renderWithEffects([], existingEffects);
-            clickFirstRemove();
-            expect(runtimeState.setRuntimeValue).toHaveBeenCalledWith(
-                'campaign',
-                'targetEffects',
-                [],
-                'test-campaign'
-            );
+            renderWithEffects([{ key: 'blinded' }], existingEffects, 'Alice', 'test-campaign', { targetAttackDisadvantageCount: 1 });
+            expect(screen.getByText('Attack Disadv')).toBeInTheDocument();
         });
+    });
 
-        it('should remove forcecage effect when badge has target_effect removeAction', () => {
+    describe('isLocalhost gating for non-removable badges', () => {
+        it('should not render remove buttons when isLocalhost is false', () => {
             const existingEffects = [
-                { target: 'Alice', effect: 'forcecage', source: 'Wizard', dc: 17 },
+                { target: 'Alice', effect: 'sanctuary', source: 'Cleric' },
             ];
-            renderWithEffects([], existingEffects);
-            clickFirstRemove();
-            expect(runtimeState.setRuntimeValue).toHaveBeenCalledWith(
-                'campaign',
-                'targetEffects',
-                [],
-                'test-campaign'
+            runtimeState.getRuntimeValue.mockImplementation((name, key) => {
+                if (name === 'campaign' && key === 'targetEffects') return existingEffects;
+                return null;
+            });
+            computeConditionEffects.mockReturnValue(makeEffects({}));
+            render(
+                <ConditionEffectBadges
+                    conditions={[]}
+                    targetEffects={existingEffects}
+                    creatureName="Alice"
+                    campaignName="test-campaign"
+                    isLocalhost={false}
+                />
             );
+            expect(screen.getByText('Sanctuary')).toBeInTheDocument();
+            expect(screen.queryByTitle('Remove effect')).not.toBeInTheDocument();
         });
     });
 });
