@@ -114,7 +114,7 @@ describe('ConditionEffectBadges - No OA & Speedy Badges', () => {
         });
 
         it('should render No OA (Crit) badge with correct styling and icon when remarkableAthleteNoOA is true', () => {
-            getRuntimeValue.mockImplementation((name, key, campaign) => {
+            getRuntimeValue.mockImplementation((name, key, _campaign) => {
                 if (name === CREATURE_NAME && key === 'activeBuffs') return [];
                 if (name === CREATURE_NAME && key === 'remarkableAthleteNoOA') return true;
                 return null;
@@ -135,7 +135,7 @@ describe('ConditionEffectBadges - No OA & Speedy Badges', () => {
         });
 
         it('should render No OA (Crit) badge with correct tooltip when remarkableAthleteNoOA is true', () => {
-            getRuntimeValue.mockImplementation((name, key, campaign) => {
+            getRuntimeValue.mockImplementation((name, key, _campaign) => {
                 if (name === CREATURE_NAME && key === 'activeBuffs') return [];
                 if (name === CREATURE_NAME && key === 'remarkableAthleteNoOA') return true;
                 return null;

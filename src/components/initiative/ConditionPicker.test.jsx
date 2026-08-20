@@ -3,8 +3,6 @@
 import { render, screen, fireEvent } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import ConditionPicker from './ConditionPicker.jsx';
-import { CONDITIONS } from '../../services/combat/conditions/conditionUtils.js';
-
 describe('ConditionPicker', () => {
     let props;
 
