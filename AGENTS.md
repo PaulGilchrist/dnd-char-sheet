@@ -84,7 +84,6 @@ Read-only inspection only: `git log`, `git show`, `git diff`, `git status`, `git
 - **GM features are localhost-only:** Encounter builder, map editing, quest/faction/NPC management are enabled on localhost; network clients get read-only view.
 - **5MB JSON body limit:** Image uploads are base64-encoded; Express JSON body parser is configured for 5MB.
 
-
 ## Server-First Pattern
 
 **Every piece of game state MUST go through the runtime store.** This is the core architecture that makes all players see the same data.
@@ -138,3 +137,5 @@ All targetEffect types (te.effect values) are defined in `src/services/combat/co
 - **One subagent at a time** to conserve memory.
 - During debugging, all added debug logging must remain in the code until I explicitly say the bug is fixed.
 - Look for and re-use existing code and avoid duplicating code.
+
+Before exploring or testing the app, read docs/app-exploration.md
