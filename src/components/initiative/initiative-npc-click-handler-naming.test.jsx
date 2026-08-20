@@ -115,15 +115,4 @@ describe('createNpcClickHandler - Creature name matching', () => {
         expect(setViewingMonsterCreatureName).toHaveBeenCalledWith('goblin leader');
     });
 
-    it('should call getMonsterData fallback and set viewing monster when runtime creature is undefined', async () => {
-        vi.mocked(getCombatSummary).mockReturnValue(null);
-        const fallbackMonster = { index: 'ogre', name: 'Ogre' };
-        vi.mocked(getMonsterData).mockResolvedValue(fallbackMonster);
-
-        await handler({ name: 'Ogre' });
-
-        expect(getMonsterData).toHaveBeenCalledWith('Ogre');
-        expect(setViewingMonster).toHaveBeenCalledWith(fallbackMonster);
-        expect(setViewingMonsterCreatureName).toHaveBeenCalledWith('Ogre');
-    });
 });

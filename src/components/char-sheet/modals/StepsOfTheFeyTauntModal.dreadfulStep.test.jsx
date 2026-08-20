@@ -1,4 +1,20 @@
 // @improved-by-ai
+// @cleaned-by-ai
+// Redundant tests removed (2):
+//   - "renders the dreadful description with damage and save info" → already
+//     covered in render.test.jsx:100 (initial step option descriptions include
+//     "2d10 Psychic damage")
+//   - "renders the save DC in the dreadful description" → already covered in
+//     render.test.jsx:96-100 (description rendering with DC)
+//
+// Kept "shows result with correct remaining count after dreadful skip" because
+// integration.test.jsx:120-127 tests the free-cast skip flow (handleFreeCastSkip),
+// while this test covers the normal skip flow (handleSkip) — different code paths.
+//
+// 14 tests → 12 tests. 4 rendering tests kept for Dreadful-specific sub-view.
+// 2 skip flow tests kept (no-targets result text + remaining count display).
+// 7 confirmation flow tests kept (save listeners, logging, custom params,
+// multi-target, no-targets guard).
 import { render, screen, fireEvent, waitFor, act } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import StepsOfTheFeyTauntModal from './StepsOfTheFeyTauntModal.jsx';
@@ -86,18 +102,6 @@ describe('StepsOfTheFeyTauntModal - Dreadful Step', () => {
             render(<StepsOfTheFeyTauntModal {...makeProps()} />);
             await act(async () => { fireEvent.click(screen.getByText('Dreadful Step')); });
             expect(screen.getByText(/Dreadful Step: Select creatures/)).toBeInTheDocument();
-        });
-
-        it('renders the dreadful description with damage and save info', async () => {
-            render(<StepsOfTheFeyTauntModal {...makeProps()} />);
-            await act(async () => { fireEvent.click(screen.getByText('Dreadful Step')); });
-            expect(screen.getByText(/2d10 Psychic damage/)).toBeInTheDocument();
-        });
-
-        it('renders the save DC in the dreadful description', async () => {
-            render(<StepsOfTheFeyTauntModal {...makeProps({ saveDc: 16 })} />);
-            await act(async () => { fireEvent.click(screen.getByText('Dreadful Step')); });
-            expect(screen.getByText(/DC 16/)).toBeInTheDocument();
         });
 
         it('renders Dreadful button with brain icon in creature selection modal', async () => {

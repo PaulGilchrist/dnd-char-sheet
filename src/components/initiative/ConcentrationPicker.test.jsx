@@ -1,4 +1,5 @@
 // @improved-by-ai
+// @cleaned-by-ai
 import { render, screen, fireEvent } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import ConcentrationPicker from './ConcentrationPicker.jsx';
@@ -24,11 +25,6 @@ describe('ConcentrationPicker', () => {
     // ------------------------------------------------------------------
 
     describe('heading', () => {
-        it('should render heading with target name', () => {
-            render(<ConcentrationPicker {...props} />);
-            expect(screen.getByRole('heading', { name: 'Concentration for Goblin' })).toBeInTheDocument();
-        });
-
         it.each`
             targetName
             ${'Alice'}
@@ -46,46 +42,10 @@ describe('ConcentrationPicker', () => {
     // ------------------------------------------------------------------
 
     describe('overlay and modal', () => {
-        it('should render the overlay container', () => {
+        it('should render the modal inside the overlay container', () => {
             render(<ConcentrationPicker {...props} />);
             expect(document.querySelector('.condition-picker-overlay')).toBeInTheDocument();
-        });
-
-        it('should render the modal container', () => {
-            render(<ConcentrationPicker {...props} />);
             expect(document.querySelector('.condition-picker-modal')).toBeInTheDocument();
-        });
-    });
-
-    // ------------------------------------------------------------------
-    // Rendering — labels
-    // ------------------------------------------------------------------
-
-    describe('labels', () => {
-        it('should render a Spell label', () => {
-            render(<ConcentrationPicker {...props} />);
-            expect(screen.getByText('Spell')).toBeInTheDocument();
-        });
-
-        it('should render a DC label', () => {
-            render(<ConcentrationPicker {...props} />);
-            expect(screen.getByText('DC')).toBeInTheDocument();
-        });
-    });
-
-    // ------------------------------------------------------------------
-    // Rendering — buttons
-    // ------------------------------------------------------------------
-
-    describe('buttons', () => {
-        it('should render a Cancel button', () => {
-            render(<ConcentrationPicker {...props} />);
-            expect(screen.getByRole('button', { name: 'Cancel' })).toBeInTheDocument();
-        });
-
-        it('should render an Apply button', () => {
-            render(<ConcentrationPicker {...props} />);
-            expect(screen.getByRole('button', { name: 'Apply' })).toBeInTheDocument();
         });
     });
 

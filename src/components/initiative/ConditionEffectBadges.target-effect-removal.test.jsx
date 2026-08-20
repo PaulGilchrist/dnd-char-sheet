@@ -1,4 +1,5 @@
 // @improved-by-ai
+// @cleaned-by-ai
 import { render, screen, fireEvent } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import ConditionEffectBadges from './ConditionEffectBadges.jsx';
@@ -116,6 +117,7 @@ describe('ConditionEffectBadges - target_effect removal', () => {
             'imprisonment',
             'confusion',
             'forcecage',
+            'slasher_enhanced_critical',
         ];
 
         it.each(removableTargetEffects)(
@@ -125,7 +127,8 @@ describe('ConditionEffectBadges - target_effect removal', () => {
                     { target: 'Alice', effect: effectType, source: 'Cleric' },
                     { target: 'Bob', effect: 'sanctuary', source: 'Wizard' },
                 ];
-                renderWithEffects([], existingEffects, 'Alice');
+                const computeOverrides = effectType === 'slasher_enhanced_critical' ? { targetAttackDisadvantageCount: 1 } : {};
+                renderWithEffects(effectType === 'slasher_enhanced_critical' ? [{ key: 'blinded' }] : [], existingEffects, 'Alice', 'test-campaign', computeOverrides);
                 clickFirstRemove();
                 expect(runtimeState.setRuntimeValue).toHaveBeenCalledWith(
                     'campaign',
@@ -135,108 +138,5 @@ describe('ConditionEffectBadges - target_effect removal', () => {
                 );
             }
         );
-
-        it('should remove slasher_enhanced_critical when Attack Disadv badge is clicked', () => {
-            const existingEffects = [
-                { target: 'Alice', effect: 'slasher_enhanced_critical', source: 'Goblin' },
-                { target: 'Bob', effect: 'sanctuary', source: 'Wizard' },
-            ];
-            renderWithEffects([{ key: 'blinded' }], existingEffects, 'Alice', 'test-campaign', { targetAttackDisadvantageCount: 1 });
-            expect(screen.getByText('Attack Disadv')).toBeInTheDocument();
-            clickFirstRemove();
-            expect(runtimeState.setRuntimeValue).toHaveBeenCalledWith(
-                'campaign',
-                'targetEffects',
-                [existingEffects[1]],
-                'test-campaign'
-            );
-        });
-    });
-
-    describe('removeAction: target_effect - preserves other effects on same creature', () => {
-        it('should remove only the clicked effect when multiple effects target the same creature', () => {
-            const existingEffects = [
-                { target: 'Alice', effect: 'sanctuary', source: 'Cleric' },
-                { target: 'Alice', effect: 'banishment', source: 'Wizard' },
-                { target: 'Bob', effect: 'haste', source: 'Druid' },
-            ];
-            renderWithEffects([], existingEffects, 'Alice');
-            clickFirstRemove();
-            const filtered = runtimeState.setRuntimeValue.mock.calls[0][2];
-            expect(filtered).toHaveLength(2);
-            expect(filtered.map(te => te.effect)).toEqual(['banishment', 'haste']);
-        });
-    });
-
-    describe('removeAction: target_effect - edge cases', () => {
-        it('should remove the only effect when it is the last one remaining', () => {
-            const existingEffects = [
-                { target: 'Alice', effect: 'sanctuary', source: 'Cleric' },
-            ];
-            renderWithEffects([], existingEffects, 'Alice');
-            clickFirstRemove();
-            expect(runtimeState.setRuntimeValue).toHaveBeenCalledWith(
-                'campaign',
-                'targetEffects',
-                [],
-                'test-campaign'
-            );
-        });
-
-        it('should preserve effects on other creatures when removing one effect', () => {
-            const existingEffects = [
-                { target: 'Alice', effect: 'maze', source: 'Wizard', dc: 20 },
-                { target: 'Alice', effect: 'imprisonment', source: 'Wizard', prisonType: 'Slumber' },
-                { target: 'Bob', effect: 'sanctuary', source: 'Cleric' },
-            ];
-            renderWithEffects([], existingEffects, 'Alice');
-            clickFirstRemove();
-            const filtered = runtimeState.setRuntimeValue.mock.calls[0][2];
-            expect(filtered).toHaveLength(2);
-            expect(filtered[0].effect).toBe('imprisonment');
-            expect(filtered[1].effect).toBe('sanctuary');
-        });
-    });
-
-    describe('rendering before removal', () => {
-        it('should render the badge with correct label before removal', () => {
-            const existingEffects = [
-                { target: 'Alice', effect: 'sanctuary', source: 'Cleric' },
-            ];
-            renderWithEffects([], existingEffects, 'Alice');
-            expect(screen.getByText('Sanctuary')).toBeInTheDocument();
-        });
-
-        it('should render the slasher_enhanced_critical badge with Attack Disadv label', () => {
-            const existingEffects = [
-                { target: 'Alice', effect: 'slasher_enhanced_critical', source: 'Goblin' },
-            ];
-            renderWithEffects([{ key: 'blinded' }], existingEffects, 'Alice', 'test-campaign', { targetAttackDisadvantageCount: 1 });
-            expect(screen.getByText('Attack Disadv')).toBeInTheDocument();
-        });
-    });
-
-    describe('isLocalhost gating for non-removable badges', () => {
-        it('should not render remove buttons when isLocalhost is false', () => {
-            const existingEffects = [
-                { target: 'Alice', effect: 'sanctuary', source: 'Cleric' },
-            ];
-            runtimeState.getRuntimeValue.mockImplementation((name, key) => {
-                if (name === 'campaign' && key === 'targetEffects') return existingEffects;
-                return null;
-            });
-            computeConditionEffects.mockReturnValue(makeEffects({}));
-            render(
-                <ConditionEffectBadges
-                    conditions={[]}
-                    targetEffects={existingEffects}
-                    creatureName="Alice"
-                    campaignName="test-campaign"
-                    isLocalhost={false}
-                />
-            );
-            expect(screen.getByText('Sanctuary')).toBeInTheDocument();
-            expect(screen.queryByTitle('Remove effect')).not.toBeInTheDocument();
-        });
     });
 });

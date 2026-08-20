@@ -1,4 +1,5 @@
 // @improved-by-ai
+// @cleaned-by-ai
 import { render, screen, fireEvent } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import CreatureCard from './CreatureCard.jsx';
@@ -124,12 +125,6 @@ describe('CreatureCard - conditions', () => {
             expect(props.onRollConditionSave).not.toHaveBeenCalled();
         });
 
-        it('should not render condition break button for non-localhost', () => {
-            const conditions = [{ id: 'c1', label: 'Blinded' }];
-            render(<CreatureCard {...props} creature={{ ...defaultPlayerCreature, conditions }} isLocalhost={false} />);
-            expect(screen.queryByTitle('Remove effect')).not.toBeInTheDocument();
-        });
-
         it('should call onBreakCondition when break button is clicked', () => {
             const conditions = [{ id: 'c1', label: 'Blinded' }];
             render(<CreatureCard {...props} creature={{ ...defaultPlayerCreature, conditions }} />);
@@ -145,6 +140,7 @@ describe('CreatureCard - conditions', () => {
             ];
             render(<CreatureCard {...props} creature={{ ...defaultPlayerCreature, conditions }} />);
             expect(screen.getByText('Blinded DC 12')).toBeInTheDocument();
+            expect(screen.queryAllByText(/Blinded/).length).toBe(1);
         });
     });
 

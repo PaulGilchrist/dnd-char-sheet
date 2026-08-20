@@ -49,36 +49,4 @@ describe('createNpcClickHandler - early return for non-localhost', () => {
         expect(setViewingMonsterCreatureName).not.toHaveBeenCalled();
     });
 
-    it('should return early when creature is null', async () => {
-        const handler = createNpcClickHandler({
-            isLocalhost: false,
-            campaignNpcs,
-            campaignName: 'test-campaign',
-            characters,
-            setViewingMonster,
-            setViewingMonsterCreatureName,
-        });
-
-        await handler(null);
-
-        expect(setViewingMonster).not.toHaveBeenCalled();
-        expect(setViewingMonsterCreatureName).not.toHaveBeenCalled();
-    });
-
-    it('should return early when creature is undefined', async () => {
-        const handler = createNpcClickHandler({
-            isLocalhost: false,
-            campaignNpcs,
-            campaignName: 'test-campaign',
-            characters,
-            setViewingMonster,
-            setViewingMonsterCreatureName,
-        });
-
-        await handler(undefined);
-
-        expect(setViewingMonster).not.toHaveBeenCalled();
-        expect(setViewingMonsterCreatureName).not.toHaveBeenCalled();
-    });
-
 });

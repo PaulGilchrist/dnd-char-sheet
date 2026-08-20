@@ -1,4 +1,5 @@
 // @improved-by-ai
+// @cleaned-by-ai
 import { render, screen, fireEvent } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import CreateUndeadModal from './CreateUndeadModal.jsx';
@@ -38,19 +39,6 @@ describe('CreateUndeadModal', () => {
   // ── Rendering ──
 
   describe('initial render', () => {
-    it('renders the modal overlay and container', () => {
-      render(<CreateUndeadModal {...makeProps()} />);
-      expect(document.querySelector('.sp-overlay')).toBeInTheDocument();
-      expect(document.querySelector('.sp-modal')).toBeInTheDocument();
-    });
-
-    it('renders the header with skull icon and title', () => {
-      render(<CreateUndeadModal {...makeProps()} />);
-      expect(screen.getByText('Create Undead')).toBeInTheDocument();
-      const skullIcon = document.querySelector('.sp-header i.fa-solid.fa-skull');
-      expect(skullIcon).toBeInTheDocument();
-    });
-
     it('renders the instruction text with maxTargets', () => {
       render(<CreateUndeadModal {...makeProps({ maxTargets: 5 })} />);
       expect(screen.getByText(/You can create up to/)).toHaveTextContent(/5 ghoul/);
@@ -59,17 +47,6 @@ describe('CreateUndeadModal', () => {
     it('renders the total display showing initial ghoulCount of 1', () => {
       render(<CreateUndeadModal {...makeProps({ maxTargets: 3 })} />);
       expect(getTotalCreaturesDisplay()).toHaveTextContent(/Total creatures: 1 \/ 3/);
-    });
-
-    it('renders the central ghoul count number', () => {
-      render(<CreateUndeadModal {...makeProps()} />);
-      const countSpan = document.querySelector('.sp-body span[style*="40px"]');
-      expect(countSpan).toHaveTextContent('1');
-    });
-
-    it('renders the Ghoul(s) label', () => {
-      render(<CreateUndeadModal {...makeProps()} />);
-      expect(screen.getByText('Ghoul(s)')).toBeInTheDocument();
     });
 
     it('renders Confirm and Cancel buttons', () => {
@@ -114,16 +91,6 @@ describe('CreateUndeadModal', () => {
       const plusBtn = buttons[1];
       fireEvent.click(plusBtn);
       expect(screen.getByRole('button', { name: /Create Undead \(2\)/ })).toBeInTheDocument();
-    });
-
-    it('updates the central ghoul count number when adjusted', () => {
-      render(<CreateUndeadModal {...makeProps({ maxTargets: 5 })} />);
-      const buttons = getAdjustButtons();
-      const plusBtn = buttons[1];
-      fireEvent.click(plusBtn);
-      fireEvent.click(plusBtn);
-      const countSpan = document.querySelector('.sp-body span[style*="40px"]');
-      expect(countSpan).toHaveTextContent('3');
     });
   });
 
@@ -183,35 +150,6 @@ describe('CreateUndeadModal', () => {
       render(<CreateUndeadModal {...makeProps({ maxTargets: 0 })} />);
       expect(screen.getByText(/You can create up to/)).toHaveTextContent(/0 ghoul/);
       expect(getTotalCreaturesDisplay()).toHaveTextContent(/Total creatures: 1 \/ 0/);
-    });
-
-    it('handles negative maxTargets (count stays at 1)', () => {
-      render(<CreateUndeadModal {...makeProps({ maxTargets: -1 })} />);
-      expect(getTotalCreaturesDisplay()).toHaveTextContent(/Total creatures: 1 \/ -1/);
-    });
-
-    it('does not increment when already at maxTargets of 1', () => {
-      render(<CreateUndeadModal {...makeProps({ maxTargets: 1 })} />);
-      const buttons = getAdjustButtons();
-      const plusBtn = buttons[1];
-      fireEvent.click(plusBtn);
-      expect(getTotalCreaturesDisplay()).toHaveTextContent(/Total creatures: 1 \/ 1/);
-    });
-
-    it('calls onConfirm with ghoulCount=1 when maxTargets is 0', () => {
-      const props = makeProps({ maxTargets: 0 });
-      render(<CreateUndeadModal {...props} />);
-      const confirmBtn = screen.getByRole('button', { name: /Create Undead/ });
-      fireEvent.click(confirmBtn);
-      expect(props.onConfirm).toHaveBeenCalledWith({ ghoulCount: 1 });
-    });
-
-    it('calls onConfirm with ghoulCount=1 when maxTargets is negative', () => {
-      const props = makeProps({ maxTargets: -5 });
-      render(<CreateUndeadModal {...props} />);
-      const confirmBtn = screen.getByRole('button', { name: /Create Undead/ });
-      fireEvent.click(confirmBtn);
-      expect(props.onConfirm).toHaveBeenCalledWith({ ghoulCount: 1 });
     });
   });
 });

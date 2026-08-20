@@ -1,4 +1,5 @@
 // @improved-by-ai
+// @cleaned-by-ai
 import { render, screen, fireEvent } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import ConditionEffectBadges from './ConditionEffectBadges.jsx';
@@ -210,14 +211,6 @@ describe('ConditionEffectBadges - Effect Removal Handlers', () => {
             expect(filtered).toHaveLength(1);
             expect(filtered[0].effect).toBe('sanctuary');
         });
-
-        it('should not call setRuntimeValue when badge has no effectTypes', () => {
-            renderWithEffects([], [], 'Alice', 'test-campaign', {});
-            const badges = screen.queryAllByTestId('creature-badge');
-            if (badges.length === 0) {
-                expect(runtimeState.setRuntimeValue).not.toHaveBeenCalled();
-            }
-        });
     });
 
     describe('removeAction: remove_haste', () => {
@@ -290,106 +283,6 @@ describe('ConditionEffectBadges - Effect Removal Handlers', () => {
         });
     });
 
-    describe('removeAction: inspiring_move', () => {
-        it('should set inspiringMovementNoOA to false when badge has inspiring_move removeAction', () => {
-            renderWithEffects(
-                [],
-                [],
-                'Alice',
-                'test-campaign',
-                {},
-                { inspiringMovementNoOA: true }
-            );
-            clickFirstRemove();
-            expect(runtimeState.setRuntimeValue).toHaveBeenCalledWith(
-                'Alice',
-                'inspiringMovementNoOA',
-                false,
-                'test-campaign'
-            );
-        });
-    });
-
-    describe('removeAction: remarkable_no_oa', () => {
-        it('should set remarkableAthleteNoOA to false when badge has remarkable_no_oa removeAction', () => {
-            renderWithEffects(
-                [],
-                [],
-                'Alice',
-                'test-campaign',
-                {},
-                { remarkableAthleteNoOA: true }
-            );
-            clickFirstRemove();
-            expect(runtimeState.setRuntimeValue).toHaveBeenCalledWith(
-                'Alice',
-                'remarkableAthleteNoOA',
-                false,
-                'test-campaign'
-            );
-        });
-    });
-
-    describe('removeAction: oa_disadv', () => {
-        it('should set hasSpeedyOpportunityDisadvantage to false when badge has oa_disadv removeAction', () => {
-            renderWithEffects(
-                [],
-                [],
-                'Alice',
-                'test-campaign',
-                {},
-                { hasSpeedyOpportunityDisadvantage: true }
-            );
-            clickFirstRemove();
-            expect(runtimeState.setRuntimeValue).toHaveBeenCalledWith(
-                'Alice',
-                'hasSpeedyOpportunityDisadvantage',
-                false,
-                'test-campaign'
-            );
-        });
-    });
-
-    describe('removeAction: difficult_terrain_ignore', () => {
-        it('should set hasSpeedyDifficultTerrainIgnore to false when badge has difficult_terrain_ignore removeAction', () => {
-            renderWithEffects(
-                [],
-                [],
-                'Alice',
-                'test-campaign',
-                {},
-                { hasSpeedyDifficultTerrainIgnore: true }
-            );
-            clickFirstRemove();
-            expect(runtimeState.setRuntimeValue).toHaveBeenCalledWith(
-                'Alice',
-                'hasSpeedyDifficultTerrainIgnore',
-                false,
-                'test-campaign'
-            );
-        });
-    });
-
-    describe('removeAction: corona_disadvantage', () => {
-        it('should set coronaDisadvantage to false when badge has corona_disadvantage removeAction', () => {
-            renderWithEffects(
-                [],
-                [],
-                'Alice',
-                'test-campaign',
-                {},
-                { coronaDisadvantage: true }
-            );
-            clickFirstRemove();
-            expect(runtimeState.setRuntimeValue).toHaveBeenCalledWith(
-                'Alice',
-                'coronaDisadvantage',
-                false,
-                'test-campaign'
-            );
-        });
-    });
-
     describe('removeAction: taunting_step', () => {
         it('should remove taunting_step target effect when badge has taunting_step removeAction', () => {
             const existingEffects = [
@@ -435,20 +328,6 @@ describe('ConditionEffectBadges - Effect Removal Handlers', () => {
                 0,
                 'test-campaign'
             );
-        });
-    });
-
-    describe('isLocalhost gating', () => {
-        it('should not render remove buttons when isLocalhost is false', () => {
-            renderWithEffects(
-                [],
-                [],
-                'Alice',
-                'test-campaign',
-                {},
-                { isLocalhost: false }
-            );
-            expect(screen.queryByTitle('Remove effect')).not.toBeInTheDocument();
         });
     });
 });

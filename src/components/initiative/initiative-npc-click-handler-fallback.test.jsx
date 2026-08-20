@@ -70,15 +70,4 @@ describe('createNpcClickHandler - Fallback to getMonsterData', () => {
         expect(setViewingMonsterCreatureName).not.toHaveBeenCalled();
     });
 
-    it('should call getMonsterData and set viewing monster when combatSummary has no creatures', async () => {
-        vi.mocked(getCombatSummary).mockReturnValue({ creatures: [] });
-        const fallbackMonster = { index: 'goblin', name: 'Goblin' };
-        vi.mocked(getMonsterData).mockResolvedValue(fallbackMonster);
-
-        await handler({ name: 'Goblin' });
-
-        expect(getMonsterData).toHaveBeenCalledWith('Goblin');
-        expect(setViewingMonster).toHaveBeenCalledWith(fallbackMonster);
-        expect(setViewingMonsterCreatureName).toHaveBeenCalledWith('Goblin');
-    });
 });

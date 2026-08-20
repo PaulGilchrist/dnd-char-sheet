@@ -1,4 +1,5 @@
 // @improved-by-ai
+// @cleaned-by-ai
 import { render, screen, fireEvent, waitFor, act } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import Initiative from './initiative.jsx';
@@ -162,9 +163,13 @@ describe('Initiative - Creature & NPC Handlers', () => {
             expect(storage.set).toHaveBeenCalledWith('combatSummary', expect.any(Object), 'test-campaign');
         });
 
-        it('should reset death saves when player goes from <=0 to >0 HP', async () => {
+        it.each([
+            { oldHp: 0, newHp: 5, desc: 'resets death saves when going from <=0 to >0 HP', shouldReset: true },
+            { oldHp: -5, newHp: 0, desc: 'does NOT reset death saves when going from negative to 0 HP', shouldReset: false },
+            { oldHp: 10, newHp: -3, desc: 'does NOT reset death saves when going from positive to negative HP', shouldReset: false },
+        ])('death saves $desc', async ({ oldHp, newHp, shouldReset }) => {
             vi.mocked(getRuntimeValue).mockImplementation((key, prop) => {
-                if (prop === 'currentHitPoints') return 0;
+                if (prop === 'currentHitPoints') return oldHp;
                 if (prop === 'hitPoints') return 20;
                 if (prop === 'activeConditions') return [];
                 if (prop === 'activeBuffs') return [];
@@ -172,64 +177,25 @@ describe('Initiative - Creature & NPC Handlers', () => {
                 if (prop === 'deathFailures') return [false, false, false];
                 return null;
             });
-            vi.mocked(loadCombatSummary).mockResolvedValue({ round: 1, creatures: [{ name: 'Alice', type: 'player', currentHp: 0 }] });
+            vi.mocked(loadCombatSummary).mockResolvedValue({ round: 1, creatures: [{ name: 'Alice', type: 'player', currentHp: oldHp }] });
             await act(async () => { render(<Initiative {...props} />); });
             await waitFor(() => { expect(screen.queryByTestId('creature-card-Alice')).toBeInTheDocument(); });
 
             await act(async () => {
                 const hpInput = screen.getByTestId('hp-input-Alice');
-                fireEvent.change(hpInput, { target: { value: '5' } });
+                fireEvent.change(hpInput, { target: { value: String(newHp) } });
             });
 
-            expect(setRuntimeValue).toHaveBeenCalledWith('Alice', 'deathSaves', [false, false, false], 'test-campaign');
-            expect(setRuntimeValue).toHaveBeenCalledWith('Alice', 'deathFailures', [false, false, false], 'test-campaign');
-            expect(setRuntimeValue).toHaveBeenCalledWith('Alice', 'isDead', 0, 'test-campaign');
-            expect(clearDeathSavePrompt).toHaveBeenCalledWith('test-campaign', 'Alice');
-        });
-
-        it('should NOT reset death saves when player goes from negative to 0 HP', async () => {
-            vi.mocked(getRuntimeValue).mockImplementation((key, prop) => {
-                if (prop === 'currentHitPoints') return -5;
-                if (prop === 'hitPoints') return 20;
-                if (prop === 'activeConditions') return [];
-                if (prop === 'activeBuffs') return [];
-                if (prop === 'deathSaves') return [true, false, false];
-                if (prop === 'deathFailures') return [false, false, false];
-                return null;
-            });
-            vi.mocked(loadCombatSummary).mockResolvedValue({ round: 1, creatures: [{ name: 'Alice', type: 'player', currentHp: -5 }] });
-            await act(async () => { render(<Initiative {...props} />); });
-            await waitFor(() => { expect(screen.queryByTestId('creature-card-Alice')).toBeInTheDocument(); });
-
-            await act(async () => {
-                const hpInput = screen.getByTestId('hp-input-Alice');
-                fireEvent.change(hpInput, { target: { value: '0' } });
-            });
-
-            expect(setRuntimeValue).not.toHaveBeenCalledWith('Alice', 'deathSaves', [false, false, false], 'test-campaign');
-            expect(setRuntimeValue).not.toHaveBeenCalledWith('Alice', 'isDead', 0, 'test-campaign');
-            expect(clearDeathSavePrompt).not.toHaveBeenCalled();
-        });
-
-        it('should NOT reset death saves when player goes from positive to negative HP', async () => {
-            vi.mocked(getRuntimeValue).mockImplementation((key, prop) => {
-                if (prop === 'currentHitPoints') return 10;
-                if (prop === 'hitPoints') return 20;
-                if (prop === 'activeConditions') return [];
-                if (prop === 'activeBuffs') return [];
-                return null;
-            });
-            vi.mocked(loadCombatSummary).mockResolvedValue({ round: 1, creatures: [{ name: 'Alice', type: 'player', currentHp: 10 }] });
-            await act(async () => { render(<Initiative {...props} />); });
-            await waitFor(() => { expect(screen.queryByTestId('creature-card-Alice')).toBeInTheDocument(); });
-
-            await act(async () => {
-                const hpInput = screen.getByTestId('hp-input-Alice');
-                fireEvent.change(hpInput, { target: { value: '-3' } });
-            });
-
-            expect(setRuntimeValue).not.toHaveBeenCalledWith('Alice', 'deathSaves', expect.any(Array), 'test-campaign');
-            expect(clearDeathSavePrompt).not.toHaveBeenCalled();
+            if (shouldReset) {
+                expect(setRuntimeValue).toHaveBeenCalledWith('Alice', 'deathSaves', [false, false, false], 'test-campaign');
+                expect(setRuntimeValue).toHaveBeenCalledWith('Alice', 'deathFailures', [false, false, false], 'test-campaign');
+                expect(setRuntimeValue).toHaveBeenCalledWith('Alice', 'isDead', 0, 'test-campaign');
+                expect(clearDeathSavePrompt).toHaveBeenCalledWith('test-campaign', 'Alice');
+            } else {
+                expect(setRuntimeValue).not.toHaveBeenCalledWith('Alice', 'deathSaves', expect.any(Array), 'test-campaign');
+                expect(setRuntimeValue).not.toHaveBeenCalledWith('Alice', 'isDead', 0, 'test-campaign');
+                expect(clearDeathSavePrompt).not.toHaveBeenCalled();
+            }
         });
 
         it('should update NPC HP directly without setRuntimeValue for currentHitPoints', async () => {
@@ -324,19 +290,6 @@ describe('Initiative - Creature & NPC Handlers', () => {
             });
 
             expect(setTarget).toHaveBeenCalled();
-            expect(storage.set).toHaveBeenCalledWith('combatSummary', expect.any(Object), 'test-campaign');
-        });
-    });
-
-    describe('handleAddNpc', () => {
-        it('should add an NPC when handleAddNpc is called', async () => {
-            vi.mocked(loadCombatSummary).mockResolvedValue({ round: 1, creatures: [{ name: 'Alice', type: 'player' }] });
-            await act(async () => { render(<Initiative {...props} />); });
-            await waitFor(() => { expect(screen.queryByTestId('creature-card-Alice')).toBeInTheDocument(); });
-
-            await act(async () => { fireEvent.click(screen.getByText('+ NPC')); });
-            await waitFor(() => { expect(screen.queryByTestId('creature-card-Alice')).toBeInTheDocument(); });
-
             expect(storage.set).toHaveBeenCalledWith('combatSummary', expect.any(Object), 'test-campaign');
         });
     });

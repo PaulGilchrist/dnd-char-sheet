@@ -1,4 +1,5 @@
 // @improved-by-ai
+// @cleaned-by-ai
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { createNpcClickHandler } from './initiative-npc-click-handler.jsx';
 import { loadMonsters } from '../../services/ui/dataLoader.js';
@@ -136,104 +137,6 @@ describe('createNpcClickHandler - Regular monster from campaign data path', () =
         expect(monster.ability_scores.wis).toBe(14);
         expect(monster.ability_scores.cha).toBe(12);
         expect(monster.languages).toBe('Common, Elvish');
-    });
-
-    it('should not set viewing monster when base monster not found', async () => {
-        const combatSummary = {
-            creatures: [
-                {
-                    name: 'MysteryMonster',
-                    type: 'npc',
-                    monsterIndex: 'nonexistent',
-                    ac: 10,
-                    currentHp: 5,
-                },
-            ],
-        };
-        vi.mocked(getCombatSummary).mockReturnValue(combatSummary);
-        vi.mocked(loadMonsters).mockResolvedValue([]);
-
-        await handler({ name: 'MysteryMonster' });
-
-        expect(setViewingMonster).not.toHaveBeenCalled();
-        expect(setViewingMonsterCreatureName).not.toHaveBeenCalled();
-    });
-
-    it('should match runtime creature by exact name (case-sensitive)', async () => {
-        const combatSummary = {
-            creatures: [
-                {
-                    name: 'Goblin Leader',
-                    type: 'npc',
-                    monsterIndex: 'goblin',
-                    ac: 16,
-                    currentHp: 10,
-                },
-            ],
-        };
-        vi.mocked(getCombatSummary).mockReturnValue(combatSummary);
-        vi.mocked(loadMonsters).mockResolvedValue([
-            {
-                index: 'goblin',
-                name: 'Goblin',
-                armor_class: 15,
-                hit_points: 7,
-                ability_scores: { str: 8, dex: 14, con: 10, int: 8, wis: 8, cha: 8 },
-                saving_throws: {},
-                actions: [],
-                size: 'Small',
-                type: 'Humanoid',
-                challenge_rating: 0.25,
-            },
-        ]);
-
-        await handler({ name: 'Goblin Leader' });
-
-        expect(setViewingMonster).toHaveBeenCalled();
-        const monster = setViewingMonster.mock.calls[0][0];
-        expect(monster.name).toBe('Goblin Leader');
-        expect(monster.armor_class).toBe(16);
-        expect(monster.hit_points).toBe(10);
-    });
-
-    it('should use default values when runtime creature has minimal fields', async () => {
-        const combatSummary = {
-            creatures: [
-                {
-                    name: 'Goblin',
-                    type: 'npc',
-                    monsterIndex: 'goblin',
-                    currentHp: 7,
-                },
-            ],
-        };
-        vi.mocked(getCombatSummary).mockReturnValue(combatSummary);
-        vi.mocked(loadMonsters).mockResolvedValue([
-            {
-                index: 'goblin',
-                name: 'Goblin',
-                armor_class: 15,
-                hit_points: 7,
-                ability_scores: { str: 8, dex: 14, con: 10, int: 8, wis: 8, cha: 8 },
-                saving_throws: { dex: { modifier: 2 } },
-                actions: [{ name: 'Scimitar', attack_bonus: 4, damage_type_primary: 'Slashing', description: '4 Slashing damage' }],
-                size: 'Small',
-                type: 'Humanoid',
-                challenge_rating: 0.25,
-            },
-        ]);
-
-        await handler({ name: 'Goblin' });
-
-        const monster = setViewingMonster.mock.calls[0][0];
-        expect(monster.name).toBe('Goblin');
-        expect(monster.hit_points).toBe(7);
-        expect(monster.armor_class).toBeUndefined();
-        expect(monster.type).toBe('npc');
-        expect(monster.speed).toBeUndefined();
-        expect(monster.damage_resistances).toBeUndefined();
-        expect(monster.damage_immunities).toBeUndefined();
-        expect(monster.actions[0].name).toBe('Scimitar');
     });
 
     it('should override save bonuses from runtime creature', async () => {

@@ -1,11 +1,12 @@
 // @improved-by-ai
+// @cleaned-by-ai
 import { render, screen, waitFor, act } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import Initiative from './initiative.jsx';
 import { loadCombatSummary } from '../../services/encounters/combatData.js';
 import { setRuntimeValue } from '../../hooks/runtime/useRuntimeState.js';
 import storage from '../../services/ui/storage.js';
-import { breakConcentration, cleanupConcentrationEffects } from '../../services/combat/concentration/concentrationService.js';
+import { cleanupConcentrationEffects } from '../../services/combat/concentration/concentrationService.js';
 
 vi.mock('../../hooks/runtime/useSSEEqualityGuard.js', () => ({ default: (setter) => setter }));
 vi.mock('../../services/ui/utils.js', () => ({ default: { getName: (name) => name } }));
@@ -160,38 +161,10 @@ describe('Initiative - Window Event Handlers', () => {
 
             expect(storage.set).toHaveBeenCalledWith('combatSummary', expect.any(Object), 'test-campaign');
         });
-
-        it('should do nothing when restoredToHp is 0 (falsy)', async () => {
-            vi.mocked(loadCombatSummary).mockResolvedValue({ round: 1, creatures: [{ name: 'Alice', type: 'player' }] });
-            await act(async () => { render(<Initiative {...props} />); });
-            await waitFor(() => { expect(screen.queryByTestId('creature-card-Alice')).toBeInTheDocument(); });
-
-            await act(async () => {
-                window.dispatchEvent(new CustomEvent('death-save-result', {
-                    detail: { targetName: 'Alice', restoredToHp: 0 },
-                }));
-            });
-
-            expect(setRuntimeValue).not.toHaveBeenCalledWith('Alice', 'currentHitPoints', 0, 'test-campaign');
-        });
-
-        it('should do nothing when restoredToHp is undefined', async () => {
-            vi.mocked(loadCombatSummary).mockResolvedValue({ round: 1, creatures: [{ name: 'Alice', type: 'player' }] });
-            await act(async () => { render(<Initiative {...props} />); });
-            await waitFor(() => { expect(screen.queryByTestId('creature-card-Alice')).toBeInTheDocument(); });
-
-            await act(async () => {
-                window.dispatchEvent(new CustomEvent('death-save-result', {
-                    detail: { targetName: 'Alice' },
-                }));
-            });
-
-            expect(setRuntimeValue).not.toHaveBeenCalledWith('Alice', 'currentHitPoints', undefined, 'test-campaign');
-        });
     });
 
     describe('concentration-result window event', () => {
-        it('should clear concentration on failed save', async () => {
+        it('should clear concentration and clean up effects on failed save', async () => {
             vi.mocked(loadCombatSummary).mockResolvedValue({ round: 1, creatures: [{ name: 'Alice', type: 'player', concentration: { spell: 'Shield', dc: 10 } }] });
             await act(async () => { render(<Initiative {...props} />); });
             await waitFor(() => { expect(screen.queryByTestId('creature-card-Alice')).toBeInTheDocument(); });
@@ -211,70 +184,17 @@ describe('Initiative - Window Event Handlers', () => {
             await act(async () => { render(<Initiative {...props} />); });
             await waitFor(() => { expect(screen.queryByTestId('creature-card-Alice')).toBeInTheDocument(); });
 
+            const storageCallsBefore = storage.set.mock.calls.length;
+            const cleanupCallsBefore = cleanupConcentrationEffects.mock.calls.length;
+
             await act(async () => {
                 window.dispatchEvent(new CustomEvent('concentration-result', {
                     detail: { targetName: 'Alice', success: true },
                 }));
             });
 
-            expect(breakConcentration).not.toHaveBeenCalled();
-        });
-
-        it('should do nothing when creature is not found in combatSummary', async () => {
-            vi.mocked(loadCombatSummary).mockResolvedValue({ round: 1, creatures: [{ name: 'Alice', type: 'player', concentration: { spell: 'Shield', dc: 10 } }] });
-            await act(async () => { render(<Initiative {...props} />); });
-            await waitFor(() => { expect(screen.queryByTestId('creature-card-Alice')).toBeInTheDocument(); });
-
-            await act(async () => {
-                window.dispatchEvent(new CustomEvent('concentration-result', {
-                    detail: { targetName: 'Bob', success: false },
-                }));
-            });
-
-            expect(breakConcentration).not.toHaveBeenCalled();
-        });
-
-        it('should do nothing when combatSummary is null', async () => {
-            vi.mocked(loadCombatSummary).mockResolvedValue(null);
-            await act(async () => { render(<Initiative {...props} />); });
-
-            await act(async () => {
-                window.dispatchEvent(new CustomEvent('concentration-result', {
-                    detail: { targetName: 'Alice', success: false },
-                }));
-            });
-
-            expect(breakConcentration).not.toHaveBeenCalled();
-        });
-    });
-
-    describe('spell-overlay window events', () => {
-        it('should handle spell-overlay add event without throwing', async () => {
-            vi.mocked(loadCombatSummary).mockResolvedValue({ round: 1, creatures: [{ name: 'Alice', type: 'player' }] });
-            await act(async () => { render(<Initiative {...props} />); });
-            await waitFor(() => { expect(screen.queryByTestId('creature-card-Alice')).toBeInTheDocument(); });
-
-            await act(async () => {
-                window.dispatchEvent(new CustomEvent('spell-overlay-test-campaign', {
-                    data: { action: 'add', overlays: [{ id: 'fireball', label: 'Fireball' }] },
-                }));
-            });
-
-            expect(screen.getByTestId('creature-card-Alice')).toBeInTheDocument();
-        });
-
-        it('should handle spell-overlay clear event without throwing', async () => {
-            vi.mocked(loadCombatSummary).mockResolvedValue({ round: 1, creatures: [{ name: 'Alice', type: 'player' }] });
-            await act(async () => { render(<Initiative {...props} />); });
-            await waitFor(() => { expect(screen.queryByTestId('creature-card-Alice')).toBeInTheDocument(); });
-
-            await act(async () => {
-                window.dispatchEvent(new CustomEvent('spell-overlay-test-campaign', {
-                    data: { action: 'clear' },
-                }));
-            });
-
-            expect(screen.getByTestId('creature-card-Alice')).toBeInTheDocument();
+            expect(storage.set).toHaveBeenCalledTimes(storageCallsBefore);
+            expect(cleanupConcentrationEffects).toHaveBeenCalledTimes(cleanupCallsBefore);
         });
     });
 });

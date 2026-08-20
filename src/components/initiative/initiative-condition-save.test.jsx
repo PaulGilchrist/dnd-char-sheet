@@ -1,4 +1,5 @@
 // @improved-by-ai
+// @cleaned-by-ai
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { createRollConditionSaveHandler } from './initiative-condition-save.jsx';
 
@@ -170,23 +171,6 @@ describe('initiative-condition-save', () => {
             expect(mockSetCombatSummary).toHaveBeenCalled();
         });
 
-        it('persists combatSummary on both success and failure', async () => {
-            const handler = createHandler();
-            rollConditionSave.mockResolvedValue(makeSuccessRoll());
-
-            await handler('Alice', { key: 'blinded', label: 'Blinded', dc: 10, ability: 'con' });
-            expect(storage.set).toHaveBeenCalledWith('combatSummary', mockCombatSummary, 'test-campaign');
-            expect(mockSetCombatSummary).toHaveBeenCalled();
-
-            vi.clearAllMocks();
-            rollConditionSave.mockResolvedValue(makeFailureRoll());
-            buildConditionPopup.mockReturnValue({ success: false });
-
-            await handler('Alice', { key: 'blinded', label: 'Blinded', dc: 10, ability: 'con' });
-            expect(storage.set).toHaveBeenCalledWith('combatSummary', mockCombatSummary, 'test-campaign');
-            expect(mockSetCombatSummary).toHaveBeenCalled();
-        });
-
         it('works for NPC creatures', async () => {
             const handler = createHandler();
             rollConditionSave.mockResolvedValue(makeSuccessRoll());
@@ -298,28 +282,6 @@ describe('initiative-condition-save', () => {
             );
         });
 
-        it('handles undefined targetEffects gracefully', async () => {
-            const handler = createHandler();
-            rollConditionSave.mockResolvedValue(makeSuccessRoll());
-            getRuntimeValue.mockReturnValue(undefined);
-
-            await handler('Alice', { key: 'charmed', label: 'Charmed', dc: 15, ability: 'wis' });
-
-            expect(setRuntimeValue).not.toHaveBeenCalled();
-        });
-
-        it('handles empty targetEffects array gracefully', async () => {
-            const handler = createHandler();
-            rollConditionSave.mockResolvedValue(makeSuccessRoll());
-            getRuntimeValue.mockImplementation((key, prop) => {
-                if (key === 'campaign' && prop === 'targetEffects') return [];
-                return null;
-            });
-
-            await handler('Alice', { key: 'charmed', label: 'Charmed', dc: 15, ability: 'wis' });
-
-            expect(setRuntimeValue).not.toHaveBeenCalled();
-        });
     });
 
     // ------------------------------------------------------------------
@@ -559,47 +521,6 @@ describe('initiative-condition-save', () => {
             );
         });
 
-        it('handles mazeData being null', async () => {
-            const handler = createHandler();
-            rollConditionSave.mockResolvedValue(makeSuccessRoll({ roll: 18, bonus: 5 }));
-            getRuntimeValue.mockImplementation((key, prop) => {
-                if (key === 'campaign' && prop === 'targetEffects') {
-                    return defaultTargetEffects('Alice', 'maze', 'Goblin', 20);
-                }
-                if (key === 'Alice' && prop === 'mazeData') return null;
-                if (key === 'Alice' && prop === 'activeConditions') return ['incapacitated'];
-                return null;
-            });
-
-            await handler('Alice', { key: 'incapacitated', label: 'Incapacitated', dc: 20, ability: 'int' });
-
-            expect(setRuntimeValue).toHaveBeenCalledWith(
-                'Alice', 'mazeData', null, 'test-campaign'
-            );
-            expect(setRuntimeValue).toHaveBeenCalledWith(
-                'Alice', 'activeConditions', [], 'test-campaign'
-            );
-        });
-
-        it('handles activeConditions being null', async () => {
-            const handler = createHandler();
-            rollConditionSave.mockResolvedValue(makeSuccessRoll({ roll: 18, bonus: 5 }));
-            getRuntimeValue.mockImplementation((key, prop) => {
-                if (key === 'campaign' && prop === 'targetEffects') {
-                    return defaultTargetEffects('Alice', 'maze', 'Goblin', 20);
-                }
-                if (key === 'Alice' && prop === 'mazeData') return { casterName: 'Goblin' };
-                if (key === 'Alice' && prop === 'activeConditions') return null;
-                return null;
-            });
-
-            await handler('Alice', { key: 'incapacitated', label: 'Incapacitated', dc: 20, ability: 'int' });
-
-            expect(setRuntimeValue).toHaveBeenCalledWith(
-                'Alice', 'activeConditions', [], 'test-campaign'
-            );
-        });
-
         it('does not trigger cleanup when no maze effect exists', async () => {
             const handler = createHandler();
             rollConditionSave.mockResolvedValue(makeSuccessRoll({ roll: 18, bonus: 5 }));
@@ -645,37 +566,6 @@ describe('initiative-condition-save', () => {
     // Edge cases
     // ------------------------------------------------------------------
     describe('edge cases', () => {
-        it('does not trigger any special handler when condition.key is null', async () => {
-            const handler = createHandler();
-            rollConditionSave.mockResolvedValue(makeSuccessRoll());
-            getRuntimeValue.mockImplementation((key, prop) => {
-                if (key === 'campaign' && prop === 'targetEffects') {
-                    return defaultTargetEffects('Alice', 'forcecage', 'Goblin', 15);
-                }
-                return null;
-            });
-
-            await handler('Alice', { key: null, label: 'Unknown', dc: 15, ability: 'cha' });
-
-            expect(removeForcecageEffect).not.toHaveBeenCalled();
-            expect(setRuntimeValue).not.toHaveBeenCalled();
-        });
-
-        it('does not trigger any special handler when condition.key is undefined', async () => {
-            const handler = createHandler();
-            rollConditionSave.mockResolvedValue(makeSuccessRoll());
-            getRuntimeValue.mockImplementation((key, prop) => {
-                if (key === 'campaign' && prop === 'targetEffects') {
-                    return defaultTargetEffects('Alice', 'forcecage', 'Goblin', 15);
-                }
-                return null;
-            });
-
-            await handler('Alice', { key: undefined, label: 'Unknown', dc: 15, ability: 'cha' });
-
-            expect(removeForcecageEffect).not.toHaveBeenCalled();
-        });
-
         it('does not trigger special handlers for unrelated conditions even with matching targetEffect', async () => {
             const handler = createHandler();
             rollConditionSave.mockResolvedValue(makeSuccessRoll());

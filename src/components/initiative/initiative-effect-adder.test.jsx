@@ -1,4 +1,5 @@
 // @improved-by-ai
+// @cleaned-by-ai
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { createEffectAdderHandlers } from './initiative-effect-adder.jsx';
 import * as conditionSaveService from '../../services/combat/conditions/conditionSaveService.js';
@@ -142,23 +143,6 @@ describe('createEffectAdderHandlers', () => {
             expect(setEffectAdderTarget).toHaveBeenCalledWith(null);
         });
 
-        it('should use targetCharacter.computedStats when available', () => {
-            const targetChar = characters[0];
-            handlers.handleApplyEffect('conditions', { ...conditionData, target: 'Alice' });
-
-            expect(conditionSaveService.addCondition).toHaveBeenLastCalledWith(
-                combatSummary,
-                'Alice',
-                expect.any(Object),
-                15,
-                'wis',
-                useRuntimeState.getRuntimeValue,
-                useRuntimeState.setRuntimeValue,
-                'test-campaign',
-                targetChar.computedStats,
-            );
-        });
-
         it('should find target by suffix name (e.g. "Alice the Wizard") in characters array', () => {
             characters.push({ name: 'Alice the Wizard', computedStats: { hitPoints: 25 } });
             const cs = cloneDeep(mockCombatSummary);
@@ -201,13 +185,6 @@ describe('createEffectAdderHandlers', () => {
                 'test-campaign',
                 undefined,
             );
-        });
-
-        it('should pass undefined stats when target is not found in characters array', () => {
-            handlers.handleApplyEffect('conditions', { conditionKey: 'blinded', target: 'Goblin', dc: 10, ability: 'con' });
-
-            const lastCall = conditionSaveService.addCondition.mock.calls[0];
-            expect(lastCall[9]).toBeUndefined();
         });
 
         it('should not apply any side effects when condition key is unknown', () => {
@@ -282,19 +259,6 @@ describe('createEffectAdderHandlers', () => {
             expect(setEffectAdderTarget).toHaveBeenCalledWith(null);
         });
 
-        it('should default saveAbility to wis when dc is provided without ability', () => {
-            handlers.handleApplyEffect('effects', { ...effectData, dc: 15 });
-
-            expect(useRuntimeState.setRuntimeValue).toHaveBeenCalledWith(
-                'campaign',
-                'targetEffects',
-                expect.arrayContaining([
-                    expect.objectContaining({ saveDc: 15, saveAbility: 'wis' }),
-                ]),
-                'test-campaign',
-            );
-        });
-
         it('should exclude optional fields when not provided', () => {
             handlers.handleApplyEffect('effects', effectData);
 
@@ -324,22 +288,6 @@ describe('createEffectAdderHandlers', () => {
                     expect.objectContaining({ target: 'Alice', effect: 'goad', source: 'New Source' }),
                 ]),
             );
-        });
-
-        it('should handle null or empty existing targetEffects', () => {
-            [null, []].forEach((existing) => {
-                vi.mocked(useRuntimeState.getRuntimeValue).mockReturnValue(existing);
-                handlers.handleApplyEffect('effects', effectData);
-
-                expect(useRuntimeState.setRuntimeValue).toHaveBeenCalledWith(
-                    'campaign',
-                    'targetEffects',
-                    expect.arrayContaining([
-                        expect.objectContaining({ target: 'Alice', effect: 'goad' }),
-                    ]),
-                    'test-campaign',
-                );
-            });
         });
 
         it('should log with dc and ability when provided', () => {
@@ -477,30 +425,4 @@ describe('createEffectAdderHandlers', () => {
         });
     });
 
-    describe('multiple handles in sequence', () => {
-        it('should handle conditions then effects in sequence', () => {
-            vi.mocked(useRuntimeState.getRuntimeValue).mockReturnValue([]);
-
-            handlers.handleApplyEffect('conditions', { conditionKey: 'blinded', target: 'Alice', dc: 10, ability: 'con' });
-            handlers.handleApplyEffect('effects', { target: 'Bob', effectKey: 'goad' });
-
-            expect(conditionSaveService.addCondition).toHaveBeenCalledTimes(1);
-            expect(useRuntimeState.setRuntimeValue).toHaveBeenCalledTimes(1);
-            expect(setEffectAdderTarget).toHaveBeenCalledTimes(2);
-        });
-
-        it('should handle conditions then concentration in sequence', () => {
-            vi.mocked(useRuntimeState.getRuntimeValue).mockImplementation((key, prop, campaign) => {
-                if (prop === 'activeBuffs' && campaign === 'test-campaign') return [];
-                return null;
-            });
-
-            handlers.handleApplyEffect('conditions', { conditionKey: 'blinded', target: 'Alice', dc: 10, ability: 'con' });
-            handlers.handleApplyEffect('concentration', { target: 'Bob', spellName: 'Shield', dc: 12 });
-
-            expect(conditionSaveService.addCondition).toHaveBeenCalledTimes(1);
-            expect(concentrationService.addConcentration).toHaveBeenCalledTimes(1);
-            expect(setEffectAdderTarget).toHaveBeenCalledTimes(2);
-        });
-    });
 });

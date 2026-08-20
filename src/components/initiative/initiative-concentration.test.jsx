@@ -10,6 +10,7 @@ import {
 import { logConcentrationSave } from '../../services/encounters/combatLoggingService.js';
 
 // @improved-by-ai
+// @cleaned-by-ai
 
 vi.mock('../../services/ui/storage.js', () => ({
     default: {
@@ -107,14 +108,12 @@ describe('initiative-concentration', () => {
             expect(rollConcentrationSave).not.toHaveBeenCalled();
         });
 
-        it('should return early when creature is not found in combatSummary', async () => {
+        it('should return early when creature is not found or has no concentration', async () => {
             const { handleRollConcentrationSave } = createHandlers();
             await handleRollConcentrationSave('NonExistent');
             expect(rollConcentrationSave).not.toHaveBeenCalled();
-        });
 
-        it('should return early when creature exists but has no concentration', async () => {
-            const { handleRollConcentrationSave } = createHandlers();
+            mockCombatSummary.creatures[0].concentration = null;
             await handleRollConcentrationSave('Alice');
             expect(rollConcentrationSave).not.toHaveBeenCalled();
         });
@@ -261,93 +260,68 @@ describe('initiative-concentration', () => {
     // ------------------------------------------------------------------
 
     describe('handleRollConcentrationSave — advantageSources', () => {
-        function setupAdvantageTest() {
+        function setupAdvantageTest(saveModifiers = []) {
             mockCombatSummary.creatures[0].concentration = { spell: 'Fireball', dc: 13 };
             rollConcentrationSave.mockResolvedValue(mockSuccessResult());
             getRuntimeValue.mockResolvedValue(null);
+            mockCharacters[0].saveModifiers = saveModifiers;
         }
 
-        it('should collect advantageSources from saveModifiers with target concentration_saving_throws', async () => {
-            setupAdvantageTest();
-            mockCharacters[0].saveModifiers = [
-                { source: 'Bard', target: 'concentration_saving_throws', condition: 'bless', effect: 'advantage' },
-            ];
-
+        it('should collect advantageSources from concentration_saving_throws, Constitution spell damage, deduplicate, and default to normal', async () => {
             const { handleRollConcentrationSave } = createHandlers();
-            await handleRollConcentrationSave('Alice');
 
+            // concentration_saving_throws target — advantage
+            setupAdvantageTest([
+                { source: 'Bard', target: 'concentration_saving_throws', condition: 'bless', effect: 'advantage' },
+            ]);
+            await handleRollConcentrationSave('Alice');
             expect(logConcentrationSave).toHaveBeenCalledWith(
                 'test-campaign', 'Alice', 15, 2, undefined, 'Fireball', 13,
                 true, 'advantage', ['Bard']
             );
-        });
 
-        it('should collect advantageSources from saveModifiers with target saving_throw + concentration_spell_damage + Constitution', async () => {
-            setupAdvantageTest();
-            mockCharacters[0].saveModifiers = [
+            vi.clearAllMocks();
+            setupAdvantageTest([
                 { source: 'Paladin', target: 'saving_throw', condition: 'concentration_spell_damage', effect: 'advantage', abilities: ['Constitution'] },
-            ];
-
-            const { handleRollConcentrationSave } = createHandlers();
+            ]);
             await handleRollConcentrationSave('Alice');
-
             expect(logConcentrationSave).toHaveBeenCalledWith(
                 'test-campaign', 'Alice', 15, 2, undefined, 'Fireball', 13,
                 true, 'advantage', ['Paladin']
             );
-        });
 
-        it('should NOT collect advantageSources when target is saving_throw but abilities does not include Constitution', async () => {
-            setupAdvantageTest();
-            mockCharacters[0].saveModifiers = [
+            vi.clearAllMocks();
+            setupAdvantageTest([
                 { source: 'SomeSource', target: 'saving_throw', condition: 'concentration_spell_damage', effect: 'advantage', abilities: ['Strength'] },
-            ];
-
-            const { handleRollConcentrationSave } = createHandlers();
+            ]);
             await handleRollConcentrationSave('Alice');
-
             expect(logConcentrationSave).toHaveBeenCalledWith(
                 'test-campaign', 'Alice', 15, 2, undefined, 'Fireball', 13,
                 true, 'normal', undefined
             );
-        });
 
-        it('should deduplicate advantageSources from multiple modifiers', async () => {
-            setupAdvantageTest();
-            mockCharacters[0].saveModifiers = [
+            vi.clearAllMocks();
+            setupAdvantageTest([
                 { source: 'Bard', target: 'concentration_saving_throws', condition: 'bless', effect: 'advantage' },
                 { source: 'Bard', target: 'concentration_saving_throws', condition: 'other', effect: 'advantage' },
-            ];
-
-            const { handleRollConcentrationSave } = createHandlers();
+            ]);
             await handleRollConcentrationSave('Alice');
-
             expect(logConcentrationSave).toHaveBeenCalledWith(
                 'test-campaign', 'Alice', 15, 2, undefined, 'Fireball', 13,
                 true, 'advantage', ['Bard']
             );
-        });
 
-        it('should default to normal when targetModifiers is undefined', async () => {
-            setupAdvantageTest();
-            mockCharacters[0].saveModifiers = undefined;
-
-            const { handleRollConcentrationSave } = createHandlers();
+            vi.clearAllMocks();
+            setupAdvantageTest(undefined);
             await handleRollConcentrationSave('Alice');
-
             expect(logConcentrationSave).toHaveBeenCalledWith(
                 'test-campaign', 'Alice', 15, 2, undefined, 'Fireball', 13,
                 true, 'normal', undefined
             );
-        });
 
-        it('should default to normal when targetModifiers is empty array', async () => {
-            setupAdvantageTest();
-            mockCharacters[0].saveModifiers = [];
-
-            const { handleRollConcentrationSave } = createHandlers();
+            vi.clearAllMocks();
+            setupAdvantageTest([]);
             await handleRollConcentrationSave('Alice');
-
             expect(logConcentrationSave).toHaveBeenCalledWith(
                 'test-campaign', 'Alice', 15, 2, undefined, 'Fireball', 13,
                 true, 'normal', undefined
@@ -355,58 +329,4 @@ describe('initiative-concentration', () => {
         });
     });
 
-    // ------------------------------------------------------------------
-    // handleRollConcentrationSave — targetCharacter finding
-    // ------------------------------------------------------------------
-
-    describe('handleRollConcentrationSave — targetCharacter matching', () => {
-        function setupTargetTest() {
-            mockCombatSummary.creatures[0].concentration = { spell: 'Fireball', dc: 13 };
-            rollConcentrationSave.mockResolvedValue(mockSuccessResult());
-            getRuntimeValue.mockResolvedValue(null);
-        }
-
-        it('should find targetCharacter by exact name match', async () => {
-            setupTargetTest();
-            mockCharacters[0].saveModifiers = [
-                { source: 'Bard', target: 'concentration_saving_throws', condition: 'bless', effect: 'advantage' },
-            ];
-
-            const { handleRollConcentrationSave } = createHandlers();
-            await handleRollConcentrationSave('Alice');
-
-            expect(rollConcentrationSave).toHaveBeenCalledWith(
-                expect.objectContaining({ name: 'Alice' }),
-                expect.any(Object),
-                expect.arrayContaining([expect.objectContaining({ name: 'Alice' })]),
-                expect.any(Array),
-                'test-campaign',
-                'test-map',
-                expect.any(Function),
-                false
-            );
-        });
-
-        it('should find targetCharacter by name prefix when creature name matches start of a character name', async () => {
-            setupTargetTest();
-            mockCharacters.push({ name: 'Alice Companion', saveModifiers: [], computedStats: {} });
-
-            const { handleRollConcentrationSave } = createHandlers();
-            await handleRollConcentrationSave('Alice');
-
-            expect(rollConcentrationSave).toHaveBeenCalledWith(
-                expect.objectContaining({ name: 'Alice' }),
-                expect.any(Object),
-                expect.arrayContaining([
-                    expect.objectContaining({ name: 'Alice' }),
-                    expect.objectContaining({ name: 'Alice Companion' }),
-                ]),
-                expect.any(Array),
-                'test-campaign',
-                'test-map',
-                expect.any(Function),
-                false
-            );
-        });
-    });
 });

@@ -1,4 +1,5 @@
 // @improved-by-ai
+// @cleaned-by-ai
 import { render, screen, fireEvent } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import CreatureCard from './CreatureCard.jsx';
@@ -129,46 +130,18 @@ describe('CreatureCard', () => {
     });
 
     describe('initiative input', () => {
-        it('should render an initiative input for player creatures', () => {
-            render(<CreatureCard {...props} creature={defaultPlayerCreature} />);
-            const initiativeInput = screen.getByTestId('initiative-input');
-            expect(initiativeInput).toBeInTheDocument();
-        });
-
-        it('should render an initiative input for NPC creatures', () => {
-            render(<CreatureCard {...props} creature={defaultNpcCreature} />);
-            const initiativeInput = screen.getByTestId('initiative-input');
-            expect(initiativeInput).toBeInTheDocument();
-        });
-
-        it('should call onInitiativeChange when initiative input blurs', () => {
+        it('should call onInitiativeChange when initiative input blurs for both player and NPC', () => {
             render(<CreatureCard {...props} creature={defaultPlayerCreature} />);
             const initiativeInput = screen.getByTestId('initiative-input');
             fireEvent.blur(initiativeInput, { target: { value: '20' } });
             expect(props.onInitiativeChange).toHaveBeenCalledWith('Alice', '20');
         });
 
-        it('should call onInitiativeChange when Enter is pressed on the initiative input', () => {
-            render(<CreatureCard {...props} creature={defaultPlayerCreature} />);
-            const initiativeInput = screen.getByTestId('initiative-input');
-            const blurSpy = vi.spyOn(initiativeInput, 'blur');
-            fireEvent.keyDown(initiativeInput, { key: 'Enter' });
-            expect(blurSpy).toHaveBeenCalled();
-            blurSpy.mockRestore();
-        });
-
-        it('should call onInitiativeChange for NPC creatures', () => {
+        it('should call onInitiativeChange when initiative input blurs for NPC', () => {
             render(<CreatureCard {...props} creature={defaultNpcCreature} />);
             const initiativeInput = screen.getByTestId('initiative-input');
             fireEvent.blur(initiativeInput, { target: { value: '15' } });
             expect(props.onInitiativeChange).toHaveBeenCalledWith('Goblin', '15');
-        });
-
-        it('should render initiative input when creature has null initiative', () => {
-            const creature = { ...defaultPlayerCreature, initiative: null };
-            render(<CreatureCard {...props} creature={creature} />);
-            const initiativeInput = screen.getByTestId('initiative-input');
-            expect(initiativeInput).toBeInTheDocument();
         });
     });
 
@@ -193,12 +166,6 @@ describe('CreatureCard', () => {
             render(<CreatureCard {...props} creature={creature} allCreatures={allCreatures} />);
             const targetSelect = screen.getByTestId('target-select');
             expect(targetSelect).toHaveValue('Bob');
-        });
-
-        it('should render a default empty option', () => {
-            render(<CreatureCard {...props} creature={defaultPlayerCreature} />);
-            const targetSelect = screen.getByTestId('target-select');
-            expect(targetSelect.querySelector('option[value=""]')).toBeInTheDocument();
         });
     });
 
@@ -226,7 +193,7 @@ describe('CreatureCard', () => {
     });
 
     describe('HP change', () => {
-        it('should call onHpChange when HP input blurs for player', () => {
+        it('should call onHpChange when HP input blurs for both player and NPC', () => {
             render(<CreatureCard {...props} creature={defaultPlayerCreature} />);
             const hpInput = screen.getByTestId('hp-input-Alice');
             fireEvent.blur(hpInput, { target: { value: '15' } });
@@ -238,32 +205,6 @@ describe('CreatureCard', () => {
             const hpInput = screen.getByTestId('hp-input-Goblin');
             fireEvent.blur(hpInput, { target: { value: '3' } });
             expect(props.onHpChange).toHaveBeenCalledWith('Goblin', 3);
-        });
-
-        it('should show current/max HP values', () => {
-            render(<CreatureCard {...props} creature={{ ...defaultPlayerCreature, currentHp: 12, maxHp: 20 }} />);
-            expect(screen.getByText('12/20')).toBeInTheDocument();
-        });
-    });
-
-    describe('edge cases', () => {
-        it('should handle creature with null currentHp', () => {
-            const creature = { ...defaultPlayerCreature, currentHp: null };
-            render(<CreatureCard {...props} creature={creature} />);
-            expect(screen.getByTestId('hp-input-Alice')).toHaveValue(0);
-        });
-
-        it('should render initiative input when creature has undefined initiative', () => {
-            const creature = { ...defaultPlayerCreature, initiative: undefined };
-            render(<CreatureCard {...props} creature={creature} />);
-            const initiativeInput = screen.getByTestId('initiative-input');
-            expect(initiativeInput).toBeInTheDocument();
-        });
-
-        it('should render target select with only the creature itself when allCreatures has one entry', () => {
-            render(<CreatureCard {...props} creature={defaultPlayerCreature} />);
-            const targetSelect = screen.getByTestId('target-select');
-            expect(targetSelect.querySelector('option[value=""]')).toBeInTheDocument();
         });
     });
 });

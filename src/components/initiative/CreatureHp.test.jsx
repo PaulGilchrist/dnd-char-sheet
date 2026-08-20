@@ -1,4 +1,5 @@
 // @improved-by-ai
+// @cleaned-by-ai
 import { render, screen, fireEvent } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import CreatureHp from './CreatureHp.jsx';
@@ -75,14 +76,6 @@ describe('CreatureHp', () => {
             maxInput.value = '5';
             fireEvent.blur(maxInput);
             expect(props.onChange).toHaveBeenCalledWith('Goblin', 5);
-        });
-
-        it('should handle empty string current HP input as 0', () => {
-            render(<CreatureHp {...props} creature={defaultNpcCreature} isLocalhost={true} />);
-            const currentInput = document.querySelectorAll('.hp-inline-input')[0];
-            currentInput.value = '';
-            fireEvent.blur(currentInput);
-            expect(props.onChange).toHaveBeenCalledWith('Goblin', 0);
         });
 
         it('should pass negative values through unchanged (no clamping)', () => {

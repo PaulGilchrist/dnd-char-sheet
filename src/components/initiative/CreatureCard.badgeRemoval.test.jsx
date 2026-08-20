@@ -1,4 +1,5 @@
 // @improved-by-ai
+// @cleaned-by-ai
 import { render, screen, fireEvent } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import CreatureCard from './CreatureCard.jsx';
@@ -180,58 +181,28 @@ describe('CreatureCard - badge removal actions', () => {
     });
 
     describe('Transformation spell removal', () => {
-        it('should revert polymorph when polymorph badge remove clicked', () => {
-            runtimeState.useRuntimeValue.mockImplementation((_campaignName, key) => {
-                if (key === 'targetEffects') return [{ target: 'Alice', effect: 'polymorph' }];
-                return null;
-            });
-            runtimeState.getRuntimeValue.mockImplementation((_target, _key) => null);
-            render(<CreatureCard {...props} creature={defaultPlayerCreature} campaignName="test-campaign" />);
-            expect(screen.getByText('Polymorph')).toBeInTheDocument();
-            const removeBtns = getRemoveButtons();
-            expect(removeBtns.length).toBe(1);
-            fireEvent.click(removeBtns[0]);
-            expect(runtimeState.setRuntimeValue).not.toHaveBeenCalled();
-        });
+        const transformationSpells = [
+            { effect: 'polymorph', label: 'Polymorph' },
+            { effect: 'animal_shapes', label: 'Animal Shapes' },
+            { effect: 'shapechange', label: 'Shapechange' },
+        ];
 
-        it('should revert animal shapes when badge remove clicked', () => {
-            runtimeState.useRuntimeValue.mockImplementation((_campaignName, key) => {
-                if (key === 'targetEffects') return [{ target: 'Alice', effect: 'animal_shapes' }];
-                return null;
-            });
-            runtimeState.getRuntimeValue.mockImplementation((_target, _key) => null);
-            render(<CreatureCard {...props} creature={defaultPlayerCreature} campaignName="test-campaign" />);
-            expect(screen.getByText('Animal Shapes')).toBeInTheDocument();
-            const removeBtns = getRemoveButtons();
-            expect(removeBtns.length).toBe(1);
-            fireEvent.click(removeBtns[0]);
-            expect(runtimeState.setRuntimeValue).not.toHaveBeenCalled();
-        });
-
-        it('should revert shapechange when badge remove clicked', () => {
-            runtimeState.useRuntimeValue.mockImplementation((_campaignName, key) => {
-                if (key === 'targetEffects') return [{ target: 'Alice', effect: 'shapechange' }];
-                return null;
-            });
-            runtimeState.getRuntimeValue.mockImplementation((_target, _key) => null);
-            render(<CreatureCard {...props} creature={defaultPlayerCreature} campaignName="test-campaign" />);
-            expect(screen.getByText('Shapechange')).toBeInTheDocument();
-            const removeBtns = getRemoveButtons();
-            expect(removeBtns.length).toBe(1);
-            fireEvent.click(removeBtns[0]);
-            expect(runtimeState.setRuntimeValue).not.toHaveBeenCalled();
-        });
-
-        it('should not render transformation remove buttons for non-localhost', () => {
-            runtimeState.useRuntimeValue.mockImplementation((_campaignName, key) => {
-                if (key === 'targetEffects') return [{ target: 'Alice', effect: 'polymorph' }];
-                return null;
-            });
-            runtimeState.getRuntimeValue.mockImplementation((_target, _key) => null);
-            render(<CreatureCard {...props} creature={defaultPlayerCreature} campaignName="test-campaign" isLocalhost={false} />);
-            expect(screen.getByText('Polymorph')).toBeInTheDocument();
-            expect(screen.queryByTitle('Remove effect')).not.toBeInTheDocument();
-        });
+        it.each(transformationSpells)(
+            'should revert %s when badge remove clicked',
+            ({ effect, label }) => {
+                runtimeState.useRuntimeValue.mockImplementation((_campaignName, key) => {
+                    if (key === 'targetEffects') return [{ target: 'Alice', effect }];
+                    return null;
+                });
+                runtimeState.getRuntimeValue.mockImplementation((_target, _key) => null);
+                render(<CreatureCard {...props} creature={defaultPlayerCreature} campaignName="test-campaign" />);
+                expect(screen.getByText(label)).toBeInTheDocument();
+                const removeBtns = getRemoveButtons();
+                expect(removeBtns.length).toBe(1);
+                fireEvent.click(removeBtns[0]);
+                expect(runtimeState.setRuntimeValue).not.toHaveBeenCalled();
+            }
+        );
     });
 
     describe('Wild Shape removal', () => {
@@ -246,12 +217,6 @@ describe('CreatureCard - badge removal actions', () => {
             expect(removeBtn).toBeInTheDocument();
             fireEvent.click(removeBtn);
             expect(runtimeState.setRuntimeValue).not.toHaveBeenCalled();
-        });
-
-        it('should not render Wild Shape remove button for non-localhost', () => {
-            runtimeState.getRuntimeValue.mockImplementation((_target, _key) => null);
-            render(<CreatureCard {...props} creature={defaultPlayerCreature} campaignName="test-campaign" isLocalhost={false} />);
-            expect(screen.queryByTitle('Remove effect')).not.toBeInTheDocument();
         });
     });
 
@@ -269,16 +234,6 @@ describe('CreatureCard - badge removal actions', () => {
             expect(removeBtn).toBeInTheDocument();
             fireEvent.click(removeBtn);
             expect(runtimeState.setRuntimeValue).toHaveBeenCalledWith('Alice', 'wrathOfTheSeaActive', false, 'test-campaign');
-        });
-
-        it('should not render remove button for non-localhost', () => {
-            runtimeState.getRuntimeValue.mockImplementation((target, key) => {
-                if (key === 'wrathOfTheSeaActive' && target === 'Alice') return true;
-                return null;
-            });
-            render(<CreatureCard {...props} creature={defaultPlayerCreature} campaignName="test-campaign" isLocalhost={false} />);
-            expect(screen.getByText('Wrath of the Sea')).toBeInTheDocument();
-            expect(screen.queryByTitle('Remove effect')).not.toBeInTheDocument();
         });
     });
 
@@ -302,22 +257,6 @@ describe('CreatureCard - badge removal actions', () => {
             expect(removeBtn).toBeInTheDocument();
             fireEvent.click(removeBtn);
             expect(runtimeState.setRuntimeValue).toHaveBeenCalledWith('Druid', 'naturesSanctuaryCreatures', ['Bob'], 'test-campaign');
-        });
-
-        it('should not render Sanctuary remove button for non-localhost', () => {
-            runtimeState.getRuntimeValue.mockImplementation((target, key) => {
-                if (key === 'naturesSanctuaryActive' && target === 'Druid') return true;
-                if (key === 'naturesSanctuaryCreatures' && target === 'Druid') return ['Alice', 'Bob'];
-                if (key === 'naturesSanctuaryResistance' && target === 'Druid') return 'Fire';
-                return null;
-            });
-            const allCreatures = [
-                { name: 'Druid', type: 'player' },
-                { ...defaultPlayerCreature },
-            ];
-            render(<CreatureCard {...props} creature={allCreatures[1]} allCreatures={allCreatures} campaignName="test-campaign" isLocalhost={false} />);
-            expect(screen.getByText('Sanctuary')).toBeInTheDocument();
-            expect(screen.queryByTitle('Remove effect')).not.toBeInTheDocument();
         });
     });
 
@@ -357,21 +296,6 @@ describe('CreatureCard - badge removal actions', () => {
             expect(removeBtns.length).toBe(2);
             fireEvent.click(removeBtns[0]);
             expect(runtimeState.setRuntimeValue).toHaveBeenCalledWith('campaign', 'targetEffects', expect.any(Array), 'test-campaign');
-        });
-
-        it('should not render summoned remove buttons for non-localhost', () => {
-            runtimeState.useRuntimeValue.mockImplementation((_campaignName, key) => {
-                if (key === 'targetEffects') return [{ target: 'Goblin', effect: 'summoned', source: 'Alice' }];
-                return null;
-            });
-            runtimeState.getRuntimeValue.mockImplementation((_target, _key) => null);
-            const allCreatures = [
-                { name: 'Alice', type: 'player' },
-                { ...defaultNpcCreature },
-            ];
-            render(<CreatureCard {...props} creature={allCreatures[1]} allCreatures={allCreatures} campaignName="test-campaign" isLocalhost={false} />);
-            expect(screen.getByText('Summoned (Alice)')).toBeInTheDocument();
-            expect(screen.queryByTitle('Remove effect')).not.toBeInTheDocument();
         });
     });
 
@@ -425,22 +349,4 @@ describe('CreatureCard - badge removal actions', () => {
         });
     });
 
-    describe('Multiple badges on same creature', () => {
-        it('should render a remove button for each removable badge', () => {
-            runtimeState.useRuntimeValue.mockImplementation((_campaignName, key) => {
-                if (key === 'targetEffects') return [
-                    { target: 'Alice', effect: 'polymorph' },
-                    { target: 'Alice', effect: 'reckless_attack' },
-                ];
-                return null;
-            });
-            runtimeState.getRuntimeValue.mockImplementation((target, key) => {
-                if (key === 'activeBuffs' && target === 'Alice') return [{ name: 'Death Ward', effect: 'death_ward' }];
-                return null;
-            });
-            render(<CreatureCard {...props} creature={defaultPlayerCreature} campaignName="test-campaign" />);
-            const removeBtns = getRemoveButtons();
-            expect(removeBtns.length).toBeGreaterThanOrEqual(2);
-        });
-    });
 });

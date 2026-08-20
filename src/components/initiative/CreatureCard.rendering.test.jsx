@@ -1,4 +1,5 @@
 // @improved-by-ai
+// @cleaned-by-ai
 import { render, screen } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import CreatureCard from './CreatureCard.jsx';
@@ -146,12 +147,6 @@ describe('CreatureCard - rendering', () => {
             expect(card).toHaveClass('creature-unconscious');
         });
 
-        it('should apply creature-unconscious class when currentHp is negative', () => {
-            render(<CreatureCard {...props} creature={{ ...defaultPlayerCreature, currentHp: -5 }} />);
-            const card = document.querySelector('.creature-card');
-            expect(card).toHaveClass('creature-unconscious');
-        });
-
         it('should not apply creature-unconscious class when currentHp is positive', () => {
             render(<CreatureCard {...props} creature={{ ...defaultPlayerCreature, currentHp: 1 }} />);
             const card = document.querySelector('.creature-card');
@@ -170,16 +165,13 @@ describe('CreatureCard - rendering', () => {
             expect(card).not.toHaveClass('active');
         });
 
-        it('should apply the creature type class', () => {
-            render(<CreatureCard {...props} creature={defaultPlayerCreature} />);
+        it.each([
+            [defaultPlayerCreature, 'player'],
+            [defaultNpcCreature, 'npc'],
+        ])('should apply the creature type class (%s)', (_creature, expectedClass) => {
+            render(<CreatureCard {...props} creature={_creature} />);
             const card = document.querySelector('.creature-card');
-            expect(card).toHaveClass('player');
-        });
-
-        it('should apply npc type class for npc creatures', () => {
-            render(<CreatureCard {...props} creature={defaultNpcCreature} />);
-            const card = document.querySelector('.creature-card');
-            expect(card).toHaveClass('npc');
+            expect(card).toHaveClass(expectedClass);
         });
     });
 
@@ -190,14 +182,11 @@ describe('CreatureCard - rendering', () => {
             expect(initiativeInput).toHaveValue(14);
         });
 
-        it('should render initiative input with null value when initiative is null', () => {
-            render(<CreatureCard {...props} creature={{ ...defaultPlayerCreature, initiative: null }} />);
-            const initiativeInput = screen.getByTestId('initiative-input');
-            expect(initiativeInput).toHaveValue(null);
-        });
-
-        it('should render initiative input with null value when initiative is undefined', () => {
-            render(<CreatureCard {...props} creature={{ ...defaultPlayerCreature, initiative: undefined }} />);
+        it.each([
+            [null, 'null'],
+            [undefined, 'undefined'],
+        ])('should render initiative input with null value when initiative is %s', (initValue) => {
+            render(<CreatureCard {...props} creature={{ ...defaultPlayerCreature, initiative: initValue }} />);
             const initiativeInput = screen.getByTestId('initiative-input');
             expect(initiativeInput).toHaveValue(null);
         });
@@ -263,43 +252,23 @@ describe('CreatureCard - rendering', () => {
     });
 
     describe('polymorphObject rendering', () => {
-        it('should display polymorphObject type as formatted name', () => {
+        it.each([
+            [{ type: 'giant_toad', icon: 'fa-toad' }, 'Giant Toad'],
+            [{ type: 'black_dragon', icon: 'fa-dragon' }, 'Black Dragon'],
+            [{ type: 'spider', icon: 'fa-spider' }, 'Spider'],
+        ])('should display polymorphObject type as formatted name (%s)', (_obj, expectedText) => {
             const creature = {
                 ...defaultNpcCreature,
-                polymorphObject: { type: 'giant_toad', icon: 'fa-toad' },
+                polymorphObject: _obj,
             };
             render(<CreatureCard {...props} creature={creature} />);
-            expect(screen.getByText('Giant Toad')).toBeInTheDocument();
-        });
-
-        it('should display polymorphObject with underscores converted to spaces and title-cased', () => {
-            const creature = {
-                ...defaultNpcCreature,
-                polymorphObject: { type: 'black_dragon', icon: 'fa-dragon' },
-            };
-            render(<CreatureCard {...props} creature={creature} />);
-            expect(screen.getByText('Black Dragon')).toBeInTheDocument();
-        });
-
-        it('should render the polymorphObject icon when present', () => {
-            const creature = {
-                ...defaultNpcCreature,
-                polymorphObject: { type: 'spider', icon: 'fa-spider' },
-            };
-            render(<CreatureCard {...props} creature={creature} />);
-            expect(screen.getByText('Spider')).toBeInTheDocument();
+            expect(screen.getByText(expectedText)).toBeInTheDocument();
         });
     });
 
     describe('edge cases - creature data', () => {
         it('should render the creature card when allCreatures is empty', () => {
             render(<CreatureCard {...props} creature={defaultPlayerCreature} allCreatures={[]} />);
-            const card = document.querySelector('.creature-card');
-            expect(card).toBeInTheDocument();
-        });
-
-        it('should render the creature card when conditions array is empty', () => {
-            render(<CreatureCard {...props} creature={{ ...defaultPlayerCreature, conditions: [] }} />);
             const card = document.querySelector('.creature-card');
             expect(card).toBeInTheDocument();
         });

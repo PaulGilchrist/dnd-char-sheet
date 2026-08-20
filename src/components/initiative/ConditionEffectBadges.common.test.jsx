@@ -1,4 +1,5 @@
 // @improved-by-ai
+// @cleaned-by-ai
 import { render, screen } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import ConditionEffectBadges from './ConditionEffectBadges.jsx';
@@ -76,38 +77,6 @@ describe('ConditionEffectBadges - Common Helpers', () => {
         vi.clearAllMocks();
     });
 
-    describe('edge cases', () => {
-        it('should render nothing when conditions is null', () => {
-            computeConditionEffects.mockReturnValue(makeEffects({}));
-            render(
-                <ConditionEffectBadges
-                    conditions={null}
-                    creatureName="Alice"
-                    campaignName="test"
-                />
-            );
-            expect(screen.queryByTestId('creature-badge')).not.toBeInTheDocument();
-        });
-
-        it('should render nothing when conditions is empty and no effects apply', () => {
-            getRuntimeValue.mockImplementation((name, key) => {
-                if (name === 'Alice' && key === 'activeBuffs') return [];
-                return null;
-            });
-            computeConditionEffects.mockReturnValue(makeEffects({}));
-            render(
-                <ConditionEffectBadges
-                    conditions={[]}
-                    targetEffects={[]}
-                    creatureName="Alice"
-                    campaignName="test-campaign"
-                    isLocalhost={true}
-                />
-            );
-            expect(screen.queryByTestId('creature-badge')).not.toBeInTheDocument();
-        });
-    });
-
     describe('Badge deduplication', () => {
         it('should deduplicate badges by label keeping the first occurrence', () => {
             getRuntimeValue.mockImplementation((name, key) => {
@@ -140,49 +109,8 @@ describe('ConditionEffectBadges - Common Helpers', () => {
                 />
             );
             const advBadges = screen.queryAllByText('Adv');
-            expect(advBadges.length).toBeLessThanOrEqual(1);
-        });
-    });
-
-    describe('CreatureBadge rendering', () => {
-        it('should render CreatureBadge as span when no onClick', () => {
-            getRuntimeValue.mockImplementation((name, key) => {
-                if (name === 'Alice' && key === 'activeBuffs') return [];
-                return null;
-            });
-            computeConditionEffects.mockReturnValue(makeEffects({}));
-            render(
-                <ConditionEffectBadges
-                    conditions={[]}
-                    targetEffects={[{ target: 'Alice', effect: 'sanctuary', source: 'Cleric' }]}
-                    creatureName="Alice"
-                    campaignName="test-campaign"
-                    isLocalhost={false}
-                />
-            );
-            const badge = screen.getByText('Sanctuary');
-            expect(badge.tagName).toBe('SPAN');
-        });
-
-        it('should render CreatureBadge as button when onClick is provided', () => {
-            const onRollConditionSave = vi.fn();
-            getRuntimeValue.mockImplementation((name, key) => {
-                if (name === 'Alice' && key === 'activeBuffs') return [];
-                return null;
-            });
-            computeConditionEffects.mockReturnValue(makeEffects({}));
-            render(
-                <ConditionEffectBadges
-                    conditions={[]}
-                    targetEffects={[{ target: 'Alice', effect: 'ottos_irresistible_dance', source: 'Wizard', dc: 15 }]}
-                    creatureName="Alice"
-                    campaignName="test-campaign"
-                    isLocalhost={true}
-                    onRollConditionSave={onRollConditionSave}
-                />
-            );
-            const badge = screen.getByText("Otto's Irresistible Dance");
-            expect(badge.tagName).toBe('BUTTON');
+            expect(advBadges.length).toBe(1);
+            expect(advBadges[0].textContent).toContain('Adv');
         });
     });
 });

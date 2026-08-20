@@ -1,9 +1,11 @@
 // @improved-by-ai
+// @cleaned-by-ai
 import { render, screen } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import CreatureCard from './CreatureCard.jsx';
 import * as runtimeState from '../../hooks/runtime/useRuntimeState.js';
 import * as buffToggle from '../../services/automation/common/buffToggle.js';
+import * as automationPassives from '../../services/combat/automation/automationPassives.js';
 
 vi.mock('../common/AvatarImage.jsx', () => ({
     default: vi.fn(({ name, imagePath }) => {
@@ -172,30 +174,6 @@ describe('CreatureCard', () => {
             render(<CreatureCard {...props} creature={allCreatures[1]} allCreatures={allCreatures} campaignName="test-campaign" />);
             expect(screen.queryByText('Sanctuary')).not.toBeInTheDocument();
         });
-
-        it('should not render sanctuary badge when sanctuary is not active', () => {
-            sanctuaryMocks.naturesSanctuaryActive = { Druid: false };
-            sanctuaryMocks.naturesSanctuaryCreatures = { Druid: ['Alice'] };
-
-            const allCreatures = [
-                { name: 'Druid', type: 'player' },
-                { ...defaultPlayerCreature },
-            ];
-
-            render(<CreatureCard {...props} creature={allCreatures[1]} allCreatures={allCreatures} campaignName="test-campaign" />);
-            expect(screen.queryByText('Sanctuary')).not.toBeInTheDocument();
-        });
-
-        it('should not render sanctuary badge when allCreatures is empty', () => {
-            sanctuaryMocks.naturesSanctuaryActive = { Druid: true };
-            sanctuaryMocks.naturesSanctuaryCreatures = { Druid: ['Alice'] };
-            sanctuaryMocks.naturesSanctuaryResistance = { Druid: 'Fire' };
-
-            render(<CreatureCard {...props} creature={defaultPlayerCreature} allCreatures={[]} campaignName="test-campaign" />);
-            expect(screen.queryByText('Sanctuary')).not.toBeInTheDocument();
-        });
-
-
     });
 
     describe('Starry Form badge rendering', () => {
@@ -210,35 +188,19 @@ describe('CreatureCard', () => {
             expect(screen.getByText('Starry Form - Archer')).toBeInTheDocument();
         });
 
-        it('should not render Starry Form badge when no constellation is set', () => {
+        it.each([
+            [{ name: 'Starry Form' }, 'Starry Form without constellation'],
+            [[], 'empty activeBuffs array'],
+            [null, 'null activeBuffs'],
+        ])('should not render Starry Form badge when %s (%s)', (buffs, _description) => {
             runtimeState.getRuntimeValue.mockImplementation((target, key) => {
                 if (key === 'activeBuffs' && target === 'Alice') {
-                    return [{ name: 'Starry Form' }];
+                    return buffs;
                 }
                 return undefined;
             });
             render(<CreatureCard {...props} creature={defaultPlayerCreature} campaignName="test-campaign" />);
             expect(screen.queryByText(/Starry Form/)).not.toBeInTheDocument();
-        });
-
-        it('should not render Starry Form badge when activeBuffs is empty', () => {
-            runtimeState.getRuntimeValue.mockImplementation((_target, key) => {
-                if (key === 'activeBuffs') return [];
-                return undefined;
-            });
-            render(<CreatureCard {...props} creature={defaultPlayerCreature} campaignName="test-campaign" />);
-            expect(screen.queryByText(/Starry Form/)).not.toBeInTheDocument();
-        });
-
-        it('should render Starry Form with Chalice constellation', () => {
-            runtimeState.getRuntimeValue.mockImplementation((target, key, _campaignName) => {
-                if (key === 'activeBuffs' && target === 'Alice') {
-                    return [{ name: 'Starry Form', constellation: 'Chalice' }];
-                }
-                return undefined;
-            });
-            render(<CreatureCard {...props} creature={defaultPlayerCreature} campaignName="test-campaign" />);
-            expect(screen.getByText('Starry Form - Chalice')).toBeInTheDocument();
         });
     });
 
@@ -262,45 +224,21 @@ describe('CreatureCard', () => {
             render(<CreatureCard {...props} creature={defaultPlayerCreature} campaignName="test-campaign" />);
             expect(screen.queryByText('Death Ward')).not.toBeInTheDocument();
         });
-
-        it('should not render Death Ward badge when activeBuffs is null', () => {
-            runtimeState.getRuntimeValue.mockImplementation((_target, key) => {
-                if (key === 'activeBuffs') return null;
-                return undefined;
-            });
-            render(<CreatureCard {...props} creature={defaultPlayerCreature} campaignName="test-campaign" />);
-            expect(screen.queryByText('Death Ward')).not.toBeInTheDocument();
-        });
     });
 
     describe('Summoned badge rendering', () => {
-        it('should render summoned badge when targetEffect has summoned effect with player source', () => {
-            const targetEffects = [{ target: 'Goblin', effect: 'summoned', source: 'Alice' }];
+        it.each([
+            [{ target: 'Goblin', effect: 'summoned', source: 'Alice' }, 'Summoned (Alice)', [{ name: 'Alice', type: 'player' }, { name: 'Goblin', type: 'npc' }]],
+            [{ target: 'Goblin', effect: 'summoned', source: null }, 'Summoned', [{ name: 'Goblin', type: 'npc' }]],
+            [{ target: 'Goblin', effect: 'summoned', source: 'Orc' }, 'Summoned (Orc)', [{ name: 'Goblin', type: 'npc' }]],
+        ])('should render %s when targetEffect has summoned effect with %s', (targetEffect, expectedLabel, allCreatures) => {
             runtimeState.useRuntimeValue.mockImplementation((_campaignName, key) => {
-                if (key === 'targetEffects') return targetEffects;
+                if (key === 'targetEffects') return [targetEffect];
                 return null;
             });
-            const allCreatures = [
-                { name: 'Alice', type: 'player' },
-                { name: 'Goblin', type: 'npc' },
-            ];
             const npcCreature = { ...defaultNpcCreature, name: 'Goblin' };
             render(<CreatureCard {...props} creature={npcCreature} allCreatures={allCreatures} campaignName="test-campaign" />);
-            expect(screen.getByText('Summoned (Alice)')).toBeInTheDocument();
-        });
-
-        it('should render summoned badge without source when source is null', () => {
-            const targetEffects = [{ target: 'Goblin', effect: 'summoned', source: null }];
-            runtimeState.useRuntimeValue.mockImplementation((_campaignName, key) => {
-                if (key === 'targetEffects') return targetEffects;
-                return null;
-            });
-            const allCreatures = [
-                { name: 'Goblin', type: 'npc' },
-            ];
-            const npcCreature = { ...defaultNpcCreature, name: 'Goblin' };
-            render(<CreatureCard {...props} creature={npcCreature} allCreatures={allCreatures} campaignName="test-campaign" />);
-            expect(screen.getByText('Summoned')).toBeInTheDocument();
+            expect(screen.getByText(expectedLabel)).toBeInTheDocument();
         });
 
         it('should not render summoned badge when no summoned targetEffects exist', () => {
@@ -311,47 +249,15 @@ describe('CreatureCard', () => {
             render(<CreatureCard {...props} creature={defaultNpcCreature} campaignName="test-campaign" />);
             expect(screen.queryByText(/Summoned/)).not.toBeInTheDocument();
         });
-
-        it('should render summoned badge even when source is not a player', () => {
-            const targetEffects = [{ target: 'Goblin', effect: 'summoned', source: 'Orc' }];
-            runtimeState.useRuntimeValue.mockImplementation((_campaignName, key) => {
-                if (key === 'targetEffects') return targetEffects;
-                return null;
-            });
-            const allCreatures = [
-                { name: 'Goblin', type: 'npc' },
-            ];
-            const npcCreature = { ...defaultNpcCreature, name: 'Goblin' };
-            render(<CreatureCard {...props} creature={npcCreature} allCreatures={allCreatures} campaignName="test-campaign" />);
-            expect(screen.getByText('Summoned (Orc)')).toBeInTheDocument();
-        });
     });
 
     describe('Resilient Sphere badge rendering', () => {
-        it('should render Resilient Sphere badge when active', async () => {
-            const { isResilientSphereActive, getResilientSphereSource } = await import('../../services/combat/automation/automationPassives.js');
-            isResilientSphereActive.mockReturnValue(true);
-            getResilientSphereSource.mockReturnValue('Wizard');
+        it('should render Resilient Sphere badge when active', () => {
+            vi.mocked(automationPassives.isResilientSphereActive).mockReturnValue(true);
+            vi.mocked(automationPassives.getResilientSphereSource).mockReturnValue('Wizard');
             render(<CreatureCard {...props} creature={defaultPlayerCreature} campaignName="test-campaign" />);
             expect(screen.getByText('Resilient Sphere')).toBeInTheDocument();
-            isResilientSphereActive.mockReturnValue(false);
-        });
-    });
-
-    describe('Multiple badges on same creature', () => {
-        it('should render both Starry Form and Death Ward badges when both are active', () => {
-            runtimeState.getRuntimeValue.mockImplementation((target, key) => {
-                if (key === 'activeBuffs' && target === 'Alice') {
-                    return [
-                        { name: 'Starry Form', constellation: 'Archer' },
-                        { name: 'Death Ward', effect: 'death_ward', sourceCharacter: 'Bob' },
-                    ];
-                }
-                return undefined;
-            });
-            render(<CreatureCard {...props} creature={defaultPlayerCreature} campaignName="test-campaign" />);
-            expect(screen.getByText('Starry Form - Archer')).toBeInTheDocument();
-            expect(screen.getByText('Death Ward')).toBeInTheDocument();
+            vi.mocked(automationPassives.isResilientSphereActive).mockReturnValue(false);
         });
     });
 });

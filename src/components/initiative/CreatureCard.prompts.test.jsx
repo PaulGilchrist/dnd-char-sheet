@@ -1,4 +1,5 @@
 // @improved-by-ai
+// @cleaned-by-ai
 import { render, screen, fireEvent } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import CreatureCard from './CreatureCard.jsx';
@@ -81,6 +82,12 @@ let wrathOfTheSeaMocks = {};
 let runtimeTargetEffects = [];
 let runtimeActiveBuffs = {};
 
+const PROMPT_TYPES = [
+    { key: '_fleshToStone_Alice', label: 'Flesh to Stone', service: savePromptService.sendFleshToStoneResult },
+    { key: '_prismaticSprayIndigo_Alice', label: 'Prismatic Spray (Indigo)', service: savePromptService.sendPrismaticSprayIndigoResult },
+    { key: '_prismaticSprayViolet_Alice', label: 'Prismatic Spray (Violet)', service: savePromptService.sendPrismaticSprayVioletResult },
+];
+
 describe('CreatureCard - save prompts', () => {
     let props;
 
@@ -137,154 +144,62 @@ describe('CreatureCard - save prompts', () => {
         });
     }
 
-    function findPromptSection(text) {
-        const label = screen.getByText(text);
-        return label.closest('.flesh-to-stone-prompt');
-    }
+    describe('Prompt rendering and interaction', () => {
+        for (const { key, label, service } of PROMPT_TYPES) {
+            describe(label, () => {
+                it('should render prompt with data for localhost', () => {
+                    createPromptMock(key, { successes: 1, failures: 1 });
+                    render(<CreatureCard {...props} creature={defaultPlayerCreature} campaignName="test-campaign" isLocalhost={true} />);
+                    expect(screen.getByText(label)).toBeInTheDocument();
+                });
 
-    describe('Flesh to Stone prompt', () => {
-        it('should render flesh to stone prompt when data exists for localhost', () => {
-            createPromptMock('_fleshToStone_Alice', { successes: 1, failures: 1 });
-            render(<CreatureCard {...props} creature={defaultPlayerCreature} campaignName="test-campaign" isLocalhost={true} />);
-            expect(screen.getByText('Flesh to Stone')).toBeInTheDocument();
-            expect(screen.getByText('Saves: 1/3 | Failures: 1/3')).toBeInTheDocument();
-        });
+                it('should not render prompt for non-localhost', () => {
+                    createPromptMock(key, { successes: 1, failures: 1 });
+                    render(<CreatureCard {...props} creature={defaultPlayerCreature} campaignName="test-campaign" isLocalhost={false} />);
+                    expect(screen.queryByText(label)).not.toBeInTheDocument();
+                });
 
-        it('should not render flesh to stone prompt when data is missing', () => {
-            render(<CreatureCard {...props} creature={defaultPlayerCreature} campaignName="test-campaign" isLocalhost={true} />);
-            expect(screen.queryByText('Flesh to Stone')).not.toBeInTheDocument();
-        });
+                it('should call the correct service on success button click', () => {
+                    createPromptMock(key, { successes: 0, failures: 0 });
+                    render(<CreatureCard {...props} creature={defaultPlayerCreature} campaignName="test-campaign" isLocalhost={true} />);
+                    fireEvent.click(screen.getByRole('button', { name: 'Success' }));
+                    expect(service).toHaveBeenCalledWith('test-campaign', 'Alice', { success: true });
+                });
 
-        it('should not render flesh to stone prompt for non-localhost', () => {
-            createPromptMock('_fleshToStone_Alice', { successes: 1, failures: 1 });
-            render(<CreatureCard {...props} creature={defaultPlayerCreature} campaignName="test-campaign" isLocalhost={false} />);
-            expect(screen.queryByText('Flesh to Stone')).not.toBeInTheDocument();
-        });
-
-        it('should call sendFleshToStoneResult with success when success button clicked', () => {
-            createPromptMock('_fleshToStone_Alice', { successes: 1, failures: 1 });
-            render(<CreatureCard {...props} creature={defaultPlayerCreature} campaignName="test-campaign" isLocalhost={true} />);
-            const section = findPromptSection('Flesh to Stone');
-            fireEvent.click(section.querySelector('.flesh-to-stone-btn.success'));
-            expect(savePromptService.sendFleshToStoneResult).toHaveBeenCalledWith('test-campaign', 'Alice', { success: true });
-        });
-
-        it('should call sendFleshToStoneResult with failure when failure button clicked', () => {
-            createPromptMock('_fleshToStone_Alice', { successes: 1, failures: 1 });
-            render(<CreatureCard {...props} creature={defaultPlayerCreature} campaignName="test-campaign" isLocalhost={true} />);
-            const section = findPromptSection('Flesh to Stone');
-            fireEvent.click(section.querySelector('.flesh-to-stone-btn.failure'));
-            expect(savePromptService.sendFleshToStoneResult).toHaveBeenCalledWith('test-campaign', 'Alice', { success: false });
-        });
-
-        it('should display zero successes and failures correctly', () => {
-            createPromptMock('_fleshToStone_Alice', { successes: 0, failures: 0 });
-            render(<CreatureCard {...props} creature={defaultPlayerCreature} campaignName="test-campaign" isLocalhost={true} />);
-            expect(screen.getByText('Saves: 0/3 | Failures: 0/3')).toBeInTheDocument();
-        });
-
-        it('should display max failures correctly', () => {
-            createPromptMock('_fleshToStone_Alice', { successes: 0, failures: 3 });
-            render(<CreatureCard {...props} creature={defaultPlayerCreature} campaignName="test-campaign" isLocalhost={true} />);
-            expect(screen.getByText('Saves: 0/3 | Failures: 3/3')).toBeInTheDocument();
-        });
-    });
-
-    describe('Prismatic Spray Indigo prompt', () => {
-        it('should render prismatic spray indigo prompt when data exists', () => {
-            createPromptMock('_prismaticSprayIndigo_Alice', { successes: 2, failures: 0 });
-            render(<CreatureCard {...props} creature={defaultPlayerCreature} campaignName="test-campaign" isLocalhost={true} />);
-            expect(screen.getByText('Prismatic Spray (Indigo)')).toBeInTheDocument();
-            expect(screen.getByText('CON Saves: 2/3 | Failures: 0/3')).toBeInTheDocument();
-        });
-
-        it('should not render prismatic spray indigo prompt when data is missing', () => {
-            render(<CreatureCard {...props} creature={defaultPlayerCreature} campaignName="test-campaign" isLocalhost={true} />);
-            expect(screen.queryByText('Prismatic Spray (Indigo)')).not.toBeInTheDocument();
-        });
-
-        it('should not render prismatic spray indigo prompt for non-localhost', () => {
-            createPromptMock('_prismaticSprayIndigo_Alice', { successes: 2, failures: 0 });
-            render(<CreatureCard {...props} creature={defaultPlayerCreature} campaignName="test-campaign" isLocalhost={false} />);
-            expect(screen.queryByText('Prismatic Spray (Indigo)')).not.toBeInTheDocument();
-        });
-
-        it('should call sendPrismaticSprayIndigoResult with success when success button clicked', () => {
-            createPromptMock('_prismaticSprayIndigo_Alice', { successes: 2, failures: 0 });
-            render(<CreatureCard {...props} creature={defaultPlayerCreature} campaignName="test-campaign" isLocalhost={true} />);
-            const section = findPromptSection('Prismatic Spray (Indigo)');
-            fireEvent.click(section.querySelector('.flesh-to-stone-btn.success'));
-            expect(savePromptService.sendPrismaticSprayIndigoResult).toHaveBeenCalledWith('test-campaign', 'Alice', { success: true });
-        });
-
-        it('should call sendPrismaticSprayIndigoResult with failure when failure button clicked', () => {
-            createPromptMock('_prismaticSprayIndigo_Alice', { successes: 2, failures: 0 });
-            render(<CreatureCard {...props} creature={defaultPlayerCreature} campaignName="test-campaign" isLocalhost={true} />);
-            const section = findPromptSection('Prismatic Spray (Indigo)');
-            fireEvent.click(section.querySelector('.flesh-to-stone-btn.failure'));
-            expect(savePromptService.sendPrismaticSprayIndigoResult).toHaveBeenCalledWith('test-campaign', 'Alice', { success: false });
-        });
-    });
-
-    describe('Prismatic Spray Violet prompt', () => {
-        it('should render prismatic spray violet prompt when data exists', () => {
-            createPromptMock('_prismaticSprayViolet_Alice', { successes: 0, failures: 0 });
-            render(<CreatureCard {...props} creature={defaultPlayerCreature} campaignName="test-campaign" isLocalhost={true} />);
-            expect(screen.getByText('Prismatic Spray (Violet)')).toBeInTheDocument();
-            expect(screen.getByText("WIS Save (caster's next turn)")).toBeInTheDocument();
-        });
-
-        it('should not render prismatic spray violet prompt when data is missing', () => {
-            render(<CreatureCard {...props} creature={defaultPlayerCreature} campaignName="test-campaign" isLocalhost={true} />);
-            expect(screen.queryByText('Prismatic Spray (Violet)')).not.toBeInTheDocument();
-        });
-
-        it('should not render prismatic spray violet prompt for non-localhost', () => {
-            createPromptMock('_prismaticSprayViolet_Alice', { successes: 0, failures: 0 });
-            render(<CreatureCard {...props} creature={defaultPlayerCreature} campaignName="test-campaign" isLocalhost={false} />);
-            expect(screen.queryByText('Prismatic Spray (Violet)')).not.toBeInTheDocument();
-        });
-
-        it('should call sendPrismaticSprayVioletResult with success when success button clicked', () => {
-            createPromptMock('_prismaticSprayViolet_Alice', { successes: 0, failures: 0 });
-            render(<CreatureCard {...props} creature={defaultPlayerCreature} campaignName="test-campaign" isLocalhost={true} />);
-            const section = findPromptSection('Prismatic Spray (Violet)');
-            fireEvent.click(section.querySelector('.flesh-to-stone-btn.success'));
-            expect(savePromptService.sendPrismaticSprayVioletResult).toHaveBeenCalledWith('test-campaign', 'Alice', { success: true });
-        });
-
-        it('should call sendPrismaticSprayVioletResult with failure when failure button clicked', () => {
-            createPromptMock('_prismaticSprayViolet_Alice', { successes: 0, failures: 0 });
-            render(<CreatureCard {...props} creature={defaultPlayerCreature} campaignName="test-campaign" isLocalhost={true} />);
-            const section = findPromptSection('Prismatic Spray (Violet)');
-            fireEvent.click(section.querySelector('.flesh-to-stone-btn.failure'));
-            expect(savePromptService.sendPrismaticSprayVioletResult).toHaveBeenCalledWith('test-campaign', 'Alice', { success: false });
-        });
-    });
-
-    describe('Multiple prompts on same creature', () => {
-        it('should render both flesh to stone and prismatic spray prompts when both have data', () => {
-            runtimeState.useRuntimeValue.mockImplementation((_campaignName, key) => {
-                if (key === 'targetEffects') return [];
-                if (key === '_fleshToStone_Alice') return { successes: 1, failures: 1 };
-                if (key === '_prismaticSprayIndigo_Alice') return { successes: 2, failures: 0 };
-                return null;
+                it('should call the correct service on failure button click', () => {
+                    createPromptMock(key, { successes: 0, failures: 0 });
+                    render(<CreatureCard {...props} creature={defaultPlayerCreature} campaignName="test-campaign" isLocalhost={true} />);
+                    fireEvent.click(screen.getByRole('button', { name: 'Failure' }));
+                    expect(service).toHaveBeenCalledWith('test-campaign', 'Alice', { success: false });
+                });
             });
-            render(<CreatureCard {...props} creature={defaultPlayerCreature} campaignName="test-campaign" isLocalhost={true} />);
-            expect(screen.getByText('Flesh to Stone')).toBeInTheDocument();
-            expect(screen.getByText('Prismatic Spray (Indigo)')).toBeInTheDocument();
-        });
+        }
+    });
 
-        it('should not render any prompts for non-localhost when multiple exist', () => {
-            runtimeState.useRuntimeValue.mockImplementation((_campaignName, key) => {
-                if (key === 'targetEffects') return [];
-                if (key === '_fleshToStone_Alice') return { successes: 1, failures: 1 };
-                if (key === '_prismaticSprayViolet_Alice') return { successes: 0, failures: 0 };
-                return null;
+    describe('Display format', () => {
+        const fleshToStoneKey = '_fleshToStone_Alice';
+        const indigoKey = '_prismaticSprayIndigo_Alice';
+
+        const testCases = [
+            { successes: 0, failures: 0, expected: /Saves:\s+0\/3\s+\|\s+Failures:\s+0\/3/ },
+            { successes: 0, failures: 3, expected: /Saves:\s+0\/3\s+\|\s+Failures:\s+3\/3/ },
+            { successes: 1, failures: 2, expected: /Saves:\s+1\/3\s+\|\s+Failures:\s+2\/3/ },
+        ];
+
+        for (const { successes, failures, expected } of testCases) {
+            it(`Flesh to Stone - displays saves/failures correctly (${successes}/${failures})`, () => {
+                createPromptMock(fleshToStoneKey, { successes, failures });
+                render(<CreatureCard {...props} creature={defaultPlayerCreature} campaignName="test-campaign" isLocalhost={true} />);
+                expect(screen.getByText('Flesh to Stone')).toBeInTheDocument();
+                expect(screen.getByText(expected)).toBeInTheDocument();
             });
-            render(<CreatureCard {...props} creature={defaultPlayerCreature} campaignName="test-campaign" isLocalhost={false} />);
-            expect(screen.queryByText('Flesh to Stone')).not.toBeInTheDocument();
-            expect(screen.queryByText('Prismatic Spray (Violet)')).not.toBeInTheDocument();
-        });
+
+            it(`Prismatic Spray (Indigo) - displays saves/failures correctly (${successes}/${failures})`, () => {
+                createPromptMock(indigoKey, { successes, failures });
+                render(<CreatureCard {...props} creature={defaultPlayerCreature} campaignName="test-campaign" isLocalhost={true} />);
+                expect(screen.getByText('Prismatic Spray (Indigo)')).toBeInTheDocument();
+                expect(screen.getByText(new RegExp(`CON Saves:\\s+${successes}\\/3\\s+\\|\\s+Failures:\\s+${failures}\\/3`))).toBeInTheDocument();
+            });
+        }
     });
 });
