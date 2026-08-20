@@ -11,10 +11,7 @@ The dice roller tray popup overlay remains open and intercepts pointer events, p
 5. The click fails — the overlay intercepts all pointer events.
 
 ## Expected behavior
-The dice tray should either:
-- Close automatically after a roll is completed, OR
-- Be positioned in a way that doesn't block other interactive elements, OR
-- Have a close button that is easily accessible.
+The dice tray should have a close button that is easily accessible.
 
 ## Actual behavior
 The dice tray overlay (`<div class="dice-tray-popup-overlay">`) stays open and blocks all pointer events to elements behind it. Clicking on "Generate NPC" (or any other button behind the overlay) times out with the error: `<div class="dice-tray-popup-overlay">…</div> intercepts pointer events`.

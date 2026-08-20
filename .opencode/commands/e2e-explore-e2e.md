@@ -1,5 +1,5 @@
 ---
-name: explore-e2e
+name: e2e-explore
 description: exploring the dnd-campaign-suite web app using the Playwright MCP browser tools.
 ---
 
@@ -16,6 +16,9 @@ You are exploring the dnd-campaign-suite web app using the Playwright MCP browse
 ## Before you start
 
 Check if `docs/app-exploration.md` already exists and read it first, so this run builds on and updates the existing map instead of starting cold and possibly contradicting it. If what you observe in the live app contradicts something in that file, trust the live app — the UI may have changed since it was last written.
+
+Pay special attention to the "Coverage" section (see below). Prioritize areas marked "not explored" or "shallow" over areas already marked "deep" — your job this run is to extend coverage, not repeat what a prior run already did thoroughly. If everything is already marked "deep," pick the area most likely to have edge cases you haven't tried
+yet (unusual input combinations, concurrent SSE updates, boundary conditions) rather than re-walking the same happy path.
 
 ## What to do
 
@@ -53,13 +56,12 @@ Do not attempt to fix the bug yourself during this session — just document it.
 
 ## Before finishing
 
-Write everything you learned to `docs/app-exploration.md` in the repo (create it if it doesn't exist, otherwise update it — don't just append duplicate info). Include:
-
 - A map of the app's main sections/pages and what each does
 - Key UI patterns (e.g. how forms validate, how the SSE party sync behaves, how fog of war interactions work)
 - Selectors or stable identifiers you found reliable for each major element (role, label, testid) — useful for writing tests later
 - Known quirks or gotchas you ran into
 - A dated entry (today's date) briefly summarizing this session's findings, with links to the corresponding files in `.opencode/plans/`
+- A "Coverage" section: a checklist of every major feature/flow (NPCs, quests, encounters, maps, party members, initiative tracking, fog of war, SSE sync, and any others you find), each marked "not explored" / "shallow" / "deep", with a one-line note on what "deep" testing has covered so far (e.g. "edited existing NPC, deleted NPC, tried empty name field — not yet tried concurrent edit from two sessions"). Update this checklist every run so the next run knows exactly where to push further.
 
 ## What to report back
 

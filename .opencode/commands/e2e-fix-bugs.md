@@ -1,5 +1,5 @@
 ---
-name: fix-e2e-bugs
+name: e2e-fix-bugs
 description: work through bug reports in .opencode/plans, delegating one fix per subagent.
 ---
 
@@ -28,10 +28,20 @@ You are fixing a single bug described in the file at: `{bug_file_path}`
 ### Steps
 
 1. Read the bug file in full.
-2. Reproduce the bug live using the exact steps to reproduce, inside "test-campaign". Confirm you can see the actual behavior described before touching any code — if you can't reproduce it, say so in the resolution notes rather than guessing at a fix.
-3. Investigate the actual root cause in the codebase. The bug file's "Likely location" and "Suggested fix" are a starting point from black-box testing, not confirmed diagnoses — verify them against the real code rather than trusting them outright.
+2. Using the Playwright MCP browser tools, reproduce the bug live in "test-campaign" by
+   following the exact steps to reproduce. Confirm you can see the actual behavior described
+   before touching any code — if you can't reproduce it this way, say so in the resolution
+   notes rather than guessing at a fix. Do not substitute reading the code, running vitest,
+   or hitting the API directly for this step — the point is confirming what a real user sees
+   in the browser, not just confirming the code path exists.
+3. Investigate the actual root cause in the codebase. The bug file's "Likely location" and
+   "Suggested fix" are a starting point from black-box testing, not confirmed diagnoses —
+   verify them against the real code rather than trusting them outright.
 4. Implement the fix.
-5. Re-run the original repro steps in "test-campaign" to confirm the bug no longer occurs. Also do a quick sanity check that you haven't broken adjacent behavior (e.g. re-check a related flow if the fix touched shared code).
+5. Using the Playwright MCP browser tools, re-run the original repro steps in "test-campaign"
+   to confirm the bug no longer occurs in the browser. Also do a quick sanity check that you
+   haven't broken adjacent behavior (e.g. re-check a related flow if the fix touched shared
+   code).
 6. Update the bug file: add a `## Resolution` section documenting what was actually wrong (if different from the original guess), which files changed, and how you verified the fix (repro steps re-run + result).
 7. Move the bug file from `.opencode/plans/` to `.opencode/plans/resolved/`.
 8. Report back to the primary agent: bug fixed (yes/no), summary of the change, files touched.
