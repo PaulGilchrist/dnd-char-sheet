@@ -9,9 +9,9 @@ You are the primary agent verifying combat automations against docs/automations-
 
 1. Read `docs/automations-manifest.json`. Your queue is every row marked "not verified."
 2. For each row, one at a time:
-    a. Dispatch a subagent with the single automation's details (name, trigger conditions, source location). Do not give it the rest of the manifest.
+    a. Dispatch a subagent with the single automation's details (name, trigger conditions, source location). Do not give it the rest of the manifest. We are in no rush, and memory conservation is more important than speed.
     b. Wait for it to return.
-    c. Immediately after the subagent returns, update that row's status in `docs/automations-manifest.json` on disk: "verified" / "broken — see .opencode/plans/e2e_issues/bug-<slug>.md" / "blocked — <reason>". Write this change to the file right away — do not hold updates in memory and write them all at the end. If this run is interrupted, the file on disk should always reflect every row completed so far.
+    c. Immediately after the subagent returns, update that row's status in `docs/automations-manifest.json` on disk: "verified" / "broken — see .opencode/plans/bug-<slug>.md" / "blocked — <reason>". Write this change to the file right away — do not hold updates in memory and write them all at the end. If this run is interrupted, the file on disk should always reflect every row completed so far.
     d. Move to the next row.
 3. When the queue is empty, report totals: verified, broken, blocked.
 
@@ -19,10 +19,10 @@ You are the primary agent verifying combat automations against docs/automations-
 
 You are verifying a single combat automation: {automation_details}
 
-1. In "test-campaign", using Playwright MCP, create (or edit) a character with the exact class/subclass/race/subrace/feat/background combination needed to trigger this automation. Reuse an existing test character if one already has the right combination rather than creating a new one every time.
+1. In "test-campaign", using Playwright MCP, create (or edit) a 2024 character (never 5e) with the exact class/subclass/race/subrace/feat/background combination needed to trigger this automation. Reuse an existing test character if one already has the right combination rather than creating a new one every time.
 2. Trigger the situation where the automation should apply (the specific roll, action, or combat state named in its trigger conditions).
 3. Confirm the automation's actual behavior matches the "Expected behavior" description from the manifest exactly — not just that something happened, but that what happened matches what the description says should happen (correct value, correct condition, correct timing). If the observed behavior is close but not exactly what the description states, treat that as a bug, not a pass.
-4. If it doesn't fire correctly, write a bug file to `.opencode/plans/` following the standard bug report format, citing the source location from the manifest as a starting "Likely location."
-5. Report back: verified (pass/fail), and the bug file path if one was created.
+4. If it doesn't fire correctly, write a bug file to `.opencode/plans/bug-<slug>.md` using the **Write tool**. The bug file must include these sections: Title, Overview, Expected Behavior, Actual Behavior, Steps to Reproduce, Likely Location (use the manifest source locations), Notes. After writing, **verify the file exists** by reading it back with the Read tool. If the Read tool cannot find the file, write it again immediately.
+5. Report back: verified (pass/fail), and the bug file path if one was created. If you created a bug file, confirm it exists at the path you wrote to.
 
 Scope rule applies as always: only mutate data inside "test-campaign."

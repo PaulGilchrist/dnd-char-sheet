@@ -79,7 +79,7 @@
       "handler": "src/services/combat/automation/handlers/featHandler.js",
       "router": "src/services/combat/automation/routers/featRouter.js",
       "infoBuilder": "src/services/combat/automation/infoBuilders/featInfoBuilder.js",
-      "verified": "not verified",
+      "verified": "verified",
       "class": "Feat",
       "triggerConditions": "",
       "expectedBehavior": "Increase one ability score of your choice by 2, or increase two ability scores of your choice by 1. This feat can't increase an ability score above 20."
@@ -103,7 +103,7 @@
       "handler": "src/services/combat/automation/handlers/classFeatureHandler.js",
       "router": "src/services/combat/automation/routers/classFeatureRouter.js",
       "infoBuilder": "src/services/combat/automation/infoBuilders/classFeatureInfoBuilder.js",
-      "verified": "not verified",
+      "verified": "broken — see .opencode/plans/bug-cla-002-abjure-foes.md",
       "class": "Paladin",
       "triggerConditions": "Action: 1 action; Range: 60 ft; Save: undefined",
       "expectedBehavior": "As a Action, expend one use of Channel Divinity. Target creatures equal to Charisma modifier (minimum 1) within 60 feet. Each makes Wisdom save or has Frightened condition for 1 minute or until taking damage. While Frightened, can only do one of: move, take action, or take Bonus Action."
@@ -115,7 +115,7 @@
       "handler": "src/services/combat/automation/handlers/backgroundHandler.js",
       "router": "src/services/combat/automation/routers/backgroundRouter.js",
       "infoBuilder": "src/services/combat/automation/infoBuilders/backgroundInfoBuilder.js",
-      "verified": "not verified",
+      "verified": "verified",
       "class": "Background",
       "triggerConditions": "",
       "expectedBehavior": "You devoted yourself to service in a temple, either nestled in a town or secluded in a sacred grove. There you performed rites in honor of a god or pantheos. You served under a priest and studied religion. Thanks to your priest's instruction and your own devotion, you also learned how to channel a modicu1n of divine poweer, in service to your place of worship and the people who prayed there."
@@ -139,7 +139,7 @@
       "handler": "src/services/combat/automation/handlers/classFeatureHandler.js",
       "router": "src/services/combat/automation/routers/classFeatureRouter.js",
       "infoBuilder": "src/services/combat/automation/infoBuilders/classFeatureInfoBuilder.js",
-      "verified": "not verified",
+      "verified": "verified",
       "class": "Fighter",
       "triggerConditions": "Action: 1 action",
       "expectedBehavior": "You can push yourself beyond your normal limits for a moment. On your turn, you can take one additional action, except the Action. Once you use this feature, you can't do so again until you finish a Short or Long Rest. Starting at level 17, you can use it twice before a rest but only once on a turn."
@@ -151,7 +151,7 @@
       "handler": "src/services/combat/automation/handlers/featHandler.js",
       "router": "src/services/combat/automation/routers/featRouter.js",
       "infoBuilder": "src/services/combat/automation/infoBuilders/featInfoBuilder.js",
-      "verified": "not verified",
+      "verified": "broken — see .opencode/plans/bug-ft-002-actor.md",
       "triggerConditions": "When making deception_performance_checks checks; while disguised",
       "expectedBehavior": "While you're disguised as a real or fictional person, you have Advantage on Charisma (Deception or Performance) checks to convince others that you are that person."
     },
@@ -173,7 +173,7 @@
       "handler": "src/services/combat/automation/handlers/classFeatureHandler.js",
       "router": "src/services/combat/automation/routers/classFeatureRouter.js",
       "infoBuilder": "src/services/combat/automation/infoBuilders/classFeatureInfoBuilder.js",
-      "verified": "not verified",
+      "verified": "verified",
       "class": "Fighter",
       "triggerConditions": "",
       "expectedBehavior": "Gain another Fighting Style feat."
@@ -185,7 +185,7 @@
       "handler": "src/services/combat/automation/handlers/classFeatureHandler.js",
       "router": "src/services/combat/automation/routers/classFeatureRouter.js",
       "infoBuilder": "src/services/combat/automation/infoBuilders/classFeatureInfoBuilder.js",
-      "verified": "not verified",
+      "verified": "verified",
       "class": "Barbarian",
       "triggerConditions": "Action: 1 bonus action; Range: self",
       "expectedBehavior": "You can take the Dash action as a Bonus Action. When you do so, you gain a number of Temporary Hit Points equal to your Proficiency Bonus. You can use this trait a number of times equal to your Proficiency Bonus, and you regain all expended uses when you finish a Short or Long Rest."
