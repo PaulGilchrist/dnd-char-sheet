@@ -197,7 +197,7 @@
       "handler": "src/services/combat/automation/handlers/maneuverHandler.js",
       "router": "src/services/combat/automation/routers/maneuverRouter.js",
       "infoBuilder": "src/services/combat/automation/infoBuilders/maneuverInfoBuilder.js",
-      "verified": "not verified",
+      "verified": "broken — see .opencode/plans/bug-sp-001-ambush-skill-check-bonus-not-applied.md",
       "class": "Fighter",
       "triggerConditions": "Action type: skill_check; Skills: Stealth; Also applies to Initiative; Uses: superiority_die",
       "expectedBehavior": "When you make a Dexterity (Stealth) check or an Initiative roll, you can expend one Superiority Die and add the die to the roll, unless you are Incapacitated."
@@ -841,7 +841,7 @@
       "handler": "src/services/combat/automation/handlers/classFeatureHandler.js",
       "router": "src/services/combat/automation/routers/classFeatureRouter.js",
       "infoBuilder": "src/services/combat/automation/infoBuilders/classFeatureInfoBuilder.js",
-      "verified": "not verified",
+      "verified": "verified",
       "class": "Cleric",
       "triggerConditions": "Action: passive",
       "expectedBehavior": "When you cast a healing spell on others that targets one or more creatures other than yourself, you regain Hit Points equal to 2 plus the spell slot's level."
@@ -853,7 +853,7 @@
       "handler": "src/services/combat/automation/handlers/fightingStyleHandler.js",
       "router": "src/services/combat/automation/routers/fightingStyleRouter.js",
       "infoBuilder": "src/services/combat/automation/infoBuilders/fightingStyleInfoBuilder.js",
-      "verified": "not verified",
+      "verified": "broken — see .opencode/plans/bug-fs-002-blessed-warrior-melee-attack-bonus-not-applied.md",
       "class": "Fighting Style",
       "triggerConditions": "",
       "expectedBehavior": "You gain a +2 bonus to attack rolls you make with melee weapons."
@@ -865,7 +865,7 @@
       "handler": "src/services/combat/automation/handlers/classFeatureHandler.js",
       "router": "src/services/combat/automation/routers/classFeatureRouter.js",
       "infoBuilder": "src/services/combat/automation/infoBuilders/classFeatureInfoBuilder.js",
-      "verified": "not verified",
+      "verified": "verified",
       "class": "Cleric",
       "triggerConditions": "Action: action; Range: 30 ft",
       "expectedBehavior": "As a Action, you can choose yourself or a willing creature within 30 feet of yourself to have Advantage on Dexterity (Stealth) checks. This blessing lasts until you finish a Long Rest or you use this feature again."
@@ -877,7 +877,7 @@
       "handler": "src/services/combat/automation/handlers/fightingStyleHandler.js",
       "router": "src/services/combat/automation/routers/fightingStyleRouter.js",
       "infoBuilder": "src/services/combat/automation/infoBuilders/fightingStyleInfoBuilder.js",
-      "verified": "not verified",
+      "verified": "verified",
       "class": "Fighting Style",
       "triggerConditions": "",
       "expectedBehavior": "You gain blindvision with a range of 10 feet. Blindvision works exactly like normal vision, except it works in total darkness and dim light does not impose the blinded condition on you. You can use this feature once before finishing a long rest."
@@ -889,7 +889,7 @@
       "handler": "src/services/combat/automation/handlers/spellHandler.js",
       "router": "src/services/combat/automation/routers/spellRouter.js",
       "infoBuilder": "src/services/combat/automation/infoBuilders/spellInfoBuilder.js",
-      "verified": "not verified",
+      "verified": "broken — see .opencode/plans/bug-sp-018-blindness-deafness-playerstats-null.md",
       "class": "Spell",
       "triggerConditions": "Range: 120 feet",
       "expectedBehavior": "One creature that you can see within range must succeed on a Constitution saving throw, or it has the Blinded or Deafened condition (your choice) for the duration. At the end of each of its turns, the target repeats the save, ending the spell on itself on a success."
@@ -913,7 +913,7 @@
       "handler": "src/services/combat/automation/handlers/classFeatureHandler.js",
       "router": "src/services/combat/automation/routers/classFeatureRouter.js",
       "infoBuilder": "src/services/combat/automation/infoBuilders/classFeatureInfoBuilder.js",
-      "verified": "not verified",
+      "verified": "verified",
       "class": "Monk",
       "triggerConditions": "",
       "expectedBehavior": "Your Dexterity and Wisdom scores increase by 4, to a maximum of 25."
@@ -925,7 +925,7 @@
       "handler": "src/services/combat/automation/handlers/featHandler.js",
       "router": "src/services/combat/automation/routers/featRouter.js",
       "infoBuilder": "src/services/combat/automation/infoBuilders/featInfoBuilder.js",
-      "verified": "not verified",
+      "verified": "blocked — cnp-overlay intercepts pointer events, preventing attack initiation via Playwright",
       "triggerConditions": "Trigger: attack_roll_miss",
       "expectedBehavior": "When you miss with an attack roll, you can hit instead. Once you use this benefit, you can't use it again until the start of your next turn."
     },
