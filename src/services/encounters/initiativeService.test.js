@@ -519,10 +519,21 @@ describe('initiativeService', () => {
       const initialSummary = makeSummary([
         { name: 'Zara', type: 'player', initiative: '', targetName: null, concentration: null },
       ]);
-      const characters = [{ name: 'Aldric' }];
+      const characters = [{ name: 'Aldric' }, { name: 'Zara' }];
       const result = mergeCombatSummaryWithCharacters(initialSummary, characters, getName);
       expect(result.creatures[0].name).toBe('Aldric');
       expect(result.creatures[1].name).toBe('Zara');
+    });
+
+    it('drops stored player creatures that are not in the current character list', () => {
+      const initialSummary = makeSummary([
+        { name: 'Aldric', type: 'player', initiative: '5' },
+        { name: 'OldPlayer', type: 'player', initiative: '8' },
+        { name: 'NPC 1', type: 'npc', currentHp: 5, maxHp: 10 },
+      ]);
+      const characters = [{ name: 'Aldric' }];
+      const result = mergeCombatSummaryWithCharacters(initialSummary, characters, getName);
+      expect(result.creatures.map(c => c.name)).toEqual(['Aldric', 'NPC 1']);
     });
 
     it('preserves NPC conditions when present', () => {

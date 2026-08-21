@@ -82,7 +82,7 @@ function App() {
     campaignRef.current.setDeleteCampaignCallback(() => { charMgmtRef.current.setCharacters([]); charMgmtRef.current.setActiveCharacter(null); });
   }, []);
 
-  const { showCampaignSelection, campaignName, isLocalhost, handleCampaignSelect, handleRenameCampaign: handleRenameCampaignRaw, handleDeleteCampaign: handleDeleteCampaignRaw, handleBackToCampaigns } = campaignMgmt;
+  const { showCampaignSelection, campaignName, isLocalhost, handleRenameCampaign: handleRenameCampaignRaw, handleDeleteCampaign: handleDeleteCampaignRaw, handleBackToCampaigns } = campaignMgmt;
   const { characters, activeCharacter, setCharacters, setActiveCharacter, handleUploadChange, handleSaveClick, handleUploadClick, handleDeleteCharacter: handleDeleteCharacterRaw, inputRef } = charMgmt;
   const { showCharacterWizard, showEditCharacterWizard, handleAddCharacter, handleWizardComplete, handleWizardCancel, handleEditCharacter, handleEditWizardComplete, handleEditWizardCancel } = wizard;
 
@@ -219,6 +219,14 @@ function App() {
   }, [isLocalhost]);
 
   const [combatSummaryLoaded, setCombatSummaryLoaded] = useState(false);
+
+  // Reset the loaded flag when switching campaigns so stale characters from the
+  // previous campaign can't render (or bleed into the new campaign's initiative
+  // roster) while the new campaign's data is still loading.
+  const handleCampaignSelect = (campaign, characters) => {
+    setCombatSummaryLoaded(false);
+    campaignMgmt.handleCampaignSelect(campaign, characters);
+  };
 
   const [theme, setTheme] = useState(() => {
     try {

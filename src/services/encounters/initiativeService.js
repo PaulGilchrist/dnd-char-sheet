@@ -170,7 +170,9 @@ function mergeCombatSummaryWithCharacters(initialSummary, characters, getName) {
         return { round: 1, creatures }
     }
     const creatureNameSet = new Set(initialSummary.creatures.map(c => c.name))
-    const mergedCreatures = initialSummary.creatures.map(c => {
+    const mergedCreatures = initialSummary.creatures
+        .filter(c => c.type !== 'player' || characters.some(ch => getName(ch.name) === c.name))
+        .map(c => {
         if (c.type === 'player') {
             const character = characters.find(ch => getName(ch.name) === c.name)
             if (character) {
