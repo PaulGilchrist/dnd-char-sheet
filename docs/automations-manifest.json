@@ -192,18 +192,12 @@
     },
     {
       "id": "SP-001",
-      "name": "Aid",
-      "type": "spell",
-      "handler": "src/services/combat/automation/handlers/spellHandler.js",
-      "router": "src/services/combat/automation/routers/spellRouter.js",
-      "infoBuilder": "src/services/combat/automation/infoBuilders/spellInfoBuilder.js",
-      "verified": "broken — see .opencode/plans/bug-sp-001-aid.md",
       "name": "Ambush",
       "type": "maneuver",
       "handler": "src/services/combat/automation/handlers/maneuverHandler.js",
       "router": "src/services/combat/automation/routers/maneuverRouter.js",
       "infoBuilder": "src/services/combat/automation/infoBuilders/maneuverInfoBuilder.js",
-      "verified": "broken — see .opencode/plans/bug-mn-001-ambush.md",
+      "verified": "not verified",
       "class": "Fighter",
       "triggerConditions": "Action type: skill_check; Skills: Stealth; Also applies to Initiative; Uses: superiority_die",
       "expectedBehavior": "When you make a Dexterity (Stealth) check or an Initiative roll, you can expend one Superiority Die and add the die to the roll, unless you are Incapacitated."
@@ -763,7 +757,7 @@
       "handler": "src/services/combat/automation/handlers/classFeatureHandler.js",
       "router": "src/services/combat/automation/routers/classFeatureRouter.js",
       "infoBuilder": "src/services/combat/automation/infoBuilders/classFeatureInfoBuilder.js",
-      "verified": "not verified",
+      "verified": "broken — see .opencode/plans/bug-cla-034-beguiling-twist.md",
       "class": "Ranger",
       "triggerConditions": "Automation type: undefined",
       "expectedBehavior": "Advantage on saving throws to avoid/end Charmed or Frightened. When you or creature within 120 feet succeeds on save vs Charmed/Frightened, take Reaction to force different creature within 120 feet to make Wisdom save (your spell save DC) or be Charmed/Frightened for 1 minute."
@@ -775,7 +769,7 @@
       "handler": "src/services/combat/automation/handlers/classFeatureHandler.js",
       "router": "src/services/combat/automation/routers/classFeatureRouter.js",
       "infoBuilder": "src/services/combat/automation/infoBuilders/classFeatureInfoBuilder.js",
-      "verified": "not verified",
+      "verified": "verified",
       "class": "Sorcerer",
       "triggerConditions": "Trigger: after creature d20 roll; Action: 1 reaction",
       "expectedBehavior": "Immediately after another creature you can see rolls the d20 for a D20 Test, take Reaction and spend 1 Sorcery Point to roll 1d4 and apply as bonus or penalty (your choice) to the d20 roll."
@@ -787,7 +781,7 @@
       "handler": "src/services/combat/automation/handlers/classFeatureHandler.js",
       "router": "src/services/combat/automation/routers/classFeatureRouter.js",
       "infoBuilder": "src/services/combat/automation/infoBuilders/classFeatureInfoBuilder.js",
-      "verified": "not verified",
+      "verified": "broken — see .opencode/plans/bug-cla-036-bestial-fury.md",
       "class": "Ranger",
       "triggerConditions": "Automation type: undefined",
       "expectedBehavior": "When commanding Primal Companion to take Beast's Strike, the beast can use it twice. First time each turn it hits a creature under Hunter's Mark, deals extra Force damage equal to the bonus damage of that spell."
@@ -799,7 +793,7 @@
       "handler": "src/services/combat/automation/handlers/spellHandler.js",
       "router": "src/services/combat/automation/routers/spellRouter.js",
       "infoBuilder": "src/services/combat/automation/infoBuilders/spellInfoBuilder.js",
-      "verified": "not verified",
+      "verified": "blocked — verification subagent stuck in loop and aborted; needs re-run",
       "class": "Spell",
       "triggerConditions": "Automation type: summon_spirit",
       "expectedBehavior": "A small, neutral beast appears in an unoccupied space within range. The beast's AC equals 11 + the spell's level. The beast has 20 Hit Points (Air only) or 30 Hit Points (Land and Water only), plus 5 for each spell level above 2. Its Speed is 30 feet, with Climb 30 feet (Land only), Fly 60 feet (Air only), or Swim 30 feet (Water only)."
@@ -811,7 +805,7 @@
       "handler": "src/services/combat/automation/handlers/classFeatureHandler.js",
       "router": "src/services/combat/automation/routers/classFeatureRouter.js",
       "infoBuilder": "src/services/combat/automation/infoBuilders/classFeatureInfoBuilder.js",
-      "verified": "not verified",
+      "verified": "blocked — two verification subagent runs returned empty results; needs re-run",
       "class": "Warlock",
       "triggerConditions": "Automation type: undefined",
       "expectedBehavior": "Immediately after casting an Enchantment or Illusion spell using an action and a spell slot, cast Misty Step as part of the same action without expending a spell slot."
@@ -823,7 +817,7 @@
       "handler": "src/services/combat/automation/handlers/spellHandler.js",
       "router": "src/services/combat/automation/routers/spellRouter.js",
       "infoBuilder": "src/services/combat/automation/infoBuilders/spellInfoBuilder.js",
-      "verified": "not verified",
+      "verified": "broken — see .opencode/plans/bug-sp-016-blade-ward.md",
       "class": "Spell",
       "triggerConditions": "Automation type: blade_ward",
       "expectedBehavior": "Whenever a creature makes an attack roll against you before the spell ends, the attacker subtracts 1d4 from the attack roll."
@@ -835,7 +829,7 @@
       "handler": "src/services/combat/automation/handlers/spellHandler.js",
       "router": "src/services/combat/automation/routers/spellRouter.js",
       "infoBuilder": "src/services/combat/automation/infoBuilders/spellInfoBuilder.js",
-      "verified": "not verified",
+      "verified": "blocked — two verification subagent runs returned empty results; needs re-run",
       "class": "Spell",
       "triggerConditions": "",
       "expectedBehavior": "You bless up to three creatures within range. Whenever a target makes an attack roll or a saving throw before the spell ends, the target adds 1d4 to the attack roll or save."
