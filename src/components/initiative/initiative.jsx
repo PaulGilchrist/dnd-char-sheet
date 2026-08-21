@@ -165,9 +165,11 @@ function Initiative({ characters, campaignName, onNpcsChange, isLocalhost, mapNa
         })
         Promise.all(promises).then(results => {
             if (cancelled) return
-            const newImages = {}
-            results.forEach(({ name, url }) => { newImages[name] = url })
-            setNpcImages(newImages)
+            setNpcImages(prev => {
+                const next = { ...prev }
+                results.forEach(({ name, url }) => { next[name] = url })
+                return next
+            })
             setNpcImagesLoaded(true)
         }).catch(err => {
             if (cancelled) return

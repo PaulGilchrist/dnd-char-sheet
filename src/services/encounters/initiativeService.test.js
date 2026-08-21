@@ -21,6 +21,13 @@ import {
   mergeCombatSummaryWithCharacters,
 } from './initiativeService.js';
 
+vi.mock('../ui/dataLoader.js', () => ({
+  loadMonsters: vi.fn(() => Promise.resolve([
+    { index: 'goblin', name: 'Goblin', armor_class: 12 },
+    { index: 'orc', name: 'Orc', armor_class: 13 },
+  ])),
+}));
+
 describe('initiativeService', () => {
   beforeEach(() => {
     vi.resetModules();
@@ -399,16 +406,29 @@ describe('initiativeService', () => {
         { name: 'New Name', armorClass: 15, hitPoints: 30 },
       ];
       const setNpcImages = vi.fn();
-      await renameNpc(combatSummary, 'Old Name', 'New Name', campaignNpcs, setNpcImages);
+      await renameNpc(combatSummary, 'Old Name', 'New Name', campaignNpcs, setNpcImages, 'campaign-1');
       expect(combatSummary.creatures[0].name).toBe('New Name');
       expect(combatSummary.creatures[0].ac).toBe(15);
       expect(combatSummary.creatures[0].maxHp).toBe(30);
       expect(setNpcImages).toHaveBeenCalledWith(expect.any(Function));
     });
 
+    it('resolves the monster image URL for a valid monster name and drops the old entry', async () => {
+      const combatSummary = makeCombatSummary([
+        { name: 'NPC 1', type: 'npc' },
+      ]);
+      const setNpcImages = vi.fn();
+      await renameNpc(combatSummary, 'NPC 1', 'Goblin', [], setNpcImages, 'campaign-1');
+      expect(setNpcImages).toHaveBeenCalledWith(expect.any(Function));
+      const updater = setNpcImages.mock.calls[0][0];
+      const next = updater({ 'NPC 1': 'https://example.com/old.jpg' });
+      expect(next['NPC 1']).toBeUndefined();
+      expect(next['Goblin']).toBe('https://paulgilchrist.github.io/dnd-tools/images/goblin.jpg');
+    });
+
     it('does nothing for a non-existent creature', async () => {
       const combatSummary = makeCombatSummary([{ name: 'NPC 1', type: 'npc' }]);
-      await renameNpc(combatSummary, 'Nope', 'New Name', [], undefined);
+      await renameNpc(combatSummary, 'Nope', 'New Name', [], undefined, 'campaign-1');
       expect(combatSummary.creatures[0].name).toBe('NPC 1');
     });
   });

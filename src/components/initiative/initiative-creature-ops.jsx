@@ -65,7 +65,7 @@ export function createCreatureHandlers({
 
     const handleNameChange = function handleNameChange(oldName, newName) {
         if (!combatSummary) return
-        renameNpc(combatSummary, oldName, newName, campaignNpcs, setNpcImages)
+        renameNpc(combatSummary, oldName, newName, campaignNpcs, setNpcImages, campaignName)
             .then(() => {
                 storage.set('combatSummary', combatSummary, campaignName)
                 setCombatSummary(cloneDeep(combatSummary))

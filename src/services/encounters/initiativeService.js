@@ -1,5 +1,5 @@
 import { rollD20 } from '../dice/diceRoller.js'
-import { getMonsterData } from '../npcs/monsterUtils.js'
+import { getMonsterData, getMonsterImageUrl } from '../npcs/monsterUtils.js'
 import { getMonsterSaveBonuses } from './encounterToInitiative.js'
 import { getRuntimeValue } from '../../hooks/runtime/useRuntimeState.js'
 
@@ -140,7 +140,7 @@ async function applyNpcMonsterData(combatSummary, creatureIndex, monster, campai
     }
 }
 
-async function renameNpc(combatSummary, oldName, newName, campaignNpcs, setNpcImages) {
+async function renameNpc(combatSummary, oldName, newName, campaignNpcs, setNpcImages, campaignName) {
     const idx = combatSummary.creatures.findIndex(c => c.name === oldName)
     if (idx === -1) return
     combatSummary.creatures[idx].name = newName
@@ -149,7 +149,13 @@ async function renameNpc(combatSummary, oldName, newName, campaignNpcs, setNpcIm
         await applyNpcMonsterData(combatSummary, idx, monster, campaignNpcs)
     }
     if (setNpcImages) {
-        setNpcImages(prev => ({ ...prev, [newName]: null }))
+        const url = await getMonsterImageUrl(newName, campaignNpcs, campaignName)
+        setNpcImages(prev => {
+            const next = { ...prev }
+            delete next[oldName]
+            next[newName] = url
+            return next
+        })
     }
 }
 
