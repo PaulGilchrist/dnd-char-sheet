@@ -80,6 +80,7 @@ describe('EffectAdder - conditions tab', () => {
     fireEvent.click(screen.getByText('Blinded'));
     fireEvent.click(screen.getByRole('button', { name: 'Apply' }));
     expect(props.onApply).toHaveBeenCalledWith('conditions', {
+      target: 'Goblin',
       conditionKey: 'blinded',
       dc: 10,
       ability: 'con',
@@ -95,6 +96,7 @@ describe('EffectAdder - conditions tab', () => {
     fireEvent.change(select, { target: { value: 'dex' } });
     fireEvent.click(screen.getByRole('button', { name: 'Apply' }));
     expect(props.onApply).toHaveBeenCalledWith('conditions', {
+      target: 'Goblin',
       conditionKey: 'grappled',
       dc: 20,
       ability: 'dex',

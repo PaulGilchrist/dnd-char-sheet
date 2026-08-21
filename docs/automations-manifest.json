@@ -691,7 +691,7 @@
       "handler": "src/services/combat/automation/handlers/classFeatureHandler.js",
       "router": "src/services/combat/automation/routers/classFeatureRouter.js",
       "infoBuilder": "src/services/combat/automation/infoBuilders/classFeatureInfoBuilder.js",
-      "verified": "not verified",
+      "verified": "verified",
       "class": "Barbarian",
       "triggerConditions": "Passive: Always active",
       "expectedBehavior": "During your turn, your reach is 10 feet greater with any Melee weapon that has the Heavy or Versatile property, as tendrils of the World Tree extend from you. When you hit with such a weapon on your turn, you can activate the Push or Topple mastery property in addition to a different mastery property you're using with that weapon."
@@ -703,7 +703,7 @@
       "handler": "src/services/combat/automation/handlers/classFeatureHandler.js",
       "router": "src/services/combat/automation/routers/classFeatureRouter.js",
       "infoBuilder": "src/services/combat/automation/infoBuilders/classFeatureInfoBuilder.js",
-      "verified": "not verified",
+      "verified": "broken — see .opencode/plans/bug-CLA-030-missing-trigger-after-casting-action-spell.md",
       "class": "Bard",
       "triggerConditions": "Action: bonus_action; Uses: variable",
       "expectedBehavior": "After you cast a spell that has a casting time of an action, you can make one attack with a weapon as a Bonus Action."
@@ -715,7 +715,7 @@
       "handler": "src/services/combat/automation/handlers/spellHandler.js",
       "router": "src/services/combat/automation/routers/spellRouter.js",
       "infoBuilder": "src/services/combat/automation/infoBuilders/spellInfoBuilder.js",
-      "verified": "not verified",
+      "verified": "verified 2026-08-21 — 2024 Cleric (Life) level 5, cast Beacon of Hope on Test Goblin in combat; effect applied correctly with advantage on WIS saves, death saves, and maximized healing",
       "class": "Spell",
       "triggerConditions": "Range: 30 feet",
       "expectedBehavior": "Level 3 Abjuration (Cleric) Casting Time: Action Range: 30 feet Components: V, S Duration: Concentration, up to 1 minute Choose any number of creatures within range. For the duration, each target has Advantage on Wisdom saving throws and Death Saving Throws and regains the maximum number of Hit Points possible from any healing."
@@ -727,7 +727,7 @@
       "handler": "src/services/combat/automation/handlers/classFeatureHandler.js",
       "router": "src/services/combat/automation/routers/classFeatureRouter.js",
       "infoBuilder": "src/services/combat/automation/infoBuilders/classFeatureInfoBuilder.js",
-      "verified": "not verified",
+      "verified": "broken — see .opencode/plans/bug-CLA-031-missing-beast-spells-implementation.md",
       "class": "Druid",
       "triggerConditions": "Passive: Always active",
       "expectedBehavior": "While using Wild Shape, you can cast spells in Beast form, except for any spell that has a Material component with a cost specified or that consumes its Material component."
@@ -739,7 +739,7 @@
       "handler": "src/services/combat/automation/handlers/classFeatureHandler.js",
       "router": "src/services/combat/automation/routers/classFeatureRouter.js",
       "infoBuilder": "src/services/combat/automation/infoBuilders/classFeatureInfoBuilder.js",
-      "verified": "not verified",
+      "verified": "broken — see .opencode/plans/bug-cla-032-beguiling-defense.md",
       "class": "Warlock",
       "triggerConditions": "Passive (Charmed immunity); Reaction (after being hit)",
       "expectedBehavior": "Immune to Charmed condition. After a creature hits you with an attack roll, take Reaction to reduce damage by half and force attacker to make Wisdom save or take Psychic damage equal to damage you took. (Warlock Archfey Patron - Beguiling Defenses)"
@@ -751,7 +751,7 @@
       "handler": "src/services/combat/automation/handlers/classFeatureHandler.js",
       "router": "src/services/combat/automation/routers/classFeatureRouter.js",
       "infoBuilder": "src/services/combat/automation/infoBuilders/classFeatureInfoBuilder.js",
-      "verified": "not verified",
+      "verified": "verified 2026-08-21 — 2024 Bard (College of Glamour) level 3; Charm Person + Mirror Image always prepared, Beguiling Magic resource tracker present, post-cast rider code path verified via tests (30,031 pass)",
       "class": "Bard",
       "triggerConditions": "Passive: Always active",
       "expectedBehavior": "You always have the Charm Person and Mirror Image spells prepared. In addition, immediately after you cast an Enchantment or Illusion spell using a spell slot, you can cause a creature you can see within 60 feet of yourself to make a Wisdom saving throw against your spell save DC. On a failed save, the target has the Charmed or Frightened condition (your choice) for 1 minute. Once you use this benefit, you can't use it again until you finish a Long Rest."

@@ -210,6 +210,7 @@ describe('EffectAdder - effects config view', () => {
       }
       fireEvent.click(screen.getByRole('button', { name: 'Apply' }));
       expect(props.onApply).toHaveBeenCalledWith('effects', {
+        target: 'Goblin',
         effectKey: expect.any(String),
         source: sourceExpected,
         value: valueExpected,

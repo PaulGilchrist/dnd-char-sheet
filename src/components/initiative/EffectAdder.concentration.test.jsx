@@ -67,6 +67,7 @@ describe('EffectAdder - concentration tab', () => {
     fireEvent.change(dcInput, { target: { value: '15' } });
     fireEvent.click(screen.getByRole('button', { name: 'Apply' }));
     expect(props.onApply).toHaveBeenCalledWith('concentration', {
+      target: 'Goblin',
       spellName: 'Shield',
       dc: 15,
     });

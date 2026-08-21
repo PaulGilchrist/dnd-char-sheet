@@ -83,12 +83,13 @@ function EffectAdder({ targetName, initialTab, onCancel, onApply, creatures }) {
 
   const handleApplyCondition = () => {
     if (!selectedCondition) return
-    onApply('conditions', { conditionKey: selectedCondition, dc: conditionDc, ability: conditionAbility })
+    onApply('conditions', { target: targetName, conditionKey: selectedCondition, dc: conditionDc, ability: conditionAbility })
   }
 
   const handleApplyEffect = () => {
     if (!selectedEffectKey) return
     onApply('effects', {
+      target: targetName,
       effectKey: selectedEffectKey,
       source: effectSource === SOURCE_OTHER ? (sourceCustom || undefined) : (effectSource || undefined),
       value: hasField('value') ? effectValue : undefined,
@@ -100,7 +101,7 @@ function EffectAdder({ targetName, initialTab, onCancel, onApply, creatures }) {
 
   const handleApplyConcentration = () => {
     if (!spellName.trim()) return
-    onApply('concentration', { spellName: spellName.trim(), dc: concentrationDc })
+    onApply('concentration', { target: targetName, spellName: spellName.trim(), dc: concentrationDc })
   }
 
   return (
