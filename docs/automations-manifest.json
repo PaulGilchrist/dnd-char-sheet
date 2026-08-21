@@ -371,7 +371,7 @@
       "handler": "src/services/combat/automation/handlers/classFeatureHandler.js",
       "router": "src/services/combat/automation/routers/classFeatureRouter.js",
       "infoBuilder": "src/services/combat/automation/infoBuilders/classFeatureInfoBuilder.js",
-      "verified": "not verified",
+      "verified": "broken — see .opencode/plans/bug-cla-014-archdruid-wild-shape-never-fires.md",
       "class": "Druid",
       "triggerConditions": "",
       "expectedBehavior": "The vitality of nature constantly blooms within you, granting you the following benefits. Evergreen Wild Shape: Whenever you roll Initiative and have no uses of Wild Shape left, you regain one expended use of it. Nature Magician: You can convert uses of Wild Shape into a spell slot (no action required). Choose a number of your unexpended uses of Wild Shape and convert them into a single spell slot, with each use contributing 2 spell levels. Longevity: The primal magic that you wield causes you to age more slowly. For every ten years that pass, your body ages only one year"
@@ -383,7 +383,7 @@
       "handler": "src/services/combat/automation/handlers/fightingStyleHandler.js",
       "router": "src/services/combat/automation/routers/fightingStyleRouter.js",
       "infoBuilder": "src/services/combat/automation/infoBuilders/fightingStyleInfoBuilder.js",
-      "verified": "not verified",
+      "verified": "verified",
       "class": "Fighting Style",
       "triggerConditions": "",
       "expectedBehavior": "You get a +2 bonus to attack rolls you make with ranged weapons."
@@ -395,7 +395,7 @@
       "handler": "src/services/combat/automation/handlers/backgroundHandler.js",
       "router": "src/services/combat/automation/routers/backgroundRouter.js",
       "infoBuilder": "src/services/combat/automation/infoBuilders/backgroundInfoBuilder.js",
-      "verified": "not verified",
+      "verified": "broken — see .opencode/plans/bug-bg-002-artisan-missing-automation.md",
       "class": "Background",
       "triggerConditions": "",
       "expectedBehavior": "You began mopping floors and scrubbi11g counters in an artisan's worl<shop for a few coppers per day as soon as you were strong enough to carry a bucket. When you were old enough to apprentice, you learned to create basic crafts of your own, as well as how to sweet-talk the occasional demanding customer. Your trade has also given you a keen eye for detail."
@@ -407,7 +407,7 @@
       "handler": "src/services/combat/automation/handlers/classFeatureHandler.js",
       "router": "src/services/combat/automation/routers/classFeatureRouter.js",
       "infoBuilder": "src/services/combat/automation/infoBuilders/classFeatureInfoBuilder.js",
-      "verified": "not verified",
+      "verified": "verified",
       "class": "Barbarian",
       "triggerConditions": "Action: passive",
       "expectedBehavior": "You gain one of the following options of your choice. Whenever you finish a Long Rest, you can change your choice. Owl: You have Darkvision with a range of 60 feet. If you already have Darkvision, its range increases by 60 feet. Panther: You have a Climb Speed equal to your Speed. Salmon: You have a Swim Speed equal to your Speed."
@@ -419,7 +419,7 @@
       "handler": "src/services/combat/automation/handlers/classFeatureHandler.js",
       "router": "src/services/combat/automation/routers/classFeatureRouter.js",
       "infoBuilder": "src/services/combat/automation/infoBuilders/classFeatureInfoBuilder.js",
-      "verified": "not verified",
+      "verified": "verified",
       "class": "Rogue",
       "triggerConditions": "Automation type: undefined",
       "expectedBehavior": "Initiative: Advantage on Initiative rolls. Surprising Strikes: During first round of each combat, Advantage on attack rolls against any creature that hasn't taken a turn. If Sneak Attack hits any target during that round, target takes extra damage equal to your Rogue level."
@@ -431,7 +431,7 @@
       "handler": "src/services/combat/automation/handlers/classFeatureHandler.js",
       "router": "src/services/combat/automation/routers/classFeatureRouter.js",
       "infoBuilder": "src/services/combat/automation/infoBuilders/classFeatureInfoBuilder.js",
-      "verified": "not verified",
+      "verified": "broken — see .opencode/plans/bug-cla-017-assassins-tools-missing-automation.md",
       "triggerConditions": "Passive",
       "expectedBehavior": "You can magically create poison on weapons or ammunition. When you hit with an attack using an infused weapon or ammunition, the target must succeed on a Constitution saving throw or take poison damage. (Rogue Assassin - Assassin's Tools)"
     },
@@ -442,7 +442,7 @@
       "handler": "src/services/combat/automation/handlers/featHandler.js",
       "router": "src/services/combat/automation/routers/featRouter.js",
       "infoBuilder": "src/services/combat/automation/infoBuilders/featInfoBuilder.js",
-      "verified": "not verified",
+      "verified": "verified",
       "triggerConditions": "Passive: Always active",
       "expectedBehavior": "You gain a Climb Speed equal to your Speed."
     },
@@ -453,7 +453,7 @@
       "handler": "src/services/combat/automation/handlers/featHandler.js",
       "router": "src/services/combat/automation/routers/featRouter.js",
       "infoBuilder": "src/services/combat/automation/infoBuilders/featInfoBuilder.js",
-      "verified": "not verified",
+      "verified": "verified",
       "triggerConditions": "Passive: Always active",
       "expectedBehavior": "You gain a Climb Speed equal to your Speed."
     },
@@ -464,7 +464,7 @@
       "handler": "src/services/combat/automation/handlers/featHandler.js",
       "router": "src/services/combat/automation/routers/featRouter.js",
       "infoBuilder": "src/services/combat/automation/infoBuilders/featInfoBuilder.js",
-      "verified": "not verified",
+      "verified": "verified",
       "triggerConditions": "Passive: Always active",
       "expectedBehavior": "You gain a Climb Speed equal to your Speed."
     },
@@ -475,7 +475,7 @@
       "handler": "src/services/combat/automation/handlers/classFeatureHandler.js",
       "router": "src/services/combat/automation/routers/classFeatureRouter.js",
       "infoBuilder": "src/services/combat/automation/infoBuilders/classFeatureInfoBuilder.js",
-      "verified": "not verified",
+      "verified": "verified",
       "class": "Paladin",
       "triggerConditions": "Passive: Always active",
       "expectedBehavior": "Your Aura of Protection is now a 30-foot Emanation."
@@ -487,7 +487,7 @@
       "handler": "src/services/combat/automation/handlers/classFeatureHandler.js",
       "router": "src/services/combat/automation/routers/classFeatureRouter.js",
       "infoBuilder": "src/services/combat/automation/infoBuilders/classFeatureInfoBuilder.js",
-      "verified": "not verified",
+      "verified": "verified",
       "class": "Paladin",
       "triggerConditions": "Passive: Always active",
       "expectedBehavior": "You and your allies have Immunity to the Frightened condition while in your Aura of Protection."
@@ -499,7 +499,7 @@
       "handler": "src/services/combat/automation/handlers/classFeatureHandler.js",
       "router": "src/services/combat/automation/routers/classFeatureRouter.js",
       "infoBuilder": "src/services/combat/automation/infoBuilders/classFeatureInfoBuilder.js",
-      "verified": "not verified",
+      "verified": "verified",
       "class": "Paladin",
       "triggerConditions": "Passive: Always active",
       "expectedBehavior": "You and your allies have Immunity to Charmed condition while in Aura of Protection."
@@ -511,7 +511,7 @@
       "handler": "src/services/combat/automation/handlers/spellHandler.js",
       "router": "src/services/combat/automation/routers/spellRouter.js",
       "infoBuilder": "src/services/combat/automation/infoBuilders/spellInfoBuilder.js",
-      "verified": "not verified",
+      "verified": "blocked — spell casting popup cannot be interacted with via Playwright (checkboxes outside viewport)",
       "class": "Spell",
       "triggerConditions": "",
       "expectedBehavior": "Level 4 Abjuration (Cleric, Paladin) Casting Time: Action Range: Self Components: V Duration: Concentration, up to 10 minutes An aura radiates from you in a 30-foot Emanation for the duration. While in the aura, you and your allies have Resistance to Necrotic damage, and your Hit Point maximums can't be reduced. If an ally with 0 Hit Points starts its turn in the aura, that ally regains 1 Hit Point."
@@ -523,7 +523,7 @@
       "handler": "src/services/combat/automation/handlers/classFeatureHandler.js",
       "router": "src/services/combat/automation/routers/classFeatureRouter.js",
       "infoBuilder": "src/services/combat/automation/infoBuilders/classFeatureInfoBuilder.js",
-      "verified": "not verified",
+      "verified": "verified",
       "class": "Paladin",
       "triggerConditions": "Passive: Always active",
       "expectedBehavior": "You radiate a protective aura in a 10-foot Emanation originating from you. The aura is inactive while you have the Incapacitated condition. You and your allies in the aura gain a bonus to saving throws equal to your Charisma modifier (minimum +1). If another Paladin is present, a creature can benefit from only one Aura of Protection at a time."
@@ -535,7 +535,7 @@
       "handler": "src/services/combat/automation/handlers/spellHandler.js",
       "router": "src/services/combat/automation/routers/spellRouter.js",
       "infoBuilder": "src/services/combat/automation/infoBuilders/spellInfoBuilder.js",
-      "verified": "not verified",
+      "verified": "broken — see .opencode/plans/bug-sp-009-concentration-not-persisted.md",
       "class": "Spell",
       "triggerConditions": "Duration: Concentration, up to 10 minutes",
       "expectedBehavior": "Level 4 Abjuration (Cleric, Paladin) Casting Time: Action Range: Self Components: V Duration: Concentration, up to 10 minutes An aura radiates from you in a 30-foot Emanation for the duration. While in the aura, you and your allies have Resistance to Poison damage and Advantage on saving throws to avoid or end effects that include the Blinded, Charmed, Deafened, Frightened, Paralyzed, Poisoned, or Stunned condition."
@@ -547,7 +547,7 @@
       "handler": "src/services/combat/automation/handlers/spellHandler.js",
       "router": "src/services/combat/automation/routers/spellRouter.js",
       "infoBuilder": "src/services/combat/automation/infoBuilders/spellInfoBuilder.js",
-      "verified": "not verified",
+      "verified": "verified",
       "class": "Spell",
       "triggerConditions": "Range: 30-foot emanation",
       "expectedBehavior": "Level 3 Abjuration (Cleric, Druid, Paladin) Casting Time: Action Range: Self Components: V Duration: Concentration, up to 1 minute An aura radiates from you in a 30-foot Emanation for the duration. When you create the aura and at the start of each of your turns while it persists, you can restore 2d6 Hit Points to one creature in it."
@@ -559,7 +559,7 @@
       "handler": "src/services/combat/automation/handlers/classFeatureHandler.js",
       "router": "src/services/combat/automation/routers/classFeatureRouter.js",
       "infoBuilder": "src/services/combat/automation/infoBuilders/classFeatureInfoBuilder.js",
-      "verified": "not verified",
+      "verified": "broken — see .opencode/plans/bug-CLA-022-aura-warding-resistances-not-applied.md",
       "class": "Paladin",
       "triggerConditions": "Passive: Always active",
       "expectedBehavior": "You and allies have Resistance to Necrotic, Psychic, and Radiant damage while in Aura of Protection."
@@ -571,7 +571,7 @@
       "handler": "src/services/combat/automation/handlers/classFeatureHandler.js",
       "router": "src/services/combat/automation/routers/classFeatureRouter.js",
       "infoBuilder": "src/services/combat/automation/infoBuilders/classFeatureInfoBuilder.js",
-      "verified": "not verified",
+      "verified": "verified",
       "class": "Cleric",
       "triggerConditions": "Passive: Always active",
       "expectedBehavior": "You gain Resistance to Bludgeoning, Piercing, and Slashing damage."
@@ -583,7 +583,7 @@
       "handler": "src/services/combat/automation/handlers/classFeatureHandler.js",
       "router": "src/services/combat/automation/routers/classFeatureRouter.js",
       "infoBuilder": "src/services/combat/automation/infoBuilders/classFeatureInfoBuilder.js",
-      "verified": "not verified",
+      "verified": "broken — see .opencode/plans/bug-CLA-024-avenging-angel-not-firing.md",
       "class": "Paladin",
       "triggerConditions": "Action: 1 bonus action; Action: bonus_action; Duration: 10_minutes",
       "expectedBehavior": "As a Bonus Action, you gain the benefits below for 10 minutes or until you end them (no action required). Once you use this feature, you can't use it again until you finish a Long Rest. You can also restore your use of it by expending a level 5 spell slot (no action required). Flight: You sprout spectral wings on your back, have a Fly Speed of 60 feet, and can hover. Frightful Aura Whenever an enemy starts its turn in your Aura of Protection, that creature must succeed on a Wisdom saving throw or have the Frightened condition for 1 minute or until it takes any damage. Attack rolls against the Frightened creature have Advantage."
@@ -595,7 +595,7 @@
       "handler": "src/services/combat/automation/handlers/classFeatureHandler.js",
       "router": "src/services/combat/automation/routers/classFeatureRouter.js",
       "infoBuilder": "src/services/combat/automation/infoBuilders/classFeatureInfoBuilder.js",
-      "verified": "not verified",
+      "verified": "verified",
       "class": "Paladin",
       "triggerConditions": "Action: 1 bonus action; Action: bonus_action; Duration: 10_minutes",
       "expectedBehavior": "As a Bonus Action, you gain the benefits below for 10 minutes or until you end them (no action required). Once you use this feature, you can't use it again until you finish a Long Rest. You can also restore your use of it by expending a level 5 spell slot (no action required). Flight: You sprout spectral wings on your back, have a Fly Speed of 60 feet, and can hover. Frightful Aura Whenever an enemy starts its turn in your Aura of Protection, that creature must succeed on a Wisdom saving throw or have the Frightened condition for 1 minute or until it takes any damage. Attack rolls against the Frightened creature have Advantage."
@@ -607,7 +607,7 @@
       "handler": "src/services/combat/automation/handlers/classFeatureHandler.js",
       "router": "src/services/combat/automation/routers/classFeatureRouter.js",
       "infoBuilder": "src/services/combat/automation/infoBuilders/classFeatureInfoBuilder.js",
-      "verified": "not verified",
+      "verified": "broken — see .opencode/plans/bug-CLA-026-awakened-mind-target-selection-no-op.md",
       "class": "Warlock",
       "triggerConditions": "Action: bonus_action; Range: 30 ft",
       "expectedBehavior": "Bonus Action, choose one creature within 30 feet. Communicate telepathically while within a number of miles equal to Charisma modifier (minimum 1 mile). Duration: minutes equal to Warlock level."
@@ -619,7 +619,7 @@
       "handler": "src/services/combat/automation/handlers/maneuverHandler.js",
       "router": "src/services/combat/automation/routers/maneuverRouter.js",
       "infoBuilder": "src/services/combat/automation/infoBuilders/maneuverInfoBuilder.js",
-      "verified": "not verified",
+      "verified": "broken — see .opencode/plans/bug-MN-002-movement-maneuver-no-ac-bonus-modal.md",
       "class": "Fighter",
       "triggerConditions": "Action type: movement; Uses: superiority_die",
       "expectedBehavior": "When you're within 5 feet of a creature on your turn, you can expend one Superiority Die and switch places with that creature, provided you spend at least 5 feet of movement and the creature is willing and not Incapacitated. This movement doesn't provoke Opportunity Attacks. Roll the Superiority Die. Until the start of your next turn, you or the other creature (your choice) gains a bonus to AC equal to the number rolled."
@@ -631,7 +631,7 @@
       "handler": "src/services/combat/automation/handlers/spellHandler.js",
       "router": "src/services/combat/automation/routers/spellRouter.js",
       "infoBuilder": "src/services/combat/automation/infoBuilders/spellInfoBuilder.js",
-      "verified": "not verified",
+      "verified": "verified",
       "class": "Spell",
       "triggerConditions": "",
       "expectedBehavior": "Level 1 Enchantment (Bard, Cleric, Warlock) Casting Time: Action Range: 30 feet Components: V, S, M (a drop of blood) Duration: Concentration, up to 1 minute Up to three creatures of your choice that you can see within range must each make a Charisma saving throw. Whenever a target that fails this save makes an attack roll or a saving throw before the spell ends, the target must subtract 1d4 from the attack roll or save. Using a Higher-Level Spell Slot. You can target one additional creature for each spell slot level above 1."
@@ -643,7 +643,7 @@
       "handler": "src/services/combat/automation/handlers/spellHandler.js",
       "router": "src/services/combat/automation/routers/spellRouter.js",
       "infoBuilder": "src/services/combat/automation/infoBuilders/spellInfoBuilder.js",
-      "verified": "not verified",
+      "verified": "verified",
       "class": "Spell",
       "triggerConditions": "Range: 30 feet",
       "expectedBehavior": "Level 4 Abjuration (Cleric, Paladin, Sorcerer, Warlock, Wizard) Casting Time: Action Range: 30 feet Components: V, S, M (a pentacle) Duration: Concentration, up to 1 minute One creature that you can see within range must succeed on a Charisma saving throw or be transported to a harmless demiplane for the duration. While there, the target has the Incapacitated condition. When the spell ends, the target reappears in the space it left or in the nearest unoccupied space if that space is occupied. If the target is an Aberration, a Celestial, an Elemental, a Fey, or a Fiend, the target doesn't return if the spell lasts for 1 minute. The target is instead transported to a random location on a plane (DM's choice) associated with its creature type. Using a Higher-Level Spell Slot. You can target one additional creature for each spell slot level above 4."
@@ -655,7 +655,7 @@
       "handler": "src/services/combat/automation/handlers/classFeatureHandler.js",
       "router": "src/services/combat/automation/routers/classFeatureRouter.js",
       "infoBuilder": "src/services/combat/automation/infoBuilders/classFeatureInfoBuilder.js",
-      "verified": "not verified",
+      "verified": "verified",
       "class": "Bard",
       "triggerConditions": "Action: 1 bonus action; Action: bonus_action; Range: 60_ft",
       "expectedBehavior": "You can inspire others through stirring words or music. Up to three times per day, you can add one of your Bardic Inspiration dice to one ability check made by one other creature of your choice. You can do so when any creature (including yourself) makes an ability check after you say the words or perform the musical piece. You must be able to see the creature, and the creature must be able to hear you. Your Bardic Inspiration die is a d6."
@@ -667,7 +667,7 @@
       "handler": "src/services/combat/automation/handlers/spellHandler.js",
       "router": "src/services/combat/automation/routers/spellRouter.js",
       "infoBuilder": "src/services/combat/automation/infoBuilders/spellInfoBuilder.js",
-      "verified": "not verified",
+      "verified": "verified",
       "class": "Spell",
       "triggerConditions": "",
       "expectedBehavior": "You touch a willing creature. Until the spell ends, the target's skin assumes a bark-like appearance, and the target has an Armor Class of 17 if its AC is lower than that."
@@ -679,7 +679,7 @@
       "handler": "src/services/combat/automation/handlers/classFeatureHandler.js",
       "router": "src/services/combat/automation/routers/classFeatureRouter.js",
       "infoBuilder": "src/services/combat/automation/infoBuilders/classFeatureInfoBuilder.js",
-      "verified": "not verified",
+      "verified": "broken — see .opencode/plans/bug-CLA-028-reaction-opens-create-modal.md",
       "class": "Sorcerer",
       "triggerConditions": "Action: 1 action; Action: action; Range: 30_ft",
       "expectedBehavior": "Action, expend 1-5 Sorcery Points to create magical ward around self or creature within 30 feet. Ward represented by number of d8s equal to SP spent. When warded creature takes damage, can expend dice, roll them, reduce damage by total rolled. Ward lasts until Long Rest or use again."

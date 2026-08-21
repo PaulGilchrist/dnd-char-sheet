@@ -17,7 +17,7 @@ export async function computeAuraComboEffects({ targetName, characters }) {
     if (!stats || !hasAuraOfProtection(stats)) continue;
     if (hasCannotActCondition(name)) continue;
     const allies = getAllyList(name);
-    if (!allies.includes(targetName)) continue;
+    if (targetName !== name && !allies.includes(targetName)) continue;
     const range = getAuraRangeFromStats(stats);
     const inRange = await isWithinRange(name, targetName, range);
     if (!inRange) continue;
