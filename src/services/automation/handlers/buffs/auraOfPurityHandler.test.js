@@ -23,6 +23,13 @@ vi.mock('../../../combat/concentration/concentrationService.js', () => ({
     addConcentration: vi.fn(),
 }));
 
+vi.mock('../../../ui/storage.js', () => {
+    const mockStorage = {
+        set: vi.fn(),
+    };
+    return { default: mockStorage };
+});
+
 import {
     handle,
     applyAuraOfPurity,
@@ -35,6 +42,7 @@ import * as expirations from '../../../rules/effects/expirations.js';
 import * as logService from '../../../ui/logService.js';
 import * as combatData from '../../../encounters/combatData.js';
 import * as concentrationService from '../../../combat/concentration/concentrationService.js';
+import storage from '../../../ui/storage.js';
 
 const campaignName = 'TestCampaign';
 const casterName = 'Cleric';
@@ -429,6 +437,28 @@ describe('auraOfPurityHandler', () => {
                 'Aura of Purity',
                 10 + 2
             );
+        });
+
+        it('persists combatSummary to storage after adding concentration', async () => {
+            const mockCombatSummary = makeCombatSummary(['Cleric', 'Ally1']);
+            combatData.getCombatSummary.mockReturnValue(mockCombatSummary);
+            useRuntimeState.getRuntimeValue.mockReturnValue([]);
+
+            const action = {
+                name: 'Aura of Purity',
+                spell: {},
+                automation: { type: 'aura_of_purity' },
+            };
+
+            await applyAuraOfPurity(
+                action,
+                makePlayerStats(),
+                campaignName,
+                null,
+                ['Ally1']
+            );
+
+            expect(storage.set).toHaveBeenCalledWith('combatSummary', mockCombatSummary, campaignName);
         });
 
         it('logs to campaign for each target', async () => {

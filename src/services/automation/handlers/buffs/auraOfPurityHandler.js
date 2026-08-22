@@ -4,6 +4,7 @@ import { addEntry } from '../../../ui/logService.js';
 import { addConcentration } from '../../../combat/concentration/concentrationService.js';
 import { getCombatSummary } from '../../../encounters/combatData.js';
 import { registerTargetEffect } from '../../../combat/conditions/targetEffectDefinitions.js';
+import storage from '../../../ui/storage.js';
 
 const AURA_OF_PURITY_BUFF_NAME = 'Aura of Purity';
 const SAVE_ADVANTAGE_CONDITIONS_KEY = 'auraOfPuritySaveAdvantageConditions';
@@ -75,6 +76,8 @@ export async function applyAuraOfPurity(action, playerStats, campaignName, mapNa
 
         const combatSummary = getCombatSummary(campaignName);
         addConcentration(combatSummary, casterName, 'Aura of Purity', 10 + Math.floor(playerStats.concentrationBonus || 0));
+        storage.set('combatSummary', combatSummary, campaignName);
+        window.dispatchEvent(new CustomEvent('combat-summary-updated'));
 
         appliedTargets.push(targetName);
 
