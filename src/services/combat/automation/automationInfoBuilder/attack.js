@@ -180,6 +180,7 @@ export const attackHandlers = {
             action: auto.action || 'bonus_action',
             weaponAttack: !!auto.weaponAttack,
             extraDamageExpression: auto.extraDamageExpression || '',
+            effect: auto.effect || null,
             usesMax,
             recharge: auto.recharge || 'long_rest',
             resourceKey: 'warPriestUses',

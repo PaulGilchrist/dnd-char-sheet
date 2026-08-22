@@ -375,6 +375,7 @@ describe('attackHandlers – bonus_action_attack', () => {
             action: 'bonus_action',
             weaponAttack: false,
             extraDamageExpression: '',
+            effect: null,
             usesMax: 0,
             recharge: 'long_rest',
             resourceKey: 'warPriestUses',
