@@ -128,7 +128,7 @@ export function resolveHealingBonuses(playerStats, prof, level, slotLevel, campa
         }
         if (passive.type === 'passive_rule' && (passive.effect === 'max_hp_increase' || passive.effect === 'fortified_health') && passive.alsoSelfHealing?.extraHealingExpression) {
             if (passive.alsoSelfHealing.oncePerTurn && campaignName) {
-                const stored = getRuntimeValue(null, '_fortifiedHealth_usedRound', campaignName);
+                const stored = getRuntimeValue(playerStats.name, '_fortifiedHealth_usedRound');
                 if (stored) continue;
             }
             const bonus = evaluateAutoExpression(passive.alsoSelfHealing.extraHealingExpression, playerStats, prof, level, slotLevel);

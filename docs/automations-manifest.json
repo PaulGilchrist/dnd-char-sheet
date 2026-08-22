@@ -146,17 +146,6 @@
       "expectedBehavior": "You can push yourself beyond your normal limits for a moment. On your turn, you can take one additional action, except the Action. Once you use this feature, you can't do so again until you finish a Short or Long Rest. Starting at level 17, you can use it twice before a rest but only once on a turn."
     },
     {
-      "id": "FT-002",
-      "name": "Actor",
-      "type": "feat",
-      "handler": "src/services/combat/automation/handlers/featHandler.js",
-      "router": "src/services/combat/automation/routers/featRouter.js",
-      "infoBuilder": "src/services/combat/automation/infoBuilders/featInfoBuilder.js",
-      "verified": "verified",
-      "triggerConditions": "When making deception_performance_checks checks; while disguised",
-      "expectedBehavior": "While you're disguised as a real or fictional person, you have Advantage on Charisma (Deception or Performance) checks to convince others that you are that person."
-    },
-    {
       "id": "CLA-005",
       "name": "Additional Fighting Style",
       "type": "classFeature",
@@ -828,17 +817,6 @@
       "expectedBehavior": "When you miss with an attack roll, you can hit instead. Once you use this benefit, you can't use it again until the start of your next turn."
     },
     {
-      "id": "FT-008",
-      "name": "Boon Of Dimensional Travel",
-      "type": "feat",
-      "handler": "src/services/combat/automation/handlers/featHandler.js",
-      "router": "src/services/combat/automation/routers/featRouter.js",
-      "infoBuilder": "src/services/combat/automation/infoBuilders/featInfoBuilder.js",
-      "verified": "not verified",
-      "triggerConditions": "Action: 1 action; Range: self",
-      "expectedBehavior": "Immediately after you take the Attack action or the Action, you can teleport up to 30 feet to an unoccupied space you can see."
-    },
-    {
       "id": "FT-009",
       "name": "Boon Of Energy Resistance",
       "type": "feat",
@@ -867,7 +845,7 @@
       "handler": "src/services/combat/automation/handlers/featHandler.js",
       "router": "src/services/combat/automation/routers/featRouter.js",
       "infoBuilder": "src/services/combat/automation/infoBuilders/featInfoBuilder.js",
-      "verified": "not verified",
+      "verified": "verified",
       "triggerConditions": "Passive: Always active",
       "expectedBehavior": "Your Hit Point maximum increases by 40. In addition, whenever you regain Hit Points, you can regain additional Hit Points equal to your Constitution modifier. Once you've regained these additional Hit Points, you can't do so again until the start of your next turn."
     },
