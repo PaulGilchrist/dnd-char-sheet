@@ -456,6 +456,22 @@ describe('createLogAndShow (useLoggedDiceRollAttack)', () => {
             await fn('Initiative', 3, 'initiative', {});
             expect(clearAllExpirationEffects).toHaveBeenCalledWith(defaultCharacterName, defaultCampaignName);
         });
+
+        it('does not crash when context is undefined (MN-001 regression)', async () => {
+            getTargetFromAttacker.mockReturnValue(null);
+            await expect(fn('Initiative', 3, 'initiative')).resolves.toBeUndefined();
+            expect(deps.setPopupHtml).toHaveBeenCalledWith(expect.objectContaining({
+                rollType: 'initiative',
+            }));
+        });
+
+        it('does not crash when context is null (MN-001 regression)', async () => {
+            getTargetFromAttacker.mockReturnValue(null);
+            await expect(fn('Initiative', 3, 'initiative', null)).resolves.toBeUndefined();
+            expect(deps.setPopupHtml).toHaveBeenCalledWith(expect.objectContaining({
+                rollType: 'initiative',
+            }));
+        });
     });
 
     describe('save roll type', () => {
