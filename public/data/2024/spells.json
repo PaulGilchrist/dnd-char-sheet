@@ -346,15 +346,15 @@
             "variants": [
                 {
                     "name": "Animated Object (Medium)",
-                    "monsterIndex": "animate-objects-medium"
+                    "monsterIndex": "animated-object-medium"
                 },
                 {
                     "name": "Animated Object (Large)",
-                    "monsterIndex": "animate-objects-large"
+                    "monsterIndex": "animated-object-large"
                 },
                 {
                     "name": "Animated Object (Huge)",
-                    "monsterIndex": "animate-objects-huge"
+                    "monsterIndex": "animated-object-huge"
                 }
             ]
         }

@@ -236,10 +236,10 @@
       "handler": "src/services/combat/automation/handlers/spellHandler.js",
       "router": "src/services/combat/automation/routers/spellRouter.js",
       "infoBuilder": "src/services/combat/automation/infoBuilders/spellInfoBuilder.js",
-      "verified": "not verified",
+      "verified": "verified",
       "class": "Spell",
       "triggerConditions": "Automation type: summon_spirit",
-      "expectedBehavior": "Level 5 Transmutation (Bard, Sorcerer, Wizard) Casting Time: Action Range: 120 feet Components: V, S Duration: Concentration, up to 1 minute Objects animate at your command. Choose a number of nonmagical objects within range that aren't being worn or carried, aren't fixed to a surface, and aren't Gargantuan. The maximum number of objects is equal to your spellcasting ability modifier; for this number, a Medium or smaller target counts as one object, a Large target counts as two, and a Huge target counts as three. Huge or Smaller Construct, Unaligned AC 15 HP 10 (Medium or smaller), 20 (Large), 40 (Huge) Speed 30 ft."
+      "expectedBehavior": "Level 5 Transmutation (Bard, Sorcerer, Wizard) Casting Time: Action Range: 120 feet Components: V, S Duration: Concentration, up to 1 minute Objects animate at your command. Choose a number of nonmagical objects within range that aren't being worn or carried, aren't fixed to a surface, and aren't Gargantuan. The maximum number of objects is equal to your spellcasting ability modifier; for this number, a Medium or smaller target counts as one object, a Large target counts for two, and a Huge target counts as three. Huge or Smaller Construct, Unaligned AC 15 HP 10 (Medium or smaller), 20 (Large), 40 (Huge) Speed 30 ft."
     },
     {
       "id": "SP-006",

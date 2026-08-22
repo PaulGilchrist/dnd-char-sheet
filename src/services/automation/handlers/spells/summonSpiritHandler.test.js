@@ -101,6 +101,18 @@ describe('summonSpiritHandler', () => {
 
     const mockMonsters = [
         {
+            index: 'animated-object-medium', name: 'Animated Object (Medium)', type: 'construct',
+            armor_class: 15, hit_points: 10, damage_resistances: [], damage_immunities: [], immunities: [],
+            saving_throws: {}, actions: [{
+                name: 'Slam',
+                description: 'Melee Spell Attack: +spell attack modifier, reach 5 ft. Hit: 1d4+3 Force damage.',
+                attack_bonus: null,
+                reach: '5 ft.',
+                damage_dice_primary: '1d4+3',
+                damage_type_primary: 'force',
+            }],
+        },
+        {
             index: 'bestial-spirit-air', name: 'Bestial Spirit (Air)', type: 'beast',
             armor_class: 11, hit_points: 20, damage_resistances: [], damage_immunities: [], immunities: [],
             saving_throws: { str: { modifier: 4 }, dex: { modifier: 0 }, con: { modifier: 3 }, int: { modifier: -3 }, wis: { modifier: 2 }, cha: { modifier: -3 } },
@@ -237,7 +249,7 @@ describe('summonSpiritHandler', () => {
             const combatSummary = getCombatSummary(mockCampaignName);
             const action = makeAction({
                 name: 'Animate Objects',
-                automation: { typeLabel: 'Animated Object', scale: false, variants: [{ name: 'Animated Object (Medium)', monsterIndex: 'animate-objects-medium' }] },
+                automation: { typeLabel: 'Animated Object', scale: false, variants: [{ name: 'Animated Object (Medium)', monsterIndex: 'animated-object-medium' }] },
             });
 
             await confirmSummonSpirit(action, mockPlayerStats, mockCampaignName, 'Animated Object (Medium)');
@@ -245,6 +257,36 @@ describe('summonSpiritHandler', () => {
             const added = combatSummary.creatures.find(c => c.name === 'Animated Object (Medium)');
             expect(added.ac).toBe(15);
             expect(added.maxHp).toBe(10);
+        });
+
+        it('summons animated object with correct monster index from 2024 spells.json', async () => {
+            loadMonsters.mockResolvedValue(mockMonsters);
+            const combatSummary = getCombatSummary(mockCampaignName);
+            const action = makeAction({
+                name: 'Animate Objects',
+                automation: { typeLabel: 'Animated Object', scale: false, variants: [{ name: 'Animated Object (Medium)', monsterIndex: 'animated-object-medium' }] },
+            });
+
+            const result = await confirmSummonSpirit(action, mockPlayerStats, mockCampaignName, 'Animated Object (Medium)');
+
+            const added = combatSummary.creatures.find(c => c.name === 'Animated Object (Medium)');
+            expect(added).toBeDefined();
+            expect(added.summonedBy).toBe('TestCaster');
+            expect(added.summonSource).toBe('spell');
+            expect(added.ac).toBe(15);
+            expect(added.maxHp).toBe(10);
+            expect(added.speed.walk).toBe('30 ft.');
+
+            const effect = getRuntimeValue('campaign', 'targetEffects').find(te => te.target === 'Animated Object (Medium)');
+            expect(effect).toMatchObject({
+                effect: 'summoned',
+                source: 'TestCaster',
+                summonSource: 'spell',
+                duration: 'concentration',
+            });
+
+            expect(addConcentration).toHaveBeenCalled();
+            expect(result.type).toBe('popup');
         });
 
         it('resolves spell attack, WIS modifier, spell level and save DC placeholders', async () => {
