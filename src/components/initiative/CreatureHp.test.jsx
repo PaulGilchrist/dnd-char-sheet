@@ -8,6 +8,12 @@ vi.mock('./HpBar.jsx', () => ({
     default: vi.fn(() => <div data-testid="hp-bar" />),
 }));
 
+vi.mock('../../hooks/runtime/useRuntimeState.js', () => ({
+    useRuntimeValue: vi.fn(() => null),
+}));
+
+import { useRuntimeValue } from '../../hooks/runtime/useRuntimeState.js';
+
 describe('CreatureHp', () => {
     let props;
 
@@ -140,6 +146,84 @@ describe('CreatureHp', () => {
             const creature = { ...defaultNpcCreature, currentHp: undefined, maxHp: undefined };
             render(<CreatureHp {...props} creature={creature} isLocalhost={false} />);
             expect(screen.getByText('DEAD')).toBeInTheDocument();
+        });
+    });
+
+    describe('runtime HP max increases (Aid, Heroes Feast)', () => {
+        beforeEach(() => {
+            vi.clearAllMocks();
+            useRuntimeValue.mockReturnValue(null);
+        });
+
+        it('displays effective max HP with aidHpMaxIncrease for player creature (localhost)', () => {
+            useRuntimeValue.mockImplementation((_, prop) => {
+                if (prop === 'aidHpMaxIncrease') return 5;
+                return null;
+            });
+
+            render(<CreatureHp {...props} creature={defaultPlayerCreature} isLocalhost={true} />);
+            expect(screen.getByText('25')).toBeInTheDocument();
+        });
+
+        it('displays effective max HP with aidHpMaxIncrease for player creature (non-localhost)', () => {
+            useRuntimeValue.mockImplementation((_, prop) => {
+                if (prop === 'aidHpMaxIncrease') return 5;
+                return null;
+            });
+
+            render(<CreatureHp {...props} creature={defaultPlayerCreature} isLocalhost={false} />);
+            expect(screen.getByText('15/25')).toBeInTheDocument();
+        });
+
+        it('displays effective max HP with both aid and heroesFeast increases', () => {
+            useRuntimeValue.mockImplementation((_, prop) => {
+                if (prop === 'aidHpMaxIncrease') return 5;
+                if (prop === 'heroesFeastHpMaxIncrease') return 3;
+                return null;
+            });
+
+            render(<CreatureHp {...props} creature={defaultPlayerCreature} isLocalhost={false} />);
+            expect(screen.getByText('15/28')).toBeInTheDocument();
+        });
+
+        it('displays effective max HP for NPC non-localhost with aid', () => {
+            useRuntimeValue.mockImplementation((_, prop) => {
+                if (prop === 'aidHpMaxIncrease') return 5;
+                return null;
+            });
+
+            const npcCreature = { ...defaultNpcCreature, currentHp: 7, maxHp: 7 };
+            render(<CreatureHp {...props} creature={npcCreature} isLocalhost={false} />);
+            expect(screen.getByText('OK')).toBeInTheDocument();
+        });
+
+        it('displays effective max HP for summoned creature with aid', () => {
+            useRuntimeValue.mockImplementation((_, prop) => {
+                if (prop === 'aidHpMaxIncrease') return 5;
+                return null;
+            });
+
+            const npcCreature = { ...defaultNpcCreature, currentHp: 7, maxHp: 7 };
+            render(<CreatureHp {...props} creature={npcCreature} isLocalhost={false} isPlayerSummoned={true} />);
+            expect(screen.getByText('7/12')).toBeInTheDocument();
+        });
+
+        it('uses effective max HP for bloodied threshold calculation', () => {
+            useRuntimeValue.mockImplementation((_, prop) => {
+                if (prop === 'aidHpMaxIncrease') return 10;
+                return null;
+            });
+
+            const npcCreature = { ...defaultNpcCreature, currentHp: 8, maxHp: 7 };
+            render(<CreatureHp {...props} creature={npcCreature} isLocalhost={false} />);
+            expect(screen.getByText('BLOODIED')).toBeInTheDocument();
+        });
+
+        it('shows base max HP when no runtime increases are active', () => {
+            useRuntimeValue.mockReturnValue(null);
+
+            render(<CreatureHp {...props} creature={defaultPlayerCreature} isLocalhost={false} />);
+            expect(screen.getByText('15/20')).toBeInTheDocument();
         });
     });
 });

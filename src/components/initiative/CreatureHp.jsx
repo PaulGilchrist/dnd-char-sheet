@@ -1,19 +1,23 @@
 
 
 import { HP_STATUS_DESCRIPTIONS } from '../../services/combat/conditions/effectDescriptions.js'
+import { useRuntimeValue } from '../../hooks/runtime/useRuntimeState.js'
 
 function CreatureHp({ creature, isLocalhost, onChange, isPlayerSummoned }) {
-    const { currentHp: rawCurrentHp, maxHp: rawMaxHp, type } = creature
+    const { currentHp: rawCurrentHp, maxHp: rawMaxHp, type, name } = creature
     const currentHp = rawCurrentHp ?? 0
     const maxHp = rawMaxHp ?? 1
+    const aidIncrease = useRuntimeValue(name, 'aidHpMaxIncrease', null)
+    const heroesFeastIncrease = useRuntimeValue(name, 'heroesFeastHpMaxIncrease', null)
+    const effectiveMaxHp = maxHp + (Number(aidIncrease) || 0) + (Number(heroesFeastIncrease) || 0)
     const isDead = currentHp <= 0
-    const isBloodied = currentHp > 0 && currentHp <= Math.floor(maxHp / 2)
+    const isBloodied = currentHp > 0 && currentHp <= Math.floor(effectiveMaxHp / 2)
 
     if (type !== 'player' && !isLocalhost && !isPlayerSummoned) {
         return (
             <div className="creature-hp">
                 <div className="hp-bar-row">
-                    <HpBar current={currentHp} max={maxHp} />
+                    <HpBar current={currentHp} max={effectiveMaxHp} />
                 </div>
                 <div className="hp-inline-row">
                     <span className="hp-status">
@@ -30,11 +34,11 @@ function CreatureHp({ creature, isLocalhost, onChange, isPlayerSummoned }) {
         return (
             <div className="creature-hp">
                 <div className="hp-bar-row">
-                    <HpBar current={currentHp} max={maxHp} />
+                    <HpBar current={currentHp} max={effectiveMaxHp} />
                 </div>
                 <div className="hp-inline-row">
                     <span className="hp-label">HP</span>
-                    <span className="hp-max-val">{currentHp}/{maxHp}</span>
+                    <span className="hp-max-val">{currentHp}/{effectiveMaxHp}</span>
                 </div>
             </div>
         )
@@ -44,7 +48,7 @@ function CreatureHp({ creature, isLocalhost, onChange, isPlayerSummoned }) {
         return (
             <div className="creature-hp">
                 <div className="hp-bar-row">
-                    <HpBar current={currentHp} max={maxHp} />
+                    <HpBar current={currentHp} max={effectiveMaxHp} />
                 </div>
                 <div className="hp-inline-row">
                     <span className="hp-label">HP</span>
@@ -64,12 +68,15 @@ function CreatureHp({ creature, isLocalhost, onChange, isPlayerSummoned }) {
                         className="hp-inline-input hp-max-input"
                         type="number"
                         min="1"
-                        defaultValue={maxHp}
+                        defaultValue={effectiveMaxHp}
                         onBlur={(e) => {
-                            const newMax = parseInt(e.target.value) || 1
-                            creature.maxHp = newMax
-                            if (creature.currentHp > newMax) {
-                                creature.currentHp = newMax
+                            const newEffectiveMax = parseInt(e.target.value) || 1
+                            const aidAmt = Number(aidIncrease) || 0
+                            const hfAmt = Number(heroesFeastIncrease) || 0
+                            const newBaseMax = newEffectiveMax - aidAmt - hfAmt
+                            creature.maxHp = newBaseMax
+                            if (creature.currentHp > newEffectiveMax) {
+                                creature.currentHp = newEffectiveMax
                             }
                             onChange(creature.name, creature.currentHp)
                         }}
@@ -86,7 +93,7 @@ function CreatureHp({ creature, isLocalhost, onChange, isPlayerSummoned }) {
     return (
         <div className="creature-hp">
             <div className="hp-bar-row">
-                <HpBar current={currentHp} max={maxHp} />
+                <HpBar current={currentHp} max={effectiveMaxHp} />
             </div>
             <div className="hp-inline-row">
                 <span className="hp-label">HP</span>
@@ -104,10 +111,10 @@ function CreatureHp({ creature, isLocalhost, onChange, isPlayerSummoned }) {
                             aria-label={`${creature.name} current HP`}
                         />
                         <span className="hp-sep">/</span>
-                        <span className="hp-max-val">{maxHp}</span>
+                        <span className="hp-max-val">{effectiveMaxHp}</span>
                     </>
                 ) : (
-                    <span className="hp-max-val">{currentHp}/{maxHp}</span>
+                    <span className="hp-max-val">{currentHp}/{effectiveMaxHp}</span>
                 )}
             </div>
         </div>
