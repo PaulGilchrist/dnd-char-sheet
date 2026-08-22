@@ -4,6 +4,10 @@ import { getRuntimeValue, setRuntimeValue } from '../../../../hooks/runtime/useR
 import { addEntry } from '../../../ui/logService.js';
 
 export async function handle(action, playerStats, campaignName, _mapName) {
+    if (!playerStats) {
+        console.error('[bladeWard] Missing playerStats — spell cast context was null');
+        return { type: 'popup', payload: { type: 'automation_info', name: action?.name || 'Blade Ward', description: 'Failed to execute Blade Ward' } };
+    }
     const auto = action.automation;
     const playerName = playerStats.name;
     const buffName = action.name;

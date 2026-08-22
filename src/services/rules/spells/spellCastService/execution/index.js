@@ -208,7 +208,7 @@ export async function executeSpellCast(spell, metaCtx, { rollAttack, rollDamage,
     if (shapechangeResult.handled) return shapechangeResult.result;
 
     // --- Generic automation routing ---
-    let genericAutomationResult = await handleGenericAutomation(spell, executeHandler, (sp, mc, ps, cn) => triggerArcaneWard(sp, mc, ps, cn));
+    let genericAutomationResult = await handleGenericAutomation(spell, executeHandler, (sp, mc, ps, cn) => triggerArcaneWard(sp, mc, ps, cn), playerStats, campaignName, mapName, characters);
     if (genericAutomationResult.handled) {
         if (genericAutomationResult.result) return genericAutomationResult.result;
         return;

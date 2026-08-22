@@ -439,7 +439,7 @@ async function handleRemoveCurse(spell, metaCtx, playerStats, campaignName, mapN
     return { handled: false };
 }
 
-async function handleGenericAutomation(spell, executeHandler, _triggerArcaneWard) {
+async function handleGenericAutomation(spell, executeHandler, _triggerArcaneWard, playerStats, campaignName, mapName, characters) {
     const spellNameLower = (spell.name || '').toLowerCase();
     if (spell.automation?.type && !spell.automation?.effects?.fail && !spell.automation?.effects?.success && !SERVICE_HANDLED_SPELLS.has(spellNameLower)) {
         const action = {
@@ -448,7 +448,7 @@ async function handleGenericAutomation(spell, executeHandler, _triggerArcaneWard
             automation: spell.automation,
             metaCtx: {},
         };
-        const handlerResult = await executeHandler(action, null, null, null, null);
+        const handlerResult = await executeHandler(action, playerStats, campaignName, mapName, characters);
         if (handlerResult) {
             return { handled: true, result: { automationPopup: handlerResult } };
         }
