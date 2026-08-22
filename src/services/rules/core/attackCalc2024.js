@@ -21,6 +21,8 @@ export function getAttacks(allEquipment, allSpells, playerStats) {
     // Ranged weapons
     const rangedWeapons = findEquippedWeapons(allEquipment, playerStats.inventory.equipped, 'Ranged');
     const fightingStyles2024 = playerStats.class?.fightingStyles != null ? playerStats.class.fightingStyles : [];
+    const hasBlessedWarrior = fightingStyles2024.includes('Blessed Warrior');
+    const hasDruidicWarrior = fightingStyles2024.includes('Druidic Warrior');
     if (rangedWeapons.length > 0) {
         const nonLightRanged = rangedWeapons.filter(name => {
             const { baseName } = parseMagicItemName(name);
@@ -136,9 +138,6 @@ export function getAttacks(allEquipment, allSpells, playerStats) {
     if (meleeWeaponNames.length > 0) {
         const bonus = Math.max(strength.bonus, dexterity.bonus);
         const abilityName = strength.bonus > dexterity.bonus ? 'Strength' : 'Dexterity';
-        const fightingStyles2024 = playerStats.class?.fightingStyles != null ? playerStats.class.fightingStyles : [];
-        const hasBlessedWarrior = fightingStyles2024.includes('Blessed Warrior');
-        const hasDruidicWarrior = fightingStyles2024.includes('Druidic Warrior');
 
         // Separate non-light and light melee weapons
         const nonLightMelee = meleeWeaponNames.filter(name => {
@@ -335,13 +334,14 @@ export function getAttacks(allEquipment, allSpells, playerStats) {
         const str = playerStats.abilities.find(a => a.name === 'Strength');
         const strMod = str?.bonus || 0;
         const tbDice = '1d4';
+        const blessedWarriorHit = hasBlessedWarrior ? 2 : 0;
         attacks.push({
             name: 'Unarmed Strike',
             damage: `${tbDice}+${strMod}`,
             damageType: 'Bludgeoning',
             damageFormula: `Damage Formula = Tavern Brawler Unarmed Strike (${tbDice}) + Strength Modifier (${strMod})`,
-            hitBonus: strMod + proficiency,
-            hitBonusFormula: `To Hit Bonus Formula = Strength Bonus (${strMod}) + Proficiency (${proficiency})`,
+            hitBonus: strMod + proficiency + blessedWarriorHit,
+            hitBonusFormula: `To Hit Bonus Formula = Strength Bonus (${strMod}) + Proficiency (${proficiency})${blessedWarriorHit ? ' + Blessed Warrior (2)' : ''}`,
             range: 5,
             type: 'Action',
             weaponType: 'unarmed',
@@ -473,13 +473,14 @@ export function getAttacks(allEquipment, allSpells, playerStats) {
     if (attacks.length === 0) {
         const str = playerStats.abilities?.find(a => a.name === 'Strength');
         const strMod = str?.bonus || 0;
+        const blessedWarriorHit = hasBlessedWarrior ? 2 : 0;
         attacks.push({
             name: 'Unarmed Strike',
             damage: `1d4+${strMod}`,
             damageType: 'Bludgeoning',
             damageFormula: `Damage Formula = Unarmed Strike (1d4) + Strength Bonus (${strMod})`,
-            hitBonus: strMod + proficiency,
-            hitBonusFormula: `To Hit Bonus Formula = Strength Bonus (${strMod}) + Proficiency (${proficiency})`,
+            hitBonus: strMod + proficiency + blessedWarriorHit,
+            hitBonusFormula: `To Hit Bonus Formula = Strength Bonus (${strMod}) + Proficiency (${proficiency})${blessedWarriorHit ? ' + Blessed Warrior (2)' : ''}`,
             range: 5,
             type: 'Action',
             weaponType: 'unarmed',
@@ -492,8 +493,8 @@ export function getAttacks(allEquipment, allSpells, playerStats) {
                 damage: `1d4+${strMod}`,
                 damageType: 'Bludgeoning',
                 damageFormula: `Damage Formula = Unarmed Strike (1d4) + Strength Bonus (${strMod})`,
-                hitBonus: strMod + proficiency,
-                hitBonusFormula: `To Hit Bonus Formula = Strength Bonus (${strMod}) + Proficiency (${proficiency})`,
+                hitBonus: strMod + proficiency + blessedWarriorHit,
+                hitBonusFormula: `To Hit Bonus Formula = Strength Bonus (${strMod}) + Proficiency (${proficiency})${blessedWarriorHit ? ' + Blessed Warrior (2)' : ''}`,
                 range: 5,
                 type: 'Bonus Action',
                 weaponType: 'unarmed',

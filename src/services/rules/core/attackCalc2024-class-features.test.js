@@ -186,6 +186,32 @@ describe('attackCalc2024 - class features', () => {
       expect(result).toHaveLength(2);
       expect(result[0].name).toBe('Unarmed Strike');
     });
+
+    it('applies Blessed Warrior +2 to Tavern Brawler unarmed strike hit bonus', () => {
+      findEquippedWeaponsStub.mockReturnValue([]);
+
+      const playerStats = defaultPlayerStats({
+        level: 5,
+        abilities: [
+          { name: 'Strength', baseScore: 16, abilityImprovements: 0, miscBonus: 0, bonus: 3 },
+          { name: 'Dexterity', baseScore: 10, abilityImprovements: 0, miscBonus: 0, bonus: 0 },
+        ],
+        class: { name: 'Cleric', fightingStyles: ['Blessed Warrior'] },
+        automation: {
+          passives: [
+            { effect: 'tavern_brawler_push', name: 'Tavern Brawler' },
+          ],
+          bonusActions: [],
+        },
+      });
+
+      const result = getAttacks([], [], playerStats);
+
+      expect(result).toHaveLength(1);
+      expect(result[0].name).toBe('Unarmed Strike');
+      expect(result[0].hitBonus).toBe(8); // strMod(3) + proficiency(3) + blessedWarrior(2)
+      expect(result[0].hitBonusFormula).toContain('Blessed Warrior (2)');
+    });
   });
 
   describe('College of Dance', () => {
@@ -297,6 +323,53 @@ describe('attackCalc2024 - class features', () => {
 
       expect(result).toHaveLength(1);
       expect(result[0].name).toBe('Unarmed Strike');
+    });
+  });
+
+  describe('Blessed Warrior fighting style on unarmed strikes', () => {
+    it('applies Blessed Warrior +2 to fallback unarmed strike hit bonus when no weapons equipped', () => {
+      findEquippedWeaponsStub.mockReturnValue([]);
+
+      const playerStats = defaultPlayerStats({
+        level: 6,
+        abilities: [
+          { name: 'Strength', baseScore: 8, abilityImprovements: 0, miscBonus: 0, bonus: -1 },
+          { name: 'Dexterity', baseScore: 10, abilityImprovements: 0, miscBonus: 0, bonus: 0 },
+        ],
+        class: { name: 'Cleric', fightingStyles: ['Blessed Warrior'] },
+      });
+
+      const result = getAttacks([], [], playerStats);
+
+      expect(result).toHaveLength(1);
+      expect(result[0].name).toBe('Unarmed Strike');
+      expect(result[0].hitBonus).toBe(4); // strMod(-1) + proficiency(3) + blessedWarrior(2)
+      expect(result[0].hitBonusFormula).toContain('Blessed Warrior (2)');
+    });
+
+    it('applies Blessed Warrior +2 to both unarmed strikes when Two-Weapon Fighting is active', () => {
+      findEquippedWeaponsStub.mockReturnValue([]);
+
+      const playerStats = defaultPlayerStats({
+        level: 6,
+        abilities: [
+          { name: 'Strength', baseScore: 16, abilityImprovements: 0, miscBonus: 0, bonus: 3 },
+          { name: 'Dexterity', baseScore: 10, abilityImprovements: 0, miscBonus: 0, bonus: 0 },
+        ],
+        class: { name: 'Cleric', fightingStyles: ['Blessed Warrior', 'Two-Weapon Fighting'] },
+      });
+
+      const result = getAttacks([], [], playerStats);
+
+      expect(result).toHaveLength(2);
+      expect(result[0].name).toBe('Unarmed Strike');
+      expect(result[0].type).toBe('Action');
+      expect(result[0].hitBonus).toBe(8); // strMod(3) + proficiency(3) + blessedWarrior(2)
+      expect(result[0].hitBonusFormula).toContain('Blessed Warrior (2)');
+      expect(result[1].name).toBe('Unarmed Strike');
+      expect(result[1].type).toBe('Bonus Action');
+      expect(result[1].hitBonus).toBe(8);
+      expect(result[1].hitBonusFormula).toContain('Blessed Warrior (2)');
     });
   });
 });

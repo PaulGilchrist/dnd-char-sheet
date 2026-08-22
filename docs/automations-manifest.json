@@ -751,7 +751,7 @@
       "handler": "src/services/combat/automation/handlers/fightingStyleHandler.js",
       "router": "src/services/combat/automation/routers/fightingStyleRouter.js",
       "infoBuilder": "src/services/combat/automation/infoBuilders/fightingStyleInfoBuilder.js",
-      "verified": "not verified",
+      "verified": "verified",
       "class": "Fighting Style",
       "triggerConditions": "",
       "expectedBehavior": "You gain a +2 bonus to attack rolls you make with melee weapons."

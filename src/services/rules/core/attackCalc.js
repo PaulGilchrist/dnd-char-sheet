@@ -234,6 +234,8 @@ export function getAttacks(allEquipment, allSpells, playerStats) {
     const proficiency = Math.floor((playerStats.level - 1) / 4 + 2);
     const attacks = [];
     const fightingStyles = playerStats.class?.fightingStyles != null ? playerStats.class.fightingStyles : [];
+    const hasBlessedWarrior = fightingStyles.includes('Blessed Warrior');
+    const hasDruidicWarrior = fightingStyles.includes('Druidic Warrior');
 
     // Ranged weapons
     const rangedWeapons = findEquippedWeapons(allEquipment, playerStats.inventory.equipped, 'Ranged');
@@ -392,12 +394,10 @@ export function getAttacks(allEquipment, allSpells, playerStats) {
       // Melee weapons
       const meleeWeaponNames = findEquippedWeapons(allEquipment, playerStats.inventory.equipped, 'Melee');
       if (meleeWeaponNames.length > 0) {
-          const bonus = Math.max(strength.bonus, dexterity.bonus);
-          const abilityName = strength.bonus > dexterity.bonus ? 'Strength' : 'Dexterity';
-          const hasBlessedWarrior = fightingStyles.includes('Blessed Warrior');
-          const hasDruidicWarrior = fightingStyles.includes('Druidic Warrior');
+           const bonus = Math.max(strength.bonus, dexterity.bonus);
+           const abilityName = strength.bonus > dexterity.bonus ? 'Strength' : 'Dexterity';
 
-          // Separate non-light and light melee weapons
+           // Separate non-light and light melee weapons
           const nonLightMelee = meleeWeaponNames.filter(name => {
               const { baseName } = parseMagicItemName(name);
               const weapon = allEquipment.find(item => item.name === baseName);
@@ -575,35 +575,36 @@ export function getAttacks(allEquipment, allSpells, playerStats) {
       }
 
       // Fallback unarmed strike when no weapons are equipped
-     if (attacks.length === 0) {
-         const strMod = strength?.bonus || 0;
-         attacks.push({
-             name: 'Unarmed Strike',
-             damage: `1d4+${strMod}`,
-             damageType: 'Bludgeoning',
-             damageFormula: `Damage Formula = Unarmed Strike (1d4) + Strength Bonus (${strMod})`,
-             hitBonus: strMod + proficiency,
-             hitBonusFormula: `To Hit Bonus Formula = Strength Bonus (${strMod}) + Proficiency (${proficiency})`,
-             range: 5,
-             type: 'Action',
-             weaponType: 'unarmed',
-         });
-         // Two-Weapon Fighting: add bonus action unarmed strike when wielding two light weapons
-         const hasTwoWeapon = fightingStyles.includes('Two-Weapon Fighting');
-         if (hasTwoWeapon) {
-             attacks.push({
-                 name: 'Unarmed Strike',
-                 damage: `1d4+${strMod}`,
-                 damageType: 'Bludgeoning',
-                 damageFormula: `Damage Formula = Unarmed Strike (1d4) + Strength Bonus (${strMod})`,
-                 hitBonus: strMod + proficiency,
-                 hitBonusFormula: `To Hit Bonus Formula = Strength Bonus (${strMod}) + Proficiency (${proficiency})`,
-                 range: 5,
-                 type: 'Bonus Action',
-                 weaponType: 'unarmed',
-             });
-         }
-      }
+      if (attacks.length === 0) {
+          const strMod = strength?.bonus || 0;
+          const blessedWarriorHit = hasBlessedWarrior ? 2 : 0;
+          attacks.push({
+              name: 'Unarmed Strike',
+              damage: `1d4+${strMod}`,
+              damageType: 'Bludgeoning',
+              damageFormula: `Damage Formula = Unarmed Strike (1d4) + Strength Bonus (${strMod})`,
+              hitBonus: strMod + proficiency + blessedWarriorHit,
+              hitBonusFormula: `To Hit Bonus Formula = Strength Bonus (${strMod}) + Proficiency (${proficiency})${blessedWarriorHit ? ' + Blessed Warrior (2)' : ''}`,
+              range: 5,
+              type: 'Action',
+              weaponType: 'unarmed',
+          });
+          // Two-Weapon Fighting: add bonus action unarmed strike when wielding two light weapons
+          const hasTwoWeapon = fightingStyles.includes('Two-Weapon Fighting');
+          if (hasTwoWeapon) {
+              attacks.push({
+                  name: 'Unarmed Strike',
+                  damage: `1d4+${strMod}`,
+                  damageType: 'Bludgeoning',
+                  damageFormula: `Damage Formula = Unarmed Strike (1d4) + Strength Bonus (${strMod})`,
+                  hitBonus: strMod + proficiency + blessedWarriorHit,
+                  hitBonusFormula: `To Hit Bonus Formula = Strength Bonus (${strMod}) + Proficiency (${proficiency})${blessedWarriorHit ? ' + Blessed Warrior (2)' : ''}`,
+                  range: 5,
+                  type: 'Bonus Action',
+                  weaponType: 'unarmed',
+              });
+          }
+       }
 
       // Starry Form: Archer constellation - ranged spell attack
      const starryArrow = buildStarryFormLuminousArrow(playerStats);

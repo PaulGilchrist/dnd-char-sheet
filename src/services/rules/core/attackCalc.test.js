@@ -465,6 +465,18 @@ describe('attackCalc', () => {
       expect(result[0].weaponType).toBe('unarmed');
     });
 
+    it('should apply Blessed Warrior +2 to fallback unarmed strike hit bonus', () => {
+      const playerStats = makePlayerStats({
+        equipped: [],
+        class: { name: 'Cleric', fightingStyles: ['Blessed Warrior'] },
+      });
+      const result = getAttacks(allEquipment, [], playerStats);
+      expect(result).toHaveLength(1);
+      expect(result[0].name).toBe('Unarmed Strike');
+      expect(result[0].hitBonus).toBe(8); // strMod(3) + proficiency(3) + blessedWarrior(2)
+      expect(result[0].hitBonusFormula).toContain('Blessed Warrior (2)');
+    });
+
     it('should build both ranged and melee attacks when both equipped', () => {
       const playerStats = makePlayerStats({
         equipped: ['Shortbow', 'Longsword'],
