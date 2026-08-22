@@ -144,13 +144,37 @@ export const damageHandlers = {
         }
     },
 
-    'primal_companion_double_strike_damage': (feature, _playerStats) => {
+    'primal_companion_double_strike_damage': (feature, playerStats) => {
         const auto = feature.automation
+        const isRanger = playerStats.class?.name === 'Ranger'
+        const hasBestialFury = (playerStats.class?.major?.features || []).some(f => f.name === 'Bestial Fury')
+        let damageExpression = auto.damageExpression || ''
+
+        if (isRanger && hasBestialFury && playerStats.concentration?.spell === "Hunter's Mark") {
+            const slotLevels = [7, 5, 3, 1]
+            let highestSlotLevel = null
+            for (const lv of slotLevels) {
+                const key = `spell_slots_level_${lv}`
+                if (playerStats.spellAbilities?.[key] > 0) {
+                    highestSlotLevel = lv
+                    break
+                }
+            }
+            if (highestSlotLevel) {
+                if (playerStats.level >= 20) {
+                    damageExpression = '1d10'
+                } else {
+                    const dieMap = { 1: '1d6', 3: '1d8', 5: '1d10', 7: '1d12' }
+                    damageExpression = dieMap[highestSlotLevel] || '1d6'
+                }
+            }
+        }
+
         return {
             type: 'damage_bonus',
             name: feature.name,
             trigger: 'companion_beasts_strike_hit',
-            damageExpression: auto.damageExpression || '',
+            damageExpression,
             damageType: auto.damageType || '',
             oncePerTurn: !!auto.oncePerTurn,
             hasAutomation: true

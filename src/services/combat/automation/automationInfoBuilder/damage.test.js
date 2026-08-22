@@ -345,6 +345,98 @@ describe('damageHandlers – primal_companion_double_strike_damage', () => {
         expect(result.oncePerTurn).toBe(true)
         expect(result.hasAutomation).toBe(true)
     })
+
+    it('falls back to JSON damageExpression when Ranger has no Hunter\'s Mark concentration', () => {
+        const rangerStats = {
+            ...BASE_STATS,
+            class: { name: 'Ranger', major: { features: [{ name: 'Bestial Fury' }] } }
+        }
+        const feature = makeFeature({
+            type: 'primal_companion_double_strike_damage',
+            damageExpression: '1d6',
+            damageType: 'Force',
+            oncePerTurn: true
+        })
+        const result = damageHandlers.primal_companion_double_strike_damage(feature, rangerStats)
+        expect(result.damageExpression).toBe('1d6')
+    })
+
+    it('computes 1d6 for Hunter\'s Mark with 1st level slot', () => {
+        const rangerStats = {
+            ...BASE_STATS,
+            level: 5,
+            class: { name: 'Ranger', major: { features: [{ name: 'Bestial Fury' }] } },
+            concentration: { spell: "Hunter's Mark", target: 'Orc' },
+            spellAbilities: { spell_slots_level_1: 4 }
+        }
+        const feature = makeFeature({ type: 'primal_companion_double_strike_damage', damageExpression: '1d6', damageType: 'Force', oncePerTurn: true })
+        const result = damageHandlers.primal_companion_double_strike_damage(feature, rangerStats)
+        expect(result.damageExpression).toBe('1d6')
+    })
+
+    it('computes 1d8 for Hunter\'s Mark with 3rd level slot', () => {
+        const rangerStats = {
+            ...BASE_STATS,
+            level: 11,
+            class: { name: 'Ranger', major: { features: [{ name: 'Bestial Fury' }] } },
+            concentration: { spell: "Hunter's Mark", target: 'Orc' },
+            spellAbilities: { spell_slots_level_1: 0, spell_slots_level_3: 2 }
+        }
+        const feature = makeFeature({ type: 'primal_companion_double_strike_damage', damageExpression: '1d6', damageType: 'Force', oncePerTurn: true })
+        const result = damageHandlers.primal_companion_double_strike_damage(feature, rangerStats)
+        expect(result.damageExpression).toBe('1d8')
+    })
+
+    it('computes 1d10 for Hunter\'s Mark with 5th level slot', () => {
+        const rangerStats = {
+            ...BASE_STATS,
+            level: 15,
+            class: { name: 'Ranger', major: { features: [{ name: 'Bestial Fury' }] } },
+            concentration: { spell: "Hunter's Mark", target: 'Orc' },
+            spellAbilities: { spell_slots_level_1: 0, spell_slots_level_3: 0, spell_slots_level_5: 1 }
+        }
+        const feature = makeFeature({ type: 'primal_companion_double_strike_damage', damageExpression: '1d6', damageType: 'Force', oncePerTurn: true })
+        const result = damageHandlers.primal_companion_double_strike_damage(feature, rangerStats)
+        expect(result.damageExpression).toBe('1d10')
+    })
+
+    it('computes 1d12 for Hunter\'s Mark with 7th level slot', () => {
+        const rangerStats = {
+            ...BASE_STATS,
+            level: 20,
+            class: { name: 'Ranger', major: { features: [{ name: 'Bestial Fury' }] } },
+            concentration: { spell: "Hunter's Mark", target: 'Orc' },
+            spellAbilities: { spell_slots_level_7: 1 }
+        }
+        const feature = makeFeature({ type: 'primal_companion_double_strike_damage', damageExpression: '1d6', damageType: 'Force', oncePerTurn: true })
+        const result = damageHandlers.primal_companion_double_strike_damage(feature, rangerStats)
+        expect(result.damageExpression).toBe('1d10')
+    })
+
+    it('uses 1d10 for level 20 Ranger with Foe Slayer regardless of slot level', () => {
+        const rangerStats = {
+            ...BASE_STATS,
+            level: 20,
+            class: { name: 'Ranger', major: { features: [{ name: 'Bestial Fury' }] } },
+            concentration: { spell: "Hunter's Mark", target: 'Orc' },
+            spellAbilities: { spell_slots_level_7: 1 }
+        }
+        const feature = makeFeature({ type: 'primal_companion_double_strike_damage', damageExpression: '1d6', damageType: 'Force', oncePerTurn: true })
+        const result = damageHandlers.primal_companion_double_strike_damage(feature, rangerStats)
+        expect(result.damageExpression).toBe('1d10')
+    })
+
+    it('does not apply Hunter\'s Mark logic for non-Ranger classes', () => {
+        const wizardStats = {
+            ...BASE_STATS,
+            class: { name: 'Wizard', major: { features: [] } },
+            concentration: { spell: "Hunter's Mark", target: 'Orc' },
+            spellAbilities: { spell_slots_level_3: 2 }
+        }
+        const feature = makeFeature({ type: 'primal_companion_double_strike_damage', damageExpression: '2d6', damageType: 'Force', oncePerTurn: true })
+        const result = damageHandlers.primal_companion_double_strike_damage(feature, wizardStats)
+        expect(result.damageExpression).toBe('2d6')
+    })
 })
 
 describe('damageHandlers – great_weapon_fighting', () => {
