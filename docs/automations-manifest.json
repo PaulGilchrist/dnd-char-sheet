@@ -128,7 +128,7 @@
       "handler": "src/services/combat/automation/handlers/classFeatureHandler.js",
       "router": "src/services/combat/automation/routers/classFeatureRouter.js",
       "infoBuilder": "src/services/combat/automation/infoBuilders/classFeatureInfoBuilder.js",
-      "verified": "broken — see .opencode/plans/bug-cla-003-acrobatic-movement.md",
+      "verified": "verified",
       "class": "Monk",
       "triggerConditions": "Passive: Always active",
       "expectedBehavior": "While not wearing armor or wielding a Shield, you can move along vertical surfaces and across liquids without falling."
