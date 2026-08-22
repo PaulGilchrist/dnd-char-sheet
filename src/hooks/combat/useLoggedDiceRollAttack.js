@@ -32,6 +32,7 @@ export function createLogAndShow(deps) {
     const { characterName, campaignName, characters, setPopupHtml, logEntry, autoDamageSourceRef } = deps;
 
     return async function logAndShow(name, bonus, rollType, context) {
+        context = context || {};
         const ctx = { ...context, name, rollType };
 
         if (rollType === 'attack') {
