@@ -10,7 +10,7 @@ import AreaEffectTargetModalBase from './AreaEffectTargetModalBase.jsx';
 import { renderTargetList, logSaveEntry, persistAndNotify } from './AreaEffectTargetModalBase.utils.jsx';
 import { addCondition } from '../../../../services/combat/conditions/conditionSaveService.js';
 
-function SetConditionModal({ combatSummary, attackerName, attackerPos, saveDc, campaignName, mapData, monsters, channelDivinityCharges, onClose, characters, featureName = 'Abjure Foes', conditionName = 'frightened', additionalCondition = null, saveType = 'WIS', rangeFeet = 60, durationRounds, shape, attackerGridX, attackerGridY, includeCaster = false }) {
+function SetConditionModal({ combatSummary, attackerName, attackerPos, saveDc, campaignName, mapData, monsters, channelDivinityCharges, onClose, characters, featureName = 'Abjure Foes', conditionName = 'frightened', additionalCondition = null, saveType = 'WIS', rangeFeet = 60, durationRounds, shape, attackerGridX, attackerGridY, includeCaster = false, maxTargets = Infinity }) {
     const applyConditionToCreature = useCallback((targetName, saveDcValue, condName, ctx) => {
         const creature = ctx.combatSummary.creatures.find(c => c.name === targetName);
         if (!creature) return;
@@ -179,7 +179,7 @@ function SetConditionModal({ combatSummary, attackerName, attackerPos, saveDc, c
                     {!(isTurnUndead && ctx.eligibleTargets.length === 0) && (
                         <p>Select creatures within {rangeFeet} feet. Each must make a <strong>{saveType}</strong> saving throw (DC {saveDc}) or become <strong>{conditionLabel}</strong> for 1 minute.</p>
                     )}
-                    <p className="sp-note">Targets selected: {ctx.selected.size}/{ctx.eligibleTargets.length}</p>
+                    <p className="sp-note">Targets selected: {ctx.selected.size}/{ctx.eligibleTargets.length} (max {maxTargets})</p>
                     {renderTargetList({ eligibleTargets: ctx.eligibleTargets, selected: ctx.selected, toggleTarget: ctx.toggleTarget })}
                 </>
             );
@@ -257,6 +257,7 @@ function SetConditionModal({ combatSummary, attackerName, attackerPos, saveDc, c
             attackerGridX={attackerGridX}
             attackerGridY={attackerGridY}
             includeCaster={includeCaster}
+            maxTargets={maxTargets}
         />
     );
 }

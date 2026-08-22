@@ -32,6 +32,7 @@ function AreaEffectTargetModalBase({
   attackerGridX,
   attackerGridY,
   includeCaster = false,
+  maxTargets = Infinity,
 }) {
   const [selected, setSelected] = useState(new Set());
   const [processing, setProcessing] = useState(false);
@@ -144,10 +145,11 @@ function AreaEffectTargetModalBase({
   const toggleTarget = useCallback((name) => {
     setSelected(prev => {
       const next = new Set(prev);
-      if (next.has(name)) { next.delete(name); } else { next.add(name); }
+      if (next.has(name)) { next.delete(name); }
+      else if (next.size < maxTargets) { next.add(name); }
       return next;
     });
-  }, []);
+  }, [maxTargets]);
 
   const allResolved = processing && pendingPrompts.length === 0 && results.length >= selected.size;
 
@@ -168,7 +170,7 @@ function AreaEffectTargetModalBase({
     processing: false, allResolved: false, selected: new Set(), eligibleTargets: [],
     results: [], pendingPrompts: [], toggleTarget: () => {},
     handleApply: () => {}, handleSaveResult: () => {},
-    saveType, saveDc, rangeFeet, featureName,
+    saveType, saveDc, rangeFeet, featureName, maxTargets,
     combatSummary, attackerName, campaignName, mapData, onClose, characters,
     setSelected, setProcessing, setResults, setPendingPrompts,
   });
@@ -187,7 +189,7 @@ function AreaEffectTargetModalBase({
     processing, allResolved, selected, eligibleTargets,
     results, pendingPrompts, toggleTarget,
     handleApply, handleSaveResult,
-    saveType, saveDc, rangeFeet, featureName,
+    saveType, saveDc, rangeFeet, featureName, maxTargets,
     combatSummary, attackerName, campaignName, mapData, onClose, characters,
     setSelected, setProcessing, setResults, setPendingPrompts,
     ...extraState,

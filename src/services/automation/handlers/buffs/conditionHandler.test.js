@@ -135,14 +135,17 @@ describe('conditionHandler.handle', () => {
       expect(getAbilityModifier).toHaveBeenCalledWith(ps.abilities, 'DEX');
     });
 
-    it('returns numeric saveDc directly without calling getAbilityModifier', async () => {
+    it('returns numeric saveDc directly without calling getAbilityModifier for saveDc', async () => {
       const ps = makePlayerStats();
       const action = makeAction({ saveDc: 16 });
+
+      getAbilityModifier.mockReturnValue(0);
 
       const result = await handle(action, ps, CAMPAIGN_NAME, null);
 
       expect(result.payload.saveDc).toBe(16);
-      expect(getAbilityModifier).not.toHaveBeenCalled();
+      expect(getAbilityModifier).toHaveBeenCalledWith(ps.abilities, 'CHA');
+      expect(getAbilityModifier).not.toHaveBeenCalledWith(ps.abilities, 'WIS');
     });
 
     it('returns fallback DC when saveDc is falsy', async () => {
@@ -161,10 +164,13 @@ describe('conditionHandler.handle', () => {
       const ps = makePlayerStats({ spellAbilities: { saveDc: 15 } });
       const action = makeAction({ saveDc: 'spell_save_dc' });
 
+      getAbilityModifier.mockReturnValue(0);
+
       const result = await handle(action, ps, CAMPAIGN_NAME, null);
 
       expect(result.payload.saveDc).toBe(15);
-      expect(getAbilityModifier).not.toHaveBeenCalled();
+      expect(getAbilityModifier).toHaveBeenCalledWith(ps.abilities, 'CHA');
+      expect(getAbilityModifier).not.toHaveBeenCalledWith(ps.abilities, 'WIS');
     });
 
     it('derives spell_save_dc from CHA when spellAbilities.saveDc is missing', async () => {
@@ -388,7 +394,7 @@ describe('conditionHandler.handle', () => {
   });
 
   describe('logging', () => {
-    it('calls addEntry with correct description format including saveType, DC, and range', async () => {
+    it('calls addEntry with correct description format including saveType, DC, range, and maxTargets', async () => {
       const ps = makePlayerStats();
       const action = makeAction({ saveType: 'DEX', range: '30ft' });
 
@@ -402,7 +408,7 @@ describe('conditionHandler.handle', () => {
         type: 'ability_use',
         characterName: 'TestHero',
         abilityName: 'Divine Smite',
-        description: 'Divine Smite activated — DEX save DC 13, all targets within 30 ft.',
+        description: 'Divine Smite activated — DEX save DC 13, up to 2 targets within 30 ft.',
       });
     });
 
@@ -523,6 +529,77 @@ describe('conditionHandler.handle', () => {
       const result = await handle(action, ps, CAMPAIGN_NAME, null);
 
       expect(result.payload.monsters).toEqual([]);
+    });
+  });
+
+  describe('maxTargets handling', () => {
+    it('passes maxTargets based on CHA modifier', async () => {
+      const ps = makePlayerStats({
+        abilities: [
+          { name: 'Charisma', bonus: 3 },
+          { name: 'Wisdom', bonus: 2 },
+        ],
+      });
+      const action = makeAction({});
+
+      getRuntimeValue.mockReturnValue(2);
+      getAbilityModifier.mockReturnValue(3);
+
+      const result = await handle(action, ps, CAMPAIGN_NAME, null);
+
+      expect(result.payload.maxTargets).toBe(3);
+      expect(getAbilityModifier).toHaveBeenCalledWith(ps.abilities, 'CHA');
+    });
+
+    it('uses minimum 1 when CHA modifier is negative', async () => {
+      const ps = makePlayerStats({
+        abilities: [
+          { name: 'Charisma', bonus: -1 },
+          { name: 'Wisdom', bonus: 2 },
+        ],
+      });
+      const action = makeAction({});
+
+      getRuntimeValue.mockReturnValue(2);
+      getAbilityModifier.mockReturnValue(-1);
+
+      const result = await handle(action, ps, CAMPAIGN_NAME, null);
+
+      expect(result.payload.maxTargets).toBe(1);
+    });
+
+    it('uses 1 when CHA modifier is 0', async () => {
+      const ps = makePlayerStats({
+        abilities: [
+          { name: 'Charisma', bonus: 0 },
+          { name: 'Wisdom', bonus: 2 },
+        ],
+      });
+      const action = makeAction({});
+
+      getRuntimeValue.mockReturnValue(2);
+      getAbilityModifier.mockReturnValue(0);
+
+      const result = await handle(action, ps, CAMPAIGN_NAME, null);
+
+      expect(result.payload.maxTargets).toBe(1);
+    });
+
+    it('uses CHA modifier when positive', async () => {
+      const ps = makePlayerStats({
+        abilities: [
+          { name: 'Charisma', bonus: 5 },
+          { name: 'Wisdom', bonus: 2 },
+        ],
+      });
+      const action = makeAction({});
+
+      getRuntimeValue.mockReturnValue(2);
+      getAbilityModifier.mockReturnValue(5);
+
+      const result = await handle(action, ps, CAMPAIGN_NAME, null);
+
+      expect(result.payload.maxTargets).toBe(5);
     });
   });
 });

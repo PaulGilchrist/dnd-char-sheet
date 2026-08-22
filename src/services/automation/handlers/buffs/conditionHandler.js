@@ -4,6 +4,7 @@ import * as mapsService from '../../../maps/mapsService.js';
 import { getCombatContext } from '../../../rules/combat/damageUtils.js';
 import { rangeToFeet } from '../../../rules/combat/rangeValidation.js';
 import { buildSaveDc } from '../../../automation/common/savePrompt.js';
+import { getAbilityModifier } from '../../../shared/abilityLookup.js';
 import { loadMonsters } from '../../../ui/dataLoader.js';
 
 export async function handle(action, playerStats, campaignName, _mapName) {
@@ -19,6 +20,9 @@ export async function handle(action, playerStats, campaignName, _mapName) {
     const additionalCondition = auto.additionalCondition || null;
     const saveType = auto.saveType || 'WIS';
     const rangeFeet = rangeToFeet(auto.range) || 60;
+
+    const chaMod = getAbilityModifier(playerStats.abilities, 'CHA');
+    const maxTargets = Math.max(1, chaMod);
 
     const storedCharges = getRuntimeValue(playerStats.name, 'channelDivinityCharges');
     const classLevel = playerStats.class?.class_levels?.[playerStats.level - 1];
@@ -61,7 +65,7 @@ export async function handle(action, playerStats, campaignName, _mapName) {
         type: 'ability_use',
         characterName: playerStats.name,
         abilityName: action.name,
-        description: `${action.name} activated — ${saveType} save DC ${saveDc}, all targets within ${rangeFeet} ft.`,
+        description: `${action.name} activated — ${saveType} save DC ${saveDc}, up to ${maxTargets} targets within ${rangeFeet} ft.`,
      }).catch((e) => { console.error("[conditionHandler:log-error]", e); });
 
     return {
@@ -81,6 +85,7 @@ export async function handle(action, playerStats, campaignName, _mapName) {
             additionalCondition,
             saveType,
             rangeFeet,
+            maxTargets,
             durationRounds: (() => {
                 const lower = (auto.duration || '').toLowerCase();
                 if (lower.startsWith('1_minute')) return 10;
