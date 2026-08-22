@@ -164,6 +164,24 @@ describe('applyShortRest', () => {
       expect(wizardUpdates.spell_slots_level_1).toBe(2)
       expect(wizardUpdates.spell_slots_level_2).toBeUndefined()
 
+      // Arcane Recovery enforces combined level cost (not slot count)
+      vi.clearAllMocks()
+      vi.mocked(getRuntimeValue).mockImplementation((_name, key) => {
+        if (key === 'spell_slots_level_2') return 1
+        return undefined
+      })
+      const wizardLevel2Stats = makeStats({
+        class: { name: 'Wizard' },
+        level: 4,
+        spellAbilities: {
+          spell_slots_level_2: 3,
+        },
+        automation: { passives: [{ type: 'resource_restoration', resourceKey: 'arcaneRecoveryLevels' }] },
+      })
+      await applyShortRest(wizardLevel2Stats, CAMPAIGN)
+      const level2Updates = getBatchUpdates()
+      expect(level2Updates.spell_slots_level_2).toBe(2)
+
       // Warlock Pact Magic
       vi.clearAllMocks()
       vi.mocked(getRuntimeValue).mockImplementation((_name, key) => {

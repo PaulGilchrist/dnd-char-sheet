@@ -283,9 +283,10 @@ function ShortRestModal({ playerStats, campaignName, onClose, onComplete }) {
                 const current = Number(getRuntimeValue(playerStats.name, slotKey) ?? max);
                 const available = max - current;
                 if (available > 0) {
-                    const toRecover = Math.min(available, maxSlotsToRecover - slotsRecovered);
+                    const remaining = maxSlotsToRecover - slotsRecovered;
+                    const toRecover = Math.min(available, Math.floor(remaining / level));
                     setRuntimeValue(playerStats.name, slotKey, current + toRecover, campaignName);
-                    slotsRecovered += toRecover;
+                    slotsRecovered += level * toRecover;
                 }
             }
         }

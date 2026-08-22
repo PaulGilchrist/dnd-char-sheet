@@ -90,9 +90,10 @@ export async function applyShortRest(playerStats, campaignName, options = {}) {
         const current = Number(getRuntimeValue(name, slotKey) ?? max)
         const available = max - current
         if (available > 0) {
-          const toRecover = Math.min(available, maxSlotsToRecover - slotsRecovered)
+          const remaining = maxSlotsToRecover - slotsRecovered
+          const toRecover = Math.min(available, Math.floor(remaining / level))
           updates[slotKey] = current + toRecover
-          slotsRecovered += toRecover
+          slotsRecovered += level * toRecover
         }
       }
     }
