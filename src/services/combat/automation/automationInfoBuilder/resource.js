@@ -54,5 +54,15 @@ export const resourceHandlers = {
             uses_max: auto.uses_max ?? 1,
             hasAutomation: true
         }
+    },
+
+    'circle_of_the_land_spells': (feature, _playerStats) => {
+        const auto = feature.automation
+        return {
+            type: 'circle_of_the_land_spells',
+            name: feature.name,
+            casting_time: auto.casting_time || 'passive',
+            hasAutomation: true
+        }
     }
 }

@@ -5345,6 +5345,21 @@
             ]
           },
           {
+            "level": 3,
+            "features": [
+              {
+                "name": "Circle of the Land Spells",
+                "level": 3,
+                "prerequisites": [],
+                "description": "You have learned to prepare the spells that nature has ready for you. Choose one land type (arctic, coast, desert, forest, grassland, mountain, swamp, or underdark). You automatically prepare the listed spells for each level you have spell slots, as shown on the Circle of the Land Spells table. You don't need to prepare them using the normal preparing process. You can still prepare the normal list of druid spells as normal. If you ever change your circle, you must wait until you next complete a long rest to change the associated spells.\n\n| Druid Level | Spells |\n|-------------|--------|\n| 3rd | *augury*, *goodberry* |\n| 5th | *plant growth* |\n| 7th | *daylight* |\n| 9th | *commune with nature* |",
+                "automation": {
+                  "type": "circle_of_the_land_spells",
+                  "casting_time": "passive"
+                }
+              }
+            ]
+          },
+          {
             "level": 6,
             "features": [
               {
