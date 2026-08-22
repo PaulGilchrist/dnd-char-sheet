@@ -190,7 +190,7 @@ describe('useInitiativeEffects - edge cases and missing coverage', () => {
                 level: 20,
                 automation: {
                     ...defaultPlayerStats.automation,
-                    actions: [
+                    specialActions: [
                         { type: 'initiative_action', effect: 'wild_shape_regen_on_initiative' },
                     ],
                 },
@@ -225,7 +225,7 @@ describe('useInitiativeEffects - edge cases and missing coverage', () => {
                 },
                 automation: {
                     ...defaultPlayerStats.automation,
-                    actions: [
+                    specialActions: [
                         { type: 'initiative_action', effect: 'regain_bardic_inspiration_on_initiative' },
                     ],
                 },

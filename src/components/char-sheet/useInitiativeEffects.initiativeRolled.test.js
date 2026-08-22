@@ -274,6 +274,82 @@ describe('useInitiativeEffects - initiative-rolled event', () => {
         });
     });
 
+    describe('initiative_action routing regression', () => {
+        it('checks specialActions not actions for initiative_action automations (CLA-013 routing fix)', () => {
+            getRuntimeValue.mockImplementation((_name, key) => {
+                if (key === 'wildShapeUses') return 0;
+                return null;
+            });
+            const stats = {
+                ...defaultPlayerStats,
+                level: 20,
+                automation: {
+                    ...defaultPlayerStats.automation,
+                    actions: [],
+                    specialActions: [
+                        {
+                            type: 'initiative_action',
+                            effect: 'wild_shape_regen_on_initiative',
+                        },
+                    ],
+                },
+                class: {
+                    ...defaultPlayerStats.class,
+                    class_levels: [
+                        { level: 20, wild_shape: 3 },
+                    ],
+                },
+            };
+            renderHookWithStats(stats);
+            dispatchInitiativeRoll({
+                characterName: 'TestMonk',
+                roll: 15,
+            });
+            expect(setRuntimeValue).toHaveBeenCalledWith(
+                'TestMonk',
+                'wildShapeUses',
+                1,
+                campaignName
+            );
+        });
+
+        it('does not find initiative_action when it is only in actions not specialActions', () => {
+            getRuntimeValue.mockImplementation((_name, key) => {
+                if (key === 'wildShapeUses') return 0;
+                return null;
+            });
+            const stats = {
+                ...defaultPlayerStats,
+                level: 20,
+                automation: {
+                    ...defaultPlayerStats.automation,
+                    actions: [
+                        {
+                            type: 'initiative_action',
+                            effect: 'wild_shape_regen_on_initiative',
+                        },
+                    ],
+                    specialActions: [],
+                },
+                class: {
+                    ...defaultPlayerStats.class,
+                    class_levels: [
+                        { level: 20, wild_shape: 3 },
+                    ],
+                },
+            };
+            renderHookWithStats(stats);
+            dispatchInitiativeRoll({
+                characterName: 'TestMonk',
+                roll: 15,
+            });
+            const wsCalls = vi.mocked(setRuntimeValue).mock.calls.filter(
+                call => call[1] === 'wildShapeUses'
+            );
+            expect(wsCalls.length).toBe(0);
+        });
+    });
+
     describe('wild shape recovery (Archdruid)', () => {
         it('recovers 1 use when all uses expended', () => {
             getRuntimeValue.mockImplementation((_name, key) => {
@@ -285,7 +361,7 @@ describe('useInitiativeEffects - initiative-rolled event', () => {
                 level: 18,
                 automation: {
                     ...defaultPlayerStats.automation,
-                    actions: [
+                    specialActions: [
                         {
                             type: 'initiative_action',
                             effect: 'wild_shape_regen_on_initiative',
@@ -322,7 +398,7 @@ describe('useInitiativeEffects - initiative-rolled event', () => {
                 level: 18,
                 automation: {
                     ...defaultPlayerStats.automation,
-                    actions: [
+                    specialActions: [
                         {
                             type: 'initiative_action',
                             effect: 'wild_shape_regen_on_initiative',
@@ -357,7 +433,7 @@ describe('useInitiativeEffects - initiative-rolled event', () => {
                 level: 18,
                 automation: {
                     ...defaultPlayerStats.automation,
-                    actions: [
+                    specialActions: [
                         {
                             type: 'initiative_action',
                             effect: 'wild_shape_regen_on_initiative',
@@ -424,7 +500,7 @@ describe('useInitiativeEffects - initiative-rolled event', () => {
                 },
                 automation: {
                     ...defaultPlayerStats.automation,
-                    actions: [
+                    specialActions: [
                         {
                             type: 'initiative_action',
                             effect:
@@ -468,7 +544,7 @@ describe('useInitiativeEffects - initiative-rolled event', () => {
                 },
                 automation: {
                     ...defaultPlayerStats.automation,
-                    actions: [
+                    specialActions: [
                         {
                             type: 'initiative_action',
                             effect:
@@ -504,7 +580,7 @@ describe('useInitiativeEffects - initiative-rolled event', () => {
                 },
                 automation: {
                     ...defaultPlayerStats.automation,
-                    actions: [
+                    specialActions: [
                         {
                             type: 'initiative_action',
                             effect:
@@ -538,7 +614,7 @@ describe('useInitiativeEffects - initiative-rolled event', () => {
                 },
                 automation: {
                     ...defaultPlayerStats.automation,
-                    actions: [
+                    specialActions: [
                         {
                             type: 'initiative_action',
                             effect:

@@ -414,7 +414,7 @@ export default function useInitiativeEffects(playerStats, campaignName, rollDama
             }
 
             // Recover Wild Shape use on initiative (Archdruid Evergreen Wild Shape)
-            const hasEvergreen = (playerStats.automation?.actions ?? []).some(a => a.type === 'initiative_action' && a.effect === 'wild_shape_regen_on_initiative');
+            const hasEvergreen = (playerStats.automation?.specialActions ?? []).some(a => a.type === 'initiative_action' && a.effect === 'wild_shape_regen_on_initiative');
             if (hasEvergreen) {
                 const druidLevel = (playerStats.class?.class_levels || []).find(cl => cl.level === playerStats.level);
                 const maxWS = druidLevel?.wild_shape || 0;
@@ -427,7 +427,7 @@ export default function useInitiativeEffects(playerStats, campaignName, rollDama
             }
 
             // Regain Bardic Inspiration on initiative (Bard level 18/20 Superior Inspiration)
-            const hasSuperiorInspiration = (playerStats.automation?.actions ?? []).some(a => a.type === 'initiative_action' && a.effect === 'regain_bardic_inspiration_on_initiative');
+            const hasSuperiorInspiration = (playerStats.automation?.specialActions ?? []).some(a => a.type === 'initiative_action' && a.effect === 'regain_bardic_inspiration_on_initiative');
             if (hasSuperiorInspiration && playerStats.class?.name === 'Bard') {
                 const classLevel = (playerStats.class?.class_levels || []).find(cl => cl.level === playerStats.level);
                 const maxBI = classLevel?.bardic_inspiration_uses ?? playerStats?.proficiency ?? 0;
