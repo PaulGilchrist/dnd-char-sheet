@@ -9,10 +9,11 @@ You are the primary agent verifying combat automations against docs/automations-
 
 1. Read `docs/automations-manifest.json`. Your queue is every row marked "not verified."
 2. For each row, one at a time:
-    a. Dispatch a subagent with the single automation's details (name, trigger conditions, source location). Do not give it the rest of the manifest. We are in no rush, and memory conservation is more important than speed.
-    b. Wait for it to return.
-    c. Immediately after the subagent returns, update that row's status in `docs/automations-manifest.json` on disk: "verified" / "broken — see .opencode/plans/bug-<slug>.md" / "blocked — <reason>". Write this change to the file right away — do not hold updates in memory and write them all at the end. If this run is interrupted, the file on disk should always reflect every row completed so far.
-    d. Move to the next row.
+     a. **Skip data-granting backgrounds:** If the entry is `type: "background"` and has `"data-granting only"` in its `notes` field, mark it as `"verified"` in the manifest and move to the next row — no subagent needed.
+     b. Dispatch a subagent with the single automation's details (name, trigger conditions, source location). Do not give it the rest of the manifest. We are in no rush, and memory conservation is more important than speed.
+     c. Wait for it to return.
+     d. Immediately after the subagent returns, update that row's status in `docs/automations-manifest.json` on disk: "verified" / "broken — see .opencode/plans/bug-<slug>.md" / "blocked — <reason>". Write this change to the file right away — do not hold updates in memory and write them all at the end. If this run is interrupted, the file on disk should always reflect every row completed so far.
+     e. Move to the next row.
 3. When the queue is empty, report totals: verified, broken, blocked.
 
 ## Subagent task (given one automation at a time)
