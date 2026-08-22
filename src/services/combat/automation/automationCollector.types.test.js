@@ -296,6 +296,23 @@ describe('collectAutomationFromFeatures – passive_rule sub-types', () => {
         const result = collectAutomationFromFeatures(features, ps)
         expect(result.passives).toHaveLength(1)
     })
+
+    it('categorizes Arcane Apotheosis passive_rule as passive', () => {
+        const feature = {
+            name: 'Arcane Apotheosis',
+            automation: {
+                type: 'passive_rule',
+                effect: 'arcane_apotheosis',
+                condition: 'innate_sorcery_active',
+                casting_time: 'passive',
+            },
+        }
+        const result = collectAutomationFromFeatures([feature], ps)
+        expect(result.passives).toHaveLength(1)
+        expect(result.passives[0].name).toBe('Arcane Apotheosis')
+        expect(result.passives[0].type).toBe('passive_rule')
+        expect(result.passives[0].effect).toBe('arcane_apotheosis')
+    })
 })
 
 // ── Multi-category types ──

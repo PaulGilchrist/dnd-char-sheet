@@ -51,6 +51,15 @@ export function collectAutomationFromFeatures(features, playerStats) {
                 })
                 continue
             }
+            if (auto?.type === 'passive_rule' && auto?.effect === 'arcane_apotheosis') {
+                result.passives.push({
+                    type: 'passive_rule',
+                    name: feature.name,
+                    effect: 'arcane_apotheosis',
+                    hasAutomation: true,
+                })
+                continue
+            }
             if (auto?.type === 'passive_rule' && auto?.effect === 'spell_breaker') {
                 result.passives.push({
                     type: 'spell_breaker',
