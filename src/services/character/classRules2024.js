@@ -167,29 +167,31 @@ const classRules = {
                    });
                }
 
-             if (playerStats.class.major) {
-                         // 2024 majors have features directly with level property, not class_levels
-                 const majorFeaturesList = playerStats.class.major.features?.filter(feature => feature.level <= playerStats.level) || [];
-                        // Create a dummy level structure for addFeatures
-                 const majorLevels = [{ features: majorFeaturesList }];
-                  const majorFeatures = addFeatures(majorLevels, featureCategories, { descriptionField: 'description' });
+            const major = playerStats.class.major || playerStats.class.subclass;
+              if (major) {
+                          // 2024 majors have features directly with level property, not class_levels
+                  const majorFeaturesList = major.features?.filter(feature => feature.level <= playerStats.level) || [];
+                         // Create a dummy level structure for addFeatures
+                  const majorLevels = [{ features: majorFeaturesList }];
+                   const majorFeatures = addFeatures(majorLevels, featureCategories, { descriptionField: 'description' });
 
-                 features = mergeCategorizedFeatures(features, majorFeatures);
-                     }
+                  features = mergeCategorizedFeatures(features, majorFeatures);
+                      }
 
              return features;
               },
     getHighestMajorLevel: (playerStats) => {
         let highestLevel = 0;
 
-        if (playerStats.class.major) {
+        const major = playerStats.class.major || playerStats.class.subclass;
+        if (major) {
                // 2024 majors have features directly with level property, not class_levels
-            const majorFeatures = playerStats.class.major.features || [];
-            for (const feature of majorFeatures) {
-                if (feature.level <= playerStats.level && feature.level > highestLevel) {
-                    highestLevel = feature.level;
-                   }
-               }
+             const majorFeatures = major.features || [];
+             for (const feature of majorFeatures) {
+                 if (feature.level <= playerStats.level && feature.level > highestLevel) {
+                     highestLevel = feature.level;
+                    }
+                }
             }
 
         return highestLevel;

@@ -625,25 +625,13 @@
       "expectedBehavior": "Level 3 Abjuration (Cleric) Casting Time: Action Range: 30 feet Components: V, S Duration: Concentration, up to 1 minute Choose any number of creatures within range. For the duration, each target has Advantage on Wisdom saving throws and Death Saving Throws and regains the maximum number of Hit Points possible from any healing."
     },
     {
-      "id": "CLA-031",
-      "name": "Beast Spells",
-      "type": "classFeature",
-      "handler": "src/services/combat/automation/handlers/classFeatureHandler.js",
-      "router": "src/services/combat/automation/routers/classFeatureRouter.js",
-      "infoBuilder": "src/services/combat/automation/infoBuilders/classFeatureInfoBuilder.js",
-      "verified": "not verified",
-      "class": "Druid",
-      "triggerConditions": "Passive: Always active",
-      "expectedBehavior": "While using Wild Shape, you can cast spells in Beast form, except for any spell that has a Material component with a cost specified or that consumes its Material component."
-    },
-    {
       "id": "CLA-032",
       "name": "Beguiling Defense",
       "type": "classFeature",
       "handler": "src/services/combat/automation/handlers/classFeatureHandler.js",
       "router": "src/services/combat/automation/routers/classFeatureRouter.js",
       "infoBuilder": "src/services/combat/automation/infoBuilders/classFeatureInfoBuilder.js",
-      "verified": "not verified",
+      "verified": "verified",
       "class": "Warlock",
       "triggerConditions": "Passive (Charmed immunity); Reaction (after being hit)",
       "expectedBehavior": "Immune to Charmed condition. After a creature hits you with an attack roll, take Reaction to reduce damage by half and force attacker to make Wisdom save or take Psychic damage equal to damage you took. (Warlock Archfey Patron - Beguiling Defenses)"

@@ -205,6 +205,7 @@ const categories2024 = {
     ],
 
     reactions: [
+        "Beguiling Defenses",
         "Protection"
     ],
 

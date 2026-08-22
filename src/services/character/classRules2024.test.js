@@ -414,6 +414,22 @@ describe('classRules2024', () => {
     it('throws when playerStats has no class property', () => {
       expect(() => classRules.getFeatures({})).toThrow(TypeError);
     });
+
+    it('includes subclass features when only subclass exists (not major)', () => {
+      const playerStats = {
+        class: {
+          class_levels: [{ level: 1, features: [] }],
+          subclass: { features: [{ name: 'Beguiling Defenses', level: 10 }] },
+        },
+        level: 10,
+      };
+      const result = classRules.getFeatures(playerStats);
+      const allFeatureNames = [
+        ...result.actions, ...result.bonusActions, ...result.reactions,
+        ...result.specialActions, ...result.characterAdvancement,
+      ].map(f => f.name);
+      expect(allFeatureNames).toContain('Beguiling Defenses');
+    });
   });
 
   describe('getHighestMajorLevel', () => {
@@ -452,6 +468,16 @@ describe('classRules2024', () => {
     it('returns 0 when major is null', () => {
       const playerStats = { class: { major: null }, level: 10 };
       expect(classRules.getHighestMajorLevel(playerStats)).toBe(0);
+    });
+
+    it('returns highest level from subclass when only subclass exists (not major)', () => {
+      const playerStats = {
+        class: {
+          subclass: { features: [{ name: 'Beguiling Defenses', level: 10 }] },
+        },
+        level: 10,
+      };
+      expect(classRules.getHighestMajorLevel(playerStats)).toBe(10);
     });
   });
 
