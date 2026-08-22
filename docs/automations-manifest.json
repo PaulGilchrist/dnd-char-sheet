@@ -79,7 +79,7 @@
       "handler": "src/services/combat/automation/handlers/featHandler.js",
       "router": "src/services/combat/automation/routers/featRouter.js",
       "infoBuilder": "src/services/combat/automation/infoBuilders/featInfoBuilder.js",
-      "verified": "verified",
+      "verified": "not verified",
       "class": "Feat",
       "triggerConditions": "",
       "expectedBehavior": "Increase one ability score of your choice by 2, or increase two ability scores of your choice by 1. This feat can't increase an ability score above 20."
@@ -91,7 +91,7 @@
       "handler": "src/services/combat/automation/handlers/classFeatureHandler.js",
       "router": "src/services/combat/automation/routers/classFeatureRouter.js",
       "infoBuilder": "src/services/combat/automation/infoBuilders/classFeatureInfoBuilder.js",
-      "verified": "verified",
+      "verified": "not verified",
       "class": "Wizard",
       "triggerConditions": "Passive: Always active",
       "expectedBehavior": "Choose two Wizard spells from the Abjuration school (no higher than level 2), add to spellbook for free. Whenever you gain access to a new level of spell slots, add one Abjuration school spell to spellbook for free."
@@ -103,7 +103,7 @@
       "handler": "src/services/combat/automation/handlers/classFeatureHandler.js",
       "router": "src/services/combat/automation/routers/classFeatureRouter.js",
       "infoBuilder": "src/services/combat/automation/infoBuilders/classFeatureInfoBuilder.js",
-      "verified": "verified",
+      "verified": "not verified",
       "class": "Paladin",
       "triggerConditions": "Action: 1 action; Range: 60 ft; Save: undefined",
       "expectedBehavior": "As a Action, expend one use of Channel Divinity. Target creatures equal to Charisma modifier (minimum 1) within 60 feet. Each makes Wisdom save or has Frightened condition for 1 minute or until taking damage. While Frightened, can only do one of: move, take action, or take Bonus Action."
@@ -115,11 +115,11 @@
       "handler": "src/services/combat/automation/handlers/backgroundHandler.js",
       "router": "src/services/combat/automation/routers/backgroundRouter.js",
       "infoBuilder": "src/services/combat/automation/infoBuilders/backgroundInfoBuilder.js",
-      "verified": "verified",
+      "verified": "not verified",
       "class": "Background",
       "triggerConditions": "",
       "expectedBehavior": "You devoted yourself to service in a temple, either nestled in a town or secluded in a sacred grove. There you performed rites in honor of a god or pantheos. You served under a priest and studied religion. Thanks to your priest's instruction and your own devotion, you also learned how to channel a modicu1n of divine poweer, in service to your place of worship and the people who prayed there.",
-      "notes": "data-granting only: ability_scores, feat, skill_proficiencies, tool_proficiencies — no combat automation"
+      "notes": "data-granting only: ability_scores, feat, skill_proficiencies, tool_proficiencies \u2014 no combat automation"
     },
     {
       "id": "CLA-003",
@@ -128,7 +128,7 @@
       "handler": "src/services/combat/automation/handlers/classFeatureHandler.js",
       "router": "src/services/combat/automation/routers/classFeatureRouter.js",
       "infoBuilder": "src/services/combat/automation/infoBuilders/classFeatureInfoBuilder.js",
-      "verified": "verified",
+      "verified": "not verified",
       "class": "Monk",
       "triggerConditions": "Passive: Always active",
       "expectedBehavior": "While not wearing armor or wielding a Shield, you can move along vertical surfaces and across liquids without falling."
@@ -140,24 +140,13 @@
       "handler": "src/services/combat/automation/handlers/classFeatureHandler.js",
       "router": "src/services/combat/automation/routers/classFeatureRouter.js",
       "infoBuilder": "src/services/combat/automation/infoBuilders/classFeatureInfoBuilder.js",
-      "verified": "verified",
+      "verified": "not verified",
       "class": "Fighter",
       "triggerConditions": "Action: 1 action",
       "expectedBehavior": "You can push yourself beyond your normal limits for a moment. On your turn, you can take one additional action, except the Action. Once you use this feature, you can't do so again until you finish a Short or Long Rest. Starting at level 17, you can use it twice before a rest but only once on a turn."
     },
     {
       "id": "FT-002",
-      "name": "Actor",
-      "type": "feat",
-      "handler": "src/services/combat/automation/handlers/featHandler.js",
-      "router": "src/services/combat/automation/routers/featRouter.js",
-      "infoBuilder": "src/services/combat/automation/infoBuilders/featInfoBuilder.js",
-      "verified": "broken — see .opencode/plans/bug-ft-002-actor.md",
-      "triggerConditions": "When making deception_performance_checks checks; while disguised",
-      "expectedBehavior": "While you're disguised as a real or fictional person, you have Advantage on Charisma (Deception or Performance) checks to convince others that you are that person."
-    },
-    {
-      "id": "FT-003",
       "name": "Actor",
       "type": "feat",
       "handler": "src/services/combat/automation/handlers/featHandler.js",
@@ -174,7 +163,7 @@
       "handler": "src/services/combat/automation/handlers/classFeatureHandler.js",
       "router": "src/services/combat/automation/routers/classFeatureRouter.js",
       "infoBuilder": "src/services/combat/automation/infoBuilders/classFeatureInfoBuilder.js",
-      "verified": "verified",
+      "verified": "not verified",
       "class": "Fighter",
       "triggerConditions": "",
       "expectedBehavior": "Gain another Fighting Style feat."
@@ -186,7 +175,7 @@
       "handler": "src/services/combat/automation/handlers/classFeatureHandler.js",
       "router": "src/services/combat/automation/routers/classFeatureRouter.js",
       "infoBuilder": "src/services/combat/automation/infoBuilders/classFeatureInfoBuilder.js",
-      "verified": "verified",
+      "verified": "not verified",
       "class": "Barbarian",
       "triggerConditions": "Action: 1 bonus action; Range: self",
       "expectedBehavior": "You can take the Dash action as a Bonus Action. When you do so, you gain a number of Temporary Hit Points equal to your Proficiency Bonus. You can use this trait a number of times equal to your Proficiency Bonus, and you regain all expended uses when you finish a Short or Long Rest."
@@ -198,7 +187,7 @@
       "handler": "src/services/combat/automation/handlers/maneuverHandler.js",
       "router": "src/services/combat/automation/routers/maneuverRouter.js",
       "infoBuilder": "src/services/combat/automation/infoBuilders/maneuverInfoBuilder.js",
-      "verified": "broken — see .opencode/plans/bug-sp-001-ambush-skill-check-bonus-not-applied.md",
+      "verified": "not verified",
       "class": "Fighter",
       "triggerConditions": "Action type: skill_check; Skills: Stealth; Also applies to Initiative; Uses: superiority_die",
       "expectedBehavior": "When you make a Dexterity (Stealth) check or an Initiative roll, you can expend one Superiority Die and add the die to the roll, unless you are Incapacitated."
@@ -210,7 +199,7 @@
       "handler": "src/services/combat/automation/handlers/spellHandler.js",
       "router": "src/services/combat/automation/routers/spellRouter.js",
       "infoBuilder": "src/services/combat/automation/infoBuilders/spellInfoBuilder.js",
-      "verified": "verified",
+      "verified": "not verified",
       "class": "Spell",
       "triggerConditions": "",
       "expectedBehavior": "Level 1 Enchantment (Bard, Druid, Ranger) Casting Time: Action Range: 30 feet Components: V, S, M (a morsel of food) Duration: 24 hours Target a Beast that you can see within range. The target must succeed on a Wisdom saving throw or have the Charmed condition for the duration. If you or one of your allies deals damage to the target, the spell ends. Using a Higher-Level Spell Slot. You can target one additional Beast for each spell slot level above 1."
@@ -222,7 +211,7 @@
       "handler": "src/services/combat/automation/handlers/spellHandler.js",
       "router": "src/services/combat/automation/routers/spellRouter.js",
       "infoBuilder": "src/services/combat/automation/infoBuilders/spellInfoBuilder.js",
-      "verified": "broken — see .opencode/plans/bug-sp-003-animal-shapes.md",
+      "verified": "not verified",
       "class": "Spell",
       "triggerConditions": "",
       "expectedBehavior": "Level 8 Transmutation (Druid) Casting Time: Action Range: 30 feet Components: V, S Duration: 24 hours Choose any number of willing creatures that you can see within range. Each target shifts into a Large or smaller Beast of your choice that has a Challenge Rating of 4 or lower. You can choose a different form for each target. On later turns, you can take a Action to transform the targets again. A target's game statistics are replaced by the chosen Beast's statistics, but the target retains its creature type; Hit Points; Hit Point Dice; alignment; ability to communicate; and Intelligence, Wisdom, and Charisma scores. The target's actions are limited by the Beast form's anatomy, and it can't cast spells. The target's equipment melds into the new form, and the target can't use any of that equipment while in that form. The target gains a number of Temporary Hit Points equal to the Hit Points of the first form into which it shape-shifts. These Temporary Hit Points vanish if any remain when the spell ends. The transformation lasts for the duration or until the target ends it as a Bonus Action."
@@ -234,7 +223,7 @@
       "handler": "src/services/combat/automation/handlers/classFeatureHandler.js",
       "router": "src/services/combat/automation/routers/classFeatureRouter.js",
       "infoBuilder": "src/services/combat/automation/infoBuilders/classFeatureInfoBuilder.js",
-      "verified": "verified",
+      "verified": "not verified",
       "class": "Barbarian",
       "triggerConditions": "",
       "expectedBehavior": "You can cast the Beast Sense and Speak with Animals spells but only as Rituals. Wisdom is your spellcasting ability for them."
@@ -246,7 +235,7 @@
       "handler": "src/services/combat/automation/handlers/spellHandler.js",
       "router": "src/services/combat/automation/routers/spellRouter.js",
       "infoBuilder": "src/services/combat/automation/infoBuilders/spellInfoBuilder.js",
-      "verified": "verified",
+      "verified": "not verified",
       "class": "Spell",
       "triggerConditions": "Automation type: animate_dead",
       "expectedBehavior": "Choose a pile of bones or a corpse of a Medium or Small Humanoid within range. The target becomes an Undead creature: a Skeleton if you chose bones or a Zombie if you chose a corpse (see appendix B for the stat blocks). On each of your turns, you can take a Bonus Action to mentally command any creature you made with this spell if the creature is within 60 feet of you (if you control multiple creatures, you can command any of them at the same time, issuing the same command to each one). You decide what action the creature will take and where it will move on its next turn, or you can issue a general command, such as to guard a chamber or corridor. If you issue no commands, the creature takes the Dodge action and moves only to avoid harm. Once given an order, the creature continues to follow it until its task is complete. The creature is under your control for 24 hours, after which it stops obeying any command you've given it. To maintain control of the creature for another 24 hours, you must cast this spell on the creature again before the current 24-hour period ends. This use of the spell reasserts your control over up to four creatures you have animated with this spell rather than animating a new creature. Using a Higher-Level Spell Slot. You animate or reassert control over two additional Undead creatures for each spell slot level above 3. Each of the creatures must come from a different corpse or pile of bones."
@@ -258,7 +247,7 @@
       "handler": "src/services/combat/automation/handlers/spellHandler.js",
       "router": "src/services/combat/automation/routers/spellRouter.js",
       "infoBuilder": "src/services/combat/automation/infoBuilders/spellInfoBuilder.js",
-      "verified": "broken — see .opencode/plans/bug-sp-005-animate-objects.md",
+      "verified": "not verified",
       "class": "Spell",
       "triggerConditions": "Automation type: summon_spirit",
       "expectedBehavior": "Level 5 Transmutation (Bard, Sorcerer, Wizard) Casting Time: Action Range: 120 feet Components: V, S Duration: Concentration, up to 1 minute Objects animate at your command. Choose a number of nonmagical objects within range that aren't being worn or carried, aren't fixed to a surface, and aren't Gargantuan. The maximum number of objects is equal to your spellcasting ability modifier; for this number, a Medium or smaller target counts as one object, a Large target counts as two, and a Huge target counts as three. Huge or Smaller Construct, Unaligned AC 15 HP 10 (Medium or smaller), 20 (Large), 40 (Huge) Speed 30 ft."
@@ -270,7 +259,7 @@
       "handler": "src/services/combat/automation/handlers/spellHandler.js",
       "router": "src/services/combat/automation/routers/spellRouter.js",
       "infoBuilder": "src/services/combat/automation/infoBuilders/spellInfoBuilder.js",
-      "verified": "verified",
+      "verified": "not verified",
       "class": "Spell",
       "triggerConditions": "",
       "expectedBehavior": "Level 8 Abjuration (Cleric, Wizard) Casting Time: Action Range: Self Components: V, S, M (iron filings) Duration: Concentration, up to 1 hour An aura of antimagic surrounds you in 10-foot Emanation. No one can cast spells, take Actions, or create other magical effects inside the aura, and those things can't target or otherwise affect anything inside it. Magical properties of magic items don't work inside the aura or on anything inside it. Areas of effect created by spells or other magic can't extend into the aura, and no one can teleport into or out of it or use planar travel there. Portals close temporarily while in the aura. Ongoing spells, except those cast by an Artifact or a deity, are suppressed in the area. While an effect is suppressed, it doesn't function, but the time it spends suppressed counts against its duration. Dispel Magic has no effect on the aura, and the auras created by different Antimagic Field spells don't nullify each other."
@@ -282,7 +271,7 @@
       "handler": "src/services/combat/automation/handlers/classFeatureHandler.js",
       "router": "src/services/combat/automation/routers/classFeatureRouter.js",
       "infoBuilder": "src/services/combat/automation/infoBuilders/classFeatureInfoBuilder.js",
-      "verified": "verified",
+      "verified": "not verified",
       "class": "Druid",
       "triggerConditions": "Passive: Always active",
       "expectedBehavior": "The size of the Emanation created by your Wrath of the Sea increases to 10 feet. In addition, you gain a Swim Speed equal to your Speed."
@@ -294,7 +283,7 @@
       "handler": "src/services/combat/automation/handlers/classFeatureHandler.js",
       "router": "src/services/combat/automation/routers/classFeatureRouter.js",
       "infoBuilder": "src/services/combat/automation/infoBuilders/classFeatureInfoBuilder.js",
-      "verified": "verified",
+      "verified": "not verified",
       "class": "Sorcerer",
       "triggerConditions": "Passive: Always active",
       "expectedBehavior": "While your Innate Sorcery feature is active, you can use one Metamagic option on each of your turns without spending Sorcery Points on it."
@@ -306,7 +295,7 @@
       "handler": "src/services/combat/automation/handlers/classFeatureHandler.js",
       "router": "src/services/combat/automation/routers/classFeatureRouter.js",
       "infoBuilder": "src/services/combat/automation/infoBuilders/classFeatureInfoBuilder.js",
-      "verified": "verified",
+      "verified": "not verified",
       "class": "Fighter",
       "triggerConditions": "Action: 1 action",
       "expectedBehavior": "When you use Action Surge, teleport up to 30 feet before or after the additional action."
@@ -318,7 +307,7 @@
       "handler": "src/services/combat/automation/handlers/classFeatureHandler.js",
       "router": "src/services/combat/automation/routers/classFeatureRouter.js",
       "infoBuilder": "src/services/combat/automation/infoBuilders/classFeatureInfoBuilder.js",
-      "verified": "verified",
+      "verified": "not verified",
       "class": "Wizard",
       "triggerConditions": "Trigger: short_rest; Action: passive",
       "expectedBehavior": "You can regain some of your magical energy by studying your spellbook. When you finish a Short Rest, you can choose expended spell slots to recover. The spell slots can have a combined level equal to no more than half your Wizard level (round up), and none of the slots can be level 6 or higher. Once you use this feature, you can't do so again until you finish a Long Rest."
@@ -330,7 +319,7 @@
       "handler": "src/services/combat/automation/handlers/spellHandler.js",
       "router": "src/services/combat/automation/routers/spellRouter.js",
       "infoBuilder": "src/services/combat/automation/infoBuilders/spellInfoBuilder.js",
-      "verified": "verified",
+      "verified": "not verified",
       "class": "Spell",
       "triggerConditions": "Automation type: arcane_vigor",
       "expectedBehavior": "Level 2 Abjuration (Sorcerer, Wizard) Casting Time: Bonus Action Range: Self Components: V, S Duration: Instantaneous You tap into your life force to heal yourself. Roll one or two of your unexpended Hit Point Dice, and regain a number of Hit Points equal to the roll's total plus your spellcasting ability modifier. Those dice are then expended. Using a Higher-Level Spell Slot. The number of unexpended Hit Dice you can roll increases by one for each spell slot level above 2."
@@ -342,7 +331,7 @@
       "handler": "src/services/combat/automation/handlers/classFeatureHandler.js",
       "router": "src/services/combat/automation/routers/classFeatureRouter.js",
       "infoBuilder": "src/services/combat/automation/infoBuilders/classFeatureInfoBuilder.js",
-      "verified": "verified",
+      "verified": "not verified",
       "class": "Wizard",
       "triggerConditions": "Passive: Always active",
       "expectedBehavior": "When you cast an Abjuration spell with a spell slot, create a magical ward on yourself lasting until Long Rest. Ward HP = 2x Wizard level + Intelligence modifier. Ward takes damage instead of you. Ward regains HP = 2x spell slot level when you cast Abjuration spell with spell slot, or as Bonus Action expend spell slot."
@@ -354,7 +343,7 @@
       "handler": "src/services/combat/automation/handlers/classFeatureHandler.js",
       "router": "src/services/combat/automation/routers/classFeatureRouter.js",
       "infoBuilder": "src/services/combat/automation/infoBuilders/classFeatureInfoBuilder.js",
-      "verified": "verified",
+      "verified": "not verified",
       "class": "Druid",
       "triggerConditions": "",
       "expectedBehavior": "The vitality of nature constantly blooms within you, granting you the following benefits. Evergreen Wild Shape: Whenever you roll Initiative and have no uses of Wild Shape left, you regain one expended use of it. Nature Magician: You can convert uses of Wild Shape into a spell slot (no action required). Choose a number of your unexpended uses of Wild Shape and convert them into a single spell slot, with each use contributing 2 spell levels. Longevity: The primal magic that you wield causes you to age more slowly. For every ten years that pass, your body ages only one year"
@@ -366,7 +355,7 @@
       "handler": "src/services/combat/automation/handlers/fightingStyleHandler.js",
       "router": "src/services/combat/automation/routers/fightingStyleRouter.js",
       "infoBuilder": "src/services/combat/automation/infoBuilders/fightingStyleInfoBuilder.js",
-      "verified": "verified",
+      "verified": "not verified",
       "class": "Fighting Style",
       "triggerConditions": "",
       "expectedBehavior": "You get a +2 bonus to attack rolls you make with ranged weapons."
@@ -378,11 +367,11 @@
       "handler": "src/services/combat/automation/handlers/backgroundHandler.js",
       "router": "src/services/combat/automation/routers/backgroundRouter.js",
       "infoBuilder": "src/services/combat/automation/infoBuilders/backgroundInfoBuilder.js",
-      "verified": "verified",
+      "verified": "not verified",
       "class": "Background",
       "triggerConditions": "",
       "expectedBehavior": "You began mopping floors and scrubbi11g counters in an artisan's worl<shop for a few coppers per day as soon as you were strong enough to carry a bucket. When you were old enough to apprentice, you learned to create basic crafts of your own, as well as how to sweet-talk the occasional demanding customer. Your trade has also given you a keen eye for detail.",
-      "notes": "data-granting only: ability_scores, feat, skill_proficiencies, tool_proficiencies — no combat automation"
+      "notes": "data-granting only: ability_scores, feat, skill_proficiencies, tool_proficiencies \u2014 no combat automation"
     },
     {
       "id": "CLA-015",
@@ -391,7 +380,7 @@
       "handler": "src/services/combat/automation/handlers/classFeatureHandler.js",
       "router": "src/services/combat/automation/routers/classFeatureRouter.js",
       "infoBuilder": "src/services/combat/automation/infoBuilders/classFeatureInfoBuilder.js",
-      "verified": "verified",
+      "verified": "not verified",
       "class": "Barbarian",
       "triggerConditions": "Action: passive",
       "expectedBehavior": "You gain one of the following options of your choice. Whenever you finish a Long Rest, you can change your choice. Owl: You have Darkvision with a range of 60 feet. If you already have Darkvision, its range increases by 60 feet. Panther: You have a Climb Speed equal to your Speed. Salmon: You have a Swim Speed equal to your Speed."
@@ -403,12 +392,11 @@
       "handler": "src/services/combat/automation/handlers/classFeatureHandler.js",
       "router": "src/services/combat/automation/routers/classFeatureRouter.js",
       "infoBuilder": "src/services/combat/automation/infoBuilders/classFeatureInfoBuilder.js",
-      "verified": "verified",
+      "verified": "not verified",
       "class": "Rogue",
       "triggerConditions": "Automation type: undefined",
       "expectedBehavior": "Initiative: Advantage on Initiative rolls. Surprising Strikes: During first round of each combat, Advantage on attack rolls against any creature that hasn't taken a turn. If Sneak Attack hits any target during that round, target takes extra damage equal to your Rogue level."
     },
-
     {
       "id": "FT-004",
       "name": "Athlete",
@@ -416,29 +404,7 @@
       "handler": "src/services/combat/automation/handlers/featHandler.js",
       "router": "src/services/combat/automation/routers/featRouter.js",
       "infoBuilder": "src/services/combat/automation/infoBuilders/featInfoBuilder.js",
-      "verified": "verified",
-      "triggerConditions": "Passive: Always active",
-      "expectedBehavior": "You gain a Climb Speed equal to your Speed."
-    },
-    {
-      "id": "FT-005",
-      "name": "Athlete",
-      "type": "feat",
-      "handler": "src/services/combat/automation/handlers/featHandler.js",
-      "router": "src/services/combat/automation/routers/featRouter.js",
-      "infoBuilder": "src/services/combat/automation/infoBuilders/featInfoBuilder.js",
-      "verified": "verified",
-      "triggerConditions": "Passive: Always active",
-      "expectedBehavior": "You gain a Climb Speed equal to your Speed."
-    },
-    {
-      "id": "FT-006",
-      "name": "Athlete",
-      "type": "feat",
-      "handler": "src/services/combat/automation/handlers/featHandler.js",
-      "router": "src/services/combat/automation/routers/featRouter.js",
-      "infoBuilder": "src/services/combat/automation/infoBuilders/featInfoBuilder.js",
-      "verified": "verified",
+      "verified": "not verified",
       "triggerConditions": "Passive: Always active",
       "expectedBehavior": "You gain a Climb Speed equal to your Speed."
     },
@@ -449,7 +415,7 @@
       "handler": "src/services/combat/automation/handlers/classFeatureHandler.js",
       "router": "src/services/combat/automation/routers/classFeatureRouter.js",
       "infoBuilder": "src/services/combat/automation/infoBuilders/classFeatureInfoBuilder.js",
-      "verified": "verified",
+      "verified": "not verified",
       "class": "Paladin",
       "triggerConditions": "Passive: Always active",
       "expectedBehavior": "Your Aura of Protection is now a 30-foot Emanation."
@@ -461,7 +427,7 @@
       "handler": "src/services/combat/automation/handlers/classFeatureHandler.js",
       "router": "src/services/combat/automation/routers/classFeatureRouter.js",
       "infoBuilder": "src/services/combat/automation/infoBuilders/classFeatureInfoBuilder.js",
-      "verified": "verified",
+      "verified": "not verified",
       "class": "Paladin",
       "triggerConditions": "Passive: Always active",
       "expectedBehavior": "You and your allies have Immunity to the Frightened condition while in your Aura of Protection."
@@ -473,7 +439,7 @@
       "handler": "src/services/combat/automation/handlers/classFeatureHandler.js",
       "router": "src/services/combat/automation/routers/classFeatureRouter.js",
       "infoBuilder": "src/services/combat/automation/infoBuilders/classFeatureInfoBuilder.js",
-      "verified": "verified",
+      "verified": "not verified",
       "class": "Paladin",
       "triggerConditions": "Passive: Always active",
       "expectedBehavior": "You and your allies have Immunity to Charmed condition while in Aura of Protection."
@@ -485,7 +451,7 @@
       "handler": "src/services/combat/automation/handlers/spellHandler.js",
       "router": "src/services/combat/automation/routers/spellRouter.js",
       "infoBuilder": "src/services/combat/automation/infoBuilders/spellInfoBuilder.js",
-      "verified": "blocked — spell casting popup cannot be interacted with via Playwright (checkboxes outside viewport)",
+      "verified": "not verified",
       "class": "Spell",
       "triggerConditions": "",
       "expectedBehavior": "Level 4 Abjuration (Cleric, Paladin) Casting Time: Action Range: Self Components: V Duration: Concentration, up to 10 minutes An aura radiates from you in a 30-foot Emanation for the duration. While in the aura, you and your allies have Resistance to Necrotic damage, and your Hit Point maximums can't be reduced. If an ally with 0 Hit Points starts its turn in the aura, that ally regains 1 Hit Point."
@@ -497,7 +463,7 @@
       "handler": "src/services/combat/automation/handlers/classFeatureHandler.js",
       "router": "src/services/combat/automation/routers/classFeatureRouter.js",
       "infoBuilder": "src/services/combat/automation/infoBuilders/classFeatureInfoBuilder.js",
-      "verified": "verified",
+      "verified": "not verified",
       "class": "Paladin",
       "triggerConditions": "Passive: Always active",
       "expectedBehavior": "You radiate a protective aura in a 10-foot Emanation originating from you. The aura is inactive while you have the Incapacitated condition. You and your allies in the aura gain a bonus to saving throws equal to your Charisma modifier (minimum +1). If another Paladin is present, a creature can benefit from only one Aura of Protection at a time."
@@ -509,7 +475,7 @@
       "handler": "src/services/combat/automation/handlers/spellHandler.js",
       "router": "src/services/combat/automation/routers/spellRouter.js",
       "infoBuilder": "src/services/combat/automation/infoBuilders/spellInfoBuilder.js",
-      "verified": "broken — see .opencode/plans/bug-sp-009-concentration-not-persisted.md",
+      "verified": "not verified",
       "class": "Spell",
       "triggerConditions": "Duration: Concentration, up to 10 minutes",
       "expectedBehavior": "Level 4 Abjuration (Cleric, Paladin) Casting Time: Action Range: Self Components: V Duration: Concentration, up to 10 minutes An aura radiates from you in a 30-foot Emanation for the duration. While in the aura, you and your allies have Resistance to Poison damage and Advantage on saving throws to avoid or end effects that include the Blinded, Charmed, Deafened, Frightened, Paralyzed, Poisoned, or Stunned condition."
@@ -521,7 +487,7 @@
       "handler": "src/services/combat/automation/handlers/spellHandler.js",
       "router": "src/services/combat/automation/routers/spellRouter.js",
       "infoBuilder": "src/services/combat/automation/infoBuilders/spellInfoBuilder.js",
-      "verified": "verified",
+      "verified": "not verified",
       "class": "Spell",
       "triggerConditions": "Range: 30-foot emanation",
       "expectedBehavior": "Level 3 Abjuration (Cleric, Druid, Paladin) Casting Time: Action Range: Self Components: V Duration: Concentration, up to 1 minute An aura radiates from you in a 30-foot Emanation for the duration. When you create the aura and at the start of each of your turns while it persists, you can restore 2d6 Hit Points to one creature in it."
@@ -533,7 +499,7 @@
       "handler": "src/services/combat/automation/handlers/classFeatureHandler.js",
       "router": "src/services/combat/automation/routers/classFeatureRouter.js",
       "infoBuilder": "src/services/combat/automation/infoBuilders/classFeatureInfoBuilder.js",
-      "verified": "verified",
+      "verified": "not verified",
       "class": "Paladin",
       "triggerConditions": "Passive: Always active",
       "expectedBehavior": "You and allies have Resistance to Necrotic, Psychic, and Radiant damage while in Aura of Protection."
@@ -545,25 +511,13 @@
       "handler": "src/services/combat/automation/handlers/classFeatureHandler.js",
       "router": "src/services/combat/automation/routers/classFeatureRouter.js",
       "infoBuilder": "src/services/combat/automation/infoBuilders/classFeatureInfoBuilder.js",
-      "verified": "verified",
+      "verified": "not verified",
       "class": "Cleric",
       "triggerConditions": "Passive: Always active",
       "expectedBehavior": "You gain Resistance to Bludgeoning, Piercing, and Slashing damage."
     },
     {
       "id": "CLA-024",
-      "name": "Avenging Angel",
-      "type": "classFeature",
-      "handler": "src/services/combat/automation/handlers/classFeatureHandler.js",
-      "router": "src/services/combat/automation/routers/classFeatureRouter.js",
-      "infoBuilder": "src/services/combat/automation/infoBuilders/classFeatureInfoBuilder.js",
-      "verified": "broken — see .opencode/plans/bug-CLA-024-avenging-angel-not-firing.md",
-      "class": "Paladin",
-      "triggerConditions": "Action: 1 bonus action; Action: bonus_action; Duration: 10_minutes",
-      "expectedBehavior": "As a Bonus Action, you gain the benefits below for 10 minutes or until you end them (no action required). Once you use this feature, you can't use it again until you finish a Long Rest. You can also restore your use of it by expending a level 5 spell slot (no action required). Flight: You sprout spectral wings on your back, have a Fly Speed of 60 feet, and can hover. Frightful Aura Whenever an enemy starts its turn in your Aura of Protection, that creature must succeed on a Wisdom saving throw or have the Frightened condition for 1 minute or until it takes any damage. Attack rolls against the Frightened creature have Advantage."
-    },
-    {
-      "id": "CLA-025",
       "name": "Avenging Angel",
       "type": "classFeature",
       "handler": "src/services/combat/automation/handlers/classFeatureHandler.js",
@@ -581,7 +535,7 @@
       "handler": "src/services/combat/automation/handlers/classFeatureHandler.js",
       "router": "src/services/combat/automation/routers/classFeatureRouter.js",
       "infoBuilder": "src/services/combat/automation/infoBuilders/classFeatureInfoBuilder.js",
-      "verified": "broken — see .opencode/plans/bug-CLA-026-awakened-mind-target-selection-no-op.md",
+      "verified": "not verified",
       "class": "Warlock",
       "triggerConditions": "Action: bonus_action; Range: 30 ft",
       "expectedBehavior": "Bonus Action, choose one creature within 30 feet. Communicate telepathically while within a number of miles equal to Charisma modifier (minimum 1 mile). Duration: minutes equal to Warlock level."
@@ -593,7 +547,7 @@
       "handler": "src/services/combat/automation/handlers/maneuverHandler.js",
       "router": "src/services/combat/automation/routers/maneuverRouter.js",
       "infoBuilder": "src/services/combat/automation/infoBuilders/maneuverInfoBuilder.js",
-      "verified": "broken — see .opencode/plans/bug-MN-002-movement-maneuver-no-ac-bonus-modal.md",
+      "verified": "not verified",
       "class": "Fighter",
       "triggerConditions": "Action type: movement; Uses: superiority_die",
       "expectedBehavior": "When you're within 5 feet of a creature on your turn, you can expend one Superiority Die and switch places with that creature, provided you spend at least 5 feet of movement and the creature is willing and not Incapacitated. This movement doesn't provoke Opportunity Attacks. Roll the Superiority Die. Until the start of your next turn, you or the other creature (your choice) gains a bonus to AC equal to the number rolled."
@@ -605,7 +559,7 @@
       "handler": "src/services/combat/automation/handlers/spellHandler.js",
       "router": "src/services/combat/automation/routers/spellRouter.js",
       "infoBuilder": "src/services/combat/automation/infoBuilders/spellInfoBuilder.js",
-      "verified": "verified",
+      "verified": "not verified",
       "class": "Spell",
       "triggerConditions": "",
       "expectedBehavior": "Level 1 Enchantment (Bard, Cleric, Warlock) Casting Time: Action Range: 30 feet Components: V, S, M (a drop of blood) Duration: Concentration, up to 1 minute Up to three creatures of your choice that you can see within range must each make a Charisma saving throw. Whenever a target that fails this save makes an attack roll or a saving throw before the spell ends, the target must subtract 1d4 from the attack roll or save. Using a Higher-Level Spell Slot. You can target one additional creature for each spell slot level above 1."
@@ -617,7 +571,7 @@
       "handler": "src/services/combat/automation/handlers/spellHandler.js",
       "router": "src/services/combat/automation/routers/spellRouter.js",
       "infoBuilder": "src/services/combat/automation/infoBuilders/spellInfoBuilder.js",
-      "verified": "verified",
+      "verified": "not verified",
       "class": "Spell",
       "triggerConditions": "Range: 30 feet",
       "expectedBehavior": "Level 4 Abjuration (Cleric, Paladin, Sorcerer, Warlock, Wizard) Casting Time: Action Range: 30 feet Components: V, S, M (a pentacle) Duration: Concentration, up to 1 minute One creature that you can see within range must succeed on a Charisma saving throw or be transported to a harmless demiplane for the duration. While there, the target has the Incapacitated condition. When the spell ends, the target reappears in the space it left or in the nearest unoccupied space if that space is occupied. If the target is an Aberration, a Celestial, an Elemental, a Fey, or a Fiend, the target doesn't return if the spell lasts for 1 minute. The target is instead transported to a random location on a plane (DM's choice) associated with its creature type. Using a Higher-Level Spell Slot. You can target one additional creature for each spell slot level above 4."
@@ -629,7 +583,7 @@
       "handler": "src/services/combat/automation/handlers/classFeatureHandler.js",
       "router": "src/services/combat/automation/routers/classFeatureRouter.js",
       "infoBuilder": "src/services/combat/automation/infoBuilders/classFeatureInfoBuilder.js",
-      "verified": "verified",
+      "verified": "not verified",
       "class": "Bard",
       "triggerConditions": "Action: 1 bonus action; Action: bonus_action; Range: 60_ft",
       "expectedBehavior": "You can inspire others through stirring words or music. Up to three times per day, you can add one of your Bardic Inspiration dice to one ability check made by one other creature of your choice. You can do so when any creature (including yourself) makes an ability check after you say the words or perform the musical piece. You must be able to see the creature, and the creature must be able to hear you. Your Bardic Inspiration die is a d6."
@@ -641,7 +595,7 @@
       "handler": "src/services/combat/automation/handlers/spellHandler.js",
       "router": "src/services/combat/automation/routers/spellRouter.js",
       "infoBuilder": "src/services/combat/automation/infoBuilders/spellInfoBuilder.js",
-      "verified": "verified",
+      "verified": "not verified",
       "class": "Spell",
       "triggerConditions": "",
       "expectedBehavior": "You touch a willing creature. Until the spell ends, the target's skin assumes a bark-like appearance, and the target has an Armor Class of 17 if its AC is lower than that."
@@ -653,7 +607,7 @@
       "handler": "src/services/combat/automation/handlers/classFeatureHandler.js",
       "router": "src/services/combat/automation/routers/classFeatureRouter.js",
       "infoBuilder": "src/services/combat/automation/infoBuilders/classFeatureInfoBuilder.js",
-      "verified": "broken — see .opencode/plans/bug-CLA-028-reaction-opens-create-modal.md",
+      "verified": "not verified",
       "class": "Sorcerer",
       "triggerConditions": "Action: 1 action; Action: action; Range: 30_ft",
       "expectedBehavior": "Action, expend 1-5 Sorcery Points to create magical ward around self or creature within 30 feet. Ward represented by number of d8s equal to SP spent. When warded creature takes damage, can expend dice, roll them, reduce damage by total rolled. Ward lasts until Long Rest or use again."
@@ -665,22 +619,10 @@
       "handler": "src/services/combat/automation/handlers/classFeatureHandler.js",
       "router": "src/services/combat/automation/routers/classFeatureRouter.js",
       "infoBuilder": "src/services/combat/automation/infoBuilders/classFeatureInfoBuilder.js",
-      "verified": "verified",
+      "verified": "not verified",
       "class": "Barbarian",
       "triggerConditions": "Passive: Always active",
       "expectedBehavior": "During your turn, your reach is 10 feet greater with any Melee weapon that has the Heavy or Versatile property, as tendrils of the World Tree extend from you. When you hit with such a weapon on your turn, you can activate the Push or Topple mastery property in addition to a different mastery property you're using with that weapon."
-    },
-    {
-      "id": "CLA-030",
-      "name": "Battle Magic",
-      "type": "classFeature",
-      "handler": "src/services/combat/automation/handlers/classFeatureHandler.js",
-      "router": "src/services/combat/automation/routers/classFeatureRouter.js",
-      "infoBuilder": "src/services/combat/automation/infoBuilders/classFeatureInfoBuilder.js",
-      "verified": "broken — see .opencode/plans/bug-CLA-030-missing-trigger-after-casting-action-spell.md",
-      "class": "Bard",
-      "triggerConditions": "Action: bonus_action; Uses: variable",
-      "expectedBehavior": "After you cast a spell that has a casting time of an action, you can make one attack with a weapon as a Bonus Action."
     },
     {
       "id": "SP-014",
@@ -689,7 +631,7 @@
       "handler": "src/services/combat/automation/handlers/spellHandler.js",
       "router": "src/services/combat/automation/routers/spellRouter.js",
       "infoBuilder": "src/services/combat/automation/infoBuilders/spellInfoBuilder.js",
-      "verified": "verified 2026-08-21 — 2024 Cleric (Life) level 5, cast Beacon of Hope on Test Goblin in combat; effect applied correctly with advantage on WIS saves, death saves, and maximized healing",
+      "verified": "not verified",
       "class": "Spell",
       "triggerConditions": "Range: 30 feet",
       "expectedBehavior": "Level 3 Abjuration (Cleric) Casting Time: Action Range: 30 feet Components: V, S Duration: Concentration, up to 1 minute Choose any number of creatures within range. For the duration, each target has Advantage on Wisdom saving throws and Death Saving Throws and regains the maximum number of Hit Points possible from any healing."
@@ -701,7 +643,7 @@
       "handler": "src/services/combat/automation/handlers/classFeatureHandler.js",
       "router": "src/services/combat/automation/routers/classFeatureRouter.js",
       "infoBuilder": "src/services/combat/automation/infoBuilders/classFeatureInfoBuilder.js",
-      "verified": "broken — see .opencode/plans/bug-CLA-031-missing-beast-spells-implementation.md",
+      "verified": "not verified",
       "class": "Druid",
       "triggerConditions": "Passive: Always active",
       "expectedBehavior": "While using Wild Shape, you can cast spells in Beast form, except for any spell that has a Material component with a cost specified or that consumes its Material component."
@@ -713,7 +655,7 @@
       "handler": "src/services/combat/automation/handlers/classFeatureHandler.js",
       "router": "src/services/combat/automation/routers/classFeatureRouter.js",
       "infoBuilder": "src/services/combat/automation/infoBuilders/classFeatureInfoBuilder.js",
-      "verified": "broken — see .opencode/plans/bug-cla-032-beguiling-defense.md",
+      "verified": "not verified",
       "class": "Warlock",
       "triggerConditions": "Passive (Charmed immunity); Reaction (after being hit)",
       "expectedBehavior": "Immune to Charmed condition. After a creature hits you with an attack roll, take Reaction to reduce damage by half and force attacker to make Wisdom save or take Psychic damage equal to damage you took. (Warlock Archfey Patron - Beguiling Defenses)"
@@ -725,7 +667,7 @@
       "handler": "src/services/combat/automation/handlers/classFeatureHandler.js",
       "router": "src/services/combat/automation/routers/classFeatureRouter.js",
       "infoBuilder": "src/services/combat/automation/infoBuilders/classFeatureInfoBuilder.js",
-      "verified": "verified 2026-08-21 — 2024 Bard (College of Glamour) level 3; Charm Person + Mirror Image always prepared, Beguiling Magic resource tracker present, post-cast rider code path verified via tests (30,031 pass)",
+      "verified": "not verified",
       "class": "Bard",
       "triggerConditions": "Passive: Always active",
       "expectedBehavior": "You always have the Charm Person and Mirror Image spells prepared. In addition, immediately after you cast an Enchantment or Illusion spell using a spell slot, you can cause a creature you can see within 60 feet of yourself to make a Wisdom saving throw against your spell save DC. On a failed save, the target has the Charmed or Frightened condition (your choice) for 1 minute. Once you use this benefit, you can't use it again until you finish a Long Rest."
@@ -737,7 +679,7 @@
       "handler": "src/services/combat/automation/handlers/classFeatureHandler.js",
       "router": "src/services/combat/automation/routers/classFeatureRouter.js",
       "infoBuilder": "src/services/combat/automation/infoBuilders/classFeatureInfoBuilder.js",
-      "verified": "broken — see .opencode/plans/bug-cla-034-beguiling-twist.md",
+      "verified": "not verified",
       "class": "Ranger",
       "triggerConditions": "Automation type: undefined",
       "expectedBehavior": "Advantage on saving throws to avoid/end Charmed or Frightened. When you or creature within 120 feet succeeds on save vs Charmed/Frightened, take Reaction to force different creature within 120 feet to make Wisdom save (your spell save DC) or be Charmed/Frightened for 1 minute."
@@ -749,7 +691,7 @@
       "handler": "src/services/combat/automation/handlers/classFeatureHandler.js",
       "router": "src/services/combat/automation/routers/classFeatureRouter.js",
       "infoBuilder": "src/services/combat/automation/infoBuilders/classFeatureInfoBuilder.js",
-      "verified": "verified",
+      "verified": "not verified",
       "class": "Sorcerer",
       "triggerConditions": "Trigger: after creature d20 roll; Action: 1 reaction",
       "expectedBehavior": "Immediately after another creature you can see rolls the d20 for a D20 Test, take Reaction and spend 1 Sorcery Point to roll 1d4 and apply as bonus or penalty (your choice) to the d20 roll."
@@ -761,7 +703,7 @@
       "handler": "src/services/combat/automation/handlers/classFeatureHandler.js",
       "router": "src/services/combat/automation/routers/classFeatureRouter.js",
       "infoBuilder": "src/services/combat/automation/infoBuilders/classFeatureInfoBuilder.js",
-      "verified": "broken — see .opencode/plans/bug-cla-036-bestial-fury.md",
+      "verified": "not verified",
       "class": "Ranger",
       "triggerConditions": "Automation type: undefined",
       "expectedBehavior": "When commanding Primal Companion to take Beast's Strike, the beast can use it twice. First time each turn it hits a creature under Hunter's Mark, deals extra Force damage equal to the bonus damage of that spell."
@@ -773,7 +715,7 @@
       "handler": "src/services/combat/automation/handlers/spellHandler.js",
       "router": "src/services/combat/automation/routers/spellRouter.js",
       "infoBuilder": "src/services/combat/automation/infoBuilders/spellInfoBuilder.js",
-      "verified": "blocked — verification subagent stuck in loop and aborted; needs re-run",
+      "verified": "not verified",
       "class": "Spell",
       "triggerConditions": "Automation type: summon_spirit",
       "expectedBehavior": "A small, neutral beast appears in an unoccupied space within range. The beast's AC equals 11 + the spell's level. The beast has 20 Hit Points (Air only) or 30 Hit Points (Land and Water only), plus 5 for each spell level above 2. Its Speed is 30 feet, with Climb 30 feet (Land only), Fly 60 feet (Air only), or Swim 30 feet (Water only)."
@@ -785,7 +727,7 @@
       "handler": "src/services/combat/automation/handlers/classFeatureHandler.js",
       "router": "src/services/combat/automation/routers/classFeatureRouter.js",
       "infoBuilder": "src/services/combat/automation/infoBuilders/classFeatureInfoBuilder.js",
-      "verified": "blocked — two verification subagent runs returned empty results; needs re-run",
+      "verified": "not verified",
       "class": "Warlock",
       "triggerConditions": "Automation type: undefined",
       "expectedBehavior": "Immediately after casting an Enchantment or Illusion spell using an action and a spell slot, cast Misty Step as part of the same action without expending a spell slot."
@@ -797,7 +739,7 @@
       "handler": "src/services/combat/automation/handlers/spellHandler.js",
       "router": "src/services/combat/automation/routers/spellRouter.js",
       "infoBuilder": "src/services/combat/automation/infoBuilders/spellInfoBuilder.js",
-      "verified": "broken — see .opencode/plans/bug-sp-016-blade-ward.md",
+      "verified": "not verified",
       "class": "Spell",
       "triggerConditions": "Automation type: blade_ward",
       "expectedBehavior": "Whenever a creature makes an attack roll against you before the spell ends, the attacker subtracts 1d4 from the attack roll."
@@ -809,7 +751,7 @@
       "handler": "src/services/combat/automation/handlers/spellHandler.js",
       "router": "src/services/combat/automation/routers/spellRouter.js",
       "infoBuilder": "src/services/combat/automation/infoBuilders/spellInfoBuilder.js",
-      "verified": "blocked — two verification subagent runs returned empty results; needs re-run",
+      "verified": "not verified",
       "class": "Spell",
       "triggerConditions": "",
       "expectedBehavior": "You bless up to three creatures within range. Whenever a target makes an attack roll or a saving throw before the spell ends, the target adds 1d4 to the attack roll or save."
@@ -821,7 +763,7 @@
       "handler": "src/services/combat/automation/handlers/classFeatureHandler.js",
       "router": "src/services/combat/automation/routers/classFeatureRouter.js",
       "infoBuilder": "src/services/combat/automation/infoBuilders/classFeatureInfoBuilder.js",
-      "verified": "verified",
+      "verified": "not verified",
       "class": "Cleric",
       "triggerConditions": "Action: passive",
       "expectedBehavior": "When you cast a healing spell on others that targets one or more creatures other than yourself, you regain Hit Points equal to 2 plus the spell slot's level."
@@ -833,7 +775,7 @@
       "handler": "src/services/combat/automation/handlers/fightingStyleHandler.js",
       "router": "src/services/combat/automation/routers/fightingStyleRouter.js",
       "infoBuilder": "src/services/combat/automation/infoBuilders/fightingStyleInfoBuilder.js",
-      "verified": "broken — see .opencode/plans/bug-fs-002-blessed-warrior-melee-attack-bonus-not-applied.md",
+      "verified": "not verified",
       "class": "Fighting Style",
       "triggerConditions": "",
       "expectedBehavior": "You gain a +2 bonus to attack rolls you make with melee weapons."
@@ -845,7 +787,7 @@
       "handler": "src/services/combat/automation/handlers/classFeatureHandler.js",
       "router": "src/services/combat/automation/routers/classFeatureRouter.js",
       "infoBuilder": "src/services/combat/automation/infoBuilders/classFeatureInfoBuilder.js",
-      "verified": "verified",
+      "verified": "not verified",
       "class": "Cleric",
       "triggerConditions": "Action: action; Range: 30 ft",
       "expectedBehavior": "As a Action, you can choose yourself or a willing creature within 30 feet of yourself to have Advantage on Dexterity (Stealth) checks. This blessing lasts until you finish a Long Rest or you use this feature again."
@@ -857,7 +799,7 @@
       "handler": "src/services/combat/automation/handlers/fightingStyleHandler.js",
       "router": "src/services/combat/automation/routers/fightingStyleRouter.js",
       "infoBuilder": "src/services/combat/automation/infoBuilders/fightingStyleInfoBuilder.js",
-      "verified": "verified",
+      "verified": "not verified",
       "class": "Fighting Style",
       "triggerConditions": "",
       "expectedBehavior": "You gain blindvision with a range of 10 feet. Blindvision works exactly like normal vision, except it works in total darkness and dim light does not impose the blinded condition on you. You can use this feature once before finishing a long rest."
@@ -869,7 +811,7 @@
       "handler": "src/services/combat/automation/handlers/spellHandler.js",
       "router": "src/services/combat/automation/routers/spellRouter.js",
       "infoBuilder": "src/services/combat/automation/infoBuilders/spellInfoBuilder.js",
-      "verified": "broken — see .opencode/plans/bug-sp-018-blindness-deafness-playerstats-null.md",
+      "verified": "not verified",
       "class": "Spell",
       "triggerConditions": "Range: 120 feet",
       "expectedBehavior": "One creature that you can see within range must succeed on a Constitution saving throw, or it has the Blinded or Deafened condition (your choice) for the duration. At the end of each of its turns, the target repeats the save, ending the spell on itself on a success."
@@ -881,7 +823,7 @@
       "handler": "src/services/combat/automation/handlers/spellHandler.js",
       "router": "src/services/combat/automation/routers/spellRouter.js",
       "infoBuilder": "src/services/combat/automation/infoBuilders/spellInfoBuilder.js",
-      "verified": "verified",
+      "verified": "not verified",
       "class": "Spell",
       "triggerConditions": "",
       "expectedBehavior": "Your body becomes blurred. For the duration, any creature has Disadvantage on attack rolls against you. An attacker is immune to this effect if it perceives you with Blindsight or Truesight."
@@ -893,7 +835,7 @@
       "handler": "src/services/combat/automation/handlers/classFeatureHandler.js",
       "router": "src/services/combat/automation/routers/classFeatureRouter.js",
       "infoBuilder": "src/services/combat/automation/infoBuilders/classFeatureInfoBuilder.js",
-      "verified": "verified",
+      "verified": "not verified",
       "class": "Monk",
       "triggerConditions": "",
       "expectedBehavior": "Your Dexterity and Wisdom scores increase by 4, to a maximum of 25."
@@ -905,7 +847,7 @@
       "handler": "src/services/combat/automation/handlers/featHandler.js",
       "router": "src/services/combat/automation/routers/featRouter.js",
       "infoBuilder": "src/services/combat/automation/infoBuilders/featInfoBuilder.js",
-      "verified": "blocked — cnp-overlay intercepts pointer events, preventing attack initiation via Playwright",
+      "verified": "not verified",
       "triggerConditions": "Trigger: attack_roll_miss",
       "expectedBehavior": "When you miss with an attack roll, you can hit instead. Once you use this benefit, you can't use it again until the start of your next turn."
     },
@@ -916,7 +858,7 @@
       "handler": "src/services/combat/automation/handlers/featHandler.js",
       "router": "src/services/combat/automation/routers/featRouter.js",
       "infoBuilder": "src/services/combat/automation/infoBuilders/featInfoBuilder.js",
-      "verified": "broken — see .opencode/plans/bug-ft-008-boon-dimensional-travel.md",
+      "verified": "not verified",
       "triggerConditions": "Action: 1 action; Range: self",
       "expectedBehavior": "Immediately after you take the Attack action or the Action, you can teleport up to 30 feet to an unoccupied space you can see."
     },
@@ -927,18 +869,7 @@
       "handler": "src/services/combat/automation/handlers/featHandler.js",
       "router": "src/services/combat/automation/routers/featRouter.js",
       "infoBuilder": "src/services/combat/automation/infoBuilders/featInfoBuilder.js",
-      "verified": "verified",
-      "triggerConditions": "Action: passive",
-      "expectedBehavior": "You gain Resistance to two of the following damage types of your choice: Acid, Cold, Fire, Lightning, Necrotic, Poison, Psychic, Radiant, or Thunder. Whenever you finish a Long Rest, you can change your choices."
-    },
-    {
-      "id": "FT-010",
-      "name": "Boon Of Energy Resistance",
-      "type": "feat",
-      "handler": "src/services/combat/automation/handlers/featHandler.js",
-      "router": "src/services/combat/automation/routers/featRouter.js",
-      "infoBuilder": "src/services/combat/automation/infoBuilders/featInfoBuilder.js",
-      "verified": "broken — see .opencode/plans/bug-ft-010-boon-energy-resistance.md",
+      "verified": "not verified",
       "triggerConditions": "Action: passive",
       "expectedBehavior": "You gain Resistance to two of the following damage types of your choice: Acid, Cold, Fire, Lightning, Necrotic, Poison, Psychic, Radiant, or Thunder. Whenever you finish a Long Rest, you can change your choices."
     },
@@ -949,7 +880,7 @@
       "handler": "src/services/combat/automation/handlers/featHandler.js",
       "router": "src/services/combat/automation/routers/featRouter.js",
       "infoBuilder": "src/services/combat/automation/infoBuilders/featInfoBuilder.js",
-      "verified": "verified",
+      "verified": "not verified",
       "triggerConditions": "Trigger: d20_test_by_self_or_ally_in_60ft; Action: 1 reaction; Range: 60 ft",
       "expectedBehavior": "When you or another creature within 60 feet of you succeeds on or fails a d20 Test, you can roll 2d4 and apply the total rolled as a bonus or penalty to the d20 roll. Once you use this benefit, you can't use it again until you roll Initiative or finish a Short or Long Rest."
     },
@@ -960,7 +891,7 @@
       "handler": "src/services/combat/automation/handlers/featHandler.js",
       "router": "src/services/combat/automation/routers/featRouter.js",
       "infoBuilder": "src/services/combat/automation/infoBuilders/featInfoBuilder.js",
-      "verified": "broken — see .opencode/plans/bug-ft-012-boon-of-fortitude.md",
+      "verified": "not verified",
       "triggerConditions": "Passive: Always active",
       "expectedBehavior": "Your Hit Point maximum increases by 40. In addition, whenever you regain Hit Points, you can regain additional Hit Points equal to your Constitution modifier. Once you've regained these additional Hit Points, you can't do so again until the start of your next turn."
     },
@@ -971,18 +902,7 @@
       "handler": "src/services/combat/automation/handlers/featHandler.js",
       "router": "src/services/combat/automation/routers/featRouter.js",
       "infoBuilder": "src/services/combat/automation/infoBuilders/featInfoBuilder.js",
-      "verified": "broken — see .opencode/plans/bug-ft-013-boon-of-irresistible-offense.md",
-      "triggerConditions": "Passive: Always active",
-      "expectedBehavior": "The Bludgeoning, Piercing, and Slashing damage you deal always ignores Resistance."
-    },
-    {
-      "id": "FT-014",
-      "name": "Boon Of Irresistible Offense",
-      "type": "feat",
-      "handler": "src/services/combat/automation/handlers/featHandler.js",
-      "router": "src/services/combat/automation/routers/featRouter.js",
-      "infoBuilder": "src/services/combat/automation/infoBuilders/featInfoBuilder.js",
-      "verified": "broken — see .opencode/plans/bug-ft-014-boon-of-irresistible-offense.md",
+      "verified": "not verified",
       "triggerConditions": "Passive: Always active",
       "expectedBehavior": "The Bludgeoning, Piercing, and Slashing damage you deal always ignores Resistance."
     },
@@ -993,18 +913,7 @@
       "handler": "src/services/combat/automation/handlers/featHandler.js",
       "router": "src/services/combat/automation/routers/featRouter.js",
       "infoBuilder": "src/services/combat/automation/infoBuilders/featInfoBuilder.js",
-      "verified": "verified",
-      "triggerConditions": "Trigger: reduced_to_0_hp; Action: 1 action",
-      "expectedBehavior": "When you would be reduced to 0 Hit Points, you can drop to 1 Hit Point instead and regain a number of Hit Points equal to half your Hit Point maximum. Once you use this benefit, you can't use it again until you finish a Long Rest."
-    },
-    {
-      "id": "FT-016",
-      "name": "Boon Of Recovery",
-      "type": "feat",
-      "handler": "src/services/combat/automation/handlers/featHandler.js",
-      "router": "src/services/combat/automation/routers/featRouter.js",
-      "infoBuilder": "src/services/combat/automation/infoBuilders/featInfoBuilder.js",
-      "verified": "verified",
+      "verified": "not verified",
       "triggerConditions": "Trigger: reduced_to_0_hp; Action: 1 action",
       "expectedBehavior": "When you would be reduced to 0 Hit Points, you can drop to 1 Hit Point instead and regain a number of Hit Points equal to half your Hit Point maximum. Once you use this benefit, you can't use it again until you finish a Long Rest."
     },
@@ -1015,18 +924,7 @@
       "handler": "src/services/combat/automation/handlers/featHandler.js",
       "router": "src/services/combat/automation/routers/featRouter.js",
       "infoBuilder": "src/services/combat/automation/infoBuilders/featInfoBuilder.js",
-      "verified": "verified",
-      "triggerConditions": "Passive: Always active",
-      "expectedBehavior": "You gain proficiency in all skills."
-    },
-    {
-      "id": "FT-018",
-      "name": "Boon Of Skill",
-      "type": "feat",
-      "handler": "src/services/combat/automation/handlers/featHandler.js",
-      "router": "src/services/combat/automation/routers/featRouter.js",
-      "infoBuilder": "src/services/combat/automation/infoBuilders/featInfoBuilder.js",
-      "verified": "broken — see .opencode/plans/bug-ft-018-boon-of-skill.md",
+      "verified": "not verified",
       "triggerConditions": "Passive: Always active",
       "expectedBehavior": "You gain proficiency in all skills."
     },
@@ -1037,18 +935,7 @@
       "handler": "src/services/combat/automation/handlers/featHandler.js",
       "router": "src/services/combat/automation/routers/featRouter.js",
       "infoBuilder": "src/services/combat/automation/infoBuilders/featInfoBuilder.js",
-      "verified": "verified",
-      "triggerConditions": "Action: bonus_action; Uses: variable",
-      "expectedBehavior": "As a Bonus Action, you can take the Disengage action, which also ends the Grappled condition on you."
-    },
-    {
-      "id": "FT-020",
-      "name": "Boon Of Speed",
-      "type": "feat",
-      "handler": "src/services/combat/automation/handlers/featHandler.js",
-      "router": "src/services/combat/automation/routers/featRouter.js",
-      "infoBuilder": "src/services/combat/automation/infoBuilders/featInfoBuilder.js",
-      "verified": "broken — see .opencode/plans/bug-ft-020-boon-of-speed.md",
+      "verified": "not verified",
       "triggerConditions": "Action: bonus_action; Uses: variable",
       "expectedBehavior": "As a Bonus Action, you can take the Disengage action, which also ends the Grappled condition on you."
     },
@@ -1150,7 +1037,7 @@
     },
     {
       "id": "CLA-047",
-      "name": "Celestial Resistance – Aasimar",
+      "name": "Celestial Resistance \u2013 Aasimar",
       "type": "classFeature",
       "handler": "src/services/combat/automation/handlers/classFeatureHandler.js",
       "router": "src/services/combat/automation/routers/classFeatureRouter.js",
@@ -1183,28 +1070,17 @@
       "expectedBehavior": "When you take the Dash action, your Speed increases by 10 feet for that action."
     },
     {
-      "id": "FT-023",
-      "name": "Charger",
-      "type": "feat",
-      "handler": "src/services/combat/automation/handlers/featHandler.js",
-      "router": "src/services/combat/automation/routers/featRouter.js",
-      "infoBuilder": "src/services/combat/automation/infoBuilders/featInfoBuilder.js",
-      "verified": "not verified",
-      "triggerConditions": "Action: 1 action; Range: self",
-      "expectedBehavior": "When you take the Dash action, your Speed increases by 10 feet for that action."
-    },
-    {
       "id": "BG-003",
       "name": "Charlatan",
       "type": "background",
       "handler": "src/services/combat/automation/handlers/backgroundHandler.js",
       "router": "src/services/combat/automation/routers/backgroundRouter.js",
       "infoBuilder": "src/services/combat/automation/infoBuilders/backgroundInfoBuilder.js",
-      "verified": "verified",
+      "verified": "not verified",
       "class": "Background",
       "triggerConditions": "",
       "expectedBehavior": "Once you were old enough to order an ale, you soon had a favorite stool in every tavern within ten miles of where you were born. As you traveled the circuit from pt1blic house to watering hole, you learned to prey on unfortunates who were in the market for a comforting lie or two-perhaps a sham potion or forged ancestry records.",
-      "notes": "data-granting only: ability_scores, feat, skill_proficiencies, tool_proficiencies — no combat automation"
+      "notes": "data-granting only: ability_scores, feat, skill_proficiencies, tool_proficiencies \u2014 no combat automation"
     },
     {
       "id": "SP-021",
@@ -1232,17 +1108,6 @@
     },
     {
       "id": "FT-024",
-      "name": "Chef",
-      "type": "feat",
-      "handler": "src/services/combat/automation/handlers/featHandler.js",
-      "router": "src/services/combat/automation/routers/featRouter.js",
-      "infoBuilder": "src/services/combat/automation/infoBuilders/featInfoBuilder.js",
-      "verified": "not verified",
-      "triggerConditions": "Trigger: short_rest_food_healing; Action: passive",
-      "expectedBehavior": "As part of a Short Rest, you can cook special food if you have ingredients and Cook's Utensils on hand. You can prepare enough of this food for a number of creatures equal to 4 plus your Proficiency Bonus. At the end of the Short Rest, any creature who eats the food and spends one or more Hit Dice to regain Hit Points regains an extra 1d8 Hit Points."
-    },
-    {
-      "id": "FT-025",
       "name": "Chef",
       "type": "feat",
       "handler": "src/services/combat/automation/handlers/featHandler.js",
@@ -1374,7 +1239,7 @@
     },
     {
       "id": "CLA-057",
-      "name": "Cloud's Jaunt – Goliath",
+      "name": "Cloud's Jaunt \u2013 Goliath",
       "type": "classFeature",
       "handler": "src/services/combat/automation/handlers/classFeatureHandler.js",
       "router": "src/services/combat/automation/routers/classFeatureRouter.js",
@@ -1409,18 +1274,6 @@
       "expectedBehavior": "A creature that has a Bardic Inspiration die from you can use it for one of the following effects. Defense. When the creature is hit by an attack roll, that creature can use its Reaction to roll the Bardic Inspiration die and add the number rolled to its AC against that attack, potentially causing the attack to miss. Offense. Immediately after the creature hits a target with an attack roll, the Creature can roll the Bardic Inspiration die and add the number rolled to the attack's damage against the target."
     },
     {
-      "id": "CLA-059",
-      "name": "Combat Inspiration",
-      "type": "classFeature",
-      "handler": "src/services/combat/automation/handlers/classFeatureHandler.js",
-      "router": "src/services/combat/automation/routers/classFeatureRouter.js",
-      "infoBuilder": "src/services/combat/automation/infoBuilders/classFeatureInfoBuilder.js",
-      "verified": "not verified",
-      "class": "Bard",
-      "triggerConditions": "Passive: Always active",
-      "expectedBehavior": "A creature that has a Bardic Inspiration die from you can use it for one of the following effects. Defense. When the creature is hit by an attack roll, that creature can use its Reaction to roll the Bardic Inspiration die and add the number rolled to its AC against that attack, potentially causing the attack to miss. Offense. Immediately after the creature hits a target with an attack roll, the Creature can roll the Bardic Inspiration die and add the number rolled to the attack's damage against the target."
-    },
-    {
       "id": "SP-025",
       "name": "Command",
       "type": "spell",
@@ -1434,7 +1287,7 @@
     },
     {
       "id": "MN-003",
-      "name": "Commander’s Strike",
+      "name": "Commander\u2019s Strike",
       "type": "maneuver",
       "handler": "src/services/combat/automation/handlers/maneuverHandler.js",
       "router": "src/services/combat/automation/routers/maneuverRouter.js",
@@ -1631,36 +1484,14 @@
       "handler": "src/services/combat/automation/handlers/backgroundHandler.js",
       "router": "src/services/combat/automation/routers/backgroundRouter.js",
       "infoBuilder": "src/services/combat/automation/infoBuilders/backgroundInfoBuilder.js",
-      "verified": "verified",
+      "verified": "not verified",
       "class": "Background",
       "triggerConditions": "",
       "expectedBehavior": "You eked out a living in dark alleyways, cutting purses or burgling shops. Perhaps you were part of a small gang of like-minded wrongdoers who looked out for each other. Or maybe you were a lone wolf, fending for yourself against the local thieves' guild and more fearsom lawbreakers.",
-      "notes": "data-granting only: ability_scores, feat, skill_proficiencies, tool_proficiencies — no combat automation"
+      "notes": "data-granting only: ability_scores, feat, skill_proficiencies, tool_proficiencies \u2014 no combat automation"
     },
     {
       "id": "FT-027",
-      "name": "Crossbow Expert",
-      "type": "feat",
-      "handler": "src/services/combat/automation/handlers/featHandler.js",
-      "router": "src/services/combat/automation/routers/featRouter.js",
-      "infoBuilder": "src/services/combat/automation/infoBuilders/featInfoBuilder.js",
-      "verified": "not verified",
-      "triggerConditions": "Passive: Always active",
-      "expectedBehavior": "You ignore the Loading property of the Hand Crossbow, Heavy Crossbow, and Light Crossbow (all called crossbows elsewhere in this feat). If you're holding one of them, you can load a piece of ammunition into it even if you lack a free hand."
-    },
-    {
-      "id": "FT-028",
-      "name": "Crossbow Expert",
-      "type": "feat",
-      "handler": "src/services/combat/automation/handlers/featHandler.js",
-      "router": "src/services/combat/automation/routers/featRouter.js",
-      "infoBuilder": "src/services/combat/automation/infoBuilders/featInfoBuilder.js",
-      "verified": "not verified",
-      "triggerConditions": "Passive: Always active",
-      "expectedBehavior": "You ignore the Loading property of the Hand Crossbow, Heavy Crossbow, and Light Crossbow (all called crossbows elsewhere in this feat). If you're holding one of them, you can load a piece of ammunition into it even if you lack a free hand."
-    },
-    {
-      "id": "FT-029",
       "name": "Crossbow Expert",
       "type": "feat",
       "handler": "src/services/combat/automation/handlers/featHandler.js",
@@ -1707,30 +1538,6 @@
       "expectedBehavior": "When you deal Sneak Attack damage, you can add one of the following Cunning Strike effects (each has a die cost - number of Sneak Attack damage dice you must forgo): Poison (Cost: 1d6). Add toxin, target makes Constitution save or has Poisoned condition for 1 minute (repeats save each turn). Must have Poisoner's Kit. Trip (Cost: 1d6). Large or smaller target makes Dexterity save or has Prone condition. Withdraw (Cost: 1d6). Immediately after attack, move up to half Speed without provoking Opportunity Attacks."
     },
     {
-      "id": "CLA-069",
-      "name": "Cunning Strike",
-      "type": "classFeature",
-      "handler": "src/services/combat/automation/handlers/classFeatureHandler.js",
-      "router": "src/services/combat/automation/routers/classFeatureRouter.js",
-      "infoBuilder": "src/services/combat/automation/infoBuilders/classFeatureInfoBuilder.js",
-      "verified": "not verified",
-      "class": "Rogue",
-      "triggerConditions": "Trigger: on hit; Once per turn: yes",
-      "expectedBehavior": "When you deal Sneak Attack damage, you can add one of the following Cunning Strike effects (each has a die cost - number of Sneak Attack damage dice you must forgo): Poison (Cost: 1d6). Add toxin, target makes Constitution save or has Poisoned condition for 1 minute (repeats save each turn). Must have Poisoner's Kit. Trip (Cost: 1d6). Large or smaller target makes Dexterity save or has Prone condition. Withdraw (Cost: 1d6). Immediately after attack, move up to half Speed without provoking Opportunity Attacks."
-    },
-    {
-      "id": "CLA-070",
-      "name": "Cunning Strike",
-      "type": "classFeature",
-      "handler": "src/services/combat/automation/handlers/classFeatureHandler.js",
-      "router": "src/services/combat/automation/routers/classFeatureRouter.js",
-      "infoBuilder": "src/services/combat/automation/infoBuilders/classFeatureInfoBuilder.js",
-      "verified": "not verified",
-      "class": "Rogue",
-      "triggerConditions": "Trigger: on hit; Once per turn: yes",
-      "expectedBehavior": "When you deal Sneak Attack damage, you can add one of the following Cunning Strike effects (each has a die cost - number of Sneak Attack damage dice you must forgo): Poison (Cost: 1d6). Add toxin, target makes Constitution save or has Poisoned condition for 1 minute (repeats save each turn). Must have Poisoner's Kit. Trip (Cost: 1d6). Large or smaller target makes Dexterity save or has Prone condition. Withdraw (Cost: 1d6). Immediately after attack, move up to half Speed without provoking Opportunity Attacks."
-    },
-    {
       "id": "SP-033",
       "name": "Cure Wounds",
       "type": "spell",
@@ -1756,7 +1563,7 @@
     },
     {
       "id": "CLA-072",
-      "name": "Damage Resistance – Dragonborn",
+      "name": "Damage Resistance \u2013 Dragonborn",
       "type": "classFeature",
       "handler": "src/services/combat/automation/handlers/classFeatureHandler.js",
       "router": "src/services/combat/automation/routers/classFeatureRouter.js",
@@ -1803,42 +1610,6 @@
     },
     {
       "id": "CLA-076",
-      "name": "Dazzling Footwork",
-      "type": "classFeature",
-      "handler": "src/services/combat/automation/handlers/classFeatureHandler.js",
-      "router": "src/services/combat/automation/routers/classFeatureRouter.js",
-      "infoBuilder": "src/services/combat/automation/infoBuilders/classFeatureInfoBuilder.js",
-      "verified": "not verified",
-      "class": "Bard",
-      "triggerConditions": "Automation type: undefined",
-      "expectedBehavior": "While you aren't wearing armor or wielding a shield, you gain the following benefits. Dance Virtuoso. You have Advantage on any Charisma (Performance) check you make that involves you dancing. Unarmored Defense. Your base Armor Class equals 10 plus your Dexterity and Charisma modifiers. Agile Strikes. When you expend a use of your Bardic Inspiration as part of an action, a Bonus Action, or a Reaction, you can make one Unarmed Strike as part of that action. Bardic Damage. You can use Dexterity instead of Strength for the attack rolls of your Unarmed Strikes. When you deal damage with an Unarmed Strike, you can deal Bludgeoning damage equal to a roll of your Bardic Inspiration die plus your Dexterity modifier, instead of the strike's normal damage."
-    },
-    {
-      "id": "CLA-077",
-      "name": "Dazzling Footwork",
-      "type": "classFeature",
-      "handler": "src/services/combat/automation/handlers/classFeatureHandler.js",
-      "router": "src/services/combat/automation/routers/classFeatureRouter.js",
-      "infoBuilder": "src/services/combat/automation/infoBuilders/classFeatureInfoBuilder.js",
-      "verified": "not verified",
-      "class": "Bard",
-      "triggerConditions": "Automation type: undefined",
-      "expectedBehavior": "While you aren't wearing armor or wielding a shield, you gain the following benefits. Dance Virtuoso. You have Advantage on any Charisma (Performance) check you make that involves you dancing. Unarmored Defense. Your base Armor Class equals 10 plus your Dexterity and Charisma modifiers. Agile Strikes. When you expend a use of your Bardic Inspiration as part of an action, a Bonus Action, or a Reaction, you can make one Unarmed Strike as part of that action. Bardic Damage. You can use Dexterity instead of Strength for the attack rolls of your Unarmed Strikes. When you deal damage with an Unarmed Strike, you can deal Bludgeoning damage equal to a roll of your Bardic Inspiration die plus your Dexterity modifier, instead of the strike's normal damage."
-    },
-    {
-      "id": "CLA-078",
-      "name": "Dazzling Footwork",
-      "type": "classFeature",
-      "handler": "src/services/combat/automation/handlers/classFeatureHandler.js",
-      "router": "src/services/combat/automation/routers/classFeatureRouter.js",
-      "infoBuilder": "src/services/combat/automation/infoBuilders/classFeatureInfoBuilder.js",
-      "verified": "not verified",
-      "class": "Bard",
-      "triggerConditions": "Automation type: undefined",
-      "expectedBehavior": "While you aren't wearing armor or wielding a shield, you gain the following benefits. Dance Virtuoso. You have Advantage on any Charisma (Performance) check you make that involves you dancing. Unarmored Defense. Your base Armor Class equals 10 plus your Dexterity and Charisma modifiers. Agile Strikes. When you expend a use of your Bardic Inspiration as part of an action, a Bonus Action, or a Reaction, you can make one Unarmed Strike as part of that action. Bardic Damage. You can use Dexterity instead of Strength for the attack rolls of your Unarmed Strikes. When you deal damage with an Unarmed Strike, you can deal Bludgeoning damage equal to a roll of your Bardic Inspiration die plus your Dexterity modifier, instead of the strike's normal damage."
-    },
-    {
-      "id": "CLA-079",
       "name": "Dazzling Footwork",
       "type": "classFeature",
       "handler": "src/services/combat/automation/handlers/classFeatureHandler.js",
@@ -2077,18 +1848,6 @@
       "expectedBehavior": "You can channel divine energy into your weapon strikes. When you hit a target with a weapon attack, you can deal extra radiant damage to the target. The damage increases when you reach certain levels. (Cleric class feature - may be domain-specific)"
     },
     {
-      "id": "CLA-094",
-      "name": "Divine Strike",
-      "type": "classFeature",
-      "handler": "src/services/combat/automation/handlers/classFeatureHandler.js",
-      "router": "src/services/combat/automation/routers/classFeatureRouter.js",
-      "infoBuilder": "src/services/combat/automation/infoBuilders/classFeatureInfoBuilder.js",
-      "verified": "not verified",
-      "class": "Cleric",
-      "triggerConditions": "Passive; Cleric Divine Domain feature",
-      "expectedBehavior": "You can channel divine energy into your weapon strikes. When you hit a target with a weapon attack, you can deal extra radiant damage to the target. The damage increases when you reach certain levels. (Cleric class feature - may be domain-specific)"
-    },
-    {
       "id": "BA-001",
       "name": "Dodge",
       "type": "baseAction",
@@ -2245,18 +2004,6 @@
       "expectedBehavior": "You gain a +2 bonus to damage rolls you make with melee weapons."
     },
     {
-      "id": "FT-031",
-      "name": "Dual Wielder",
-      "type": "feat",
-      "handler": "src/services/combat/automation/handlers/featHandler.js",
-      "router": "src/services/combat/automation/routers/featRouter.js",
-      "infoBuilder": "src/services/combat/automation/infoBuilders/featInfoBuilder.js",
-      "verified": "not verified",
-      "class": "Feat",
-      "triggerConditions": "Trigger: attack_action_with_light_weapon; Action: 1 bonus action",
-      "expectedBehavior": "When you take the Attack action on your turn and attack with a weapon that has the Light property, you can make one extra attack as a Bonus Action later on the same turn with a different weapon, which must be a Melee weapon that lacks the Two-Handed property. You don't add your ability modifier to the extra attack's damage unless that modifier is negative."
-    },
-    {
       "id": "FS-006",
       "name": "Dueling",
       "type": "fightingStyle",
@@ -2270,17 +2017,6 @@
     },
     {
       "id": "FT-032",
-      "name": "Durable",
-      "type": "feat",
-      "handler": "src/services/combat/automation/handlers/featHandler.js",
-      "router": "src/services/combat/automation/routers/featRouter.js",
-      "infoBuilder": "src/services/combat/automation/infoBuilders/featInfoBuilder.js",
-      "verified": "not verified",
-      "triggerConditions": "When making death_saving_throws checks",
-      "expectedBehavior": "You have Advantage on Death Saving Throws."
-    },
-    {
-      "id": "FT-033",
       "name": "Durable",
       "type": "feat",
       "handler": "src/services/combat/automation/handlers/featHandler.js",
@@ -2324,31 +2060,7 @@
       "verified": "not verified",
       "class": "Paladin",
       "triggerConditions": "Action: 1 bonus action; Duration: 1_minute",
-      "expectedBehavior": "As a Bonus Action you can imbue your Aura of Protection with primal power, granting the benefits below for 1 minute or until you end them (no action required). Once you use this feature, you can't use it again until you finish a Long Rest. You can also restore your use of it by expending a level 5 spell slot (no action required). Diminish Defiance: Enemies in aura have Disadvantage on saving throws against your spells and Channel Divinity options. Regeneration: At the start of each of your turns, you regain 10 HP. Swift Spells: Whenever you cast a spell that has a casting time of an action, you can cast it using a Bonus Action instead."
-    },
-    {
-      "id": "CLA-105",
-      "name": "Elder Champion",
-      "type": "classFeature",
-      "handler": "src/services/combat/automation/handlers/classFeatureHandler.js",
-      "router": "src/services/combat/automation/routers/classFeatureRouter.js",
-      "infoBuilder": "src/services/combat/automation/infoBuilders/classFeatureInfoBuilder.js",
-      "verified": "not verified",
-      "class": "Paladin",
-      "triggerConditions": "Action: 1 bonus action; Duration: 1_minute",
-      "expectedBehavior": "As a Bonus Action you can imbue your Aura of Protection with primal power, granting the benefits below for 1 minute or until you end them (no action required). Once you use this feature, you can't use it again until you finish a Long Rest. You can also restore your use of it by expending a level 5 spell slot (no action required). Diminish Defiance: Enemies in aura have Disadvantage on saving throws against your spells and Channel Divinity options. Regeneration: At the start of each of your turns, you regain 10 HP. Swift Spells: Whenever you cast a spell that has a casting time of an action, you can cast it using a Bonus Action instead."
-    },
-    {
-      "id": "CLA-106",
-      "name": "Elder Champion",
-      "type": "classFeature",
-      "handler": "src/services/combat/automation/handlers/classFeatureHandler.js",
-      "router": "src/services/combat/automation/routers/classFeatureRouter.js",
-      "infoBuilder": "src/services/combat/automation/infoBuilders/classFeatureInfoBuilder.js",
-      "verified": "not verified",
-      "class": "Paladin",
-      "triggerConditions": "Action: 1 bonus action; Duration: 1_minute",
-      "expectedBehavior": "As a Bonus Action you can imbue your Aura of Protection with primal power, granting the benefits below for 1 minute or until you end them (no action required). Once you use this feature, you can't use it again until you finish a Long Rest. You can also restore your use of it by expending a level 5 spell slot (no action required). Diminish Defiance: Enemies in aura have Disadvantage on saving throws against your spells and Channel Divinity options. Regeneration: At the start of each of your turns, you regain 10 HP. Swift Spells: Whenever you cast a spell that has a casting time of an action, you can cast it using a Bonus Action instead."
+      "expectedBehavior": "As a Bonus Action you can imbue your Aura of Protection with primal power, granting the benefits below for 1 minute or until you end them (no action required). Once you use this feature, you can't use it again until you finish a Long Rest. You can also restore your use of it by expending a level 5 spell slot (no action required). Diminish Defiance: Enemies in aura have Disadvantage on saving throws against your spells and Channel Divinity options. Regeneration: At the start of each of your turns, you regain 10 HP"
     },
     {
       "id": "CLA-107",
@@ -2446,30 +2158,6 @@
       "expectedBehavior": "While your Elemental Attunement is active, you also gain the following benefits. Damage Resistance: You gain Resistance to one of the following damage types of your choice: Acid, Cold, Fire, Lightning, or Thunder. At the start of each of your turns, you can change this choice. Destructive Stride: When you use your Step of the Wind, your Speed increases by 20 feet until the end of the turn. For that duration, any creature of your choice takes damage equal to one roll of your Martial Arts die when you enter a space within 5 feet of it. The damage type is your choice of Acid, Cold, Fire, Lightning, or Thunder. A creature can take this damage only once per turn. Empowered Strikes: Once on each of your turns, you can deal extra damage to a target equal to one roll of your Martial Arts die when you hit it with an Unarmed Strike. The extra damage is the same type dealt by that strike."
     },
     {
-      "id": "CLA-114",
-      "name": "Elemental Epitome",
-      "type": "classFeature",
-      "handler": "src/services/combat/automation/handlers/classFeatureHandler.js",
-      "router": "src/services/combat/automation/routers/classFeatureRouter.js",
-      "infoBuilder": "src/services/combat/automation/infoBuilders/classFeatureInfoBuilder.js",
-      "verified": "not verified",
-      "class": "Monk",
-      "triggerConditions": "Action: passive",
-      "expectedBehavior": "While your Elemental Attunement is active, you also gain the following benefits. Damage Resistance: You gain Resistance to one of the following damage types of your choice: Acid, Cold, Fire, Lightning, or Thunder. At the start of each of your turns, you can change this choice. Destructive Stride: When you use your Step of the Wind, your Speed increases by 20 feet until the end of the turn. For that duration, any creature of your choice takes damage equal to one roll of your Martial Arts die when you enter a space within 5 feet of it. The damage type is your choice of Acid, Cold, Fire, Lightning, or Thunder. A creature can take this damage only once per turn. Empowered Strikes: Once on each of your turns, you can deal extra damage to a target equal to one roll of your Martial Arts die when you hit it with an Unarmed Strike. The extra damage is the same type dealt by that strike."
-    },
-    {
-      "id": "CLA-115",
-      "name": "Elemental Epitome",
-      "type": "classFeature",
-      "handler": "src/services/combat/automation/handlers/classFeatureHandler.js",
-      "router": "src/services/combat/automation/routers/classFeatureRouter.js",
-      "infoBuilder": "src/services/combat/automation/infoBuilders/classFeatureInfoBuilder.js",
-      "verified": "not verified",
-      "class": "Monk",
-      "triggerConditions": "Action: passive",
-      "expectedBehavior": "While your Elemental Attunement is active, you also gain the following benefits. Damage Resistance: You gain Resistance to one of the following damage types of your choice: Acid, Cold, Fire, Lightning, or Thunder. At the start of each of your turns, you can change this choice. Destructive Stride: When you use your Step of the Wind, your Speed increases by 20 feet until the end of the turn. For that duration, any creature of your choice takes damage equal to one roll of your Martial Arts die when you enter a space within 5 feet of it. The damage type is your choice of Acid, Cold, Fire, Lightning, or Thunder. A creature can take this damage only once per turn. Empowered Strikes: Once on each of your turns, you can deal extra damage to a target equal to one roll of your Martial Arts die when you hit it with an Unarmed Strike. The extra damage is the same type dealt by that strike."
-    },
-    {
       "id": "CLA-116",
       "name": "Elemental Fury",
       "type": "classFeature",
@@ -2482,20 +2170,8 @@
       "expectedBehavior": "The might of the elements flows through you. You gain one of the following options of your choice. Potent Spellcasting: Add your Wisdom modifier to the damage you deal with any Druid cantrip. Primal Strike: Once on each of your turns when you hit a creature with an attack roll using a weapon or a Beast form's attack in Wild Shape, you can cause the target to take an extra 1d8 Cold, Fire, Lightning, or Thunder damage (choose when you hit)."
     },
     {
-      "id": "CLA-117",
-      "name": "Elemental Fury",
-      "type": "classFeature",
-      "handler": "src/services/combat/automation/handlers/classFeatureHandler.js",
-      "router": "src/services/combat/automation/routers/classFeatureRouter.js",
-      "infoBuilder": "src/services/combat/automation/infoBuilders/classFeatureInfoBuilder.js",
-      "verified": "not verified",
-      "class": "Druid",
-      "triggerConditions": "Trigger: weapon_or_beast_form_attack_hit; Once per turn: yes",
-      "expectedBehavior": "The might of the elements flows through you. You gain one of the following options of your choice. Potent Spellcasting: Add your Wisdom modifier to the damage you deal with any Druid cantrip. Primal Strike: Once on each of your turns when you hit a creature with an attack roll using a weapon or a Beast form's attack in Wild Shape, you can cause the target to take an extra 1d8 Cold, Fire, Lightning, or Thunder damage (choose when you hit)."
-    },
-    {
       "id": "CLA-118",
-      "name": "Elfish Lineage – Elf",
+      "name": "Elfish Lineage \u2013 Elf",
       "type": "classFeature",
       "handler": "src/services/combat/automation/handlers/classFeatureHandler.js",
       "router": "src/services/combat/automation/routers/classFeatureRouter.js",
@@ -2583,11 +2259,11 @@
       "handler": "src/services/combat/automation/handlers/backgroundHandler.js",
       "router": "src/services/combat/automation/routers/backgroundRouter.js",
       "infoBuilder": "src/services/combat/automation/infoBuilders/backgroundInfoBuilder.js",
-      "verified": "verified",
+      "verified": "not verified",
       "class": "Background",
       "triggerConditions": "",
-      "expectedBehavior": "You spent much of your youth following roving fairs and carnivals, performing odd jobs for musicians and acrobats in exchange for· lessons. You may have learned how to walk a tightrope, how to play a lute in a distinct style, or how to recite poetry with impeccable diction. To this day, you thrive on applause and long for the stage.",
-      "notes": "data-granting only: ability_scores, feat, skill_proficiencies, tool_proficiencies — no combat automation"
+      "expectedBehavior": "You spent much of your youth following roving fairs and carnivals, performing odd jobs for musicians and acrobats in exchange for\u00b7 lessons. You may have learned how to walk a tightrope, how to play a lute in a distinct style, or how to recite poetry with impeccable diction. To this day, you thrive on applause and long for the stage.",
+      "notes": "data-granting only: ability_scores, feat, skill_proficiencies, tool_proficiencies \u2014 no combat automation"
     },
     {
       "id": "CLA-123",
@@ -2660,18 +2336,6 @@
       "class": "Ranger",
       "triggerConditions": "Action: 1 bonus action",
       "expectedBehavior": "When commanding Primal Companion to take an action, also command it to take Dash, Disengage, Dodge, or Help action using its Bonus Action. It can deal Force damage or its normal damage type."
-    },
-    {
-      "id": "SP-041",
-      "name": "Expeditious Retreat",
-      "type": "spell",
-      "handler": "src/services/combat/automation/handlers/spellHandler.js",
-      "router": "src/services/combat/automation/routers/spellRouter.js",
-      "infoBuilder": "src/services/combat/automation/infoBuilders/spellInfoBuilder.js",
-      "verified": "not verified",
-      "class": "Spell",
-      "triggerConditions": "",
-      "expectedBehavior": "You take the Dash action, and until the spell ends, you can take that action again as a Bonus Action."
     },
     {
       "id": "CLA-128",
@@ -2764,11 +2428,11 @@
       "handler": "src/services/combat/automation/handlers/backgroundHandler.js",
       "router": "src/services/combat/automation/routers/backgroundRouter.js",
       "infoBuilder": "src/services/combat/automation/infoBuilders/backgroundInfoBuilder.js",
-      "verified": "verified",
+      "verified": "not verified",
       "class": "Background",
       "triggerConditions": "",
       "expectedBehavior": "You grew up close to the land. Years tending animals and ct1ltivating the earth rewarded you with patience and good health. You have a lceen appreciation for nature's bounty alongside a healthy respect for nature's wrath.",
-      "notes": "data-granting only: ability_scores, feat, skill_proficiencies, tool_proficiencies — no combat automation"
+      "notes": "data-granting only: ability_scores, feat, skill_proficiencies, tool_proficiencies \u2014 no combat automation"
     },
     {
       "id": "CLA-132",
@@ -2963,7 +2627,7 @@
     },
     {
       "id": "CLA-141",
-      "name": "Fire's Burn – Goliath",
+      "name": "Fire's Burn \u2013 Goliath",
       "type": "classFeature",
       "handler": "src/services/combat/automation/handlers/classFeatureHandler.js",
       "router": "src/services/combat/automation/routers/classFeatureRouter.js",
@@ -2972,18 +2636,6 @@
       "class": "Fire Giant",
       "triggerConditions": "On hit with attack roll; Uses: proficiency_bonus, recharges on long rest",
       "expectedBehavior": "When you hit a target with an attack roll and deal damage to it, you can also deal 1d10 Fire damage. (Fire Giant subrace of Goliath)"
-    },
-    {
-      "id": "CLA-142",
-      "name": "Fleet Step",
-      "type": "classFeature",
-      "handler": "src/services/combat/automation/handlers/classFeatureHandler.js",
-      "router": "src/services/combat/automation/routers/classFeatureRouter.js",
-      "infoBuilder": "src/services/combat/automation/infoBuilders/classFeatureInfoBuilder.js",
-      "verified": "not verified",
-      "class": "Monk",
-      "triggerConditions": "",
-      "expectedBehavior": "When you take a Bonus Action other than Step of the Wind, you can also use Step of the Wind immediately after that Bonus Action."
     },
     {
       "id": "SP-050",
@@ -3095,7 +2747,7 @@
     },
     {
       "id": "CLA-148",
-      "name": "Frost's Chill – Goliath",
+      "name": "Frost's Chill \u2013 Goliath",
       "type": "classFeature",
       "handler": "src/services/combat/automation/handlers/classFeatureHandler.js",
       "router": "src/services/combat/automation/routers/classFeatureRouter.js",
@@ -3155,7 +2807,7 @@
     },
     {
       "id": "CLA-151",
-      "name": "Gnomish Cunning – Gnome",
+      "name": "Gnomish Cunning \u2013 Gnome",
       "type": "classFeature",
       "handler": "src/services/combat/automation/handlers/classFeatureHandler.js",
       "router": "src/services/combat/automation/routers/classFeatureRouter.js",
@@ -3166,7 +2818,7 @@
     },
     {
       "id": "CLA-152",
-      "name": "Gnomish Lineage – Gnome",
+      "name": "Gnomish Lineage \u2013 Gnome",
       "type": "classFeature",
       "handler": "src/services/combat/automation/handlers/classFeatureHandler.js",
       "router": "src/services/combat/automation/routers/classFeatureRouter.js",
@@ -3201,28 +2853,6 @@
     },
     {
       "id": "FT-036",
-      "name": "Grappler",
-      "type": "feat",
-      "handler": "src/services/combat/automation/handlers/featHandler.js",
-      "router": "src/services/combat/automation/routers/featRouter.js",
-      "infoBuilder": "src/services/combat/automation/infoBuilders/featInfoBuilder.js",
-      "verified": "not verified",
-      "triggerConditions": "Action: action",
-      "expectedBehavior": "When you hit a creature with an Unarmed Strike as part of the Attack action on your turn, you can use both the Damage and the Grapple option. You can use this benefit only once per turn."
-    },
-    {
-      "id": "FT-037",
-      "name": "Grappler",
-      "type": "feat",
-      "handler": "src/services/combat/automation/handlers/featHandler.js",
-      "router": "src/services/combat/automation/routers/featRouter.js",
-      "infoBuilder": "src/services/combat/automation/infoBuilders/featInfoBuilder.js",
-      "verified": "not verified",
-      "triggerConditions": "Action: action",
-      "expectedBehavior": "When you hit a creature with an Unarmed Strike as part of the Attack action on your turn, you can use both the Damage and the Grapple option. You can use this benefit only once per turn."
-    },
-    {
-      "id": "FT-038",
       "name": "Grappler",
       "type": "feat",
       "handler": "src/services/combat/automation/handlers/featHandler.js",
@@ -3328,28 +2958,17 @@
       "expectedBehavior": "When you hit a creature with a weapon that has the Heavy property as part of the Attack action on your turn, you can cause the weapon to deal extra damage to the target. The extra damage equals your Proficiency Bonus."
     },
     {
-      "id": "FT-040",
-      "name": "Great Weapon Master",
-      "type": "feat",
-      "handler": "src/services/combat/automation/handlers/featHandler.js",
-      "router": "src/services/combat/automation/routers/featRouter.js",
-      "infoBuilder": "src/services/combat/automation/infoBuilders/featInfoBuilder.js",
-      "verified": "not verified",
-      "triggerConditions": "Trigger: melee_heavy_weapon_hit; Once per turn: no",
-      "expectedBehavior": "When you hit a creature with a weapon that has the Heavy property as part of the Attack action on your turn, you can cause the weapon to deal extra damage to the target. The extra damage equals your Proficiency Bonus."
-    },
-    {
       "id": "BG-007",
       "name": "Guard",
       "type": "background",
       "handler": "src/services/combat/automation/handlers/backgroundHandler.js",
       "router": "src/services/combat/automation/routers/backgroundRouter.js",
       "infoBuilder": "src/services/combat/automation/infoBuilders/backgroundInfoBuilder.js",
-      "verified": "verified",
+      "verified": "not verified",
       "class": "Background",
       "triggerConditions": "",
       "expectedBehavior": "Your feet ache when you remember the countless hours you spent at your post in the tower. You were trained to l<eep one eye looking outside the wall, watching for marauders sweeping from the nearby forest, and your other eye looking inside the wall, searching for cutpurses and troublemakers.",
-      "notes": "data-granting only: ability_scores, feat, skill_proficiencies, tool_proficiencies — no combat automation"
+      "notes": "data-granting only: ability_scores, feat, skill_proficiencies, tool_proficiencies \u2014 no combat automation"
     },
     {
       "id": "CLA-155",
@@ -3370,25 +2989,14 @@
       "handler": "src/services/combat/automation/handlers/backgroundHandler.js",
       "router": "src/services/combat/automation/routers/backgroundRouter.js",
       "infoBuilder": "src/services/combat/automation/infoBuilders/backgroundInfoBuilder.js",
-      "verified": "verified",
+      "verified": "not verified",
       "class": "Background",
       "triggerConditions": "",
       "expectedBehavior": "You came of age outdoors, far from settled lands. Your home was anywhere you chose to spread your bedroll. There are wonders in the wilderness-strange monsters, pristine forests and streams, overgrown ruins of great halls once trod by giants and you learned to fend for yourself as you explored them. From time to time, you guided friendly nature priests who instructed you in the fundamentals of channeling the magic of the wild.",
-      "notes": "data-granting only: ability_scores, feat, skill_proficiencies, tool_proficiencies — no combat automation"
+      "notes": "data-granting only: ability_scores, feat, skill_proficiencies, tool_proficiencies \u2014 no combat automation"
     },
     {
       "id": "FT-041",
-      "name": "Sentinel",
-      "type": "feat",
-      "handler": "src/services/combat/automation/handlers/featHandler.js",
-      "router": "src/services/combat/automation/routers/featRouter.js",
-      "infoBuilder": "src/services/combat/automation/infoBuilders/featInfoBuilder.js",
-      "verified": "not verified",
-      "triggerConditions": "Trigger: creature_disengages_or_hits_other_within_5ft; Action: 1 reaction; Range: 5_ft",
-      "expectedBehavior": "Immediately after a creature within 5 feet of you takes the Disengage action or hits a target other than you with an attack, you can make an Opportunity Attack against that creature."
-    },
-    {
-      "id": "FT-042",
       "name": "Sentinel",
       "type": "feat",
       "handler": "src/services/combat/automation/handlers/featHandler.js",
@@ -3409,18 +3017,6 @@
       "class": "Cleric",
       "triggerConditions": "Trigger: missed_attack_roll_within_30ft",
       "expectedBehavior": "When you or a creature within 30 feet of you misses with an attack roll, you can expend one use of your Channel Divinity and give that roll a +10 bonus, potentially causing it to hit."
-    },
-    {
-      "id": "CLA-157",
-      "name": "Halfling Nimbleness",
-      "type": "classFeature",
-      "handler": "src/services/combat/automation/handlers/classFeatureHandler.js",
-      "router": "src/services/combat/automation/routers/classFeatureRouter.js",
-      "infoBuilder": "src/services/combat/automation/infoBuilders/classFeatureInfoBuilder.js",
-      "verified": "not verified",
-      "race": "Halfling",
-      "triggerConditions": "",
-      "expectedBehavior": "You can move through the space of any creature that is a size larger than you, but you can't stop in the same space."
     },
     {
       "id": "CLA-158",
@@ -3687,7 +3283,7 @@
     },
     {
       "id": "CLA-169",
-      "name": "Hill's Tumble – Goliath",
+      "name": "Hill's Tumble \u2013 Goliath",
       "type": "classFeature",
       "handler": "src/services/combat/automation/handlers/classFeatureHandler.js",
       "router": "src/services/combat/automation/routers/classFeatureRouter.js",
@@ -3743,31 +3339,7 @@
       "verified": "not verified",
       "class": "Paladin",
       "triggerConditions": "Automation type: undefined",
-      "expectedBehavior": "As a Bonus Action, you can imbue your Aura of Protection with holy power, granting the benefits below for 10 minutes or until you end them (no action required). Once you use this feature, you can't use it again until you finish a Long Rest. You can also restore your use of it by expending a level 5 spell slot (no action required). Holy Ward: You have Advantage on any saving throw you are forced to make by a Fiend or an Undead. Radiant Damage: Whenever an enemy starts its turn in the aura, that creature takes Radiant damage equal to your Charisma modifier plus your Proficiency Bonus. Sunlight: The aura is filled with Bright Light that is sunlight."
-    },
-    {
-      "id": "CLA-171",
-      "name": "Holy Nimbus",
-      "type": "classFeature",
-      "handler": "src/services/combat/automation/handlers/classFeatureHandler.js",
-      "router": "src/services/combat/automation/routers/classFeatureRouter.js",
-      "infoBuilder": "src/services/combat/automation/infoBuilders/classFeatureInfoBuilder.js",
-      "verified": "not verified",
-      "class": "Paladin",
-      "triggerConditions": "Automation type: undefined",
-      "expectedBehavior": "As a Bonus Action, you can imbue your Aura of Protection with holy power, granting the benefits below for 10 minutes or until you end them (no action required). Once you use this feature, you can't use it again until you finish a Long Rest. You can also restore your use of it by expending a level 5 spell slot (no action required). Holy Ward: You have Advantage on any saving throw you are forced to make by a Fiend or an Undead. Radiant Damage: Whenever an enemy starts its turn in the aura, that creature takes Radiant damage equal to your Charisma modifier plus your Proficiency Bonus. Sunlight: The aura is filled with Bright Light that is sunlight."
-    },
-    {
-      "id": "CLA-172",
-      "name": "Holy Nimbus",
-      "type": "classFeature",
-      "handler": "src/services/combat/automation/handlers/classFeatureHandler.js",
-      "router": "src/services/combat/automation/routers/classFeatureRouter.js",
-      "infoBuilder": "src/services/combat/automation/infoBuilders/classFeatureInfoBuilder.js",
-      "verified": "not verified",
-      "class": "Paladin",
-      "triggerConditions": "Automation type: undefined",
-      "expectedBehavior": "As a Bonus Action, you can imbue your Aura of Protection with holy power, granting the benefits below for 10 minutes or until you end them (no action required). Once you use this feature, you can't use it again until you finish a Long Rest. You can also restore your use of it by expending a level 5 spell slot (no action required). Holy Ward: You have Advantage on any saving throw you are forced to make by a Fiend or an Undead. Radiant Damage: Whenever an enemy starts its turn in the aura, that creature takes Radiant damage equal to your Charisma modifier plus your Proficiency Bonus. Sunlight: The aura is filled with Bright Light that is sunlight."
+      "expectedBehavior": "As a Bonus Action, you can imbue your Aura of Protection with holy power, granting the benefits below for 10 minutes or until you end them (no action required). Once you use this feature, you can't use it again until you finish a Long Rest. You can also restore your use of it by expending a level 5 spell slot (no action required). Holy Ward: You have Advantage on any saving throw you are forced to make by a Fiend or an Undead. Radiant Damage: Whenever an enemy starts its turn in the aura, that creature takes Radiant damage equal to your Charisma modifier plus your Proficiency Bonus"
     },
     {
       "id": "CLA-173",
@@ -3926,31 +3498,7 @@
       "expectedBehavior": "You have honed new ways to attack furiously. Also, since these 2 have combat effect we can automate, The following effects are now among your Brutal Strike options. Staggering Blow: The target has Disadvantage on the next saving throw it makes, and it can't make Opportunity Attacks until the start of your next turn. Sundering Blow: Before the start of your next turn, the next attack roll made by another creature against the target gains a +5 bonus to the roll. An attack roll can gain only one Sundering Blow bonus."
     },
     {
-      "id": "CLA-183",
-      "name": "Improved Brutal Strike",
-      "type": "classFeature",
-      "handler": "src/services/combat/automation/handlers/classFeatureHandler.js",
-      "router": "src/services/combat/automation/routers/classFeatureRouter.js",
-      "infoBuilder": "src/services/combat/automation/infoBuilders/classFeatureInfoBuilder.js",
-      "verified": "not verified",
-      "class": "Barbarian",
-      "triggerConditions": "Trigger: strength_attack_hit_after_reckless; Once per turn: yes",
-      "expectedBehavior": "You have honed new ways to attack furiously. Also, since these 2 have combat effect we can automate, The following effects are now among your Brutal Strike options. Staggering Blow: The target has Disadvantage on the next saving throw it makes, and it can't make Opportunity Attacks until the start of your next turn. Sundering Blow: Before the start of your next turn, the next attack roll made by another creature against the target gains a +5 bonus to the roll. An attack roll can gain only one Sundering Blow bonus."
-    },
-    {
       "id": "CLA-184",
-      "name": "Improved Circle Forms",
-      "type": "classFeature",
-      "handler": "src/services/combat/automation/handlers/classFeatureHandler.js",
-      "router": "src/services/combat/automation/routers/classFeatureRouter.js",
-      "infoBuilder": "src/services/combat/automation/infoBuilders/classFeatureInfoBuilder.js",
-      "verified": "not verified",
-      "class": "Druid",
-      "triggerConditions": "Automation type: undefined",
-      "expectedBehavior": "While in a Wild Shape form, you gain the following benefits. Lunar Radiance: Each of your attacks in a Wild Shape form can deal its normal damage type or Radiant damage. You make this choice each time you hit with those attacks. Increased Toughness: You can add your Wisdom modifier to your Constitution saving throws."
-    },
-    {
-      "id": "CLA-185",
       "name": "Improved Circle Forms",
       "type": "classFeature",
       "handler": "src/services/combat/automation/handlers/classFeatureHandler.js",
@@ -4285,7 +3833,7 @@
     },
     {
       "id": "CLA-209",
-      "name": "Large Form – Goliath",
+      "name": "Large Form \u2013 Goliath",
       "type": "classFeature",
       "handler": "src/services/combat/automation/handlers/classFeatureHandler.js",
       "router": "src/services/combat/automation/routers/classFeatureRouter.js",
@@ -4367,30 +3915,6 @@
       "expectedBehavior": "Bonus Action for 10 minutes. Charismatic: Advantage on all Charisma checks. Saving Throw Reroll: Reaction to reroll failed save. Unerring Strike: once per turn, cause missed weapon attack to hit."
     },
     {
-      "id": "CLA-214",
-      "name": "Living Legend",
-      "type": "classFeature",
-      "handler": "src/services/combat/automation/handlers/classFeatureHandler.js",
-      "router": "src/services/combat/automation/routers/classFeatureRouter.js",
-      "infoBuilder": "src/services/combat/automation/infoBuilders/classFeatureInfoBuilder.js",
-      "verified": "not verified",
-      "class": "Paladin",
-      "triggerConditions": "Action: 1 bonus action; Duration: 10_minutes",
-      "expectedBehavior": "Bonus Action for 10 minutes. Charismatic: Advantage on all Charisma checks. Saving Throw Reroll: Reaction to reroll failed save. Unerring Strike: once per turn, cause missed weapon attack to hit."
-    },
-    {
-      "id": "CLA-215",
-      "name": "Living Legend",
-      "type": "classFeature",
-      "handler": "src/services/combat/automation/handlers/classFeatureHandler.js",
-      "router": "src/services/combat/automation/routers/classFeatureRouter.js",
-      "infoBuilder": "src/services/combat/automation/infoBuilders/classFeatureInfoBuilder.js",
-      "verified": "not verified",
-      "class": "Paladin",
-      "triggerConditions": "Action: 1 bonus action; Duration: 10_minutes",
-      "expectedBehavior": "Bonus Action for 10 minutes. Charismatic: Advantage on all Charisma checks. Saving Throw Reroll: Reaction to reroll failed save. Unerring Strike: once per turn, cause missed weapon attack to hit."
-    },
-    {
       "id": "SP-073",
       "name": "Longstrider",
       "type": "spell",
@@ -4404,28 +3928,6 @@
     },
     {
       "id": "FT-049",
-      "name": "Lucky",
-      "type": "feat",
-      "handler": "src/services/combat/automation/handlers/featHandler.js",
-      "router": "src/services/combat/automation/routers/featRouter.js",
-      "infoBuilder": "src/services/combat/automation/infoBuilders/featInfoBuilder.js",
-      "verified": "not verified",
-      "triggerConditions": "Action: reaction",
-      "expectedBehavior": "When you roll a d20 for a D20 Test, you can spend 1 Luck Point to give yourself Advantage on the roll."
-    },
-    {
-      "id": "FT-050",
-      "name": "Lucky",
-      "type": "feat",
-      "handler": "src/services/combat/automation/handlers/featHandler.js",
-      "router": "src/services/combat/automation/routers/featRouter.js",
-      "infoBuilder": "src/services/combat/automation/infoBuilders/featInfoBuilder.js",
-      "verified": "not verified",
-      "triggerConditions": "Action: reaction",
-      "expectedBehavior": "When you roll a d20 for a D20 Test, you can spend 1 Luck Point to give yourself Advantage on the roll."
-    },
-    {
-      "id": "FT-051",
       "name": "Lucky",
       "type": "feat",
       "handler": "src/services/combat/automation/handlers/featHandler.js",
@@ -4507,17 +4009,6 @@
       "expectedBehavior": "When you damage a creature that is concentrating, it has Disadvantage on the saving throw it makes to maintain Concentration."
     },
     {
-      "id": "FT-053",
-      "name": "Mage Slayer",
-      "type": "feat",
-      "handler": "src/services/combat/automation/handlers/featHandler.js",
-      "router": "src/services/combat/automation/routers/featRouter.js",
-      "infoBuilder": "src/services/combat/automation/infoBuilders/featInfoBuilder.js",
-      "verified": "not verified",
-      "triggerConditions": "Passive: Always active",
-      "expectedBehavior": "When you damage a creature that is concentrating, it has Disadvantage on the saving throw it makes to maintain Concentration."
-    },
-    {
       "id": "FT-054",
       "name": "Magic Initiate",
       "type": "feat",
@@ -4543,7 +4034,7 @@
     },
     {
       "id": "CLA-219",
-      "name": "Magical Ambush – Rogue – Arcane Trickster",
+      "name": "Magical Ambush \u2013 Rogue \u2013 Arcane Trickster",
       "type": "classFeature",
       "handler": "src/services/combat/automation/handlers/classFeatureHandler.js",
       "router": "src/services/combat/automation/routers/classFeatureRouter.js",
@@ -4694,7 +4185,7 @@
       "verified": "not verified",
       "class": "Spell",
       "triggerConditions": "Range: 60 feet; Duration: 24 hours",
-      "expectedBehavior": "You suggest a course of activity—described in no more than 25 words—to twelve or fewer creatures you can see within range that can hear and understand you. The suggestion must sound achievable and not involve anything that would obviously deal damage to any of the targets or their allies. Each target must succeed on a Wisdom saving throw or have the Charmed condition for the duration or until you or your allies deal damage to the target. Each Charmed target pursues the suggestion to the best of its ability. The suggested activity can continue for the entire duration, but if the suggested activity can be completed in a shorter time, the spell ends for a target upon completing it."
+      "expectedBehavior": "You suggest a course of activity\u2014described in no more than 25 words\u2014to twelve or fewer creatures you can see within range that can hear and understand you. The suggestion must sound achievable and not involve anything that would obviously deal damage to any of the targets or their allies. Each target must succeed on a Wisdom saving throw or have the Charmed condition for the duration or until you or your allies deal damage to the target. Each Charmed target pursues the suggestion to the best of its ability. The suggested activity can continue for the entire duration, but if the suggested activity can be completed in a shorter time, the spell ends for a target upon completing it."
     },
     {
       "id": "SP-080",
@@ -4750,11 +4241,11 @@
       "handler": "src/services/combat/automation/handlers/backgroundHandler.js",
       "router": "src/services/combat/automation/routers/backgroundRouter.js",
       "infoBuilder": "src/services/combat/automation/infoBuilders/backgroundInfoBuilder.js",
-      "verified": "verified",
+      "verified": "not verified",
       "class": "Background",
       "triggerConditions": "",
       "expectedBehavior": "You were apprenticed to a trader, caravan master, or shopkeeper, learning the fundamentals of commerce. You traveled broadly, and you earned a living by buying and selling the raw materials artisans need to practice their craft or finished works from such crafters. You might have transported goods from one place to another (by ship, wagon, or caravan) or bought them from traveling traders and sold them in your own shop.",
-      "notes": "data-granting only: ability_scores, feat, skill_proficiencies, tool_proficiencies — no combat automation"
+      "notes": "data-granting only: ability_scores, feat, skill_proficiencies, tool_proficiencies \u2014 no combat automation"
     },
     {
       "id": "MM-001",
@@ -4766,79 +4257,7 @@
       "verified": "not verified",
       "class": "Sorcerer",
       "triggerConditions": "Applied when casting a sorcerer spell using a metamagic option",
-      "expectedBehavior": "Apply a Metamagic option when casting a sorcerer spell. Options include: Careful Spell, Distant Spell, Empowered Spell, Extended Spell, Heightened Spell, Quickened Spell, Subtle Spell, Twinned Spell. Each costs sorcery points."
-    },
-    {
-      "id": "MM-002",
-      "name": "Metamagic",
-      "type": "metamagic",
-      "handler": "src/services/combat/automation/handlers/metamagicHandler.js",
-      "router": "src/services/combat/automation/routers/metamagicRouter.js",
-      "infoBuilder": "src/services/combat/automation/infoBuilders/metamagicInfoBuilder.js",
-      "verified": "not verified",
-      "class": "Sorcerer",
-      "triggerConditions": "Applied when casting a sorcerer spell using a metamagic option",
-      "expectedBehavior": "Apply a Metamagic option when casting a sorcerer spell. Options include: Careful Spell, Distant Spell, Empowered Spell, Extended Spell, Heightened Spell, Quickened Spell, Subtle Spell, Twinned Spell. Each costs sorcery points."
-    },
-    {
-      "id": "MM-003",
-      "name": "Metamagic",
-      "type": "metamagic",
-      "handler": "src/services/combat/automation/handlers/metamagicHandler.js",
-      "router": "src/services/combat/automation/routers/metamagicRouter.js",
-      "infoBuilder": "src/services/combat/automation/infoBuilders/metamagicInfoBuilder.js",
-      "verified": "not verified",
-      "class": "Sorcerer",
-      "triggerConditions": "Applied when casting a sorcerer spell using a metamagic option",
-      "expectedBehavior": "Apply a Metamagic option when casting a sorcerer spell. Options include: Careful Spell, Distant Spell, Empowered Spell, Extended Spell, Heightened Spell, Quickened Spell, Subtle Spell, Twinned Spell. Each costs sorcery points."
-    },
-    {
-      "id": "MM-004",
-      "name": "Metamagic",
-      "type": "metamagic",
-      "handler": "src/services/combat/automation/handlers/metamagicHandler.js",
-      "router": "src/services/combat/automation/routers/metamagicRouter.js",
-      "infoBuilder": "src/services/combat/automation/infoBuilders/metamagicInfoBuilder.js",
-      "verified": "not verified",
-      "class": "Sorcerer",
-      "triggerConditions": "Applied when casting a sorcerer spell using a metamagic option",
-      "expectedBehavior": "Apply a Metamagic option when casting a sorcerer spell. Options include: Careful Spell, Distant Spell, Empowered Spell, Extended Spell, Heightened Spell, Quickened Spell, Subtle Spell, Twinned Spell. Each costs sorcery points."
-    },
-    {
-      "id": "MM-005",
-      "name": "Metamagic",
-      "type": "metamagic",
-      "handler": "src/services/combat/automation/handlers/metamagicHandler.js",
-      "router": "src/services/combat/automation/routers/metamagicRouter.js",
-      "infoBuilder": "src/services/combat/automation/infoBuilders/metamagicInfoBuilder.js",
-      "verified": "not verified",
-      "class": "Sorcerer",
-      "triggerConditions": "Applied when casting a sorcerer spell using a metamagic option",
-      "expectedBehavior": "Apply a Metamagic option when casting a sorcerer spell. Options include: Careful Spell, Distant Spell, Empowered Spell, Extended Spell, Heightened Spell, Quickened Spell, Subtle Spell, Twinned Spell. Each costs sorcery points."
-    },
-    {
-      "id": "MM-006",
-      "name": "Metamagic",
-      "type": "metamagic",
-      "handler": "src/services/combat/automation/handlers/metamagicHandler.js",
-      "router": "src/services/combat/automation/routers/metamagicRouter.js",
-      "infoBuilder": "src/services/combat/automation/infoBuilders/metamagicInfoBuilder.js",
-      "verified": "not verified",
-      "class": "Sorcerer",
-      "triggerConditions": "Applied when casting a sorcerer spell using a metamagic option",
-      "expectedBehavior": "Apply a Metamagic option when casting a sorcerer spell. Options include: Careful Spell, Distant Spell, Empowered Spell, Extended Spell, Heightened Spell, Quickened Spell, Subtle Spell, Twinned Spell. Each costs sorcery points."
-    },
-    {
-      "id": "MM-007",
-      "name": "Metamagic",
-      "type": "metamagic",
-      "handler": "src/services/combat/automation/handlers/metamagicHandler.js",
-      "router": "src/services/combat/automation/routers/metamagicRouter.js",
-      "infoBuilder": "src/services/combat/automation/infoBuilders/metamagicInfoBuilder.js",
-      "verified": "not verified",
-      "class": "Sorcerer",
-      "triggerConditions": "Applied when casting a sorcerer spell using a metamagic option",
-      "expectedBehavior": "Apply a Metamagic option when casting a sorcerer spell. Options include: Careful Spell, Distant Spell, Empowered Spell, Extended Spell, Heightened Spell, Quickened Spell, Subtle Spell, Twinned Spell. Each costs sorcery points."
+      "expectedBehavior": "Apply a Metamagic option when casting a sorcerer spell. Options include: Careful Spell, Empowered Spell, Twinned Spell. Each costs sorcery points."
     },
     {
       "id": "CLA-227",
@@ -4901,30 +4320,7 @@
       "expectedBehavior": "As a Bonus Action, teleport up to 30 feet and have Advantage on the next attack roll. Uses equal to Wisdom modifier. Can restore uses by expending level 2+ spell slot."
     },
     {
-      "id": "FT-058",
-      "name": "Mounted Combatant",
-      "type": "feat",
-      "handler": "src/services/combat/automation/handlers/featHandler.js",
-      "router": "src/services/combat/automation/routers/featRouter.js",
-      "infoBuilder": "src/services/combat/automation/infoBuilders/featInfoBuilder.js",
-      "verified": "not verified",
-      "class": "Feat",
-      "triggerConditions": "When making attack_rolls_vs_unmounted_near_mount checks; while mounted_and_target_one_size_smaller",
-      "expectedBehavior": "While mounted, you have Advantage on attack rolls against any unmounted creature within 5 feet of your mount that is at least one size smaller than the mount."
-    },
-    {
       "id": "FT-059",
-      "name": "Musician",
-      "type": "feat",
-      "handler": "src/services/combat/automation/handlers/featHandler.js",
-      "router": "src/services/combat/automation/routers/featRouter.js",
-      "infoBuilder": "src/services/combat/automation/infoBuilders/featInfoBuilder.js",
-      "verified": "not verified",
-      "triggerConditions": "Action: passive",
-      "expectedBehavior": "As you finish a Short or Long Rest, you can play a song on a Musical Instrument with which you have proficiency and give Heroic Inspiration to allies who hear the song. The number of allies you can affect in this way equals your Proficiency Bonus."
-    },
-    {
-      "id": "FT-060",
       "name": "Musician",
       "type": "feat",
       "handler": "src/services/combat/automation/handlers/featHandler.js",
@@ -4972,7 +4368,7 @@
     },
     {
       "id": "CLA-233",
-      "name": "Naturally Stealthy – Halfling",
+      "name": "Naturally Stealthy \u2013 Halfling",
       "type": "classFeature",
       "handler": "src/services/combat/automation/handlers/classFeatureHandler.js",
       "router": "src/services/combat/automation/routers/classFeatureRouter.js",
@@ -5073,11 +4469,11 @@
       "handler": "src/services/combat/automation/handlers/backgroundHandler.js",
       "router": "src/services/combat/automation/routers/backgroundRouter.js",
       "infoBuilder": "src/services/combat/automation/infoBuilders/backgroundInfoBuilder.js",
-      "verified": "verified",
+      "verified": "not verified",
       "class": "Background",
       "triggerConditions": "",
       "expectedBehavior": "You were raised in a castle, surrounded by wealth, power, and privilege. Your family of minor aristocrats ensured that you received a first-class education, some of which you appreciated and some of which you resented. Your time in the castle, especially the many hours you spent observing your family at court, also taught you a great deal about leadership.",
-      "notes": "data-granting only: ability_scores, feat, skill_proficiencies, tool_proficiencies — no combat automation"
+      "notes": "data-granting only: ability_scores, feat, skill_proficiencies, tool_proficiencies \u2014 no combat automation"
     },
     {
       "id": "CLA-240",
@@ -5149,7 +4545,7 @@
       "verified": "not verified",
       "class": "Spell",
       "triggerConditions": "Duration: Concentration, up to 1 minute",
-      "expectedBehavior": "A shimmering sphere encloses a Large or smaller creature or object within range. An unwilling creature must succeed on a Dexterity saving throw or be enclosed for the duration. Nothing—not physical objects, energy, or other spell effects—can pass through the barrier, in or out, though a creature in the sphere can breathe there. The sphere is immune to all damage, and a creature or object inside can't be damaged by attacks or effects originating from outside, nor can a creature inside the sphere damage anything outside it. The sphere is weightless and just large enough to contain the creature or object inside. An enclosed creature can take an action to push against the sphere's walls and thus roll the sphere at up to half the creature's Speed. Similarly, the globe can be picked up and moved by other creatures. A Disintegrate spell targeting the globe destroys it without harming anything inside."
+      "expectedBehavior": "A shimmering sphere encloses a Large or smaller creature or object within range. An unwilling creature must succeed on a Dexterity saving throw or be enclosed for the duration. Nothing\u2014not physical objects, energy, or other spell effects\u2014can pass through the barrier, in or out, though a creature in the sphere can breathe there. The sphere is immune to all damage, and a creature or object inside can't be damaged by attacks or effects originating from outside, nor can a creature inside the sphere damage anything outside it. The sphere is weightless and just large enough to contain the creature or object inside. An enclosed creature can take an action to push against the sphere's walls and thus roll the sphere at up to half the creature's Speed. Similarly, the globe can be picked up and moved by other creatures. A Disintegrate spell targeting the globe destroys it without harming anything inside."
     },
     {
       "id": "SP-084",
@@ -5319,17 +4715,6 @@
       "expectedBehavior": "Once per turn, when you hit a creature with an attack that deals Piercing damage, you can reroll one of the attack's damage dice, and you must use the new roll."
     },
     {
-      "id": "FT-062",
-      "name": "Piercer",
-      "type": "feat",
-      "handler": "src/services/combat/automation/handlers/featHandler.js",
-      "router": "src/services/combat/automation/routers/featRouter.js",
-      "infoBuilder": "src/services/combat/automation/infoBuilders/featInfoBuilder.js",
-      "verified": "not verified",
-      "triggerConditions": "Action: reaction",
-      "expectedBehavior": "Once per turn, when you hit a creature with an attack that deals Piercing damage, you can reroll one of the attack's damage dice, and you must use the new roll."
-    },
-    {
       "id": "FT-063",
       "name": "Poisoner",
       "type": "feat",
@@ -5339,39 +4724,6 @@
       "verified": "not verified",
       "triggerConditions": "Automation type: ignore_resistance",
       "expectedBehavior": "When you make a damage roll that deals Poison damage, it ignores Resistance to Poison damage."
-    },
-    {
-      "id": "FT-064",
-      "name": "Poisoner",
-      "type": "feat",
-      "handler": "src/services/combat/automation/handlers/featHandler.js",
-      "router": "src/services/combat/automation/routers/featRouter.js",
-      "infoBuilder": "src/services/combat/automation/infoBuilders/featInfoBuilder.js",
-      "verified": "not verified",
-      "triggerConditions": "Automation type: ignore_resistance",
-      "expectedBehavior": "When you make a damage roll that deals Poison damage, it ignores Resistance to Poison damage."
-    },
-    {
-      "id": "FT-065",
-      "name": "Polearm Master",
-      "type": "feat",
-      "handler": "src/services/combat/automation/handlers/featHandler.js",
-      "router": "src/services/combat/automation/routers/featRouter.js",
-      "infoBuilder": "src/services/combat/automation/infoBuilders/featInfoBuilder.js",
-      "verified": "not verified",
-      "triggerConditions": "Action: bonus_action; Uses: variable",
-      "expectedBehavior": "Immediately after you take the Attack action and attack with a Quarterstaff, a Spear, or a weapon that has the Heavy and Reach properties, you can use a Bonus Action to make a melee attack with the opposite end of the weapon. The weapon deals Bludgeoning damage, and the weapon's damage die for this attack is a d4."
-    },
-    {
-      "id": "FT-066",
-      "name": "Polearm Master",
-      "type": "feat",
-      "handler": "src/services/combat/automation/handlers/featHandler.js",
-      "router": "src/services/combat/automation/routers/featRouter.js",
-      "infoBuilder": "src/services/combat/automation/infoBuilders/featInfoBuilder.js",
-      "verified": "not verified",
-      "triggerConditions": "Action: bonus_action; Uses: variable",
-      "expectedBehavior": "Immediately after you take the Attack action and attack with a Quarterstaff, a Spear, or a weapon that has the Heavy and Reach properties, you can use a Bonus Action to make a melee attack with the opposite end of the weapon. The weapon deals Bludgeoning damage, and the weapon's damage die for this attack is a d4."
     },
     {
       "id": "SP-086",
@@ -5387,7 +4739,7 @@
     },
     {
       "id": "CLA-254",
-      "name": "Powerful Build – Goliath",
+      "name": "Powerful Build \u2013 Goliath",
       "type": "classFeature",
       "handler": "src/services/combat/automation/handlers/classFeatureHandler.js",
       "router": "src/services/combat/automation/routers/classFeatureRouter.js",
@@ -5422,18 +4774,6 @@
     },
     {
       "id": "CLA-257",
-      "name": "Potent Spellcasting",
-      "type": "classFeature",
-      "handler": "src/services/combat/automation/handlers/classFeatureHandler.js",
-      "router": "src/services/combat/automation/routers/classFeatureRouter.js",
-      "infoBuilder": "src/services/combat/automation/infoBuilders/classFeatureInfoBuilder.js",
-      "verified": "not verified",
-      "class": "Cleric",
-      "triggerConditions": "Passive; Cleric Forge Domain feature",
-      "expectedBehavior": "Your spells deal more damage. When you cast a cleric spell that deals damage, add your Wisdom modifier to one weapon damage roll if you cast the spell using a bonus action. (Cleric class feature - Potent Spellcasting in 5e, Blessed Strikes in 2024)"
-    },
-    {
-      "id": "CLA-258",
       "name": "Potent Spellcasting",
       "type": "classFeature",
       "handler": "src/services/combat/automation/handlers/classFeatureHandler.js",
@@ -5491,17 +4831,6 @@
       "class": "Spell",
       "triggerConditions": "",
       "expectedBehavior": "You overwhelm the mind of one creature you can see within range. If the target has 150 Hit Points or fewer, it has the Stunned condition. Otherwise, its Speed is 0 until the start of your next turn. The Stunned target makes a Constitution saving throw at the end of each of its turns, ending the condition on itself on a success."
-    },
-    {
-      "id": "CLA-259",
-      "name": "Powerful Build – Goliath",
-      "type": "classFeature",
-      "handler": "src/services/combat/automation/handlers/classFeatureHandler.js",
-      "router": "src/services/combat/automation/routers/classFeatureRouter.js",
-      "infoBuilder": "src/services/combat/automation/infoBuilders/classFeatureInfoBuilder.js",
-      "verified": "not verified",
-      "triggerConditions": "Passive",
-      "expectedBehavior": "You have Advantage on any ability check you make to end the Grappled condition. You also count as one size larger when determining your carrying capacity. (Goliath trait)"
     },
     {
       "id": "SP-091",
@@ -5972,18 +5301,6 @@
       "expectedBehavior": "Once per turn, when you use a maneuver, roll 1d8 and use the number instead of expending a Superiority Die."
     },
     {
-      "id": "CLA-287",
-      "name": "Relentless Avenger",
-      "type": "classFeature",
-      "handler": "src/services/combat/automation/handlers/classFeatureHandler.js",
-      "router": "src/services/combat/automation/routers/classFeatureRouter.js",
-      "infoBuilder": "src/services/combat/automation/infoBuilders/classFeatureInfoBuilder.js",
-      "verified": "not verified",
-      "class": "Paladin",
-      "triggerConditions": "Duration: until_end_of_current_turn",
-      "expectedBehavior": "When you hit a creature with an Opportunity Attack, reduce creature's Speed to 0 until end of current turn. Move up to half Speed as part of same Reaction."
-    },
-    {
       "id": "CLA-288",
       "name": "Relentless Endurance",
       "type": "classFeature",
@@ -6229,11 +5546,11 @@
       "handler": "src/services/combat/automation/handlers/backgroundHandler.js",
       "router": "src/services/combat/automation/routers/backgroundRouter.js",
       "infoBuilder": "src/services/combat/automation/infoBuilders/backgroundInfoBuilder.js",
-      "verified": "verified",
+      "verified": "not verified",
       "class": "Background",
       "triggerConditions": "",
       "expectedBehavior": "You spent your for1native yeaI'S traveling between manors and monasteries, performing various odd jobs and services in exchange for access to their libraries. You whiled away many a long evening studying books and scrolls, learning the lore of the multiverse-even the rudiments of magic-and your mind yearns for more.",
-      "notes": "data-granting only: ability_scores, feat, skill_proficiencies, tool_proficiencies — no combat automation"
+      "notes": "data-granting only: ability_scores, feat, skill_proficiencies, tool_proficiencies \u2014 no combat automation"
     },
     {
       "id": "BG-013",
@@ -6242,11 +5559,11 @@
       "handler": "src/services/combat/automation/handlers/backgroundHandler.js",
       "router": "src/services/combat/automation/routers/backgroundRouter.js",
       "infoBuilder": "src/services/combat/automation/infoBuilders/backgroundInfoBuilder.js",
-      "verified": "verified",
+      "verified": "not verified",
       "class": "Background",
       "triggerConditions": "",
       "expectedBehavior": "You lived as a seafarer, wind at your back and decks swaying beneath your feet. You've perched on barstools in more ports of call than you can remember, faced mighty storms, and swapped stories with folk who live beneath the waves.",
-      "notes": "data-granting only: ability_scores, feat, skill_proficiencies, tool_proficiencies — no combat automation"
+      "notes": "data-granting only: ability_scores, feat, skill_proficiencies, tool_proficiencies \u2014 no combat automation"
     },
     {
       "id": "SP-101",
@@ -6303,11 +5620,11 @@
       "handler": "src/services/combat/automation/handlers/backgroundHandler.js",
       "router": "src/services/combat/automation/routers/backgroundRouter.js",
       "infoBuilder": "src/services/combat/automation/infoBuilders/backgroundInfoBuilder.js",
-      "verified": "verified",
+      "verified": "not verified",
       "class": "Background",
       "triggerConditions": "",
-      "expectedBehavior": "You spent formative years in a scriptorium, a monastery dedicated to the preservation of knowledge, o· a government agency, where you learned to write with a clear hand and produce finely written texts. Perhaps you scribed government documents or copied tomes of literature. You might have some skill as a writer of poetry, narrative, or scholarly research. Above all, you have a careful attention to detail, helping you avoid introducing mistakes to the documents you copy and create.",
-      "notes": "data-granting only: ability_scores, feat, skill_proficiencies, tool_proficiencies — no combat automation"
+      "expectedBehavior": "You spent formative years in a scriptorium, a monastery dedicated to the preservation of knowledge, o\u00b7 a government agency, where you learned to write with a clear hand and produce finely written texts. Perhaps you scribed government documents or copied tomes of literature. You might have some skill as a writer of poetry, narrative, or scholarly research. Above all, you have a careful attention to detail, helping you avoid introducing mistakes to the documents you copy and create.",
+      "notes": "data-granting only: ability_scores, feat, skill_proficiencies, tool_proficiencies \u2014 no combat automation"
     },
     {
       "id": "CLA-303",
@@ -6464,28 +5781,6 @@
       "expectedBehavior": "Your ranged attacks with weapons ignore Half Cover and Three-Quarters Cover."
     },
     {
-      "id": "FT-072",
-      "name": "Sharpshooter",
-      "type": "feat",
-      "handler": "src/services/combat/automation/handlers/featHandler.js",
-      "router": "src/services/combat/automation/routers/featRouter.js",
-      "infoBuilder": "src/services/combat/automation/infoBuilders/featInfoBuilder.js",
-      "verified": "not verified",
-      "triggerConditions": "Passive: Always active",
-      "expectedBehavior": "Your ranged attacks with weapons ignore Half Cover and Three-Quarters Cover."
-    },
-    {
-      "id": "FT-073",
-      "name": "Sharpshooter",
-      "type": "feat",
-      "handler": "src/services/combat/automation/handlers/featHandler.js",
-      "router": "src/services/combat/automation/routers/featRouter.js",
-      "infoBuilder": "src/services/combat/automation/infoBuilders/featInfoBuilder.js",
-      "verified": "not verified",
-      "triggerConditions": "Passive: Always active",
-      "expectedBehavior": "Your ranged attacks with weapons ignore Half Cover and Three-Quarters Cover."
-    },
-    {
       "id": "SP-104",
       "name": "Shield",
       "type": "spell",
@@ -6499,17 +5794,6 @@
     },
     {
       "id": "FT-074",
-      "name": "Shield Master",
-      "type": "feat",
-      "handler": "src/services/combat/automation/handlers/featHandler.js",
-      "router": "src/services/combat/automation/routers/featRouter.js",
-      "infoBuilder": "src/services/combat/automation/infoBuilders/featInfoBuilder.js",
-      "verified": "not verified",
-      "triggerConditions": "Trigger: melee_hit_with_shield_equipped; Once per turn: yes",
-      "expectedBehavior": "If you attack a creature within 5 feet of you as part of the Attack action and hit with a Melee weapon, you can immediately bash the target with your Shield if it's equipped, forcing the target to make a Strength saving throw (DC 8 plus your Strength modifier and Proficiency Bonus). On a failed save, you either push the target 5 feet from you or cause it to have the Prone condition (your choice). You can use this benefit only once on each of your turns."
-    },
-    {
-      "id": "FT-075",
       "name": "Shield Master",
       "type": "feat",
       "handler": "src/services/combat/automation/handlers/featHandler.js",
@@ -6567,17 +5851,6 @@
       "expectedBehavior": "Ability Score Increase. Increase one ability score of your choice by 1, to a maximum of 20. Skill Proficiency. You gain proficiency in one skill of your choice. Expertise. Choose one skill in which you have proficiency but lack Expertise. You gain Expertise with that skill."
     },
     {
-      "id": "FT-077",
-      "name": "Skill Expert",
-      "type": "feat",
-      "handler": "src/services/combat/automation/handlers/featHandler.js",
-      "router": "src/services/combat/automation/routers/featRouter.js",
-      "infoBuilder": "src/services/combat/automation/infoBuilders/featInfoBuilder.js",
-      "verified": "not verified",
-      "triggerConditions": "",
-      "expectedBehavior": "Ability Score Increase. Increase one ability score of your choice by 1, to a maximum of 20. Skill Proficiency. You gain proficiency in one skill of your choice. Expertise. Choose one skill in which you have proficiency but lack Expertise. You gain Expertise with that skill."
-    },
-    {
       "id": "FT-078",
       "name": "Skilled",
       "type": "feat",
@@ -6591,7 +5864,7 @@
     },
     {
       "id": "CLA-313",
-      "name": "Skillful – Human",
+      "name": "Skillful \u2013 Human",
       "type": "classFeature",
       "handler": "src/services/combat/automation/handlers/classFeatureHandler.js",
       "router": "src/services/combat/automation/routers/classFeatureRouter.js",
@@ -6612,40 +5885,7 @@
       "expectedBehavior": "You have Blindsight with a range of 10 feet."
     },
     {
-      "id": "FT-080",
-      "name": "Skulker",
-      "type": "feat",
-      "handler": "src/services/combat/automation/handlers/featHandler.js",
-      "router": "src/services/combat/automation/routers/featRouter.js",
-      "infoBuilder": "src/services/combat/automation/infoBuilders/featInfoBuilder.js",
-      "verified": "not verified",
-      "triggerConditions": "Passive: Always active",
-      "expectedBehavior": "You have Blindsight with a range of 10 feet."
-    },
-    {
-      "id": "FT-081",
-      "name": "Skulker",
-      "type": "feat",
-      "handler": "src/services/combat/automation/handlers/featHandler.js",
-      "router": "src/services/combat/automation/routers/featRouter.js",
-      "infoBuilder": "src/services/combat/automation/infoBuilders/featInfoBuilder.js",
-      "verified": "not verified",
-      "triggerConditions": "Passive: Always active",
-      "expectedBehavior": "You have Blindsight with a range of 10 feet."
-    },
-    {
       "id": "FT-082",
-      "name": "Slasher",
-      "type": "feat",
-      "handler": "src/services/combat/automation/handlers/featHandler.js",
-      "router": "src/services/combat/automation/routers/featRouter.js",
-      "infoBuilder": "src/services/combat/automation/infoBuilders/featInfoBuilder.js",
-      "verified": "not verified",
-      "triggerConditions": "Trigger: slashing_damage_hit; Once per turn: yes",
-      "expectedBehavior": "Once per turn when you hit a creature with an attack that deals Slashing damage, you can reduce the Speed of that creature by 10 feet until the start of your next turn."
-    },
-    {
-      "id": "FT-083",
       "name": "Slasher",
       "type": "feat",
       "handler": "src/services/combat/automation/handlers/featHandler.js",
@@ -6758,11 +5998,11 @@
       "handler": "src/services/combat/automation/handlers/backgroundHandler.js",
       "router": "src/services/combat/automation/routers/backgroundRouter.js",
       "infoBuilder": "src/services/combat/automation/infoBuilders/backgroundInfoBuilder.js",
-      "verified": "verified",
+      "verified": "not verified",
       "class": "Background",
       "triggerConditions": "",
       "expectedBehavior": "You began training for war as soon as you reached adulthood and carry precious few me1nories of life before you took up arms. Battle is in your blood. Sometimes you catch yourself reflexively performing the basic fighting exercises you learned first. Eventually, you put that training to use on the battlefield, protecting the realm by waging war.",
-      "notes": "data-granting only: ability_scores, feat, skill_proficiencies, tool_proficiencies — no combat automation"
+      "notes": "data-granting only: ability_scores, feat, skill_proficiencies, tool_proficiencies \u2014 no combat automation"
     },
     {
       "id": "CLA-318",
@@ -6836,28 +6076,6 @@
       "expectedBehavior": "Your Speed increases by 10 feet."
     },
     {
-      "id": "FT-085",
-      "name": "Speedy",
-      "type": "feat",
-      "handler": "src/services/combat/automation/handlers/featHandler.js",
-      "router": "src/services/combat/automation/routers/featRouter.js",
-      "infoBuilder": "src/services/combat/automation/infoBuilders/featInfoBuilder.js",
-      "verified": "not verified",
-      "triggerConditions": "Passive: Always active",
-      "expectedBehavior": "Your Speed increases by 10 feet."
-    },
-    {
-      "id": "FT-086",
-      "name": "Speedy",
-      "type": "feat",
-      "handler": "src/services/combat/automation/handlers/featHandler.js",
-      "router": "src/services/combat/automation/routers/featRouter.js",
-      "infoBuilder": "src/services/combat/automation/infoBuilders/featInfoBuilder.js",
-      "verified": "not verified",
-      "triggerConditions": "Passive: Always active",
-      "expectedBehavior": "Your Speed increases by 10 feet."
-    },
-    {
       "id": "CLA-322",
       "name": "Spell Breaker",
       "type": "classFeature",
@@ -6895,28 +6113,6 @@
     },
     {
       "id": "FT-087",
-      "name": "Spell Sniper",
-      "type": "feat",
-      "handler": "src/services/combat/automation/handlers/featHandler.js",
-      "router": "src/services/combat/automation/routers/featRouter.js",
-      "infoBuilder": "src/services/combat/automation/infoBuilders/featInfoBuilder.js",
-      "verified": "not verified",
-      "triggerConditions": "",
-      "expectedBehavior": "Ability Score Increase. Increase your Intelligence, Wisdom, or Charisma score by 1, to a maximum of 20. Bypass Cover. Your attack rolls for spells ignore Half Cover and Three-Quarters Cover. Casting in Melee. Being within 5 feet of an enemy doesn't impose Disadvantage on your attack rolls with spells. Increased Range. When you cast a spell that has a range of at least 10 feet and requires you to make an attack roll, you can increase the spell's range by 60 feet."
-    },
-    {
-      "id": "FT-088",
-      "name": "Spell Sniper",
-      "type": "feat",
-      "handler": "src/services/combat/automation/handlers/featHandler.js",
-      "router": "src/services/combat/automation/routers/featRouter.js",
-      "infoBuilder": "src/services/combat/automation/infoBuilders/featInfoBuilder.js",
-      "verified": "not verified",
-      "triggerConditions": "",
-      "expectedBehavior": "Ability Score Increase. Increase your Intelligence, Wisdom, or Charisma score by 1, to a maximum of 20. Bypass Cover. Your attack rolls for spells ignore Half Cover and Three-Quarters Cover. Casting in Melee. Being within 5 feet of an enemy doesn't impose Disadvantage on your attack rolls with spells. Increased Range. When you cast a spell that has a range of at least 10 feet and requires you to make an attack roll, you can increase the spell's range by 60 feet."
-    },
-    {
-      "id": "FT-089",
       "name": "Spell Sniper",
       "type": "feat",
       "handler": "src/services/combat/automation/handlers/featHandler.js",
@@ -6999,30 +6195,6 @@
       "expectedBehavior": "As a Bonus Action, you can expend a use of your Wild Shape feature to take on a starry form rather than shape-shifting. While in your starry form, you retain your game statistics, but your body becomes luminous, your joints glimmer like stars, and glowing lines connect them as on a star chart. This form sheds Bright Light in a 10-foot radius and Dim Light for an additional 10 feet. The form lasts for 10 minutes. It ends early if you dismiss it (no action required), have the Incapacitated condition, or use this feature again. Whenever you assume your starry form, choose which of the following constellations glimmers on your body; your choice gives you certain benefits while in the form. Archer: A constellation of an archer appears on you. When you activate this form and as a Bonus Action on your subsequent turns while it lasts, you can make a ranged spell attack, hurling a luminous arrow that targets one creature within 60 feet of yourself. On a hit, the attack deals Radiant damage equal to 1d8 plus your Wisdom modifier. Chalice: A constellation of a life-giving goblet appears on you. Whenever you cast a spell using a spell slot that restores Hit Points to a creative, you or another creature within 30 feet of you can regain Hit Points equal to 1d8 plus your Wisdom modifier. Dragon: A constellation of a wise dragon appears on you. When you maize an Intelligence or a Wisdom check or a Constitution saving throw to maintain Concentration, you can treat a roll of 9 or lower on the d20 as a 10."
     },
     {
-      "id": "CLA-329",
-      "name": "Starry Form",
-      "type": "classFeature",
-      "handler": "src/services/combat/automation/handlers/classFeatureHandler.js",
-      "router": "src/services/combat/automation/routers/classFeatureRouter.js",
-      "infoBuilder": "src/services/combat/automation/infoBuilders/classFeatureInfoBuilder.js",
-      "verified": "not verified",
-      "class": "Druid",
-      "triggerConditions": "Automation type: undefined",
-      "expectedBehavior": "As a Bonus Action, you can expend a use of your Wild Shape feature to take on a starry form rather than shape-shifting. While in your starry form, you retain your game statistics, but your body becomes luminous, your joints glimmer like stars, and glowing lines connect them as on a star chart. This form sheds Bright Light in a 10-foot radius and Dim Light for an additional 10 feet. The form lasts for 10 minutes. It ends early if you dismiss it (no action required), have the Incapacitated condition, or use this feature again. Whenever you assume your starry form, choose which of the following constellations glimmers on your body; your choice gives you certain benefits while in the form. Archer: A constellation of an archer appears on you. When you activate this form and as a Bonus Action on your subsequent turns while it lasts, you can make a ranged spell attack, hurling a luminous arrow that targets one creature within 60 feet of yourself. On a hit, the attack deals Radiant damage equal to 1d8 plus your Wisdom modifier. Chalice: A constellation of a life-giving goblet appears on you. Whenever you cast a spell using a spell slot that restores Hit Points to a creative, you or another creature within 30 feet of you can regain Hit Points equal to 1d8 plus your Wisdom modifier. Dragon: A constellation of a wise dragon appears on you. When you maize an Intelligence or a Wisdom check or a Constitution saving throw to maintain Concentration, you can treat a roll of 9 or lower on the d20 as a 10."
-    },
-    {
-      "id": "CLA-330",
-      "name": "Starry Form",
-      "type": "classFeature",
-      "handler": "src/services/combat/automation/handlers/classFeatureHandler.js",
-      "router": "src/services/combat/automation/routers/classFeatureRouter.js",
-      "infoBuilder": "src/services/combat/automation/infoBuilders/classFeatureInfoBuilder.js",
-      "verified": "not verified",
-      "class": "Druid",
-      "triggerConditions": "Automation type: undefined",
-      "expectedBehavior": "As a Bonus Action, you can expend a use of your Wild Shape feature to take on a starry form rather than shape-shifting. While in your starry form, you retain your game statistics, but your body becomes luminous, your joints glimmer like stars, and glowing lines connect them as on a star chart. This form sheds Bright Light in a 10-foot radius and Dim Light for an additional 10 feet. The form lasts for 10 minutes. It ends early if you dismiss it (no action required), have the Incapacitated condition, or use this feature again. Whenever you assume your starry form, choose which of the following constellations glimmers on your body; your choice gives you certain benefits while in the form. Archer: A constellation of an archer appears on you. When you activate this form and as a Bonus Action on your subsequent turns while it lasts, you can make a ranged spell attack, hurling a luminous arrow that targets one creature within 60 feet of yourself. On a hit, the attack deals Radiant damage equal to 1d8 plus your Wisdom modifier. Chalice: A constellation of a life-giving goblet appears on you. Whenever you cast a spell using a spell slot that restores Hit Points to a creative, you or another creature within 30 feet of you can regain Hit Points equal to 1d8 plus your Wisdom modifier. Dragon: A constellation of a wise dragon appears on you. When you maize an Intelligence or a Wisdom check or a Constitution saving throw to maintain Concentration, you can treat a roll of 9 or lower on the d20 as a 10."
-    },
-    {
       "id": "CLA-331",
       "name": "Steady Aim",
       "type": "classFeature",
@@ -7072,7 +6244,7 @@
     },
     {
       "id": "CLA-335",
-      "name": "Stone's Endurance – Goliath",
+      "name": "Stone's Endurance \u2013 Goliath",
       "type": "classFeature",
       "handler": "src/services/combat/automation/handlers/classFeatureHandler.js",
       "router": "src/services/combat/automation/routers/classFeatureRouter.js",
@@ -7096,7 +6268,7 @@
     },
     {
       "id": "CLA-337",
-      "name": "Storm's Thunder – Goliath",
+      "name": "Storm's Thunder \u2013 Goliath",
       "type": "classFeature",
       "handler": "src/services/combat/automation/handlers/classFeatureHandler.js",
       "router": "src/services/combat/automation/routers/classFeatureRouter.js",
@@ -7105,18 +6277,6 @@
       "class": "Storm Giant",
       "triggerConditions": "When you take damage from creature within 60ft; Reaction; Uses: proficiency_bonus, recharges on long rest",
       "expectedBehavior": "When you take damage from a creature within 60 feet of you, you can take a Reaction to deal 1d8 Thunder damage to that creature. (Storm Giant subrace of Goliath)"
-    },
-    {
-      "id": "CLA-338",
-      "name": "Stride of the Elements",
-      "type": "classFeature",
-      "handler": "src/services/combat/automation/handlers/classFeatureHandler.js",
-      "router": "src/services/combat/automation/routers/classFeatureRouter.js",
-      "infoBuilder": "src/services/combat/automation/infoBuilders/classFeatureInfoBuilder.js",
-      "verified": "not verified",
-      "class": "Monk",
-      "triggerConditions": "Action: passive",
-      "expectedBehavior": "When you use your Elemental Attunement, you can gain a special movement type: Cold = Ice Walk (walk on water/ice), Fire = +10ft Speed, Lightning = Fly Speed equal to your Speed, Thunder = teleport 30 ft."
     },
     {
       "id": "CLA-339",
@@ -7395,18 +6555,6 @@
       "expectedBehavior": "When you hit a creature with a melee attack roll using a weapon or an Unarmed Strike, you can expend one Superiority Die to attempt to damage another creature. Choose another creature within 5 feet of the original target and within your reach. If the original attack roll would hit the second creature, it takes damage equal to the number rolled on your Superiority Die. The damage type is the same as the original attack."
     },
     {
-      "id": "SP-122",
-      "name": "Swift Quiver",
-      "type": "spell",
-      "handler": "src/services/combat/automation/handlers/spellHandler.js",
-      "router": "src/services/combat/automation/routers/spellRouter.js",
-      "infoBuilder": "src/services/combat/automation/infoBuilders/spellInfoBuilder.js",
-      "verified": "not verified",
-      "class": "Spell",
-      "triggerConditions": "Trigger: each_turn; Action: 1 bonus action; Action: bonus_action",
-      "expectedBehavior": "When you cast the spell and as a Bonus Action until it ends, you can make two attacks with a weapon that fires Arrows or Bolts, such as a Longbow or a Light Crossbow. The spell magically creates the ammunition needed for each attack. Each Arrow or Bolt created by the spell deals damage like a nonmagical piece of ammunition of its kind and disintegrates immediately after it hits or misses."
-    },
-    {
       "id": "MN-019",
       "name": "Tactical Assessment",
       "type": "maneuver",
@@ -7487,54 +6635,10 @@
       "infoBuilder": "src/services/combat/automation/infoBuilders/featInfoBuilder.js",
       "verified": "not verified",
       "triggerConditions": "",
-      "expectedBehavior": "Enhanced Unarmed Strike. When you hit with your Unarmed Strike and deal damage, you can deal Bludgeoning damage equal to 1d4 plus your Strength modifier instead of the normal damage of an Unarmed Strike. Damage Rerolls. Whenever you roll a damage die for your Unarmed Strike, you can reroll the die if it rolls a 1, and you must use the new roll. Improvised Weaponry. You have proficiency with improvised weapons. Push. When you hit a creature with an Unarmed Strike as part of the Attack action on your turn, you can deal damage to the target and also push it 5 feet away from you. You can use this benefit only once per turn."
-    },
-    {
-      "id": "FT-091",
-      "name": "Tavern Brawler",
-      "type": "feat",
-      "handler": "src/services/combat/automation/handlers/featHandler.js",
-      "router": "src/services/combat/automation/routers/featRouter.js",
-      "infoBuilder": "src/services/combat/automation/infoBuilders/featInfoBuilder.js",
-      "verified": "not verified",
-      "triggerConditions": "",
-      "expectedBehavior": "Enhanced Unarmed Strike. When you hit with your Unarmed Strike and deal damage, you can deal Bludgeoning damage equal to 1d4 plus your Strength modifier instead of the normal damage of an Unarmed Strike. Damage Rerolls. Whenever you roll a damage die for your Unarmed Strike, you can reroll the die if it rolls a 1, and you must use the new roll. Improvised Weaponry. You have proficiency with improvised weapons. Push. When you hit a creature with an Unarmed Strike as part of the Attack action on your turn, you can deal damage to the target and also push it 5 feet away from you. You can use this benefit only once per turn."
-    },
-    {
-      "id": "FT-092",
-      "name": "Tavern Brawler",
-      "type": "feat",
-      "handler": "src/services/combat/automation/handlers/featHandler.js",
-      "router": "src/services/combat/automation/routers/featRouter.js",
-      "infoBuilder": "src/services/combat/automation/infoBuilders/featInfoBuilder.js",
-      "verified": "not verified",
-      "triggerConditions": "",
-      "expectedBehavior": "Enhanced Unarmed Strike. When you hit with your Unarmed Strike and deal damage, you can deal Bludgeoning damage equal to 1d4 plus your Strength modifier instead of the normal damage of an Unarmed Strike. Damage Rerolls. Whenever you roll a damage die for your Unarmed Strike, you can reroll the die if it rolls a 1, and you must use the new roll. Improvised Weaponry. You have proficiency with improvised weapons. Push. When you hit a creature with an Unarmed Strike as part of the Attack action on your turn, you can deal damage to the target and also push it 5 feet away from you. You can use this benefit only once per turn."
-    },
-    {
-      "id": "FT-093",
-      "name": "Tavern Brawler",
-      "type": "feat",
-      "handler": "src/services/combat/automation/handlers/featHandler.js",
-      "router": "src/services/combat/automation/routers/featRouter.js",
-      "infoBuilder": "src/services/combat/automation/infoBuilders/featInfoBuilder.js",
-      "verified": "not verified",
-      "triggerConditions": "",
-      "expectedBehavior": "Enhanced Unarmed Strike. When you hit with your Unarmed Strike and deal damage, you can deal Bludgeoning damage equal to 1d4 plus your Strength modifier instead of the normal damage of an Unarmed Strike. Damage Rerolls. Whenever you roll a damage die for your Unarmed Strike, you can reroll the die if it rolls a 1, and you must use the new roll. Improvised Weaponry. You have proficiency with improvised weapons. Push. When you hit a creature with an Unarmed Strike as part of the Attack action on your turn, you can deal damage to the target and also push it 5 feet away from you. You can use this benefit only once per turn."
+      "expectedBehavior": "Enhanced Unarmed Strike. When you hit with your Unarmed Strike and deal damage, you can deal Bludgeoning damage equal to 1d4 plus your Strength modifier instead of the normal damage of an Unarmed Strike. Damage Rerolls. Whenever you roll a damage die for your Unarmed Strike, you can reroll the die if it rolls a 1, and you must use the new roll. Improvised Weaponry. You have proficiency with improvised weapons"
     },
     {
       "id": "FT-094",
-      "name": "Telekinesis",
-      "type": "feat",
-      "handler": "src/services/combat/automation/handlers/featHandler.js",
-      "router": "src/services/combat/automation/routers/featRouter.js",
-      "infoBuilder": "src/services/combat/automation/infoBuilders/featInfoBuilder.js",
-      "verified": "not verified",
-      "triggerConditions": "Action: 1 bonus action; Action: bonus_action; Range: 30",
-      "expectedBehavior": "As a Bonus Action, you can telekinetically shove one creature you can see within 30 feet of yourself. When you do so, the target must succeed on a Strength saving throw (DC 8 plus the ability modifier of the score increased by this feat and your Proficiency Bonus) or be moved 5 feet toward or away from you."
-    },
-    {
-      "id": "FT-095",
       "name": "Telekinesis",
       "type": "feat",
       "handler": "src/services/combat/automation/handlers/featHandler.js",
@@ -7581,30 +6685,7 @@
       "expectedBehavior": "Action to move an object or willing creature up to 30 feet."
     },
     {
-      "id": "CLA-358",
-      "name": "Telepathic Speech",
-      "type": "classFeature",
-      "handler": "src/services/combat/automation/handlers/classFeatureHandler.js",
-      "router": "src/services/combat/automation/routers/classFeatureRouter.js",
-      "infoBuilder": "src/services/combat/automation/infoBuilders/classFeatureInfoBuilder.js",
-      "verified": "not verified",
-      "class": "Sorcerer",
-      "triggerConditions": "Action: bonus_action; Range: self",
-      "expectedBehavior": "Bonus Action, choose one creature within 30 feet. Communicate telepathically while within a number of miles equal to Charisma modifier (minimum 1 mile). Duration: minutes equal to Sorcerer level."
-    },
-    {
       "id": "FT-096",
-      "name": "Telepathy",
-      "type": "feat",
-      "handler": "src/services/combat/automation/handlers/featHandler.js",
-      "router": "src/services/combat/automation/routers/featRouter.js",
-      "infoBuilder": "src/services/combat/automation/infoBuilders/featInfoBuilder.js",
-      "verified": "not verified",
-      "triggerConditions": "Action: passive; Spell: Detect Thoughts",
-      "expectedBehavior": "You always have the Detect Thoughts spell prepared. You can cast it without a spell slot or spell components, and you must finish a Long Rest before you can cast it in this way again. You can also cast it using spell slots you have of the appropriate level. Your spellcasting ability for the spell is the ability increased by this feat."
-    },
-    {
-      "id": "FT-097",
       "name": "Telepathy",
       "type": "feat",
       "handler": "src/services/combat/automation/handlers/featHandler.js",
@@ -7721,18 +6802,6 @@
       "class": "Sorcerer",
       "triggerConditions": "Action: bonus action; Action: bonus_action; Duration: 1_minute",
       "expectedBehavior": "You gain the ability to align your consciousness with the endless calculations of Mechanus. As a Bonus Action, you can enter this state for 1 minute. For the duration, attack rolls against you can't benefit from Advantage, and whenever you make a D20 Test, you can treat a roll of 9 or lower on the d20 as a 10. Once you use this feature, you can't use it again until you finish a Long Rest unless you spend 5 Sorcery Points (no action required) to restore your use of it."
-    },
-    {
-      "id": "CLA-365",
-      "name": "Travel Along the Tree",
-      "type": "classFeature",
-      "handler": "src/services/combat/automation/handlers/classFeatureHandler.js",
-      "router": "src/services/combat/automation/routers/classFeatureRouter.js",
-      "infoBuilder": "src/services/combat/automation/infoBuilders/classFeatureInfoBuilder.js",
-      "verified": "not verified",
-      "class": "Barbarian",
-      "triggerConditions": "Action: 1 bonus action; Range: self",
-      "expectedBehavior": "When you activate your Rage and as a Bonus Action while your Rage is active, you can teleport up to 60 feet to an unoccupied space you can see. In addition, once per Rage, you can increase the range of that teleport to 150 feet. When you do so, you can also bring up to six willing creatures who are within 10 feet of you. Each creature teleports to an unoccupied space of your choice within 10 feet of your destination space."
     },
     {
       "id": "CLA-366",
@@ -7892,7 +6961,7 @@
     },
     {
       "id": "CLA-375",
-      "name": "Versatile – Human",
+      "name": "Versatile \u2013 Human",
       "type": "classFeature",
       "handler": "src/services/combat/automation/handlers/classFeatureHandler.js",
       "router": "src/services/combat/automation/routers/classFeatureRouter.js",
@@ -7963,28 +7032,6 @@
     },
     {
       "id": "FT-099",
-      "name": "War Caster",
-      "type": "feat",
-      "handler": "src/services/combat/automation/handlers/featHandler.js",
-      "router": "src/services/combat/automation/routers/featRouter.js",
-      "infoBuilder": "src/services/combat/automation/infoBuilders/featInfoBuilder.js",
-      "verified": "not verified",
-      "triggerConditions": "When making concentration_saving_throws checks",
-      "expectedBehavior": "You have Advantage on Constitution saving throws that you make to maintain Concentration."
-    },
-    {
-      "id": "FT-100",
-      "name": "War Caster",
-      "type": "feat",
-      "handler": "src/services/combat/automation/handlers/featHandler.js",
-      "router": "src/services/combat/automation/routers/featRouter.js",
-      "infoBuilder": "src/services/combat/automation/infoBuilders/featInfoBuilder.js",
-      "verified": "not verified",
-      "triggerConditions": "When making concentration_saving_throws checks",
-      "expectedBehavior": "You have Advantage on Constitution saving throws that you make to maintain Concentration."
-    },
-    {
-      "id": "FT-101",
       "name": "War Caster",
       "type": "feat",
       "handler": "src/services/combat/automation/handlers/featHandler.js",
@@ -8085,11 +7132,11 @@
       "handler": "src/services/combat/automation/handlers/backgroundHandler.js",
       "router": "src/services/combat/automation/routers/backgroundRouter.js",
       "infoBuilder": "src/services/combat/automation/infoBuilders/backgroundInfoBuilder.js",
-      "verified": "verified",
+      "verified": "not verified",
       "class": "Background",
       "triggerConditions": "",
       "expectedBehavior": "You grew up on the streets surrounded by similarly ill-fated castoffs, a few of them friends and a few of them rivals. You slept where you could and did odd jobs for food. At times, when the hunger became unbearable, you resorted to theft. Still, you never lost your pride and never abandoned hope. Fate is not yet finished with you.",
-      "notes": "data-granting only: ability_scores, feat, skill_proficiencies, tool_proficiencies — no combat automation"
+      "notes": "data-granting only: ability_scores, feat, skill_proficiencies, tool_proficiencies \u2014 no combat automation"
     },
     {
       "id": "CLA-386",
@@ -8197,7 +7244,7 @@
       "verified": "not verified",
       "class": "Druid",
       "triggerConditions": "Action: 1 bonus action; Action: bonus_action; Range: 5_ft; Duration: 1_minute",
-      "expectedBehavior": "As a Bonus Action, you can expend a use of your Wild Shape to manifest a 5-foot Emanation that takes the form of ocean spray that surrounds you for 10 minutes. It ends early if you dismiss it (no action required), manifest it again, or have the Incapacitated condition. When you manifest the Emanation and as a Bonus Action on your subsequent turns, you can choose another creature you can see in the Emanation. The target must succeed on a Constitution saving throw against your spell save DC or take Cold damage and, if the creature is Large or smaller, be pushed up to 15 feet away fr·o1n you. To determine this damage, roll a number of d6s equal to your Wisdom modifier (minimum of one die)."
+      "expectedBehavior": "As a Bonus Action, you can expend a use of your Wild Shape to manifest a 5-foot Emanation that takes the form of ocean spray that surrounds you for 10 minutes. It ends early if you dismiss it (no action required), manifest it again, or have the Incapacitated condition. When you manifest the Emanation and as a Bonus Action on your subsequent turns, you can choose another creature you can see in the Emanation. The target must succeed on a Constitution saving throw against your spell save DC or take Cold damage and, if the creature is Large or smaller, be pushed up to 15 feet away fr\u00b7o1n you. To determine this damage, roll a number of d6s equal to your Wisdom modifier (minimum of one die)."
     },
     {
       "id": "CLA-394",
