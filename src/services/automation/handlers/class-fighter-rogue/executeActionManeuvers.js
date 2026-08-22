@@ -227,14 +227,37 @@ export async function executeMovementManeuver(action, playerStats, campaignName,
     };
     await addEntry(campaignName, logEntry).catch((e) => { console.error("[executeActionManeuvers:log-error]", e); });
 
-    const description = `<b>${maneuver.name}</b><br/>${dieDescription} You or the ally gains +${dieValue} AC until the start of your next turn.`;
+    let description = `<b>${maneuver.name}</b><br/>${dieDescription}`;
+
+    if (maneuver.effect === 'ac_bonus_and_swap') {
+        description += ` You or an ally gains +${dieValue} AC until the start of your next turn.`;
+        const cs = await getCombatContext(campaignName);
+        const allies = cs?.creatures?.filter(c => c.name !== playerStats.name) || [];
+        const options = [
+            { label: `Myself (${playerStats.name})`, value: playerStats.name },
+            ...allies.map(a => ({ label: a.name, value: a.name })),
+        ];
+        return {
+            type: 'modal',
+            modalName: 'baitAndSwitchChoice',
+            payload: {
+                playerStats,
+                campaignName,
+                dieValue,
+                maneuverName: maneuver.name,
+                options,
+                description,
+            },
+            logEntries: [logEntry],
+        };
+    }
 
     return {
         type: 'popup',
         payload: {
             type: 'automation_info',
             name: maneuver.name,
-            description,
+            description: `${description} You or the ally gains +${dieValue} AC until the start of your next turn.`,
         },
         logEntries: [logEntry],
     };
