@@ -275,6 +275,9 @@ export function getDamageResistances(playerStats) {
         if (passive.type === 'passive_immunity' && Array.isArray(passive.damageResistance)) {
             resistances.push(...passive.damageResistance);
         }
+        if (passive.type === 'passive_buff' && Array.isArray(passive.resistances)) {
+            resistances.push(...passive.resistances);
+        }
     }
     return [...new Set(resistances)];
 }

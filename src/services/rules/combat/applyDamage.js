@@ -7,6 +7,7 @@ import { rollConcentrationSave } from '../../combat/concentration/concentrationR
 import { cleanupConcentrationEffects } from '../../combat/concentration/concentrationService.js';
 import { addEntry } from '../../ui/logService.js';
 import { getDamageReduction, getDamageResistances } from '../../combat/automation/automationPassives.js';
+import { computeAuraComboEffects } from '../../combat/auras/auraComboEffects.js';
 import { isCreatureInSilenceZone } from '../../rules/features/silenceService.js';
 import { applyWardingBond } from '../../rules/features/wardingBondService.js';
 import { checkPsychicVeil } from '../../rules/features/psychicVeilService.js';
@@ -175,6 +176,12 @@ export async function applyDamageToTarget(combatSummary, targetName, rawDamage, 
            }
        }
    }
+}
+// Aura-granted resistances (e.g., Aura of Warding) — computeAuraComboEffects self-filters
+// to targets that are the source paladin or an ally within Aura of Protection range
+const auraComboEffects = await computeAuraComboEffects({ targetName, characters });
+if (auraComboEffects.resistances.length > 0) {
+  resistances = [...new Set([...resistances, ...auraComboEffects.resistances])];
 }
 if (!Array.isArray(damageTypes)) { throw new Error('damageTypes must be an array'); }
 const resResult = computeDamageAfterResistancesWithDetails(rawDamage, damageTypes, resistances, immunities, ignoreResistance);

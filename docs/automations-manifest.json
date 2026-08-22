@@ -408,17 +408,7 @@
       "triggerConditions": "Automation type: undefined",
       "expectedBehavior": "Initiative: Advantage on Initiative rolls. Surprising Strikes: During first round of each combat, Advantage on attack rolls against any creature that hasn't taken a turn. If Sneak Attack hits any target during that round, target takes extra damage equal to your Rogue level."
     },
-    {
-      "id": "CLA-017",
-      "name": "Assassin’s Tools – Rogue – Assassin <span style=\"background:red; color:#eee; padding:1px 1px; border-radius:12px; font-size:0.85em;\">",
-      "type": "classFeature",
-      "handler": "src/services/combat/automation/handlers/classFeatureHandler.js",
-      "router": "src/services/combat/automation/routers/classFeatureRouter.js",
-      "infoBuilder": "src/services/combat/automation/infoBuilders/classFeatureInfoBuilder.js",
-      "verified": "broken — see .opencode/plans/bug-cla-017-assassins-tools-missing-automation.md",
-      "triggerConditions": "Passive",
-      "expectedBehavior": "You can magically create poison on weapons or ammunition. When you hit with an attack using an infused weapon or ammunition, the target must succeed on a Constitution saving throw or take poison damage. (Rogue Assassin - Assassin's Tools)"
-    },
+
     {
       "id": "FT-004",
       "name": "Athlete",
@@ -543,7 +533,7 @@
       "handler": "src/services/combat/automation/handlers/classFeatureHandler.js",
       "router": "src/services/combat/automation/routers/classFeatureRouter.js",
       "infoBuilder": "src/services/combat/automation/infoBuilders/classFeatureInfoBuilder.js",
-      "verified": "broken — see .opencode/plans/bug-CLA-022-aura-warding-resistances-not-applied.md",
+      "verified": "verified",
       "class": "Paladin",
       "triggerConditions": "Passive: Always active",
       "expectedBehavior": "You and allies have Resistance to Necrotic, Psychic, and Radiant damage while in Aura of Protection."

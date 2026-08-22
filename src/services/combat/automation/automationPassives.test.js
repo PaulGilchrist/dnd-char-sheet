@@ -400,6 +400,22 @@ describe('getDamageResistances', () => {
     expect(getDamageResistances(playerStats)).toEqual(['fire', 'cold', 'lightning'])
   })
 
+  it('collects and deduplicates damage resistances from passive_buff resistances arrays', () => {
+    const playerStats = { automation: { passives: [
+      { type: 'passive_buff', resistances: ['necrotic', 'psychic'] },
+      { type: 'passive_buff', resistances: ['radiant', 'necrotic'] },
+    ] } }
+    expect(getDamageResistances(playerStats)).toEqual(['necrotic', 'psychic', 'radiant'])
+  })
+
+  it('merges resistances from both passive_immunity and passive_buff sources', () => {
+    const playerStats = { automation: { passives: [
+      { type: 'passive_immunity', damageResistance: ['fire'] },
+      { type: 'passive_buff', name: 'Aura of Warding', resistances: ['necrotic', 'psychic', 'radiant'] },
+    ] } }
+    expect(getDamageResistances(playerStats)).toEqual(['fire', 'necrotic', 'psychic', 'radiant'])
+  })
+
   it('returns empty array when no passives, no damageResistance, or non-passive_immunity types', () => {
     expect(getDamageResistances({ automation: { passives: [] } })).toEqual([])
     expect(getDamageResistances({ automation: { passives: [{ type: 'passive_immunity' }] } })).toEqual([])
