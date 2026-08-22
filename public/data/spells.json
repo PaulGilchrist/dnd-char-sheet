@@ -268,7 +268,10 @@
         "classes": [
             "Druid"
         ],
-        "subclasses": []
+        "subclasses": [],
+        "automation": {
+            "type": "animal_shapes"
+        }
     },
     {
         "index": "animate-dead",

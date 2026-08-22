@@ -265,7 +265,10 @@
         ],
         "subclasses": [],
         "area_of_effect": null,
-        "status_effects": []
+        "status_effects": [],
+        "automation": {
+            "type": "animal_shapes"
+        }
     },
     {
         "index": "animate-dead",
