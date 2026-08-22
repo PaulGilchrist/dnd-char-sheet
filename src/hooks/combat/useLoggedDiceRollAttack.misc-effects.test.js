@@ -621,3 +621,120 @@ describe('createLogAndShow - Explicit target resolution', () => {
         expect(getTargetFromAttacker).toHaveBeenCalled();
     });
 });
+
+describe('createLogAndShow - Pending Skill Check Bonus (Ambush maneuver)', () => {
+    beforeEach(() => {
+        vi.clearAllMocks();
+        getDefaultMocks();
+    });
+
+    it('applies pendingSkillCheckBonus to skill check total and bonus', async () => {
+        mockRuntimeValue({
+            'TestFighter:pendingSkillCheckBonus': 4,
+        });
+        getTargetFromAttacker.mockReturnValue(null);
+        loadCombatSummary.mockResolvedValue({ creatures: [] });
+        const fn = createFn();
+        await fn('Stealth', 2, 'skill', {});
+
+        expect(defaultDeps.logEntry).toHaveBeenCalledWith(expect.objectContaining({
+            bonus: 6,
+            bonusDetail: expect.stringContaining('Pending Skill Check'),
+        }));
+        expect(defaultDeps.setPopupHtml).toHaveBeenCalledWith(expect.objectContaining({
+            bonus: 6,
+            bonusDetail: expect.stringContaining('Pending Skill Check'),
+        }));
+        expect(setRuntimeValue).toHaveBeenCalledWith('TestFighter', 'pendingSkillCheckBonus', null, 'test-campaign', true);
+    });
+
+    it('applies pendingSkillCheckBonus to ability check', async () => {
+        mockRuntimeValue({
+            'TestFighter:pendingSkillCheckBonus': 3,
+        });
+        getTargetFromAttacker.mockReturnValue(null);
+        loadCombatSummary.mockResolvedValue({ creatures: [] });
+        const fn = createFn();
+        await fn('Athletics', 5, 'check', {});
+
+        expect(defaultDeps.logEntry).toHaveBeenCalledWith(expect.objectContaining({
+            bonus: 8,
+        }));
+        expect(setRuntimeValue).toHaveBeenCalledWith('TestFighter', 'pendingSkillCheckBonus', null, 'test-campaign', true);
+    });
+
+    it('applies pendingSkillCheckBonus to initiative roll', async () => {
+        mockRuntimeValue({
+            'TestFighter:pendingSkillCheckBonus': 5,
+        });
+        getTargetFromAttacker.mockReturnValue(null);
+        loadCombatSummary.mockResolvedValue({ creatures: [] });
+        const fn = createFn();
+        await fn('Initiative', 3, 'initiative', {});
+
+        expect(defaultDeps.logEntry).toHaveBeenCalledWith(expect.objectContaining({
+            bonus: 8,
+            bonusDetail: expect.stringContaining('Pending Skill Check'),
+        }));
+        expect(setRuntimeValue).toHaveBeenCalledWith('TestFighter', 'pendingSkillCheckBonus', null, 'test-campaign', true);
+    });
+
+    it('does NOT apply pendingSkillCheckBonus to attack rolls', async () => {
+        mockRuntimeValue({
+            'TestFighter:pendingSkillCheckBonus': 4,
+        });
+        getTargetFromAttacker.mockReturnValue({ name: 'Goblin', ac: 22 });
+        const fn = createFn();
+        await fn('Longsword', 5, 'attack', { targetName: 'Goblin' });
+
+        expect(defaultDeps.logEntry).toHaveBeenCalledWith(expect.objectContaining({
+            bonus: 5,
+        }));
+        expect(defaultDeps.logEntry).not.toHaveBeenCalledWith(expect.objectContaining({
+            bonusDetail: expect.stringContaining('Pending Skill Check'),
+        }));
+        expect(setRuntimeValue).not.toHaveBeenCalledWith('TestFighter', 'pendingSkillCheckBonus', null, 'test-campaign', true);
+    });
+
+    it('does NOT apply pendingSkillCheckBonus to save rolls', async () => {
+        mockRuntimeValue({
+            'TestFighter:pendingSkillCheckBonus': 4,
+        });
+        getTargetFromAttacker.mockReturnValue(null);
+        loadCombatSummary.mockResolvedValue({ creatures: [] });
+        const fn = createFn();
+        await fn('DEX', 3, 'save', {});
+
+        expect(defaultDeps.logEntry).toHaveBeenCalledWith(expect.objectContaining({
+            bonus: 3,
+        }));
+        expect(setRuntimeValue).not.toHaveBeenCalledWith('TestFighter', 'pendingSkillCheckBonus', null, 'test-campaign', true);
+    });
+
+    it('does nothing when pendingSkillCheckBonus is 0', async () => {
+        mockRuntimeValue({
+            'TestFighter:pendingSkillCheckBonus': 0,
+        });
+        getTargetFromAttacker.mockReturnValue(null);
+        loadCombatSummary.mockResolvedValue({ creatures: [] });
+        const fn = createFn();
+        await fn('Stealth', 2, 'skill', {});
+
+        expect(defaultDeps.logEntry).toHaveBeenCalledWith(expect.objectContaining({
+            bonus: 2,
+        }));
+        expect(setRuntimeValue).not.toHaveBeenCalledWith('TestFighter', 'pendingSkillCheckBonus', null, 'test-campaign', true);
+    });
+
+    it('does nothing when pendingSkillCheckBonus is null', async () => {
+        getTargetFromAttacker.mockReturnValue(null);
+        loadCombatSummary.mockResolvedValue({ creatures: [] });
+        const fn = createFn();
+        await fn('Stealth', 2, 'skill', {});
+
+        expect(defaultDeps.logEntry).toHaveBeenCalledWith(expect.objectContaining({
+            bonus: 2,
+        }));
+        expect(setRuntimeValue).not.toHaveBeenCalledWith('TestFighter', 'pendingSkillCheckBonus', null, 'test-campaign', true);
+    });
+});

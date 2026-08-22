@@ -44,6 +44,19 @@ export function computeD20Roll(characterName, campaignName, name, rollType, cont
         }
     }
 
+    // Pending Skill Check Bonus (Ambush maneuver): apply stored bonus to check/skill/initiative rolls
+    let pendingSkillCheckAppliedBonus = 0;
+    let pendingSkillCheckDetail = null;
+    if ((rollType === 'check' || rollType === 'skill' || rollType === 'initiative') && characterName) {
+        const pendingRaw = getRuntimeValue(characterName, 'pendingSkillCheckBonus');
+        if (pendingRaw && typeof pendingRaw === 'number' && pendingRaw > 0) {
+            effectiveD20Roll += pendingRaw;
+            pendingSkillCheckAppliedBonus = pendingRaw;
+            pendingSkillCheckDetail = `(+${pendingSkillCheckAppliedBonus} [Pending Skill Check])`;
+            setRuntimeValue(characterName, 'pendingSkillCheckBonus', null, campaignName, true);
+        }
+    }
+
     // Ray of Enfeeblement: STR-based d20 tests have disadvantage
     let rayStrDisadvantage = false;
     if (rollType === 'check' || rollType === 'skill') {
@@ -138,7 +151,7 @@ export function computeD20Roll(characterName, campaignName, name, rollType, cont
         }
     }
 
-    const effectiveBonus = bonus + cosmicOmenAppliedBonus + sunderingBlowBonus + baneAttackPenalty + blessAttackBonus;
+    const effectiveBonus = bonus + cosmicOmenAppliedBonus + pendingSkillCheckAppliedBonus + sunderingBlowBonus + baneAttackPenalty + blessAttackBonus;
 
     const bonusDetailParts = [];
     if (sacredWeaponBonus > 0) {
@@ -152,6 +165,7 @@ export function computeD20Roll(characterName, campaignName, name, rollType, cont
     }
     if (sunderingBlowBonus > 0) bonusDetailParts.push('+' + sunderingBlowBonus + ' [Sundering Blow]');
     if (cosmicOmenAppliedBonus !== 0 && cosmicOmenDetail) bonusDetailParts.push(cosmicOmenDetail);
+    if (pendingSkillCheckAppliedBonus > 0 && pendingSkillCheckDetail) bonusDetailParts.push(pendingSkillCheckDetail);
     if (baneAttackPenalty < 0) bonusDetailParts.push(`${baneAttackPenalty} [${baneDisplayLabel}]`);
     if (blessAttackBonus > 0) bonusDetailParts.push('+' + blessAttackBonus + ' [Bless]');
     const finalBonusDetail = bonusDetailParts.length > 0 ? '(' + bonusDetailParts.join(', ') + ')' : undefined;
@@ -180,6 +194,8 @@ export function computeD20Roll(characterName, campaignName, name, rollType, cont
         luckyRerollValue,
         cosmicOmenAppliedBonus,
         cosmicOmenDetail,
+        pendingSkillCheckAppliedBonus,
+        pendingSkillCheckDetail,
         rayStrDisadvantage,
         sacredWeaponBonus,
         baneAttackPenalty,
