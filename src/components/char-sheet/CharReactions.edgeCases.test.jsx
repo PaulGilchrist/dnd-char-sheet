@@ -141,6 +141,7 @@ import { buildFeatureDetailHtml } from '../../hooks/combat/useActionPopup.js';
 import { getCategories } from '../../services/character/featureCategories.js';
 import { getReactionSpellNames } from '../../services/ui/spellSectionUtils.js';
 import { resolveSpellDamageAtLevel } from '../../services/rules/core/spellDamageUtils.js';
+import { executeHandler } from '../../services/automation/index.js';
 
 const campaignName = 'test-campaign';
 
@@ -388,6 +389,57 @@ describe('CharReactions - Edge Cases', () => {
         render(<CharReactions {...props} />);
         expect(screen.getByText('Reactions')).toBeInTheDocument();
         expect(screen.queryByText('Bastion of Law:')).not.toBeInTheDocument();
+    });
+
+    it('replaces Bastion of Law action with spend reaction when ward is active', () => {
+        useRuntimeValue.mockImplementation((_charKey, key) => {
+            if (key === 'bastionOfLawActive') return true;
+            if (key === 'bastionOfLawWardDice') return [{ value: 8 }];
+            return [];
+        });
+        hasAutomation.mockImplementation((feature) => {
+            if (feature?.automation?.type === 'bastion_of_law_spend') return true;
+            return false;
+        });
+        executeHandler.mockResolvedValue({ type: 'modal', modalName: 'bastionOfLawSpend', payload: {} });
+        const props = createProps({
+            playerStats: {
+                ...basePlayerStats,
+                reactions: [
+                    { name: 'Opportunity Attack', description: 'Can attack creature that moves out of your reach' },
+                    { name: 'Bastion of Law', description: 'Action desc', automation: { type: 'bastion_of_law' } },
+                ],
+            },
+        });
+        render(<CharReactions {...props} />);
+        expect(screen.getByText('Reactions')).toBeInTheDocument();
+        const bastionElements = screen.queryAllByText(/Bastion of Law:/);
+        expect(bastionElements).toHaveLength(1);
+        bastionElements[0].click();
+        expect(executeHandler).toHaveBeenCalledTimes(1);
+        const actionArg = executeHandler.mock.calls[0][0];
+        expect(actionArg.automation.type).toBe('bastion_of_law_spend');
+    });
+
+    it('does not add duplicate Bastion of Law when wardActive is true and action already exists', () => {
+        useRuntimeValue.mockImplementation((_charKey, key) => {
+            if (key === 'bastionOfLawActive') return true;
+            if (key === 'bastionOfLawWardDice') return [{ value: 8 }];
+            return [];
+        });
+        const props = createProps({
+            playerStats: {
+                ...basePlayerStats,
+                reactions: [
+                    { name: 'Opportunity Attack', description: 'Can attack creature that moves out of your reach' },
+                    { name: 'Bastion of Law', description: 'Action desc', automation: { type: 'bastion_of_law' } },
+                ],
+            },
+        });
+        render(<CharReactions {...props} />);
+        expect(screen.getByText('Reactions')).toBeInTheDocument();
+        const bastionElements = screen.queryAllByText(/Bastion of Law:/);
+        expect(bastionElements).toHaveLength(1);
     });
 
     it('does not add duplicate Opportunity Attack when already in reactions', () => {

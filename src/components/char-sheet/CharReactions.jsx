@@ -96,17 +96,30 @@ function CharReactions({ playerStats, campaignName, cannotAct, mapName, characte
         });
     }
 
-    // Add Bastion of Law ward reaction if active
+    // Add Bastion of Law ward reaction if active — replace the action entry
+    // with the spend variant so clicking it triggers handleSpendDice (SPEND
+    // modal) instead of handleBastionOfLaw (CREATE modal).
     const wardActive = useRuntimeValue(playerStats?.name, 'bastionOfLawActive', campaignName);
     const wardDice = useRuntimeValue(playerStats?.name, 'bastionOfLawWardDice', campaignName) || [];
-    if (wardActive && wardDice.length > 0 && !reactions.find(r => r.name === 'Bastion of Law')) {
-        reactions.push({
-            name: 'Bastion of Law',
-            description: `Ward active (${wardDice.length}d8 remaining). Click when you take damage to spend dice and reduce damage.`,
-            automation: {
-                type: 'bastion_of_law_spend',
-            },
-        });
+    if (wardActive && wardDice.length > 0) {
+        const existingIdx = reactions.findIndex(r => r.name === 'Bastion of Law');
+        if (existingIdx !== -1) {
+            reactions[existingIdx] = {
+                name: 'Bastion of Law',
+                description: `Ward active (${wardDice.length}d8 remaining). Click when you take damage to spend dice and reduce damage.`,
+                automation: {
+                    type: 'bastion_of_law_spend',
+                },
+            };
+        } else {
+            reactions.push({
+                name: 'Bastion of Law',
+                description: `Ward active (${wardDice.length}d8 remaining). Click when you take damage to spend dice and reduce damage.`,
+                automation: {
+                    type: 'bastion_of_law_spend',
+                },
+            });
+        }
     }
 
     // Update Stone's Endurance description based on remaining uses
