@@ -21,7 +21,7 @@ function extractSpellsFromDescription(description, result) {
     ];
 
     const knownSpells = [
-      'Speak with Animals', 'Detect Magic', 'Faerie Fire', 'Longstrider',
+      'Beast Sense', 'Speak with Animals', 'Detect Magic', 'Faerie Fire', 'Longstrider',
       'Darkness', 'Misty Step', 'Pass Without Trace', 'Invisibility',
       'Silent Image', 'Cursed Hunt', 'Ensnaring Strike',
       'Bless', 'Cure Wounds', 'Command', 'Identify', 'Burning Hands',
