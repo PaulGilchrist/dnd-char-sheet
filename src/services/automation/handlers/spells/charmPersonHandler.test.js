@@ -143,6 +143,7 @@ describe('charmPersonHandler.handle', () => {
         advantage: true,
         disadvantage: false,
         condition: 'charmed',
+        saveConditions: ['charmed'],
       });
     });
   });
@@ -529,6 +530,56 @@ describe('charmPersonHandler.handle', () => {
       expect(createSaveListener).toHaveBeenCalledWith(campaignName, expect.objectContaining({
         disadvantage: true,
       }));
+    });
+  });
+
+  describe('saveConditions for Beguiling Twist compatibility', () => {
+    it('passes saveConditions charmed to createSaveListener so Beguiling Twist can trigger', async () => {
+      setupBaseMocks({ success: true });
+
+      await handle(makeAction(), makePlayerStats(), campaignName, null);
+
+      expect(createSaveListener).toHaveBeenCalledWith(campaignName, expect.objectContaining({
+        saveConditions: ['charmed'],
+      }));
+    });
+
+    it('passes saveConditions charmed even when save fails', async () => {
+      setupBaseMocks({ success: false });
+      getRuntimeValue.mockReturnValue([]);
+
+      await handle(makeAction(), makePlayerStats(), campaignName, null);
+
+      expect(createSaveListener).toHaveBeenCalledWith(campaignName, expect.objectContaining({
+        saveConditions: ['charmed'],
+      }));
+    });
+
+    it('passes saveConditions charmed for multi-target casts', async () => {
+      buildSaveDc.mockReturnValue(15);
+      createSaveListener.mockReturnValue({
+        promptId: 'test-prompt-id',
+        promise: Promise.resolve({ success: true }),
+      });
+      getCombatContext.mockResolvedValue({
+        creatures: [
+          { name: 'Goblin', type: 'npc', saveBonuses: { WIS: 2 } },
+          { name: 'Orc', type: 'npc', saveBonuses: { WIS: 1 } },
+        ],
+      });
+
+      const action = {
+        name: 'Charm Person',
+        automation: { type: 'charm_person', saveType: 'WIS', saveDc: 15 },
+        metaCtx: { charmPersonTargets: ['Goblin', 'Orc'] },
+      };
+
+      await handle(action, makePlayerStats(), campaignName, null);
+
+      const calls = createSaveListener.mock.calls;
+      expect(calls.length).toBe(2);
+      expect(calls[0][1].saveConditions).toEqual(['charmed']);
+      expect(calls[1][1].saveConditions).toEqual(['charmed']);
     });
   });
 

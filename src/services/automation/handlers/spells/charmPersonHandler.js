@@ -101,6 +101,7 @@ export async function handle(action, playerStats, campaignName, _mapName) {
             advantage: targetAdvantage,
             disadvantage: !!action.metaCtx?.metamagicHeighten,
             condition: 'charmed',
+            saveConditions: ['charmed'],
         });
 
         addEntry(campaignName, {
