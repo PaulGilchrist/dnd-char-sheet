@@ -309,6 +309,78 @@ function CharSheet({ allAbilityScores, allClasses, allClasses2024, allEquipment,
         }
     }
 
+    // Don't render hooks or content until playerStats is ready
+    if (!playerStats) {
+        return null;
+    }
+
+    return (
+        <CharSheetContent
+            playerStats={playerStats}
+            allAbilityScores={allAbilityScores}
+            allClasses={allClasses}
+            allClasses2024={allClasses2024}
+            allEquipment={allEquipment}
+            allMagicItems={allMagicItems}
+            allRaces={allRaces}
+            allSpells={allSpells}
+            allSpells2024={allSpells2024}
+            allRaces2024={allRaces2024}
+            allMagicItems2024={allMagicItems2024}
+            playerSummary={playerSummary}
+            onDeleteCharacter={onDeleteCharacter}
+            onEditCharacter={onEditCharacter}
+            onUploadClick={onUploadClick}
+            onSaveClick={onSaveClick}
+            campaignName={campaignName}
+            activeMapName={activeMapName}
+            characters={characters}
+            setCharActionsModalState={setCharActionsModalState}
+            charActionsModalState={charActionsModalState}
+            setModalState={setModalState}
+            popupHtml={popupHtml}
+            setPopupHtml={setPopupHtml}
+            Provider={Provider}
+            value={value}
+            isLocalhost={isLocalhost}
+            handleWildShapeConfirm={handleWildShapeConfirm}
+            handlePolymorphConfirm={handlePolymorphConfirm}
+            handleShapechangeConfirm={handleShapechangeConfirm}
+            handleAnimalShapesBeastConfirm={handleAnimalShapesBeastConfirm}
+            handleTruePolymorphConfirm={handleTruePolymorphConfirm}
+            handleObjectTransformConfirm={handleObjectTransformConfirm}
+            handleTogglePreparedSpells={handleTogglePreparedSpells}
+        />
+    );
+}
+
+function CharSheetContent({
+    playerStats,
+    allAbilityScores,
+    playerSummary,
+    campaignName,
+    activeMapName,
+    characters,
+    setCharActionsModalState,
+    charActionsModalState,
+    setModalState,
+    popupHtml,
+    setPopupHtml,
+    Provider,
+    value,
+    isLocalhost,
+    handleWildShapeConfirm,
+    handlePolymorphConfirm,
+    handleShapechangeConfirm,
+    handleAnimalShapesBeastConfirm,
+    handleTruePolymorphConfirm,
+    handleObjectTransformConfirm,
+    handleTogglePreparedSpells,
+    onDeleteCharacter,
+    onEditCharacter,
+    onUploadClick,
+    onSaveClick,
+}) {
     const handleConditionsChange = () => { }
     const handleBuffsChange = () => { }
 
@@ -446,7 +518,7 @@ function CharSheet({ allAbilityScores, allClasses, allClasses2024, allEquipment,
 
     return (<Provider value={value}>
         <React.Fragment>
-            {playerStats && <div className='char-sheet' data-testid='char-sheet'>
+            <div className='char-sheet' data-testid='char-sheet'>
                 <CharSummary
                     playerStats={playerStats}
                     onDeleteCharacter={onDeleteCharacter}
@@ -499,7 +571,7 @@ function CharSheet({ allAbilityScores, allClasses, allClasses2024, allEquipment,
                 <CharInventory playerStats={playerStats}></CharInventory>
                 <CharSpecialActions playerStats={playerStats} campaignName={campaignName} cannotAct={cannotAct} characters={characters} mapName={activeMapName}></CharSpecialActions>
                 <div className='no-print'><CharCharacterAdvancement playerStats={playerStats} campaignName={campaignName}></CharCharacterAdvancement></div>
-            </div>}
+            </div>
         </React.Fragment>
                 {renderPopup(popupHtml, setPopupHtml, isLocalhost, playerStats, campaignName, characters, popupHandlers)}
                 {popupHtml?.type === 'shield_of_faith_target_selection' && (

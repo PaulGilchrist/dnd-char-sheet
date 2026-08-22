@@ -5,6 +5,10 @@ import { getRuntimeValue, setRuntimeValue } from '../../../hooks/runtime/useRunt
 import { addEntry } from '../../ui/logService.js';
 
 export function buildSaveDc(auto, playerStats) {
+    if (!playerStats) {
+        console.error('[buildSaveDc] playerStats is null/undefined');
+        return 10;
+    }
     if (auto.saveDc === 'ability') {
         let ability = auto.saveAbility || 'CON';
         if (Array.isArray(ability)) ability = ability[0];
