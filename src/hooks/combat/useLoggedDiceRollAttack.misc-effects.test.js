@@ -591,6 +591,24 @@ describe('createLogAndShow - Bardic Inspiration Defense context', () => {
 
         expect(context.bardicInspirationDefense).toBe(false);
     });
+
+    it('does NOT send a defense prompt — player must actively select the reaction from character sheet', async () => {
+        mockBardicInspiration(true, 'd6', 3);
+        getTargetFromAttacker.mockReturnValue({ name: 'Bard', ac: 14 });
+        loadCombatSummary.mockResolvedValue({ creatures: [{ name: 'Bard', type: 'player', ac: 14 }] });
+        const context = {
+            targetName: 'Bard',
+            playerStats: { automation: { features: [{ type: 'bardic_inspiration_offense' }] } },
+        };
+        const fn = createLogAndShow(wizardDeps);
+        await fn('Fire Bolt', 3, 'attack', context);
+
+        // Defense feature sets context flags (verified above) but must NOT call sendBardicInspirationDefensePrompt.
+        // The player actively selects the Bardic Inspiration reaction from their character sheet, not an auto-prompt.
+        // sendBardicInspirationDefensePrompt sets runtime value 'biPrompt' — this must not happen.
+        const biPromptCalls = setRuntimeValue.mock.calls.filter((call) => call[1] === 'biPrompt');
+        expect(biPromptCalls).toHaveLength(0);
+    });
 });
 
 describe('createLogAndShow - Explicit target resolution', () => {
