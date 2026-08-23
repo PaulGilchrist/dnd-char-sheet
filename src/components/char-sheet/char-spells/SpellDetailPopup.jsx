@@ -111,12 +111,12 @@ function SpellDetailPopup({ spell, playerStats, campaignName, onClose, onCast, u
   };
 
   const isRaging = getActiveBuffs(playerStats.name, campaignName).some(b => b.name === 'Rage');
-  const canCast = !isRaging && (isCantrip || (isUpcastable ? hasAnySlots : (freeCastAuthorized || (() => {
+  const canCast = !isRaging && (isCantrip || (isUpcastable ? hasAnySlots : ((freeCastAuthorized || (() => {
     const baseKey = `spell_slots_level_${spell.level}`;
     const stored = getRuntimeValue(playerStats.name, baseKey);
     const max = (playerStats.spellAbilities && playerStats.spellAbilities[baseKey]) || 0;
     return (stored != null ? stored : max) > 0;
-  })() || (isWarlock && warlockSlotLevel !== null))) || (_psionicSorceryAvailable >= (isUpcastable ? Number(selectedUpcastLvl) || spell.level : spell.level)));
+  })() || (isWarlock && warlockSlotLevel !== null)) || (_psionicSorceryAvailable >= spell.level))));
 
   const showUpcastSelector = isUpcastable && upcastLevels.length > 1;
 
