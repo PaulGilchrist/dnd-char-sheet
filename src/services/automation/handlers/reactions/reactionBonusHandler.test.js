@@ -321,7 +321,7 @@ describe('reactionBonusHandler', () => {
             getCombatContext.mockReturnValue({ lastAttack });
 
             const result = await applyBendFateChoice(
-                { name: 'Bend Fate', automation: { type: 'reaction_bonus' } },
+                { name: 'Bend Luck', automation: { type: 'reaction_bonus' } },
                 makePlayerStats(),
                 CAMPAIGN,
                 3,
@@ -347,7 +347,7 @@ describe('reactionBonusHandler', () => {
             applyDamageToTarget.mockReturnValue({ finalDamage: 10 });
 
             const result = await applyBendFateChoice(
-                { name: 'Bend Fate', automation: { type: 'reaction_bonus' } },
+                { name: 'Bend Luck', automation: { type: 'reaction_bonus' } },
                 makePlayerStats(),
                 CAMPAIGN,
                 3,
@@ -371,7 +371,7 @@ describe('reactionBonusHandler', () => {
             applyHealingToTarget.mockReturnValue({ actualHeal: 8, oldHp: 15, newHp: 23 });
 
             const result = await applyBendFateChoice(
-                { name: 'Bend Fate', automation: { type: 'reaction_bonus' } },
+                { name: 'Bend Luck', automation: { type: 'reaction_bonus' } },
                 makePlayerStats(),
                 CAMPAIGN,
                 3,
@@ -400,7 +400,7 @@ describe('reactionBonusHandler', () => {
             });
 
             const result = await applyBendFateChoice(
-                { name: 'Bend Fate', automation: { type: 'reaction_bonus' } },
+                { name: 'Bend Luck', automation: { type: 'reaction_bonus' } },
                 makePlayerStats(),
                 CAMPAIGN,
                 3,
@@ -429,7 +429,7 @@ describe('reactionBonusHandler', () => {
             });
 
             const result = await applyBendFateChoice(
-                { name: 'Bend Fate', automation: { type: 'reaction_bonus' } },
+                { name: 'Bend Luck', automation: { type: 'reaction_bonus' } },
                 makePlayerStats(),
                 CAMPAIGN,
                 3,
@@ -445,7 +445,7 @@ describe('reactionBonusHandler', () => {
             getCombatContext.mockReturnValue({ lastAttack: { ...baseLastAttack } });
 
             await applyBendFateChoice(
-                { name: 'Bend Fate', automation: { type: 'reaction_bonus' } },
+                { name: 'Bend Luck', automation: { type: 'reaction_bonus' } },
                 makePlayerStats(),
                 CAMPAIGN,
                 3,
@@ -461,7 +461,7 @@ describe('reactionBonusHandler', () => {
             getCombatContext.mockReturnValue({ lastAttack: { ...baseLastAttack } });
 
             await applyBendFateChoice(
-                { name: 'Bend Fate', automation: { type: 'reaction_bonus' } },
+                { name: 'Bend Luck', automation: { type: 'reaction_bonus' } },
                 makePlayerStats(),
                 CAMPAIGN,
                 3,
@@ -472,7 +472,7 @@ describe('reactionBonusHandler', () => {
             expect(addEntry).toHaveBeenCalledWith(CAMPAIGN, expect.objectContaining({
                 type: 'ability_use',
                 characterName: HERO_NAME,
-                abilityName: 'Bend Fate',
+                abilityName: 'Bend Luck',
             }));
         });
 
@@ -485,7 +485,7 @@ describe('reactionBonusHandler', () => {
             getCombatContext.mockReturnValue({ lastAttack });
 
             const result = await applyBendFateChoice(
-                { name: 'Bend Fate', automation: { type: 'reaction_bonus' } },
+                { name: 'Bend Luck', automation: { type: 'reaction_bonus' } },
                 makePlayerStats(),
                 CAMPAIGN,
                 3,
@@ -509,7 +509,7 @@ describe('reactionBonusHandler', () => {
             rollExpression.mockReturnValueOnce({ total: 3 }).mockReturnValueOnce(null);
 
             let result = await applyBendFateChoice(
-                { name: 'Bend Fate', automation: { type: 'reaction_bonus' } },
+                { name: 'Bend Luck', automation: { type: 'reaction_bonus' } },
                 makePlayerStats(),
                 CAMPAIGN,
                 3,
@@ -522,7 +522,7 @@ describe('reactionBonusHandler', () => {
             applyDamageToTarget.mockReturnValue(null);
 
             result = await applyBendFateChoice(
-                { name: 'Bend Fate', automation: { type: 'reaction_bonus' } },
+                { name: 'Bend Luck', automation: { type: 'reaction_bonus' } },
                 makePlayerStats(),
                 CAMPAIGN,
                 3,
@@ -541,7 +541,7 @@ describe('reactionBonusHandler', () => {
             };
             getCombatContext.mockReturnValue({ lastAttack });
             let result = await applyBendFateChoice(
-                { name: 'Bend Fate', automation: { type: 'reaction_bonus' } },
+                { name: 'Bend Luck', automation: { type: 'reaction_bonus' } },
                 makePlayerStats(),
                 CAMPAIGN,
                 3,
@@ -558,7 +558,7 @@ describe('reactionBonusHandler', () => {
             };
             getCombatContext.mockReturnValue({ lastAttack });
             result = await applyBendFateChoice(
-                { name: 'Bend Fate', automation: { type: 'reaction_bonus' } },
+                { name: 'Bend Luck', automation: { type: 'reaction_bonus' } },
                 makePlayerStats(),
                 CAMPAIGN,
                 3,
@@ -579,7 +579,7 @@ describe('reactionBonusHandler', () => {
             };
             getCombatContext.mockReturnValue({ lastAttack });
             result = await applyBendFateChoice(
-                { name: 'Bend Fate', automation: { type: 'reaction_bonus' } },
+                { name: 'Bend Luck', automation: { type: 'reaction_bonus' } },
                 makePlayerStats(),
                 CAMPAIGN,
                 3,
@@ -600,7 +600,7 @@ describe('reactionBonusHandler', () => {
             };
             getCombatContext.mockReturnValue({ lastAttack });
             result = await applyBendFateChoice(
-                { name: 'Bend Fate', automation: { type: 'reaction_bonus' } },
+                { name: 'Bend Luck', automation: { type: 'reaction_bonus' } },
                 makePlayerStats(),
                 CAMPAIGN,
                 3,
@@ -622,7 +622,7 @@ describe('reactionBonusHandler', () => {
             getCombatContext.mockReturnValue({ lastAttack });
 
             const result = await applyBendFateChoice(
-                { name: 'Bend Fate', automation: { type: 'reaction_bonus' } },
+                { name: 'Bend Luck', automation: { type: 'reaction_bonus' } },
                 makePlayerStats(),
                 CAMPAIGN,
                 3,
@@ -637,7 +637,7 @@ describe('reactionBonusHandler', () => {
             getCombatContext.mockReturnValue(null);
 
             let result = await applyBendFateChoice(
-                { name: 'Bend Fate', automation: { type: 'reaction_bonus' } },
+                { name: 'Bend Luck', automation: { type: 'reaction_bonus' } },
                 makePlayerStats(),
                 CAMPAIGN,
                 3,
@@ -648,7 +648,7 @@ describe('reactionBonusHandler', () => {
 
             // save type with null context
             result = await applyBendFateChoice(
-                { name: 'Bend Fate', automation: { type: 'reaction_bonus' } },
+                { name: 'Bend Luck', automation: { type: 'reaction_bonus' } },
                 makePlayerStats(),
                 CAMPAIGN,
                 3,
@@ -671,7 +671,7 @@ describe('reactionBonusHandler', () => {
             const d4Roll = { total: 4, rolls: [4] };
 
             await applyBendFateChoice(
-                { name: 'Bend Fate', automation: { type: 'reaction_bonus' } },
+                { name: 'Bend Luck', automation: { type: 'reaction_bonus' } },
                 makePlayerStats(),
                 CAMPAIGN,
                 d4Roll,
@@ -685,7 +685,7 @@ describe('reactionBonusHandler', () => {
             getCurrentSorceryPoints.mockReturnValue(3);
 
             await applyBendFateChoice(
-                { name: 'Bend Fate', automation: { type: 'reaction_bonus' } },
+                { name: 'Bend Luck', automation: { type: 'reaction_bonus' } },
                 makePlayerStats(),
                 CAMPAIGN,
                 2,
@@ -712,7 +712,7 @@ describe('reactionBonusHandler', () => {
                 return null;
             });
             let result = await applyBendFateChoice(
-                { name: 'Bend Fate', automation: { type: 'reaction_bonus' } },
+                { name: 'Bend Luck', automation: { type: 'reaction_bonus' } },
                 makePlayerStats(),
                 CAMPAIGN,
                 3,
@@ -740,7 +740,7 @@ describe('reactionBonusHandler', () => {
                 return null;
             });
             result = await applyBendFateChoice(
-                { name: 'Bend Fate', automation: { type: 'reaction_bonus' } },
+                { name: 'Bend Luck', automation: { type: 'reaction_bonus' } },
                 makePlayerStats(),
                 CAMPAIGN,
                 3,
@@ -763,7 +763,7 @@ describe('reactionBonusHandler', () => {
             getCombatContext.mockReturnValue({ lastAttack });
 
             const result = await applyBendFateChoice(
-                { name: 'Bend Fate', automation: { type: 'reaction_bonus' } },
+                { name: 'Bend Luck', automation: { type: 'reaction_bonus' } },
                 makePlayerStats(),
                 CAMPAIGN,
                 3,
@@ -782,7 +782,7 @@ describe('reactionBonusHandler', () => {
             getCombatContext.mockReturnValue({ lastAttack });
 
             const result = await applyBendFateChoice(
-                { name: 'Bend Fate', automation: { type: 'reaction_bonus' } },
+                { name: 'Bend Luck', automation: { type: 'reaction_bonus' } },
                 makePlayerStats(),
                 CAMPAIGN,
                 3,

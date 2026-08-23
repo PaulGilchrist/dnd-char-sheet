@@ -42,7 +42,7 @@ export async function handle(action, playerStats, campaignName, _mapName) {
 async function handleBendFate(action, playerStats, campaignName, _mapName) {
     const auto = action.automation;
     const playerName = playerStats.name;
-    const featureName = action.name || 'Bend Fate';
+    const featureName = action.name || 'Bend Luck';
 
     const featureMaxSP = playerStats.automation?.specialActions?.find(a => a.name === 'Sorcery Points')?.uses || 0;
     const maxSP = featureMaxSP || (getClassFeatures(playerStats)?.maxSorceryPoints || 0);
@@ -56,7 +56,7 @@ async function handleBendFate(action, playerStats, campaignName, _mapName) {
 
 
     if (!lastAttack) {
-        return infoPopup(featureName, `${featureName}: No recent D20 test found. Bend Fate can only be used shortly after a creature rolls a d20.`, auto);
+        return infoPopup(featureName, `${featureName}: No recent D20 test found. Bend Luck can only be used shortly after a creature rolls a d20.`, auto);
     }
 
     if (lastAttack.targetName === playerName) {
@@ -286,8 +286,8 @@ export async function applyBendFateChoice(action, playerStats, campaignName, d4R
     const d4Value = typeof d4Roll === 'object' ? d4Roll.total : d4Roll;
     action._playerStats = playerStats;
     return applyD20Modifier(action, playerName, campaignName, d4Value, lastAttack, mode, {
-        featureName: action.name || 'Bend Fate',
-        logDescription: `${playerName} used ${action.name || 'Bend Fate'}`,
+        featureName: action.name || 'Bend Luck',
+        logDescription: `${playerName} used ${action.name || 'Bend Luck'}`,
         onSpent: () => spendSorceryPoints(playerName, 1, campaignName, getClassFeatures(playerStats)?.maxSorceryPoints || 0),
     });
 }

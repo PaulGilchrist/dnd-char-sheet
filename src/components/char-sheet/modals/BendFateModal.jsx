@@ -14,8 +14,8 @@ function BendFateModal({ action, playerStats, campaignName, d4Roll, lastAttack, 
             const res = await applyBendFateChoice(action, playerStats, campaignName, d4Roll, lastAttack, mode);
             setResult(res);
         } catch (e) {
-            console.error('Bend Fate failed', e);
-            setError(`Failed to apply Bend Fate: ${e.message}`);
+            console.error('Bend Luck failed', e);
+            setError(`Failed to apply Bend Luck: ${e.message}`);
         }
     };
 
@@ -24,7 +24,7 @@ function BendFateModal({ action, playerStats, campaignName, d4Roll, lastAttack, 
             <div className="sp-overlay" onClick={onClose}>
                 <div className="sp-modal" onClick={e => e.stopPropagation()}>
                     <div className="sp-header">
-                        <i className="fa-solid fa-hand"></i> {action.name || 'Bend Fate'}
+                        <i className="fa-solid fa-hand"></i> {action.name || 'Bend Luck'}
                     </div>
                     <div className="sp-body" dangerouslySetInnerHTML={{ __html: result.payload.description }}>
                     </div>
@@ -40,7 +40,7 @@ function BendFateModal({ action, playerStats, campaignName, d4Roll, lastAttack, 
         <div className="sp-overlay" onClick={onClose}>
             <div className="sp-modal" onClick={e => e.stopPropagation()}>
                 <div className="sp-header">
-                    <i className="fa-solid fa-hand"></i> {action.name || 'Bend Fate'}
+                    <i className="fa-solid fa-hand"></i> {action.name || 'Bend Luck'}
                 </div>
                 <div className="sp-body">
                     <p><b>{eventLabel}</b></p>

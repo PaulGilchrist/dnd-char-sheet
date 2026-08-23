@@ -262,7 +262,7 @@
       "infoBuilder": "src/services/combat/automation/infoBuilders/classFeatureInfoBuilder.js",
       "verified": "broken — see .opencode/plans/bug-cla-008-aquatic-affinity-missing.md",
       "class": "Druid",
-      "triggerConditions": "Passive: Always active",
+      "triggerConditions": "verified",
       "expectedBehavior": "The size of the Emanation created by your Wrath of the Sea increases to 10 feet. In addition, you gain a Swim Speed equal to your Speed."
     },
     {
@@ -284,7 +284,7 @@
       "handler": "src/services/combat/automation/handlers/classFeatureHandler.js",
       "router": "src/services/combat/automation/routers/classFeatureRouter.js",
       "infoBuilder": "src/services/combat/automation/infoBuilders/classFeatureInfoBuilder.js",
-      "verified": "broken — see .opencode/plans/bug-cla-010-no-teleport.md",
+      "verified": "verified",
       "class": "Fighter",
       "triggerConditions": "Action: 1 action",
       "expectedBehavior": "When you use Action Surge, teleport up to 30 feet before or after the additional action."
@@ -648,18 +648,6 @@
       "class": "Ranger",
       "triggerConditions": "Automation type: undefined",
       "expectedBehavior": "Advantage on saving throws to avoid/end Charmed or Frightened. When you or creature within 120 feet succeeds on save vs Charmed/Frightened, take Reaction to force different creature within 120 feet to make Wisdom save (your spell save DC) or be Charmed/Frightened for 1 minute."
-    },
-    {
-      "id": "CLA-035",
-      "name": "Bend Fate",
-      "type": "classFeature",
-      "handler": "src/services/combat/automation/handlers/classFeatureHandler.js",
-      "router": "src/services/combat/automation/routers/classFeatureRouter.js",
-      "infoBuilder": "src/services/combat/automation/infoBuilders/classFeatureInfoBuilder.js",
-      "verified": "broken — see .opencode/plans/bug-cla-035-bend-fate-wrong-subclass.md",
-      "class": "Sorcerer",
-      "triggerConditions": "Trigger: after creature d20 roll; Action: 1 reaction",
-      "expectedBehavior": "Immediately after another creature you can see rolls the d20 for a D20 Test, take Reaction and spend 1 Sorcery Point to roll 1d4 and apply as bonus or penalty (your choice) to the d20 roll."
     },
     {
       "id": "CLA-036",

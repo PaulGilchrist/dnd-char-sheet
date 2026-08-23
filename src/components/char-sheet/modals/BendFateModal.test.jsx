@@ -21,7 +21,7 @@ import * as reactionBonusHandler from '../../../services/automation/handlers/rea
 // ── Test fixtures ──
 
 const baseAction = {
-  name: 'Bend Fate',
+  name: 'Bend Luck',
   automation: {
     type: 'class_feature',
     effect: 'bonus_or_penalty_choice',
@@ -93,13 +93,13 @@ describe('BendFateModal', () => {
   describe('initial render', () => {
     it('renders modal with action name in header', () => {
       renderModal(baseProps);
-      expect(screen.getByText('Bend Fate')).toBeInTheDocument();
+      expect(screen.getByText('Bend Luck')).toBeInTheDocument();
     });
 
     it('renders default name when action name is missing', () => {
       const noNameAction = makeAction({ name: null });
       renderModal(makeProps({ action: noNameAction }));
-      expect(screen.getByText('Bend Fate')).toBeInTheDocument();
+      expect(screen.getByText('Bend Luck')).toBeInTheDocument();
     });
 
     it('renders event label, roll calculation, and buttons', () => {
@@ -193,8 +193,8 @@ describe('BendFateModal', () => {
         type: 'popup',
         payload: {
           type: 'automation_info',
-          name: 'Bend Fate',
-          description: 'Bend Fate result',
+          name: 'Bend Luck',
+          description: 'Bend Luck result',
         },
       });
       renderModal(baseProps);
@@ -220,14 +220,14 @@ describe('BendFateModal', () => {
         type: 'popup',
         payload: {
           type: 'automation_info',
-          name: 'Bend Fate',
+          name: 'Bend Luck',
           description: 'Attack: d20(14) + 6+3 = <strong>23</strong> vs AC 17 → HIT',
         },
       });
       renderModal(baseProps);
       fireEvent.click(screen.getByRole('button', { name: 'Apply +3 (Bonus)' }));
       await waitFor(() => {
-        expect(screen.getByText('Bend Fate')).toBeInTheDocument();
+        expect(screen.getByText('Bend Luck')).toBeInTheDocument();
         expect(screen.getByText(/Attack: d20/)).toBeInTheDocument();
         expect(screen.getByRole('button', { name: 'Done' })).toBeInTheDocument();
       });
@@ -238,7 +238,7 @@ describe('BendFateModal', () => {
         type: 'popup',
         payload: {
           type: 'automation_info',
-          name: 'Bend Fate',
+          name: 'Bend Luck',
           description: 'Result',
         },
       });

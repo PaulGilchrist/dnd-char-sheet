@@ -11363,7 +11363,7 @@
                         }
                     },
                     {
-                        "name": "Bend Fate",
+                        "name": "Bend Luck",
                         "description": "Immediately after another creature you can see rolls the d20 for a D20 Test, take Reaction and spend 1 Sorcery Point to roll 1d4 and apply as bonus or penalty (your choice) to the d20 roll.",
                         "level": 6,
                         "automation": {

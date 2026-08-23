@@ -158,8 +158,8 @@ describe('featureCategories5e', () => {
       expect(reactions).toHaveLength(unique.size);
     });
 
-    it('should list Bend Fate as a reaction feature', () => {
-      expect(reactions).toContain('Bend Fate');
+    it('should list Bend Luck as a reaction feature', () => {
+      expect(reactions).toContain('Bend Luck');
     });
   });
 

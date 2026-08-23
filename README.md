@@ -99,7 +99,7 @@ No more "Wait, how many hit points do you have?" mid-combat! No more passing aro
 | 🎯 **Range Validation** | Melee/ranged checks with disadvantage, long-range penalties, and feat-based range effects (e.g., Crossbow Expert) |
 | 🔄 **Rest System** | Short rest with Hit Dice, Song of Rest, Arcane Recovery, Font of Inspiration, Sorcerous Restoration, Bolstering Treats, Memorize Spell; Long rest with full restore and exhaustion reduction |
 | 🎭 **Character Advancement** | Feats with prerequisite validation, multiclass features, feature choice selectors (Spell Mastery, Signature Spells, Defensive Tactics, Hunter's Prey, and more) |
-| 🎭 **Reaction Features** | Haste extra actions, Nick weapon mastery, Horde Breaker, Revivification, Stand (Power Word Heal), Arcane Ward Restore, Bastion of Law, Bend Fate, and more — auto-surface based on active buffs |
+| 🎭 **Reaction Features** | Haste extra actions, Nick weapon mastery, Horde Breaker, Revivification, Stand (Power Word Heal), Arcane Ward Restore, Bastion of Law, Bend Luck, and more — auto-surface based on active buffs |
 | 🤝 **Aura Combo Effects** | Multiple character auras combine — speed bonuses, resistances, immunities, and protection stack when overlapping |
 | 📋 **Prompt Queuing** | Multiple save prompts and concentration prompts are queued so you never lose a roll |
 
@@ -252,7 +252,7 @@ The app creates **beautiful, well-organized character sheets that fit on a singl
 - **Actions** — Attacks with hit bonuses, damage, and damage types (click to roll vs target's AC with HIT/MISS determination; successful hits auto-advance to damage roll)
 - **Base Actions** — Standard D&D actions: Hide (auto-applies Invisible on success), Dodge (gives attackers disadvantage), Dash, Disengage, Use an Object
 - **Bonus actions** — Clearly separated from regular actions, including Horde Breaker conditional display
-- **Reactions** — Opportunity attacks (with Inspiring Movement / Tactical Shift / Agile Movement awareness), reaction spells, Revivification, Stand (Power Word Heal), Arcane Ward Restore, Bastion of Law, Bend Fate
+- **Reactions** — Opportunity attacks (with Inspiring Movement / Tactical Shift / Agile Movement awareness), reaction spells, Revivification, Stand (Power Word Heal), Arcane Ward Restore, Bastion of Law, Bend Luck
 - **Special actions** — Class features, fighting styles, auto-integrated from rules data (Great Weapon Fighting, Protection), and custom abilities with markdown descriptions
 - **Haste Extra Action** — When Haste buff is active, gain an extra attack, dash, disengage, hide, or use an object
 - **Weapon Mastery Column** — 2024 rules show mastery effects (Slowed, Topple, Paralyzed, etc.) per attack with click-to-popup details
@@ -848,7 +848,7 @@ Want to level up, buy gear, or prepare spells between sessions?
 
 **No More Aura Math** — Paladin and party auras (Protection, Alacrity, Courage, Devotion, Warding), Druid auras (Duplicity, Elder Champion, Lion, Wolf), and Corona of Light compute bonuses based on actual map positions, with condition-awareness and combo effects when multiple auras overlap.
 
-**No More Forgotten Reactions** — Haste extra actions, Nick weapon mastery tracking, Horde Breaker conditional display, Revivification, Stand (Power Word Heal), Arcane Ward Restore, Bastion of Law, Bend Fate, and reaction spells all surface automatically based on your character's active buffs.
+**No More Forgotten Reactions** — Haste extra actions, Nick weapon mastery tracking, Horde Breaker conditional display, Revivification, Stand (Power Word Heal), Arcane Ward Restore, Bastion of Law, Bend Luck, and reaction spells all surface automatically based on your character's active buffs.
 
 **No More Forgotten Class Features** — 200+ automation handlers cover every class feature interaction: Persistent Rage, Zealous Presence, Countercharm, Vow of Enmity, Soul of Vengeance, Relentless Endurance, Glorious Defense, Elder Champion, Dragon Wings, Celestial Revelation, Shadowy Dodge, Misty Escape, and 100+ more — all automated with proper save resolution and campaign log entries.
 
@@ -920,7 +920,7 @@ Spells like Magic Missile, Aid, Heroes' Feast, Greater Restoration, Lesser Resto
 The sidebar includes clickable d4, d6, d8, d10, d12, d20, and d100 buttons for quick reference rolls without navigating to a character sheet.
 
 **What are reaction features?**
-When your character has active buffs that grant reactions (like Haste's extra action, Revivification, Stand from Power Word Heal, Inspiring Movement, Arcane Ward Restore, Bastion of Law, or Bend Fate), they automatically appear in the reactions section.
+When your character has active buffs that grant reactions (like Haste's extra action, Revivification, Stand from Power Word Heal, Inspiring Movement, Arcane Ward Restore, Bastion of Law, or Bend Luck), they automatically appear in the reactions section.
 
 **How do auras work?**
 Paladin and party auras (Protection, Alacrity, Courage, Devotion, Warding), Druid auras (Duplicity, Elder Champion, Lion, Wolf), and Corona of Light compute bonuses based on actual map positions. If multiple characters have overlapping auras, the bonuses combine. Auras from incapacitated or otherwise disabled characters are automatically disabled.
