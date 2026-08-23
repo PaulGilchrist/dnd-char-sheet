@@ -1078,10 +1078,10 @@
       "handler": "src/services/combat/automation/handlers/classFeatureHandler.js",
       "router": "src/services/combat/automation/routers/classFeatureRouter.js",
       "infoBuilder": "src/services/combat/automation/infoBuilders/classFeatureInfoBuilder.js",
-      "verified": "broken — see .opencode/plans/bug-cla-049-circle-forms-not-applied.md",
+      "verified": "verified",
       "class": "Druid",
       "triggerConditions": "Passive: Always active",
-      "expectedBehavior": "You can channel lunar magic when you assume a Wild Shape form, granting you the benefits below. Challenge Rating: The maximum Challenge Rating for the form equals your Druid level divided by 3 (round down). Armor Class: Until you leave the form, your AC equals 13 plus your Wisdom modifier if that total is higher than the Beast's AC. Temporary Hit Points: You gain a number of TemporaryHit Points equal to three times your Druid level."
+      "expectedBehavior": "Circle Forms effects (CR limit, AC override, temp HP) are applied via the hardcoded Wild Shape activation flow in wildShapeCreatureBuilder.js:activateWildShape() when a Moon Druid transforms. NOT via the circle_forms_active automation type (dead code — passive_buff handler does not process requiresActive or bonusExpression). CR limit: Druid level / 3 (round down). AC: 13 + WIS mod if higher than Beast AC. Temp HP: 3 × Druid level."
     },
     {
       "id": "SP-023",
