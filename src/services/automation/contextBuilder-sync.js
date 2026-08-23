@@ -11,6 +11,7 @@ import { getCoronaSaveDisadvantage } from '../combat/auras/coronaAuraUtils.js';
 import { endSanctuary } from './handlers/spells/sanctuaryHandler.js';
 import { isActive as isAvengingAngelActive, isAuraTarget } from '../automation/handlers/class-cleric-paladin/avengingAngelHandler.js';
 import { isProtectionFromEvilAndGoodActive, isCreatureWarded } from '../automation/handlers/buffs/protectionFromEvilAndGoodHandler.js';
+import { isDeathWardActive } from '../automation/handlers/buffs/deathWardHandler.js';
 import { collectWeaponMastery } from '../combat/automation/automationService.js';
 import { resolveDiceExpression } from '../combat/automation/automationExpressions.js';
 import { isResilientSphereActive } from '../combat/automation/automationPassives.js';
@@ -234,6 +235,13 @@ export async function buildAttackContextSync(attack, playerStats, campaignName, 
                 if (attackerCreature && isCreatureWarded(attackerCreature.type, targetName, campaignName)) {
                     dis++;
                 }
+            }
+        }
+
+        // Death Ward: attackers have disadvantage on attack rolls against the target
+        if (targetName && forcedMode === undefined) {
+            if (isDeathWardActive(targetName, campaignName)) {
+                dis++;
             }
         }
 

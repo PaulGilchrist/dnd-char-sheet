@@ -53,6 +53,10 @@ vi.mock('../../../services/automation/handlers/buffs/circleOfPowerHandler.js', (
     isCircleOfPowerActive: vi.fn(),
 }));
 
+vi.mock('../../../services/automation/handlers/buffs/deathWardHandler.js', () => ({
+    isDeathWardActive: vi.fn(),
+}));
+
 vi.mock('../../../services/automation/handlers/buffs/holyAuraHandler.js', () => ({
     getHolyAuraTargets: vi.fn(),
 }));
@@ -103,6 +107,7 @@ import { getHolyAuraTargets } from '../../../services/automation/handlers/buffs/
 import { getCoronaSaveDisadvantage } from '../../../services/combat/auras/coronaAuraUtils.js';
 import { getElderChampionSaveDisadvantage } from '../../../services/combat/auras/elderChampionAuraUtils.js';
 import { isCircleOfPowerActive } from '../../../services/automation/handlers/buffs/circleOfPowerHandler.js';
+import { isDeathWardActive } from '../../../services/automation/handlers/buffs/deathWardHandler.js';
 
 const BASE_CONTEXT = {
     saveDc: 15,
@@ -167,6 +172,7 @@ describe('handlePlayerSaveDamage - targetEffects and buff flags', () => {
         getCoronaSaveDisadvantage.mockReturnValue({ disadvantage: false });
         getElderChampionSaveDisadvantage.mockResolvedValue({ disadvantage: false });
         isCircleOfPowerActive.mockReturnValue(false);
+        isDeathWardActive.mockReturnValue(false);
     });
 
     describe('shape_shift buff detection', () => {
@@ -543,6 +549,35 @@ describe('handlePlayerSaveDamage - targetEffects and buff flags', () => {
             const result = await invokeHandler(handler);
 
             expect(result).toBe(true);
+        });
+    });
+
+    describe('Death Ward grants advantage on saves', () => {
+        it('passes saveAdvantage=true when target has Death Ward buff', async () => {
+            isDeathWardActive.mockReturnValue(true);
+
+            const handler = createPlayerSaveDamageHandler(deps);
+            await invokeHandler(handler);
+
+            expect(deps.pendingSaves['test-guid-1234']).toHaveProperty('saveAdvantage', true);
+        });
+
+        it('passes saveAdvantage=false when target has no Death Ward buff', async () => {
+            isDeathWardActive.mockReturnValue(false);
+
+            const handler = createPlayerSaveDamageHandler(deps);
+            await invokeHandler(handler);
+
+            expect(deps.pendingSaves['test-guid-1234']).toHaveProperty('saveAdvantage', false);
+        });
+
+        it('sends advantage=true to save prompt when Death Ward is active', async () => {
+            isDeathWardActive.mockReturnValue(true);
+
+            const handler = createPlayerSaveDamageHandler(deps);
+            await invokeHandler(handler);
+
+            expect(deps.pendingSaves['test-guid-1234']).toHaveProperty('saveAdvantage', true);
         });
     });
 });

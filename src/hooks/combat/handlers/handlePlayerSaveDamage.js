@@ -8,6 +8,7 @@ import { getElderChampionSaveDisadvantage } from '../../../services/combat/auras
 import { sendSavePrompt } from '../../../services/combat/conditions/savePromptService.js';
 import { computeConditionEffects } from '../../../services/combat/conditions/conditionEffects.js';
 import { isCircleOfPowerActive } from '../../../services/automation/handlers/buffs/circleOfPowerHandler.js';
+import { isDeathWardActive } from '../../../services/automation/handlers/buffs/deathWardHandler.js';
 import { registerPendingSavePrompt } from '../../../services/combat/auras/pendingSaveRegistry.js';
 import { registerPendingPopupSetter } from '../../../services/combat/auras/pendingPopupRegistry.js';
 import utils from '../../../services/ui/utils.js';
@@ -199,7 +200,8 @@ export function createPlayerSaveDamageHandler(deps) {
 
         const saveAdvantage = !!(targetConditionEffects.saveAdvantageCount > 0 ||
             (targetConditionEffects.saveAdvantageAbilities && targetConditionEffects.saveAdvantageAbilities.includes((saveType || '').substring(0, 3).toUpperCase())) ||
-            isCircleOfPowerActive(target.name, campaignName));
+            isCircleOfPowerActive(target.name, campaignName) ||
+            isDeathWardActive(target.name, campaignName));
 
         const pendingData = {
             targetName: target.name, rawDamage: adjustedTotal, saveDc, saveType, dcSuccess,

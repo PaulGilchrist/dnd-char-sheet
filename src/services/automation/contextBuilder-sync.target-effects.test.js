@@ -82,6 +82,11 @@ vi.mock('../automation/handlers/buffs/protectionFromEvilAndGoodHandler.js', () =
   handle: vi.fn(),
 }));
 
+vi.mock('../automation/handlers/buffs/deathWardHandler.js', () => ({
+  isDeathWardActive: vi.fn().mockReturnValue(false),
+  handle: vi.fn(),
+}));
+
 vi.mock('../combat/automation/automationService.js', () => ({
   collectWeaponMastery: vi.fn().mockReturnValue({ baseMastery: null, extraMasteries: [] }),
 }));
@@ -104,6 +109,7 @@ const { getWolfAdvantageAgainst } = await import('../combat/auras/wolfAuraUtils.
 const { getDuplicityAdvantageAgainst } = await import('../combat/auras/duplicityAuraUtils.js');
 const { getLionDisadvantageAgainst } = await import('../combat/auras/lionAuraUtils.js');
 const { getCoronaSaveDisadvantage } = await import('../combat/auras/coronaAuraUtils.js');
+const { isDeathWardActive } = await import('../automation/handlers/buffs/deathWardHandler.js');
 
 const mockStats = {
   name: 'Fighter1',
@@ -279,5 +285,42 @@ describe('contextBuilder-sync: next_attack_bonus (Sundering Blow)', () => {
     const result = await buildAttackContextSync(mockAttack, mockStats, 'camp', 'normal', {});
 
     expect(result.hitBonus).toBe(7);
+  });
+});
+
+describe('contextBuilder-sync: Death Ward grants disadvantage on attacks', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    defaultBaseAttackContext();
+    getRuntimeValue.mockReturnValue(undefined);
+    defaultAuraMocks();
+  });
+
+  it('sets disadvantage when target has Death Ward buff', async () => {
+    isDeathWardActive.mockReturnValue(true);
+
+    const result = await buildAttackContextSync(mockAttack, mockStats, 'camp', 'normal', {});
+
+    expect(result.forcedMode).toBe('disadvantage');
+  });
+
+  it('does not set disadvantage when target has no Death Ward buff', async () => {
+    isDeathWardActive.mockReturnValue(false);
+
+    const result = await buildAttackContextSync(mockAttack, mockStats, 'camp', 'normal', {});
+
+    expect(result.forcedMode).toBeUndefined();
+  });
+
+  it('stacks with other disadvantage sources', async () => {
+    isDeathWardActive.mockReturnValue(true);
+    getRuntimeValue.mockImplementation((name, key) => {
+      if (key === 'activeBuffs') return [{ effect: 'dodge' }];
+      return undefined;
+    });
+
+    const result = await buildAttackContextSync(mockAttack, mockStats, 'camp', 'normal', {});
+
+    expect(result.forcedMode).toBe('disadvantage');
   });
 });

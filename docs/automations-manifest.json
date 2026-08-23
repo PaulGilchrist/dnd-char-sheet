@@ -1589,10 +1589,10 @@
       "handler": "src/services/combat/automation/handlers/spellHandler.js",
       "router": "src/services/combat/automation/routers/spellRouter.js",
       "infoBuilder": "src/services/combat/automation/infoBuilders/spellInfoBuilder.js",
-      "verified": "broken — see .opencode/plans/bug-sp-034-death-ward.md",
+      "verified": "verified",
       "class": "Spell",
       "triggerConditions": "",
-      "expectedBehavior": "You touch a creature and grant it a measure of protection from death. The first time the target would drop to 0 Hit Points before the spell ends, the target instead drops to 1 Hit Point, and the spell ends. If the spell is still in effect when the target is subjected to an effect that would kill it instantly without dealing damage, that effect is negated against the target, and the spell ends."
+      "expectedBehavior": "You touch a creature and grant it a measure of protection from death. For the duration, the target has advantage on saving throws against being reduced to 0 Hit Points. When attacks are made against the target, the attacker has disadvantage on the attack roll. If an effect would reduce the target to 0 Hit Points, it instead is reduced to 1 Hit Point instead, and the spell ends.",
     },
     {
       "id": "FS-004",
