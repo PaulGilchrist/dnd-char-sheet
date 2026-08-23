@@ -394,4 +394,36 @@ describe('contextBuilder-sync: basic context fields', () => {
       expect(result2.isAutoMiss).toBe(true);
     });
   });
+
+  describe('hitBonus undefined on attack object', () => {
+    it('defaults to 0 instead of producing NaN when attack.hitBonus is undefined', async () => {
+      const attackWithoutHitBonus = {
+        name: 'Greataxe',
+        damage: '1d12',
+        damageType: 'Slashing',
+        weaponType: 'melee',
+        hitBonus: undefined,
+      };
+
+      const result = await buildAttackContextSync(attackWithoutHitBonus, mockStats, 'camp', 'normal', {});
+
+      expect(result.hitBonus).toBe(0);
+      expect(Number.isNaN(result.hitBonus)).toBe(false);
+    });
+
+    it('defaults to 0 when attack.hitBonus is null', async () => {
+      const attackWithNullHitBonus = {
+        name: 'Greataxe',
+        damage: '1d12',
+        damageType: 'Slashing',
+        weaponType: 'melee',
+        hitBonus: null,
+      };
+
+      const result = await buildAttackContextSync(attackWithNullHitBonus, mockStats, 'camp', 'normal', {});
+
+      expect(result.hitBonus).toBe(0);
+      expect(Number.isNaN(result.hitBonus)).toBe(false);
+    });
+  });
 });
