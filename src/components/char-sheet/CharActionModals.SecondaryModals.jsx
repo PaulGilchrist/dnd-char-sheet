@@ -10,6 +10,7 @@ import TashasLaughterModal from './modals/shared/TashasLaughterModal.jsx';
 import SilenceModal from './modals/SilenceModal.jsx';
 import MassSuggestionModal from './modals/shared/MassSuggestionModal.jsx';
 import CalmEmotionsModal from './modals/shared/CalmEmotionsModal.jsx';
+import CommandModal from './CommandModal.jsx';
 import ElementalAttunementModal from './modals/ElementalAttunementModal.jsx';
 import ElementalBurstModal from './modals/ElementalBurstModal.jsx';
 import DivineSparkModal from './modals/divine/DivineSparkModal.jsx';
@@ -221,6 +222,12 @@ function SecondaryModals({
                 <CalmEmotionsModal
                     {...mergedModalState.calmEmotionsModal}
                     onClose={() => setModalState({ calmEmotionsModal: null })}
+                />
+            )}
+            {mergedModalState.commandModal && (
+                <CommandModal
+                    {...mergedModalState.commandModal}
+                    onClose={() => setModalState({ commandModal: null })}
                 />
             )}
             {mergedModalState.elementalAttunementModal && (

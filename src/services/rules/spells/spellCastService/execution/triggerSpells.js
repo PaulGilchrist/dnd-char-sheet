@@ -55,6 +55,7 @@ const SERVICE_HANDLED_SPELLS = new Set([
     'tasha\'s hideous laughter', 'hideous laughter',
     'ray of enfeeblement',
     'hex',
+    'command',
 ]);
 
 async function handleRegenerate(spell, getTargetInfo, applyRegenerateSpell, playerStats, campaignName) {
@@ -179,6 +180,30 @@ async function handleSuggestion(spell, metaCtx, spellSaveDc, playerStats, campai
     if (spell.name && spell.name.toLowerCase() === 'suggestion') {
         await triggerSuggestion(spell, { ...metaCtx, spellSaveDc }, playerStats, campaignName, mapName);
         return { handled: true };
+    }
+    return { handled: false };
+}
+
+async function handleCommand(spell, metaCtx, spellSaveDc, getTargetInfo, playerStats, campaignName, mapName) {
+    if (spell.name && spell.name.toLowerCase() === 'command') {
+        const commandTarget = await getTargetInfo();
+        return {
+            handled: true,
+            result: {
+                automationPopup: {
+                    type: 'modal',
+                    modalName: 'commandChoice',
+                    payload: {
+                        spell,
+                        metaCtx: { ...metaCtx, spellSaveDc },
+                        targetName: commandTarget?.name,
+                        playerStats,
+                        campaignName,
+                        mapName,
+                    },
+                },
+            },
+        };
     }
     return { handled: false };
 }
@@ -578,6 +603,7 @@ export {
     handleBeaconOfHope,
     handleMassSuggestion,
     handleSuggestion,
+    handleCommand,
     handleOttoDance,
     handleResilientSphere,
     handleBlur,

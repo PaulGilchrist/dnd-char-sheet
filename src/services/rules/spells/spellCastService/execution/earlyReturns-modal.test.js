@@ -153,6 +153,7 @@ vi.mock('./triggerSpells.js', () => ({
   handleBeaconOfHope: vi.fn(() => Promise.resolve({ handled: false })),
   handleMassSuggestion: vi.fn(() => Promise.resolve({ handled: false })),
   handleSuggestion: vi.fn(() => Promise.resolve({ handled: false })),
+  handleCommand: vi.fn(() => Promise.resolve({ handled: false })),
   handleOttoDance: vi.fn(() => Promise.resolve({ handled: false })),
   handleResilientSphere: vi.fn(() => Promise.resolve({ handled: false })),
   handleBlur: vi.fn(() => Promise.resolve({ handled: false })),

@@ -557,24 +557,30 @@ vi.mock('../../services/automation/handlers/class-cleric-paladin/bastionOfLawHan
   handleApply: vi.fn().mockResolvedValue(undefined),
 }));
 vi.mock('../../services/automation/handlers/spells/animateDeadHandler.js', () => ({
+  handle: vi.fn(),
   confirmAnimateDead: vi.fn().mockResolvedValue(undefined),
 }));
 vi.mock('../../services/automation/handlers/spells/createUndeadHandler.js', () => ({
+  handle: vi.fn(),
   confirmCreateUndead: vi.fn().mockResolvedValue(undefined),
 }));
 vi.mock('../../services/automation/handlers/spells/summonSpiritHandler.js', () => ({
+  handle: vi.fn(),
   confirmSummonSpirit: vi.fn().mockResolvedValue(undefined),
 }));
 vi.mock('../../services/automation/handlers/class-warlock/tempTeleportHandler.js', () => ({
+  handle: vi.fn(),
   confirmTeleport: vi.fn().mockResolvedValue(undefined),
 }));
 vi.mock('../../services/rules/spells/postCastHealService.js', () => ({
   applyStarryChaliceHeal: vi.fn().mockResolvedValue(null),
 }));
 vi.mock('../../services/automation/handlers/combat/elementalEpitomeHandler.js', () => ({
+  handle: vi.fn(),
   applyResistanceChoice: vi.fn().mockResolvedValue(undefined),
 }));
 vi.mock('../../services/automation/handlers/combat/destructiveStrideHandler.js', () => ({
+  handle: vi.fn(),
   applyDamageTypeChoice: vi.fn().mockResolvedValue(undefined),
   applyTargetChoice: vi.fn().mockResolvedValue(undefined),
   skipTargetChoice: vi.fn().mockResolvedValue(undefined),

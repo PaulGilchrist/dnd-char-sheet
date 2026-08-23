@@ -1,0 +1,87 @@
+.command-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 100vh;
+    background-color: rgba(0, 0, 0, 0.9);
+    z-index: 1000;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.command-modal {
+    background-color: var(--background-color-header-inner);
+    border: 1px solid var(--color-header);
+    border-radius: 10px;
+    color: var(--color-header-inner);
+    padding: 20px;
+    max-width: 500px;
+    width: 90%;
+    max-height: 85vh;
+    overflow-y: auto;
+}
+
+.command-modal h3 {
+    margin: 0 0 12px;
+    color: var(--color-header);
+}
+
+.command-description {
+    margin-bottom: 16px;
+    font-size: 0.95em;
+}
+
+.command-options {
+    margin-bottom: 16px;
+}
+
+.command-option {
+    display: flex;
+    align-items: flex-start;
+    gap: 8px;
+    padding: 10px 12px;
+    margin-bottom: 6px;
+    border: 1px solid var(--border-color-light);
+    border-radius: 6px;
+    cursor: pointer;
+    transition: border-color 0.15s ease;
+}
+
+.command-option:hover {
+    border-color: var(--color-header);
+}
+
+.command-option.selected {
+    border-color: var(--color-header);
+    background-color: rgba(255, 255, 255, 0.05);
+}
+
+.command-option input[type="radio"] {
+    margin-top: 3px;
+    flex-shrink: 0;
+}
+
+.command-option-content {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+
+.command-option-label {
+    font-weight: 600;
+    font-size: 0.95em;
+}
+
+.command-option-description {
+    font-size: 0.85em;
+    opacity: 0.8;
+}
+
+.command-actions {
+    display: flex;
+    gap: 8px;
+    justify-content: flex-end;
+    margin-top: 12px;
+}
