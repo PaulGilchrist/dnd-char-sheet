@@ -86,7 +86,7 @@ export async function handle(action, playerStats, campaignName) {
         await setRuntimeValue(playerName, usesKey, currentUses - 1, campaignName);
     }
 
-    await setRuntimeValue('cosmicOmen', 'cosmicOmenPendingBonus', JSON.stringify({
+    await setRuntimeValue(playerName, 'cosmicOmenPendingBonus', JSON.stringify({
         value: d6Value,
         type: omenEffect.type,
     }), campaignName);

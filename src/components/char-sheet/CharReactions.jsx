@@ -228,6 +228,10 @@ function CharReactions({ playerStats, campaignName, cannotAct, mapName, characte
         }
 
         if (result.type === 'popup') {
+            if (result.payload.type === 'automation_info') {
+                setPopupHtml(result.payload);
+                return;
+            }
             if (result.payload.eligibleSpells && result.payload.eligibleSpells.length > 0) {
                 setReactiveSpellEligible(result.payload.eligibleSpells);
             }

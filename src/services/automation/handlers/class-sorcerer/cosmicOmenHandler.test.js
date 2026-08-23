@@ -323,4 +323,24 @@ describe('cosmicOmenHandler', () => {
             );
         });
     });
+
+    describe('playerName fix regression', () => {
+        it('sets cosmicOmenPendingBonus on playerName not literal "cosmicOmen"', async () => {
+            setupRuntimeValues({
+                cosmicomenUses: 1,
+                cosmicOmenEffect: JSON.stringify({ type: 'Weal', isEven: true, starMapRoll: 10 }),
+            });
+            rollExpression.mockReturnValue({ total: 2 });
+
+            const customPlayer = { name: 'CustomPlayerName' };
+            await handle(makeAction(), customPlayer, 'test-campaign');
+
+            const pendingCall = setRuntimeValue.mock.calls.find(
+                (call) => call[1] === 'cosmicOmenPendingBonus'
+            );
+            expect(pendingCall).toBeDefined();
+            expect(pendingCall[0]).toBe('CustomPlayerName');
+            expect(pendingCall[0]).not.toBe('cosmicOmen');
+        });
+    });
 });
