@@ -250,5 +250,15 @@ export const passiveHandlers = {
             bonus: auto.bonus || 2,
             hasAutomation: true
         }
+    },
+
+    'contact_patron_auto_save': (feature, _playerStats) => {
+        return {
+            type: 'passive_rule',
+            name: feature.name,
+            effect: 'contact_patron_auto_save',
+            casting_time: 'passive',
+            hasAutomation: true
+        }
     }
 }

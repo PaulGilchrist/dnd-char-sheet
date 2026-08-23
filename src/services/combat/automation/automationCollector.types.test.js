@@ -493,6 +493,68 @@ describe('collectAutomationFromFeatures – array automations', () => {
     })
 })
 
+// ── Contact Patron (CLA-061) regression test ──
+
+describe('collectAutomationFromFeatures – Contact Patron (CLA-061)', () => {
+    it('collects both free_spell action and contact_patron_auto_save passive from array automation', () => {
+        const contactPatronFeature = {
+            name: 'Contact Patron',
+            description: 'You always have the Contact Other Plane spell prepared. With this feature, you can cast the spell without expending a spell slot to contact your patron, and you automatically succeed on the spell\'s saving throw. Once you cast the spell with this feature, you can\'t do so in this way again until you finish a Long Rest.',
+            level: 9,
+            type: 'class_feature',
+            automation: [
+                {
+                    type: 'free_spell',
+                    spell: 'Contact Other Plane',
+                    uses_expression: '1',
+                    recharge: 'long_rest',
+                    action: 'action',
+                    casting_time: '1 minute or Ritual',
+                },
+                {
+                    type: 'passive_rule',
+                    effect: 'contact_patron_auto_save',
+                    casting_time: 'passive',
+                },
+            ],
+        }
+
+        const result = collectAutomationFromFeatures([contactPatronFeature], ps)
+
+        // free_spell should be in actions
+        expect(result.actions).toHaveLength(1)
+        expect(result.actions[0].type).toBe('free_spell')
+        expect(result.actions[0].spell).toBe('Contact Other Plane')
+        expect(result.actions[0].uses).toBe(1)
+        expect(result.actions[0].usesMax).toBe(1)
+        expect(result.actions[0].uses_expression).toBe('1')
+
+        // contact_patron_auto_save should be in passives
+        expect(result.passives).toHaveLength(1)
+        expect(result.passives[0].type).toBe('passive_rule')
+        expect(result.passives[0].effect).toBe('contact_patron_auto_save')
+        expect(result.passives[0].name).toBe('Contact Patron')
+        expect(result.passives[0].hasAutomation).toBe(true)
+    })
+
+    it('collects contact_patron_auto_save passive when it is a standalone feature', () => {
+        const feature = {
+            name: 'Contact Patron Auto Save',
+            automation: {
+                type: 'passive_rule',
+                effect: 'contact_patron_auto_save',
+                casting_time: 'passive',
+            },
+        }
+
+        const result = collectAutomationFromFeatures([feature], ps)
+
+        expect(result.passives).toHaveLength(1)
+        expect(result.passives[0].type).toBe('passive_rule')
+        expect(result.passives[0].effect).toBe('contact_patron_auto_save')
+    })
+})
+
 // ── processFeatureAutomation edge cases ──
 
 describe('processFeatureAutomation – edge cases', () => {
