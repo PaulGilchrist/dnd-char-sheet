@@ -288,6 +288,7 @@ export function buildCelestialRevelationStep() {
     emit: 'celestial:applied',
     condition: (ctx) => !!ctx.playerStats.automation?.passives,
     handler: async (ctx) => {
+      if (!ctx.targetName) return { data: {} };
       const riders = ctx.playerStats.automation.passives.filter(
         a => a.type === 'attack_rider' && a.damageExpression && a.trigger === 'hit'
       );

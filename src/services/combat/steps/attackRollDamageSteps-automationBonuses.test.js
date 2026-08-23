@@ -353,7 +353,7 @@ describe('buildAttackRollDamageSteps - automationBonuses', () => {
       it('applies celestial damage when conditions met', async () => {
         buffsMock([{ name: 'Inner Radiance' }]);
         getRuntimeValue.mockReturnValue(null);
-        const r = await steps[13].handler(makeCtx({ playerStats: { name: 'TestChar', abilities: [{ name: 'Strength', bonus: 3 }], automation: { passives: [{ type: 'attack_rider', name: 'Inner Radiance', damageExpression: '1d6', damageType: 'radiant', trigger: 'hit', oncePerTurn: true }] }, level: 5, proficiency: 3 }, formula: '1d8+3', total: 11, rolls: [8, 3] }));
+        const r = await steps[13].handler(makeCtx({ targetName: 'Goblin', playerStats: { name: 'TestChar', abilities: [{ name: 'Strength', bonus: 3 }], automation: { passives: [{ type: 'attack_rider', name: 'Inner Radiance', damageExpression: '1d6', damageType: 'radiant', trigger: 'hit', oncePerTurn: true }] }, level: 5, proficiency: 3 }, formula: '1d8+3', total: 11, rolls: [8, 3] }));
         expect(r.data.formula).toContain('+ 1d6 [radiant]');
         expect(r.data.total).toBe(15);
         expect(setRuntimeValue).toHaveBeenCalledWith('TestChar', '_Inner_Radiance_usedRound', 1, 'test-campaign');
@@ -361,13 +361,13 @@ describe('buildAttackRollDamageSteps - automationBonuses', () => {
       it('works with Heavenly Wings', async () => {
         buffsMock([{ name: 'Heavenly Wings' }]);
         getRuntimeValue.mockReturnValue(null);
-        const r = await steps[13].handler(makeCtx({ ...base, playerStats: { ...base.playerStats, automation: { passives: [{ type: 'attack_rider', name: 'Heavenly Wings', damageExpression: '1d4', damageType: 'fire', trigger: 'hit' }] } } }));
+        const r = await steps[13].handler(makeCtx({ ...base, targetName: 'Goblin', playerStats: { ...base.playerStats, automation: { passives: [{ type: 'attack_rider', name: 'Heavenly Wings', damageExpression: '1d4', damageType: 'fire', trigger: 'hit' }] } } }));
         expect(r.data.formula).toContain('+ 1d4 [fire]');
       });
       it('works with Necrotic Shroud', async () => {
         buffsMock([{ name: 'Necrotic Shroud' }]);
         getRuntimeValue.mockReturnValue(null);
-        const r = await steps[13].handler(makeCtx({ ...base, playerStats: { ...base.playerStats, automation: { passives: [{ type: 'attack_rider', name: 'Necrotic Shroud', damageExpression: '1d4', damageType: 'necrotic', trigger: 'hit' }] } } }));
+        const r = await steps[13].handler(makeCtx({ ...base, targetName: 'Goblin', playerStats: { ...base.playerStats, automation: { passives: [{ type: 'attack_rider', name: 'Necrotic Shroud', damageExpression: '1d4', damageType: 'necrotic', trigger: 'hit' }] } } }));
         expect(r.data.formula).toContain('+ 1d4 [necrotic]');
       });
       it('returns empty when rollExpression fails', async () => {

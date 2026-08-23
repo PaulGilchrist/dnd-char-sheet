@@ -508,6 +508,7 @@ describe('buildAttackRollDamageSteps - natural20Bonuses, celestialRevelation', (
         rollExpression.mockReturnValue({ total: 5, rolls: [5], modifier: 0 });
 
         const ctx = makeCtx({
+          targetName: 'Goblin',
           playerStats: {
             automation: {
               passives: [
@@ -541,6 +542,7 @@ describe('buildAttackRollDamageSteps - natural20Bonuses, celestialRevelation', (
         });
 
         const ctx = makeCtx({
+          targetName: 'Goblin',
           playerStats: {
             name: 'TestChar',
             automation: {
@@ -556,9 +558,6 @@ describe('buildAttackRollDamageSteps - natural20Bonuses, celestialRevelation', (
               ],
             },
           },
-          formula: '1d8+3',
-          total: 11,
-          rolls: [8, 3],
         });
         await steps[13].handler(ctx);
 
@@ -577,6 +576,7 @@ describe('buildAttackRollDamageSteps - natural20Bonuses, celestialRevelation', (
         rollExpression.mockReturnValue({ total: 4, rolls: [4], modifier: 0 });
 
         const ctx = makeCtx({
+          targetName: 'Goblin',
           playerStats: {
             automation: {
               passives: [
@@ -605,6 +605,7 @@ describe('buildAttackRollDamageSteps - natural20Bonuses, celestialRevelation', (
         rollExpression.mockReturnValue({ total: 3, rolls: [3], modifier: 0 });
 
         const ctx = makeCtx({
+          targetName: 'Goblin',
           playerStats: {
             automation: {
               passives: [
@@ -653,6 +654,125 @@ describe('buildAttackRollDamageSteps - natural20Bonuses, celestialRevelation', (
         const result = await steps[13].handler(ctx);
 
         expect(result.data).toEqual({});
+      });
+
+      it('returns early when ctx.targetName is not set (no target on creature card)', async () => {
+        getActiveBuffs.mockReturnValue([{ name: 'Heavenly Wings' }]);
+        getRuntimeValue.mockReturnValue(null);
+
+        const ctx = makeCtx({
+          playerStats: {
+            automation: {
+              passives: [
+                {
+                  type: 'attack_rider',
+                  trigger: 'hit',
+                  damageExpression: '1d8',
+                  damageType: 'radiant',
+                  name: 'Heavenly Wings',
+                },
+              ],
+            },
+          },
+          formula: '1d8+3',
+          total: 11,
+          rolls: [8, 3],
+        });
+        const result = await steps[13].handler(ctx);
+
+        expect(result.data).toEqual({});
+        expect(rollExpression).not.toHaveBeenCalled();
+      });
+
+      it('applies damage when ctx.targetName is set on creature card', async () => {
+        getActiveBuffs.mockReturnValue([{ name: 'Heavenly Wings' }]);
+        getRuntimeValue.mockReturnValue(null);
+        rollExpression.mockReturnValue({ total: 5, rolls: [5], modifier: 0 });
+
+        const ctx = makeCtx({
+          targetName: 'Goblin',
+          playerStats: {
+            automation: {
+              passives: [
+                {
+                  type: 'attack_rider',
+                  trigger: 'hit',
+                  damageExpression: '1d8',
+                  damageType: 'radiant',
+                  name: 'Heavenly Wings',
+                },
+              ],
+            },
+          },
+          formula: '1d8+3',
+          total: 11,
+          rolls: [8, 3],
+        });
+        const result = await steps[13].handler(ctx);
+
+        expect(result.data.formula).toBe('1d8+3 + 1d8 [radiant]');
+        expect(result.data.total).toBeGreaterThan(11);
+        expect(rollExpression).toHaveBeenCalledWith('1d8');
+      });
+
+      it('applies Necrotic Shroud damage when target is set', async () => {
+        getActiveBuffs.mockReturnValue([{ name: 'Necrotic Shroud' }]);
+        getRuntimeValue.mockReturnValue(null);
+        rollExpression.mockReturnValue({ total: 3, rolls: [3], modifier: 0 });
+
+        const ctx = makeCtx({
+          targetName: 'Orc',
+          playerStats: {
+            automation: {
+              passives: [
+                {
+                  type: 'attack_rider',
+                  trigger: 'hit',
+                  damageExpression: '1d4',
+                  damageType: 'necrotic',
+                  name: 'Necrotic Shroud',
+                },
+              ],
+            },
+          },
+          formula: '1d6+2',
+          total: 8,
+          rolls: [6, 2],
+        });
+        const result = await steps[13].handler(ctx);
+
+        expect(result.data.formula).toBe('1d6+2 + 1d4 [necrotic]');
+        expect(result.data.total).toBeGreaterThan(8);
+      });
+
+      it('applies Inner Radiance damage when target is set', async () => {
+        getActiveBuffs.mockReturnValue([{ name: 'Inner Radiance' }]);
+        getRuntimeValue.mockReturnValue(null);
+        rollExpression.mockReturnValue({ total: 4, rolls: [4], modifier: 0 });
+
+        const ctx = makeCtx({
+          targetName: 'Skeleton',
+          playerStats: {
+            automation: {
+              passives: [
+                {
+                  type: 'attack_rider',
+                  trigger: 'hit',
+                  damageExpression: '1d6',
+                  damageType: 'radiant',
+                  name: 'Inner Radiance',
+                },
+              ],
+            },
+          },
+          formula: '1d8',
+          total: 5,
+          rolls: [5],
+        });
+        const result = await steps[13].handler(ctx);
+
+        expect(result.data.formula).toBe('1d8 + 1d6 [radiant]');
+        expect(result.data.total).toBeGreaterThan(5);
       });
     });
   });
