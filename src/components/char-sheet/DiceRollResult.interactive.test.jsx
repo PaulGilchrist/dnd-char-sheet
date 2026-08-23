@@ -274,6 +274,7 @@ describe('DiceRollResult', () => {
                     bonus={3}
                     rollType="attack"
                     availableSuperiorityManeuvers={[{ name: 'Precision Attack' }]}
+                    playerStats={{ level: 3 }}
                     onSuperiorityManeuver={vi.fn()}
                 />
             );

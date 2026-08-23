@@ -5,6 +5,7 @@ import { getCurrentCombatRound } from '../../../../services/encounters/combatDat
 import { addEntry } from '../../../ui/logService.js';
 import { addExpiration } from '../../../rules/effects/expirations.js';
 import { getCombatContext } from '../../../rules/combat/damageUtils.js';
+import { isWithinRange } from '../../../rules/combat/rangeCheck.js';
 import {
     findManeuver,
     checkSuperiorityDice,
@@ -425,6 +426,82 @@ export async function executeCommandingPresenceReaction(action, playerStats, cam
         return buildNoDiceRemainingPopup(maneuver.name);
     }
 
+    const auto = action.automation || {};
+    const targetName = auto.targetName;
+    const reactionEffect = auto.reactionEffect || 'disadvantage_next_attack';
+    const reactionDuration = auto.reactionDuration || 'until_end_of_next_turn';
+
+    // If no target is pre-set, show a modal to select one
+    if (!targetName) {
+        const cs = await getCombatContext(campaignName);
+        if (!cs || !cs.creatures || cs.creatures.length === 0) {
+            return {
+                type: 'popup',
+                payload: {
+                    type: 'automation_info',
+                    name: maneuver.name,
+                    description: `${maneuver.name}: No creatures available to target.`,
+                },
+            };
+        }
+
+        const rangeFt = auto.reactionRange === '30_ft' ? 30 : 30;
+        const validTargets = [];
+        for (const creature of cs.creatures) {
+            if (creature.name === playerStats.name) continue;
+            const inRange = await isWithinRange(playerStats.name, creature.name, rangeFt);
+            if (inRange) {
+                const hp = creature.type === 'player'
+                    ? { currentHp: getRuntimeValue(creature.name, 'currentHitPoints') ?? getRuntimeValue(creature.name, 'hitPoints') ?? 0, maxHp: getRuntimeValue(creature.name, 'hitPoints') ?? 0 }
+                    : { currentHp: creature.currentHp ?? creature.maxHp, maxHp: creature.maxHp };
+                validTargets.push({ ...creature, ...hp });
+            }
+        }
+
+        if (validTargets.length === 0) {
+            return {
+                type: 'popup',
+                payload: {
+                    type: 'automation_info',
+                    name: maneuver.name,
+                    description: `${maneuver.name}: No creatures within 30 feet to target.`,
+                },
+            };
+        }
+
+        const saveDc = auto.saveDc === 'ability' ? playerStats.abilityDc || 8 : (auto.saveDc || 8);
+        const saveType = auto.saveType || auto.reactionSaveType || 'WIS';
+
+        return {
+            type: 'modal',
+            modalName: 'commandingPresenceReaction',
+            payload: {
+                title: `${maneuver.name} — Choose Target`,
+                targets: validTargets,
+                confirmLabel: 'Force Save',
+                confirmIcon: 'fa-wand-sparkles',
+                featureDescription: `Target must make a ${saveType} save (DC ${saveDc}) or have Disadvantage on their next attack roll.`,
+                description: `You use your Reaction to intimidate a creature within 30 feet.`,
+                action: action,
+                playerStats: playerStats,
+                campaignName: campaignName,
+                maneuverName: maneuverName,
+                onTargetSelected: async (selectedTargetName) => {
+                    const result = await executeCommandingPresenceReaction({ ...action, automation: { ...auto, targetName: selectedTargetName } }, playerStats, campaignName, maneuverName);
+                    return result;
+                },
+                onSkip: async () => {
+                    await addEntry(campaignName, {
+                        type: 'ability_use',
+                        characterName: playerStats.name,
+                        abilityName: maneuver.name,
+                        description: `${playerStats.name} used ${maneuver.name} as a reaction but chose not to target a creature.`,
+                    }).catch((e) => { console.error("[executeActionManeuvers:log-error]", e); });
+                },
+            },
+        };
+    }
+
     const { dieDescription, expendedDie } = rollManeuverDie(maneuver, playerStats, campaignName);
     await expendSuperiorityDie(playerStats, campaignName, expendedDie, superiorityDice);
 
@@ -432,50 +509,26 @@ export async function executeCommandingPresenceReaction(action, playerStats, cam
         type: 'ability_use',
         characterName: playerStats.name,
         abilityName: maneuver.name,
-        description: `Used ${maneuver.name} as a reaction. ${dieDescription}`,
+        description: `Used ${maneuver.name} as a reaction on ${targetName}. ${dieDescription}`,
     };
     await addEntry(campaignName, logEntry).catch((e) => { console.error("[executeActionManeuvers:log-error]", e); });
 
-    const auto = action.automation || {};
-    const targetName = auto.targetName;
-    const reactionEffect = auto.reactionEffect || 'disadvantage_next_attack';
-    const reactionDuration = auto.reactionDuration || 'until_end_of_next_turn';
+    let description = `<b>${maneuver.name}</b> (Reaction)<br/>${dieDescription}<br/>Target: ${targetName}.`;
 
-    let description = `<b>${maneuver.name}</b> (Reaction)<br/>${dieDescription}`;
-
-    if (targetName) {
-        description += ` Target: ${targetName}.`;
-    }
-
-    if (reactionEffect === 'disadvantage_next_attack') {
+    if (reactionEffect === 'disadvantage_next_attack' || reactionEffect === 'attack_roll_disadvantage') {
         const durationInTurns = reactionDuration === 'until_end_of_next_turn' ? 2 : 1;
-        description += ` ${targetName || 'The target'} has Disadvantage on their next attack roll.`;
-        if (targetName) {
-            const storedConditions = getRuntimeValue(targetName, 'activeConditions', campaignName) || [];
-            const conditions = Array.isArray(storedConditions) ? storedConditions : [];
-            const hasDisadvantage = conditions.some(c => String(c).toLowerCase() === 'disadvantage');
-            if (!hasDisadvantage) {
-                await setRuntimeValue(targetName, 'activeConditions', [...conditions, 'disadvantage'], campaignName);
-            }
-            await addExpiration(playerStats.name, targetName, [
-                { type: 'condition', condition: 'disadvantage' },
-            ], campaignName, durationInTurns);
+        description += ` ${targetName} has Disadvantage on their next attack roll.`;
+        const storedConditions = getRuntimeValue(targetName, 'activeConditions', campaignName) || [];
+        const conditions = Array.isArray(storedConditions) ? storedConditions : [];
+        const hasDisadvantage = conditions.some(c => String(c).toLowerCase() === 'disadvantage');
+        if (!hasDisadvantage) {
+            await setRuntimeValue(targetName, 'activeConditions', [...conditions, 'disadvantage'], campaignName);
         }
-    } else if (reactionEffect === 'attack_roll_disadvantage') {
-        description += ` ${targetName || 'The target'} has Disadvantage on their next attack roll.`;
-        if (targetName) {
-            const storedConditions = getRuntimeValue(targetName, 'activeConditions', campaignName) || [];
-            const conditions = Array.isArray(storedConditions) ? storedConditions : [];
-            const hasDisadvantage = conditions.some(c => String(c).toLowerCase() === 'disadvantage');
-            if (!hasDisadvantage) {
-                await setRuntimeValue(targetName, 'activeConditions', [...conditions, 'disadvantage'], campaignName);
-            }
-            await addExpiration(playerStats.name, targetName, [
-                { type: 'condition', condition: 'disadvantage' },
-            ], campaignName, 2);
-        }
+        await addExpiration(playerStats.name, targetName, [
+            { type: 'condition', condition: 'disadvantage' },
+        ], campaignName, durationInTurns);
     } else if (reactionEffect === 'save_disadvantage') {
-        description += ` ${targetName || 'The target'} has Disadvantage on their next saving throw.`;
+        description += ` ${targetName} has Disadvantage on their next saving throw.`;
     }
 
     return {

@@ -1,3 +1,5 @@
+import { evaluateAutoExpression } from '../../services/combat/automation/automationExpressions.js';
+
 export function createDiceRollHandlers(props, state) {
     const {
         bonus, modifier, total, rolls, formula, targetName, damageType,
@@ -5,6 +7,7 @@ export function createDiceRollHandlers(props, state) {
         bardicInspirationDefenseDieSize, spellName, onReroll, onTacticalMind, onDarkOnesLuck,
         onBardicInspiration, onBardicInspirationDefense, onBardicInspirationOffense,
         onEmpoweredSpell, onPuncture, onSavageAttacker, onSuperiorityManeuver,
+        playerStats,
     } = props;
 
     const {
@@ -171,7 +174,8 @@ export function createDiceRollHandlers(props, state) {
     const handleSuperiorityManeuver = async (maneuver) => {
         if (!onSuperiorityManeuver) return;
         try {
-            const dieResult = Math.floor(Math.random() * 12) + 1;
+            const dieSize = evaluateAutoExpression(maneuver.dieExpression || 'superiority_die', playerStats);
+            const dieResult = Math.floor(Math.random() * dieSize) + 1;
             const newTotal = finalRoll + bonus + modifier + dieResult;
             setSuperiorityResult({ dieValue: dieResult, maneuverName: maneuver.name, total: newTotal });
             setSuperiorityUsed(true);

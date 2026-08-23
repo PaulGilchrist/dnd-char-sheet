@@ -74,6 +74,19 @@ function CharReactions({ playerStats, campaignName, cannotAct, mapName, characte
     // Build reactions list immutably
     let reactions = [...(playerStats.reactions || [])];
 
+    // Add automation reactions from playerStats.automation.reactions (e.g., Commanding Presence reaction)
+    const automationReactions = playerStats.automation?.reactions || [];
+    for (const auto of automationReactions) {
+        const featureName = auto.name || auto.type;
+        if (featureName && !reactions.find(r => r.name === featureName)) {
+            reactions.push({
+                name: featureName,
+                description: auto.description || '',
+                automation: { ...auto },
+            });
+        }
+    }
+
     // Add dynamic reactions from active buffs (e.g., Revivification from Rage of the Gods)
     for (const buff of activeBuffs) {
         if (buff.reactionSave && !reactions.find(r => r.name === 'Revivification')) {
@@ -259,6 +272,8 @@ function CharReactions({ playerStats, campaignName, cannotAct, mapName, characte
                 setModalState({ searingVengeanceModal: { ...result.payload, reaction, campaignName, characters } });
             } else if (result.modalName === 'energyRedirection') {
                 setModalState({ energyRedirectionModal: result.payload });
+            } else if (result.modalName === 'commandingPresenceReaction') {
+                setModalState({ commandingPresenceReactionModal: result.payload });
             } else {
                 const html = buildFeatureDetailHtml(reaction);
                 if (html) setPopupHtml(html);
@@ -323,6 +338,28 @@ function CharReactions({ playerStats, campaignName, cannotAct, mapName, characte
             }
         }
     }, [modalState.searingVengeanceModal, setModalState, playerStats, setPopupHtml]);
+
+    const handleCommandingPresenceConfirm = React.useCallback(async (targetName) => {
+        if (!modalState.commandingPresenceReactionModal) return;
+        setModalState({ commandingPresenceReactionModal: null });
+        if (!targetName) return;
+        const { onTargetSelected } = modalState.commandingPresenceReactionModal;
+        const result = await onTargetSelected(targetName);
+        if (result) {
+            if (result.type === 'popup') {
+                setPopupHtml(result.payload);
+            }
+        }
+    }, [modalState.commandingPresenceReactionModal, setModalState, setPopupHtml]);
+
+    const handleCommandingPresenceSkip = React.useCallback(async () => {
+        if (!modalState.commandingPresenceReactionModal) return;
+        setModalState({ commandingPresenceReactionModal: null });
+        const { onSkip } = modalState.commandingPresenceReactionModal;
+        if (onSkip) {
+            await onSkip();
+        }
+    }, [modalState.commandingPresenceReactionModal, setModalState]);
 
     const getTargetInfo = React.useCallback(async () => {
         const cs = await getCombatContext(campaignName);
@@ -640,6 +677,18 @@ function CharReactions({ playerStats, campaignName, cannotAct, mapName, characte
                     creatureTargets={modalState.searingVengeanceModal.creatureTargets}
                     onConfirm={handleSearingVengeanceConfirm}
                     onSkip={handleSearingVengeanceSkip}
+                />
+            )}
+            {modalState.commandingPresenceReactionModal && (
+                <SecondaryTargetModal
+                    title={modalState.commandingPresenceReactionModal.title}
+                    targets={modalState.commandingPresenceReactionModal.targets}
+                    confirmLabel={modalState.commandingPresenceReactionModal.confirmLabel || 'Force Save'}
+                    confirmIcon={modalState.commandingPresenceReactionModal.confirmIcon || 'fa-wand-sparkles'}
+                    featureDescription={modalState.commandingPresenceReactionModal.featureDescription}
+                    description={modalState.commandingPresenceReactionModal.description}
+                    onTargetSelected={handleCommandingPresenceConfirm}
+                    onSkip={handleCommandingPresenceSkip}
                 />
             )}
             {reactions.filter(r => !getCategories(playerStats.rules || '5e').featuresToIgnore.includes(r.name)).map((reaction) => {

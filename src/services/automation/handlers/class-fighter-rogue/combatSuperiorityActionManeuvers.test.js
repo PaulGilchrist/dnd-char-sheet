@@ -215,7 +215,7 @@ describe('executeCommandingPresenceReaction', () => {
         vi.clearAllMocks();
     });
 
-    it('handles null targetName in description', async () => {
+    it('returns modal when targetName is not provided', async () => {
         getRuntimeValue.mockImplementation((_playerName, key, _campaignName) => {
             if (key === 'superiorityDice') return 4;
             if (key === SELECTION_KEY) return ['Commanding Presence'];
@@ -235,7 +235,10 @@ describe('executeCommandingPresenceReaction', () => {
             'Commanding Presence'
         );
 
-        expect(result.payload.description).toContain('The target');
+        expect(result.type).toBe('modal');
+        expect(result.modalName).toBe('commandingPresenceReaction');
+        expect(result.payload.onTargetSelected).toBeDefined();
+        expect(result.payload.onSkip).toBeDefined();
         expect(setRuntimeValue).not.toHaveBeenCalledWith(expect.any(String), 'activeConditions', expect.anything(), expect.any(String));
     });
 });

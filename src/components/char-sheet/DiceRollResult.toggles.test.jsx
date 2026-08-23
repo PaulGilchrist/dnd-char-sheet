@@ -161,6 +161,7 @@ describe('DiceRollResult', () => {
                     rolls={[15]}
                     bonus={3}
                     availableSuperiorityManeuvers={[{ name: 'Pushing Attack' }]}
+                    playerStats={{ level: 3 }}
                     onSuperiorityManeuver={onSuperiorityManeuver}
                 />
             );

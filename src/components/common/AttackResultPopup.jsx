@@ -5,7 +5,7 @@ import * as logService from '../../services/ui/logService.js';
 import Popup from './popup.jsx';
 import DiceRollResult from '../char-sheet/DiceRollResult.jsx';
 
-function AttackResultPopup({ popupHtml, onClose, campaignName, attackerName, setPopupHtml, onBeforeBiDefense, onAfterBiDefense, onStrokeOfLuck, ...callbacks }) {
+function AttackResultPopup({ popupHtml, onClose, campaignName, attackerName, playerStats, setPopupHtml, onBeforeBiDefense, onAfterBiDefense, onStrokeOfLuck, ...callbacks }) {
   const [missToHitApplied, setMissToHitApplied] = useState(false);
   const hasBoonBeenUsedRef = useRef(false);
 
@@ -80,6 +80,7 @@ function AttackResultPopup({ popupHtml, onClose, campaignName, attackerName, set
           {...popupHtml}
           hit={missToHitApplied || popupHtml?.hit}
           autoDamage={popupHtml?.autoDamage}
+          playerStats={playerStats}
           onBardicInspirationDefense={popupHtml?.bardicInspirationDefense ? handleBardicInspirationDefense : undefined}
           onDone={popupHtml?.autoDamage ? handleDone : undefined}
           onStrokeOfLuck={popupHtml?.strokeOfLuck || (popupHtml?.autoRerollForAttack && !missToHitApplied && !hasBoonBeenUsedRef.current) ? handleMissToHit : undefined}

@@ -6,6 +6,7 @@ import { getManeuversForRules, getSuperiorityDice } from '../../services/automat
 import { loadCombatSummary } from '../../services/encounters/combatData.js'
 import * as storageService from '../../services/ui/storage.js'
 import { addEntry } from '../../services/ui/logService.js'
+import { evaluateAutoExpression } from '../../services/combat/automation/automationExpressions.js'
 
 export function handleReroll(playerStats, campaignName, conditionEffects) {
     if (playerStats) {
@@ -326,7 +327,8 @@ export async function handleSuperiorityManeuver(playerStats, campaignName, setPo
         };
 
         // Show result popup
-        const desc = `<b>${maneuverName}</b><br/>Rolled d12 for ${dieValue}.<br/>${skillName}: ${oldTotal} → <b>${newTotal}</b> (+${dieValue})`;
+        const dieSize = evaluateAutoExpression(maneuver.dieExpression || 'superiority_die', playerStats);
+        const desc = `<b>${maneuverName}</b><br/>Rolled d${dieSize} for ${dieValue}.<br/>${skillName}: ${oldTotal} → <b>${newTotal}</b> (+${dieValue})`;
         setPopupHtml({
             type: 'automation_info',
             name: maneuverName,

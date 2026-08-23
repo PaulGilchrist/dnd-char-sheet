@@ -52,6 +52,15 @@ vi.mock('../../../../services/ui/logService.js', () => ({
     addEntry: vi.fn(async () => {}),
 }));
 
+vi.mock('../../../../services/rules/combat/damageUtils.js', () => ({
+    getCombatContext: vi.fn().mockResolvedValue({
+        creatures: [
+            { name: 'Goblin', type: 'npc', maxHp: 7 },
+        ],
+    }),
+    getTargetFromAttacker: vi.fn(() => null),
+}));
+
 const SELECTION_KEY = 'BattleMasterManeuvers_selection';
 
 const makePlayerStats = (overrides = {}) => ({
@@ -145,7 +154,7 @@ describe('handleCombatSuperiorityCommandingPresenceReaction', () => {
         expect(result.payload.description).toBe('No maneuver specified.');
     });
 
-    it('delegates to executeCommandingPresenceReaction and returns its result when maneuverName is provided', async () => {
+    it('delegates to executeCommandingPresenceReaction and returns modal when no target is set', async () => {
         getRuntimeValue.mockImplementation((_playerName, key, _campaignName) => {
             if (key === 'superiorityDice') return 4;
             if (key === SELECTION_KEY) return ['Commanding Presence'];
@@ -159,11 +168,9 @@ describe('handleCombatSuperiorityCommandingPresenceReaction', () => {
             null
         );
 
-        expect(result.type).toBe('popup');
-        expect(result.payload.type).toBe('automation_info');
-        expect(result.payload.name).toBe('Commanding Presence');
-        expect(result.payload.description).toContain('Commanding Presence');
-        expect(result).toHaveProperty('logEntries');
+        expect(result.type).toBe('modal');
+        expect(result.modalName).toBe('commandingPresenceReaction');
+        expect(result.payload.onTargetSelected).toBeDefined();
     });
 });
 

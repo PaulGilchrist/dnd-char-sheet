@@ -173,6 +173,7 @@ export const renderPopup = (popupHtml, setPopupHtml, isLocalhost, playerStats, c
         }}
         campaignName={campaignName}
         attackerName={playerStats?.name}
+        playerStats={playerStats}
         setPopupHtml={setPopupHtml}
         onSuperiorityManeuver={popupHtml?.availableSuperiorityManeuvers ? popupHandlers.onSuperiorityManeuver : undefined}
         onTacticalMind={popupHtml?.tacticalMind ? popupHandlers.onTacticalMind : undefined}

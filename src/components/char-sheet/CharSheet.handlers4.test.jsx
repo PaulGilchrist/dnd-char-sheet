@@ -61,6 +61,10 @@ vi.mock('../../services/automation/handlers/class-fighter-rogue/combatSuperiorit
   getSuperiorityDice: vi.fn().mockReturnValue(0),
 }));
 
+vi.mock('../../services/combat/automation/automationExpressions.js', () => ({
+  evaluateAutoExpression: vi.fn(() => 8),
+}));
+
 vi.mock('../../services/encounters/combatData.js', () => ({
   loadCombatSummary: vi.fn().mockResolvedValue({ creatures: [] }),
 }));
