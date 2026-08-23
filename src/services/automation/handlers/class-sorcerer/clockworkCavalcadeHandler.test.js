@@ -227,6 +227,10 @@ describe('clockworkCavalcadeHandler', () => {
     describe('confirmClockworkCavalcadeHeal', () => {
         it('heals across the distribution and consumes a use', async () => {
             useRuntimeState.getRuntimeValue.mockReturnValue('1');
+            getCombatContext.mockResolvedValue(makeCombatSummary([
+                { name: 'Ally', type: 'player', currentHp: 20, maxHp: 50 },
+                { name: 'Enemy', type: 'npc', currentHp: 30, maxHp: 40 },
+            ]));
 
             const result = await confirmClockworkCavalcadeHeal(
                 makeAction(),
@@ -240,7 +244,7 @@ describe('clockworkCavalcadeHandler', () => {
             expect(applyHealingToTarget).toHaveBeenCalledWith(expect.anything(), 'Enemy', 10, CAMPAIGN);
             expect(getUsesCalls()[0][2]).toBe(0);
             expect(result.type).toBe('popup');
-            expect(result.payload.description).toContain('+30 HP');
+            expect(result.payload.description).toContain('restored 40 HP');
         });
 
         it('caps total healing at the pool', async () => {

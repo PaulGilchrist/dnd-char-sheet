@@ -1174,7 +1174,7 @@
       "handler": "src/services/combat/automation/handlers/classFeatureHandler.js",
       "router": "src/services/combat/automation/routers/classFeatureRouter.js",
       "infoBuilder": "src/services/combat/automation/infoBuilders/classFeatureInfoBuilder.js",
-      "verified": "not verified",
+      "verified": "verified",
       "class": "Sorcerer",
       "triggerConditions": "Action: action; Range: 30_ft_cube",
       "expectedBehavior": "You momentarily summon spirits of order to expunge disorder around you. As a Magic action, you summon the spirits in a 30-foot Cube originating from you. The spirits look like modrons or other Constructs of your choice. The spirits are intangible and invulnerable, and they create the effects below within the Cube before vanishing. Once you use this action, you can't use it again until you finish a Long Rest unless you spend 7 Sorcery Points (no action required) to restore your use of it. Heal: The spirits restore up to 100 Hit Points, divided as you choose among any number of creatures of your choice in the Cube. Repair: Any damaged objects entirely in the Cube are repaired instantly. Dispel: Every spell of level 6 and lower ends on creatures and objects of your choice in the Cube."
@@ -1186,7 +1186,7 @@
       "handler": "src/services/combat/automation/handlers/classFeatureHandler.js",
       "router": "src/services/combat/automation/routers/classFeatureRouter.js",
       "infoBuilder": "src/services/combat/automation/infoBuilders/classFeatureInfoBuilder.js",
-      "verified": "not verified",
+      "verified": "verified",
       "class": "Sorcerer",
       "triggerConditions": "Automation type: psionic_spells_list",
       "expectedBehavior": "Level 3: Aid, Alarm, Lesser Restoration, Protection from Evil and Good. Level 5: Dispel Magic, Protection from Energy. Level 7: Freedom of Movement, Summon Construct. Level 9: Greater Restoration, Wall of Force. Manifestations of Order (1d6): 1=Spectral cogwheels hover behind you. 2=Hands of clock spin in your eyes. 3=Skin glows with brassy sheen. 4=Floating equations overlay body. 5=Spellcasting Focus becomes Tiny clockwork mechanism. 6=Ticking of gears/ringing clock heard."
@@ -1198,7 +1198,7 @@
       "handler": "src/services/combat/automation/handlers/classFeatureHandler.js",
       "router": "src/services/combat/automation/routers/classFeatureRouter.js",
       "infoBuilder": "src/services/combat/automation/infoBuilders/classFeatureInfoBuilder.js",
-      "verified": "not verified",
+      "verified": "verified",
       "class": "Cloud Giant",
       "triggerConditions": "Bonus Action; Uses: proficiency_bonus, recharges on long rest",
       "expectedBehavior": "As a Bonus Action, you magically teleport up to 30 feet to an unoccupied space you can see. (Cloud Giant subrace of Goliath)"
@@ -1210,7 +1210,7 @@
       "handler": "src/services/combat/automation/handlers/spellHandler.js",
       "router": "src/services/combat/automation/routers/spellRouter.js",
       "infoBuilder": "src/services/combat/automation/infoBuilders/spellInfoBuilder.js",
-      "verified": "not verified",
+      "verified": "broken — see .opencode/plans/bug-sp-024-color-spray.md",
       "class": "Spell",
       "triggerConditions": "Automation type: save_only",
       "expectedBehavior": "You launch a dazzling array of flashing, colorful light. Each creature in a 15-foot Cone originating from you must succeed on a Constitution saving throw or have the Blinded condition until the end of your next turn."
@@ -1222,7 +1222,7 @@
       "handler": "src/services/combat/automation/handlers/classFeatureHandler.js",
       "router": "src/services/combat/automation/routers/classFeatureRouter.js",
       "infoBuilder": "src/services/combat/automation/infoBuilders/classFeatureInfoBuilder.js",
-      "verified": "not verified",
+      "verified": "broken — see .opencode/plans/bug-cla-058-combat-inspiration.md",
       "class": "Bard",
       "triggerConditions": "Passive: Always active",
       "expectedBehavior": "A creature that has a Bardic Inspiration die from you can use it for one of the following effects. Defense. When the creature is hit by an attack roll, that creature can use its Reaction to roll the Bardic Inspiration die and add the number rolled to its AC against that attack, potentially causing the attack to miss. Offense. Immediately after the creature hits a target with an attack roll, the Creature can roll the Bardic Inspiration die and add the number rolled to the attack's damage against the target."
@@ -1234,19 +1234,19 @@
       "handler": "src/services/combat/automation/handlers/spellHandler.js",
       "router": "src/services/combat/automation/routers/spellRouter.js",
       "infoBuilder": "src/services/combat/automation/infoBuilders/spellInfoBuilder.js",
-      "verified": "not verified",
+      "verified": "broken — see .opencode/plans/bug-sp-025-command.md",
       "class": "Spell",
       "triggerConditions": "",
       "expectedBehavior": "You speak a one-word command to a creature you can see within range. The target must succeed on a Wisdom saving throw or follow the command on its next turn. Choose the command from these options: Approach. The target moves toward you by the shortest and most direct route, ending its turn if it moves within 5 feet of you. Drop. The target drops whatever it is holding and then ends its turn. Flee. The target spends its turn moving away from you by the fastest available means. Grovel. The target has the Prone condition and then ends its turn. Halt. On its turn, the target doesn't move and takes no action or Bonus Action."
     },
     {
       "id": "MN-003",
-      "name": "Commander’s Strike",
+      "name": "Commander's Strike",
       "type": "maneuver",
       "handler": "src/services/combat/automation/handlers/maneuverHandler.js",
       "router": "src/services/combat/automation/routers/maneuverRouter.js",
       "infoBuilder": "src/services/combat/automation/infoBuilders/maneuverInfoBuilder.js",
-      "verified": "not verified",
+      "verified": "verified",
       "class": "Fighter",
       "triggerConditions": "Action type: grant_attack; Trigger: replace_attack; Uses: superiority_die",
       "expectedBehavior": "When you take the Attack action on your turn, you can replace one of your attacks to direct one of your companions to strike. Choose a willing creature who can see or hear you and expend one Superiority Die. That creature can immediately use its Reaction to make one attack with a weapon or an Unarmed Strike, adding the Superiority Die to the attack's damage roll on a hit."
@@ -1258,7 +1258,7 @@
       "handler": "src/services/combat/automation/handlers/maneuverHandler.js",
       "router": "src/services/combat/automation/routers/maneuverRouter.js",
       "infoBuilder": "src/services/combat/automation/infoBuilders/maneuverInfoBuilder.js",
-      "verified": "not verified",
+      "verified": "broken — see .opencode/plans/bug-mn-004-commanding-presence.md",
       "class": "Fighter",
       "triggerConditions": "Action type: skill_check; Skills: Intimidation, Performance, Persuasion; Uses: superiority_die",
       "expectedBehavior": "When you make a Charisma (Intimidation, Performance, or Persuasion) check, you can expend one Superiority Die and add the die to the roll. Additionally, if the check succeeds, you can use your Reaction to force one creature that you can see within 30 feet of you to make a Wisdom saving throw against your maneuver save DC. On a failed save, the creature has disadvantage on its next attack roll before the end of your next turn."
@@ -1270,7 +1270,7 @@
       "handler": "src/services/combat/automation/handlers/spellHandler.js",
       "router": "src/services/combat/automation/routers/spellRouter.js",
       "infoBuilder": "src/services/combat/automation/infoBuilders/spellInfoBuilder.js",
-      "verified": "not verified",
+      "verified": "verified",
       "class": "Spell",
       "triggerConditions": "",
       "expectedBehavior": "You try to compel a creature into a duel. One creature that you can see within range makes a Wisdom saving throw. On a failed save, the target has Disadvantage on attack rolls against creatures other than you, and it can't willingly move to a space that is more than 30 feet away from you. The spell ends if you make an attack roll against a creature other than the target, if you cast a spell on an enemy other than the target, if any ally of yours damages the target, or if you end your turn more than 30 feet away from the target."
@@ -1282,7 +1282,7 @@
       "handler": "src/services/combat/automation/handlers/spellHandler.js",
       "router": "src/services/combat/automation/routers/spellRouter.js",
       "infoBuilder": "src/services/combat/automation/infoBuilders/spellInfoBuilder.js",
-      "verified": "not verified",
+      "verified": "broken — see .opencode/plans/bug-sp-027-compulsion.md",
       "class": "Spell",
       "triggerConditions": "",
       "expectedBehavior": "Each creature of your choice that you can see within range must succeed on a Wisdom saving throw or have the Charmed condition until the spell ends. For the duration, you can take a Bonus Action to designate a direction that is horizontal to you. Each Charmed target must use as much of its movement as possible to move in that direction on its next turn, taking the safest route. After moving in this way, a target repeats the save, ending the spell on itself on a success."
@@ -1294,7 +1294,7 @@
       "handler": "src/services/combat/automation/handlers/spellHandler.js",
       "router": "src/services/combat/automation/routers/spellRouter.js",
       "infoBuilder": "src/services/combat/automation/infoBuilders/spellInfoBuilder.js",
-      "verified": "not verified",
+      "verified": "verified",
       "class": "Spell",
       "triggerConditions": "",
       "expectedBehavior": "Each creature in a 10-foot-radius Sphere centered on a point you choose within range must succeed on a Wisdom saving throw, or that target can't take Bonus Actions or Reactions and must roll 1d10 at the start of each of its turns to determine its behavior for that turn: 1. The target doesn't take an action, and it uses all its movement to move. Roll 1d4 for the direction: 1, north; 2, east; 3, south; or 4, west. 2-6. The target doesn't move or take actions. 7-8. The target doesn't move, and it takes the Attack action to make one melee attack against a random creature within reach. If none are within reach, the target takes no action. 9-10. The target chooses its behavior. At the end of each of its turns, an affected target repeats the save, ending the spell on itself on a success."
@@ -1306,7 +1306,7 @@
       "handler": "src/services/combat/automation/handlers/spellHandler.js",
       "router": "src/services/combat/automation/routers/spellRouter.js",
       "infoBuilder": "src/services/combat/automation/infoBuilders/spellInfoBuilder.js",
-      "verified": "not verified",
+      "verified": "verified",
       "class": "Spell",
       "triggerConditions": "",
       "expectedBehavior": "You brandish the weapon used to cast the spell and choose a point within range. Hundreds of similar spectral weapons (or ammunition appropriate to the weapon) fall in a volley and then disappear."
@@ -1318,7 +1318,7 @@
       "handler": "src/services/combat/automation/handlers/classFeatureHandler.js",
       "router": "src/services/combat/automation/routers/classFeatureRouter.js",
       "infoBuilder": "src/services/combat/automation/infoBuilders/classFeatureInfoBuilder.js",
-      "verified": "not verified",
+      "verified": "verified",
       "class": "War Caster Feat",
       "triggerConditions": "Passive; Constitution saving throws to maintain Concentration",
       "expectedBehavior": "You have Advantage on Constitution saving throws that you make to maintain Concentration. (War Caster Feat - Concentration benefit)"

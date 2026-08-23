@@ -136,8 +136,14 @@ export async function confirmClockworkCavalcadeHeal(action, playerStats, campaig
         if (amount <= 0) continue;
         const creature = combatSummary?.creatures?.find(c => c.name === targetName);
         const maxHp = creature?.maxHp || playerStats.hitPoints || 0;
-        const storedHp = getRuntimeValue(targetName, 'currentHitPoints', campaignName);
-        const currentHp = storedHp != null && storedHp !== '' ? Number(storedHp) : maxHp;
+        const isPlayer = creature?.type === 'player';
+        let currentHp;
+        if (isPlayer) {
+            const storedHp = getRuntimeValue(targetName, 'currentHitPoints', campaignName);
+            currentHp = storedHp != null && storedHp !== '' ? Number(storedHp) : maxHp;
+        } else {
+            currentHp = creature?.currentHp ?? maxHp;
+        }
         const missingHp = Math.max(0, maxHp - currentHp);
         const actualHeal = Math.min(amount, missingHp, remainingPool);
 
