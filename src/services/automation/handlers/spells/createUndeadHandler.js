@@ -86,6 +86,18 @@ export async function handle(action, playerStats, campaignName) {
 }
 
 export async function confirmCreateUndead(action, playerStats, campaignName, { ghoulCount }) {
+    if (!playerStats) {
+        return {
+            type: 'popup',
+            payload: {
+                type: 'automation_info',
+                name: action.name,
+                description: 'Failed to load caster data.',
+                automation: action.automation,
+            },
+        };
+    }
+
     const slotLevel = getSlotLevel(action);
     const maxTargets = getMaxTargets(slotLevel);
     const count = ghoulCount || 1;

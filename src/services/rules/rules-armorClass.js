@@ -54,7 +54,7 @@ export function getArmorClass(allEquipment, playerStats, playerSummary) {
             }
         }
 
-    let armorClass;
+     let armorClass;
     if (armorName) {
         let parsedArmor = parseMagicItemName(armorName);
         contributions.push(`Armor Magic Bonus (${parsedArmor.magicBonus})`);
@@ -69,6 +69,9 @@ export function getArmorClass(allEquipment, playerStats, playerSummary) {
             contributions.push(`Dexterity Bonus (${armorBonus})`);
             armorClass = armor.armor_class.base + armorBonus + addedBonus + parsedArmor.magicBonus;
          }
+      } else if (is2024(playerStats, playerSummary) && playerStats.class.subclass && playerStats.class.subclass.name === 'College of Dance') {
+        armorClass = 10 + dexterity.bonus + charisma.bonus + addedBonus;
+        contributions = [`Unarmored AC (10) + Dexterity Bonus (${dexterity.bonus}) + Charisma Bonus (${charisma.bonus})`];
      } else {
         armorClass = 10 + dexterity.bonus + addedBonus;
         contributions.push(`Unarmored AC (10) + Dexterity Bonus (${dexterity.bonus})`);

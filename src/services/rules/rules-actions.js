@@ -1,6 +1,7 @@
 import { uniqBy } from 'lodash';
 import { is2024 } from './rules-helpers.js';
 import { getSubModules } from './rules-core.js';
+import { categorizeFeatures } from '../character/featureCategorizationUtils.js';
 
 /**
  * Get actions for a character (ruleset-specific).
@@ -10,14 +11,19 @@ export function getActions(playerStats, playerSummary) {
     const features = cr.getFeatures(playerStats);
     const traits = rr.getTraits(playerStats);
 
+    // Process character-level features array (e.g., Deflect Attacks from character JSON)
+    const characterFeatures = playerSummary?.features && Array.isArray(playerSummary.features)
+        ? categorizeFeatures(playerSummary.features, cr.featureCategories || {})
+        : { actions: [], bonusActions: [], reactions: [], specialActions: [], characterAdvancement: [] };
+
     if (is2024(playerStats, playerSummary)) {
-        return getActions2024(playerStats, features, traits);
+        return getActions2024(playerStats, features, traits, characterFeatures);
     }
 
-    return getActions5e(playerStats, features, traits);
+    return getActions5e(playerStats, features, traits, characterFeatures);
 }
 
-function getActions2024(playerStats, features, traits) {
+function getActions2024(playerStats, features, traits, characterFeatures = {}) {
     // 2024: normalize string actions, include magic/utilize/craft actions
     const playerActions = playerStats.actions;
     if (!Array.isArray(playerActions)) {
@@ -31,6 +37,7 @@ function getActions2024(playerStats, features, traits) {
     const actions = uniqBy([
          ...playerActionsMapped,
          ...features.actions,
+         ...characterFeatures.actions,
          ...traits.actions,
          ...(playerStats.magicActions ? playerStats.magicActions : []),
          ...(playerStats.utilizeActions ? playerStats.utilizeActions : []),
@@ -40,12 +47,14 @@ function getActions2024(playerStats, features, traits) {
     const bonusActions = uniqBy([
          ...(playerStats.bonusActions ? playerStats.bonusActions : []),
          ...features.bonusActions,
+         ...characterFeatures.bonusActions,
          ...traits.bonusActions
      ], 'name').sort((a, b) => a.name.localeCompare(b.name));
 
     const reactions = uniqBy([
          ...(playerStats.reactions ? playerStats.reactions : []),
          ...features.reactions,
+         ...characterFeatures.reactions,
          ...traits.reactions
      ], 'name').sort((a, b) => a.name.localeCompare(b.name));
 
@@ -60,6 +69,7 @@ function getActions2024(playerStats, features, traits) {
 
      const specialActions = uniqBy([
            ...features.specialActions,
+           ...characterFeatures.specialActions,
            ...traits.specialActions,
            ...playerSpecialActionsMapped,
           ...(playerStats.magicSpecialActions ? playerStats.magicSpecialActions : []),
@@ -67,12 +77,12 @@ function getActions2024(playerStats, features, traits) {
           ...(playerStats.craftSpecialActions ? playerStats.craftSpecialActions : [])
       ], 'name').sort((a, b) => a.name.localeCompare(b.name));
 
-    const characterAdvancement = uniqBy([...features.characterAdvancement, ...traits.characterAdvancement], 'name').sort((a, b) => a.name.localeCompare(b.name));
+    const characterAdvancement = uniqBy([...features.characterAdvancement, ...characterFeatures.characterAdvancement, ...traits.characterAdvancement], 'name').sort((a, b) => a.name.localeCompare(b.name));
 
     return [actions, bonusActions, reactions, specialActions, characterAdvancement];
 }
 
-function getActions5e(playerStats, features, traits) {
+function getActions5e(playerStats, features, traits, characterFeatures = {}) {
     // 5e: original action handling
     const actions = playerStats.actions;
     if (!Array.isArray(actions)) {
@@ -94,11 +104,11 @@ function getActions5e(playerStats, features, traits) {
         console.error('rules: expected specialActions to be an array for', playerStats.name);
         throw new Error('Missing array: specialActions for ' + playerStats.name);
     }
-    const actionsResult = uniqBy([...actions, ...features.actions, ...traits.actions], 'name').sort((a, b) => a.name.localeCompare(b.name));
-    const bonusActionsResult = uniqBy([...bonusActions, ...features.bonusActions, ...traits.bonusActions], 'name').sort((a, b) => a.name.localeCompare(b.name));
-    const reactionsResult = uniqBy([...reactions, ...features.reactions, ...traits.reactions], 'name').sort((a, b) => a.name.localeCompare(b.name));
-    const specialActionsResult = uniqBy([...specialActions, ...features.specialActions, ...traits.specialActions], 'name').sort((a, b) => a.name.localeCompare(b.name));
-    const characterAdvancement = uniqBy([...features.characterAdvancement, ...traits.characterAdvancement], 'name').sort((a, b) => a.name.localeCompare(b.name));
+    const actionsResult = uniqBy([...actions, ...features.actions, ...characterFeatures.actions, ...traits.actions], 'name').sort((a, b) => a.name.localeCompare(b.name));
+    const bonusActionsResult = uniqBy([...bonusActions, ...features.bonusActions, ...characterFeatures.bonusActions, ...traits.bonusActions], 'name').sort((a, b) => a.name.localeCompare(b.name));
+    const reactionsResult = uniqBy([...reactions, ...features.reactions, ...characterFeatures.reactions, ...traits.reactions], 'name').sort((a, b) => a.name.localeCompare(b.name));
+    const specialActionsResult = uniqBy([...specialActions, ...features.specialActions, ...characterFeatures.specialActions, ...traits.specialActions], 'name').sort((a, b) => a.name.localeCompare(b.name));
+    const characterAdvancement = uniqBy([...features.characterAdvancement, ...characterFeatures.characterAdvancement, ...traits.characterAdvancement], 'name').sort((a, b) => a.name.localeCompare(b.name));
 
     return [actionsResult, bonusActionsResult, reactionsResult, specialActionsResult, characterAdvancement];
 }

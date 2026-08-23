@@ -20,11 +20,11 @@ export const categorizeFeatures = (items, categories, options = {}) => {
   } = options;
 
   const {
-    actions,
-    bonusActions,
-    reactions,
-    characterAdvancement
-  } = categories;
+    actions = [],
+    bonusActions = [],
+    reactions = [],
+    characterAdvancement = []
+  } = categories || {};
 
   const categorized = {
     actions: [],
