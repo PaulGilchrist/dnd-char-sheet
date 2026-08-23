@@ -91,7 +91,7 @@
       "handler": "src/services/combat/automation/handlers/classFeatureHandler.js",
       "router": "src/services/combat/automation/routers/classFeatureRouter.js",
       "infoBuilder": "src/services/combat/automation/infoBuilders/classFeatureInfoBuilder.js",
-      "verified": "not verified",
+      "verified": "verified",
       "class": "Wizard",
       "triggerConditions": "Passive: Always active",
       "expectedBehavior": "Choose two Wizard spells from the Abjuration school (no higher than level 2), add to spellbook for free. Whenever you gain access to a new level of spell slots, add one Abjuration school spell to spellbook for free."
@@ -284,7 +284,7 @@
       "handler": "src/services/combat/automation/handlers/classFeatureHandler.js",
       "router": "src/services/combat/automation/routers/classFeatureRouter.js",
       "infoBuilder": "src/services/combat/automation/infoBuilders/classFeatureInfoBuilder.js",
-      "verified": "not verified",
+      "verified": "broken — see .opencode/plans/bug-cla-010-no-teleport.md",
       "class": "Fighter",
       "triggerConditions": "Action: 1 action",
       "expectedBehavior": "When you use Action Surge, teleport up to 30 feet before or after the additional action."
@@ -548,7 +548,7 @@
       "handler": "src/services/combat/automation/handlers/spellHandler.js",
       "router": "src/services/combat/automation/routers/spellRouter.js",
       "infoBuilder": "src/services/combat/automation/infoBuilders/spellInfoBuilder.js",
-      "verified": "not verified",
+      "verified": "verified",
       "class": "Spell",
       "triggerConditions": "Range: 30 feet",
       "expectedBehavior": "Level 4 Abjuration (Cleric, Paladin, Sorcerer, Warlock, Wizard) Casting Time: Action Range: 30 feet Components: V, S, M (a pentacle) Duration: Concentration, up to 1 minute One creature that you can see within range must succeed on a Charisma saving throw or be transported to a harmless demiplane for the duration. While there, the target has the Incapacitated condition. When the spell ends, the target reappears in the space it left or in the nearest unoccupied space if that space is occupied. If the target is an Aberration, a Celestial, an Elemental, a Fey, or a Fiend, the target doesn't return if the spell lasts for 1 minute. The target is instead transported to a random location on a plane (DM's choice) associated with its creature type. Using a Higher-Level Spell Slot. You can target one additional creature for each spell slot level above 4."
@@ -596,7 +596,7 @@
       "handler": "src/services/combat/automation/handlers/classFeatureHandler.js",
       "router": "src/services/combat/automation/routers/classFeatureRouter.js",
       "infoBuilder": "src/services/combat/automation/infoBuilders/classFeatureInfoBuilder.js",
-      "verified": "not verified",
+      "verified": "verified",
       "class": "Barbarian",
       "triggerConditions": "Passive: Always active",
       "expectedBehavior": "During your turn, your reach is 10 feet greater with any Melee weapon that has the Heavy or Versatile property, as tendrils of the World Tree extend from you. When you hit with such a weapon on your turn, you can activate the Push or Topple mastery property in addition to a different mastery property you're using with that weapon."
@@ -608,7 +608,7 @@
       "handler": "src/services/combat/automation/handlers/spellHandler.js",
       "router": "src/services/combat/automation/routers/spellRouter.js",
       "infoBuilder": "src/services/combat/automation/infoBuilders/spellInfoBuilder.js",
-      "verified": "not verified",
+      "verified": "verified",
       "class": "Spell",
       "triggerConditions": "Range: 30 feet",
       "expectedBehavior": "Level 3 Abjuration (Cleric) Casting Time: Action Range: 30 feet Components: V, S Duration: Concentration, up to 1 minute Choose any number of creatures within range. For the duration, each target has Advantage on Wisdom saving throws and Death Saving Throws and regains the maximum number of Hit Points possible from any healing."
@@ -900,7 +900,7 @@
       "handler": "src/services/combat/automation/handlers/featHandler.js",
       "router": "src/services/combat/automation/routers/featRouter.js",
       "infoBuilder": "src/services/combat/automation/infoBuilders/featInfoBuilder.js",
-      "verified": "not verified",
+      "verified": "verified",
       "class": "Feat",
       "triggerConditions": "Passive: Always active",
       "expectedBehavior": "You have Truesight with a range of 60 feet."
@@ -948,7 +948,7 @@
       "handler": "src/services/combat/automation/handlers/classFeatureHandler.js",
       "router": "src/services/combat/automation/routers/classFeatureRouter.js",
       "infoBuilder": "src/services/combat/automation/infoBuilders/classFeatureInfoBuilder.js",
-      "verified": "not verified",
+      "verified": "verified",
       "class": "Barbarian",
       "triggerConditions": "Trigger: strength_attack_hit_after_reckless; Once per turn: yes",
       "expectedBehavior": "If you use Reckless Attack, you can forgo any Advantage on one Strength-based attack roll of your choice on your turn. The chosen attack roll mustn't have Disadvantage. If the chosen attack roll hits, the target takes an extra 1d10 damage of the same type dealt by the weapon or Unarmed Strike, and you can cause one Brutal Strike effect of your choice. You have the following effect options. Forceful Blow: The target is pushed 15 feet straight away from you. You can then move up to half your Speed straight toward the target without provoking Opportunity Attacks. Hamstring Blow. The target's Speed is reduced by 15 feet until the start of your next turn. A target can be affected by only one Hamstring Blow at a time. The most recent one."
@@ -960,7 +960,7 @@
       "handler": "src/services/combat/automation/handlers/classFeatureHandler.js",
       "router": "src/services/combat/automation/routers/classFeatureRouter.js",
       "infoBuilder": "src/services/combat/automation/infoBuilders/classFeatureInfoBuilder.js",
-      "verified": "not verified",
+      "verified": "verified",
       "class": "Fighter",
       "triggerConditions": "Action: 1 bonus action; Range: 30_ft; Duration: 1_round",
       "expectedBehavior": "Bonus Action to give Half Cover to creatures within 30 feet (Int modifier max)."
@@ -1007,7 +1007,7 @@
       "handler": "src/services/combat/automation/handlers/classFeatureHandler.js",
       "router": "src/services/combat/automation/routers/classFeatureRouter.js",
       "infoBuilder": "src/services/combat/automation/infoBuilders/classFeatureInfoBuilder.js",
-      "verified": "not verified",
+      "verified": "broken — see .opencode/plans/bug-cla-048-celestial-revelation-attack-flow.md",
       "race": "Aasimar",
       "triggerConditions": "Action: 1 bonus action; Min level: 3; Recharge: long_rest",
       "expectedBehavior": "When you reach character level 3, you can transform as a Bonus Action using one of the options below (choose the option each time you transform). The transformation lasts for 1 minute or until you end it (no action required). Once you transform, you can't do so again until you finish a Long Rest. Once on each of your turns before the transformation ends, you can deal extra damage to one target when you deal damage to it with an attack or a spell. The extra damage equals your Proficiency Bonus, and the extra damage's type is either Necrotic for Necrotic Shroud or Radiant for Heavenly Wings and Inner Radiance. Here are the transformation options:"
@@ -1102,7 +1102,7 @@
       "handler": "src/services/combat/automation/handlers/classFeatureHandler.js",
       "router": "src/services/combat/automation/routers/classFeatureRouter.js",
       "infoBuilder": "src/services/combat/automation/infoBuilders/classFeatureInfoBuilder.js",
-      "verified": "not verified",
+      "verified": "verified",
       "class": "Druid",
       "triggerConditions": "Action: passive",
       "expectedBehavior": "Choose one land type (arid, polar, temperate, tropical) after each Long Rest. ARID LAND: Level 3: Blur, Burning Hands, Fire Bolt. Level 5: Fireball. Level 7: Blight. Level 9: Wall of Stone. POLAR LAND: Level 3: Fog Cloud, Hold Person, Ray of Frost. Level 5: Sleet Storm. Level 7: Ice Storm. Level 9: Cone of Cold. TEMPERATE LAND: Level 3: Misty Step, Shocking Grasp, Sleep. Level 5: Lightning Bolt. Level 7: Freedom of Movement. Level 9: Tree Stride. TROPICAL LAND: Level 3: Acid Splash, Ray of Sickness, Web. Level 5: Stinking Cloud. Level 7: Polymorph. Level 9: Insect Plague."
@@ -1114,7 +1114,7 @@
       "handler": "src/services/combat/automation/handlers/classFeatureHandler.js",
       "router": "src/services/combat/automation/routers/classFeatureRouter.js",
       "infoBuilder": "src/services/combat/automation/infoBuilders/classFeatureInfoBuilder.js",
-      "verified": "not verified",
+      "verified": "verified",
       "class": "Druid",
       "triggerConditions": "",
       "expectedBehavior": "Always prepared: Level 3: Cure Wounds, Moonbeam, Starry Wisp. Level 5: Conjure Animals. Level 7: Fount of Moonlight. Level 9: Mass Cure Wounds."
@@ -1126,7 +1126,7 @@
       "handler": "src/services/combat/automation/handlers/classFeatureHandler.js",
       "router": "src/services/combat/automation/routers/classFeatureRouter.js",
       "infoBuilder": "src/services/combat/automation/infoBuilders/classFeatureInfoBuilder.js",
-      "verified": "not verified",
+      "verified": "verified",
       "class": "Druid",
       "triggerConditions": "",
       "expectedBehavior": "Always prepared: Level 3: Fog Cloud, Gust of Wind, Ray of Frost, Shatter, Thunderwave. Level 5: Lightning Bolt, Water Breathing. Level 7: Control Water, Ice Storm. Level 9: Conjure Elemental, Hold Monster."
@@ -1138,7 +1138,7 @@
       "handler": "src/services/combat/automation/handlers/classFeatureHandler.js",
       "router": "src/services/combat/automation/routers/classFeatureRouter.js",
       "infoBuilder": "src/services/combat/automation/infoBuilders/classFeatureInfoBuilder.js",
-      "verified": "not verified",
+      "verified": "verified",
       "class": "Warlock",
       "triggerConditions": "Action: passive; Duration: 1_minute",
       "expectedBehavior": "When you form a telepathic bond with a creature using Awakened Mind, force that creature to make Wisdom save. On failed save, creature has Disadvantage on attack rolls against you, and you have Advantage on attack rolls against that creature for the duration. Once per Short or Long Rest (or expend Pact Magic spell slot to restore)."
@@ -1150,7 +1150,7 @@
       "handler": "src/services/combat/automation/handlers/weaponMasteryHandler.js",
       "router": "src/services/combat/automation/routers/weaponMasteryRouter.js",
       "infoBuilder": "src/services/combat/automation/infoBuilders/weaponMasteryInfoBuilder.js",
-      "verified": "not verified",
+      "verified": "broken — see .opencode/plans/bug-wm-001-cleave-nan-attack-total.md",
       "class": "Barbarian",
       "triggerConditions": "",
       "expectedBehavior": "If you hit a creature with a melee attack roll using this weapon, you can make a melee attack roll with the weapon against a second creature within 5 feet of the first that is also within your reach. On a hit, the second creature takes the weapon's damage, but don't add your ability modifier to that damage unless that modifier is negative. You can make this extra attack only once per turn."
@@ -1162,7 +1162,7 @@
       "handler": "src/services/combat/automation/handlers/classFeatureHandler.js",
       "router": "src/services/combat/automation/routers/classFeatureRouter.js",
       "infoBuilder": "src/services/combat/automation/infoBuilders/classFeatureInfoBuilder.js",
-      "verified": "not verified",
+      "verified": "verified",
       "class": "Monk",
       "triggerConditions": "Action: 1 action; Action: action; Duration: 1_minute",
       "expectedBehavior": "As a Magic action while entirely within Dim Light or Darkness, you can expend 3 Focus Points to shroud yourself with shadows for 1 minute, until you have the Incapacitated condition, or until you end your turn Bright Light. While shrouded by these shadows, you gain the following benefits. Invisibility: You have the Invisible condition. Partially Incorporeal: You can move through occupied spaces as if they were Difficult Terrain. If you end your turn in such a space, you are shunted to the last unoccupied space you were in. Shadow Flurry: You can use your Flurry of Blows without expending any Focus Points."
