@@ -159,7 +159,6 @@ vi.mock('./triggerSpells.js', () => ({
   handleBlur: vi.fn(() => Promise.resolve({ handled: false })),
   handleExpeditiousRetreat: vi.fn(() => Promise.resolve({ handled: false })),
   handleFriends: vi.fn(() => Promise.resolve({ handled: false })),
-  handleCompulsion: vi.fn(() => Promise.resolve({ handled: false })),
   handleCrownOfMadness: vi.fn(() => Promise.resolve({ handled: false })),
   handleAnimalFriendship: vi.fn(() => Promise.resolve({ handled: false })),
   handleDominateBeast: vi.fn(() => Promise.resolve({ handled: false })),

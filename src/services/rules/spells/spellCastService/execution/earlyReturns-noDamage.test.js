@@ -159,7 +159,6 @@ vi.mock('./triggerSpells.js', () => ({
   handleBlur: vi.fn(() => Promise.resolve({ handled: false })),
   handleExpeditiousRetreat: vi.fn(() => Promise.resolve({ handled: false })),
   handleFriends: vi.fn(() => Promise.resolve({ handled: false })),
-  handleCompulsion: vi.fn(() => Promise.resolve({ handled: false })),
   handleCrownOfMadness: vi.fn(() => Promise.resolve({ handled: false })),
   handleGenericAutomation: vi.fn(() => Promise.resolve({ handled: false })),
   handleAnimalFriendship: vi.fn(() => Promise.resolve({ handled: false })),
@@ -223,7 +222,6 @@ const {
   handleBlur: mockBlur,
   handleExpeditiousRetreat: mockExpeditiousRetreat,
   handleFriends: mockFriends,
-  handleCompulsion: mockCompulsion,
   handleCrownOfMadness: mockCrownOfMadness,
 } = await import('./triggerSpells.js');
 
@@ -297,7 +295,6 @@ function resetAllMocks() {
   mockBlur.mockResolvedValue({ handled: false });
   mockExpeditiousRetreat.mockResolvedValue({ handled: false });
   mockFriends.mockResolvedValue({ handled: false });
-  mockCompulsion.mockResolvedValue({ handled: false });
   mockCrownOfMadness.mockResolvedValue({ handled: false });
 }
 
@@ -339,7 +336,6 @@ const noDamageSpells = [
   { name: 'Blur', mock: mockBlur, expectResult: undefined, resultOverride: { handled: true } },
   { name: 'Expeditious Retreat', mock: mockExpeditiousRetreat, expectResult: undefined, resultOverride: { handled: true } },
   { name: 'Friends', mock: mockFriends, expectResult: { automationPopup: { type: 'popup' } }, resultOverride: { handled: true, result: { automationPopup: { type: 'popup' } } } },
-  { name: 'Compulsion', mock: mockCompulsion, expectResult: { automationPopup: { type: 'popup' } }, resultOverride: { handled: true, result: { automationPopup: { type: 'popup' } } } },
   { name: 'Crown of Madness', mock: mockCrownOfMadness, expectResult: { automationPopup: { type: 'popup' } }, resultOverride: { handled: true, result: { automationPopup: { type: 'popup' } } } },
 ];
 

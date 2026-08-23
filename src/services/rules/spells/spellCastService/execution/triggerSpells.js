@@ -18,7 +18,6 @@ import { triggerResilientSphere } from '../../../features/resilientSphereService
 import { triggerBlur } from '../../../features/blurService.js';
 import { triggerExpeditiousRetreat } from '../../../features/expeditiousRetreatService.js';
 import { triggerFriends } from '../../../features/friendsService.js';
-import { triggerCompulsion } from '../../../features/compulsionService.js';
 import { triggerCrownOfMadness } from '../../../features/crownOfMadnessService.js';
 import { triggerAnimalFriendship } from '../../../features/animalFriendshipService.js';
 import { triggerDominateBeast } from '../../../features/dominateBeastService.js';
@@ -46,7 +45,6 @@ const SERVICE_HANDLED_SPELLS = new Set([
     'blur',
     'expeditious retreat',
     'friends',
-    'compulsion',
     'crown of madness',
     'animal friendship',
     'dominate beast',
@@ -247,18 +245,6 @@ async function handleFriends(spell, metaCtx, spellSaveDc, getTargetInfo, playerS
         const friendsResult = await triggerFriends(spell, friendsMetaCtx, playerStats, campaignName, mapName);
         if (friendsResult) {
             return { handled: true, result: { automationPopup: friendsResult } };
-        }
-        return { handled: true };
-    }
-    return { handled: false };
-}
-
-async function handleCompulsion(spell, metaCtx, spellSaveDc, getTargetInfo, playerStats, campaignName, mapName) {
-    if (spell.name && spell.name.toLowerCase() === 'compulsion') {
-        const compulsionTarget = await getTargetInfo();
-        const compulsionResult = await triggerCompulsion(spell, { ...metaCtx, spellSaveDc, targetName: compulsionTarget?.name }, playerStats, campaignName, mapName);
-        if (compulsionResult) {
-            return { handled: true, result: { automationPopup: compulsionResult } };
         }
         return { handled: true };
     }
@@ -609,7 +595,6 @@ export {
     handleBlur,
     handleExpeditiousRetreat,
     handleFriends,
-    handleCompulsion,
     handleCrownOfMadness,
     handleAnimalFriendship,
     handleDominateBeast,

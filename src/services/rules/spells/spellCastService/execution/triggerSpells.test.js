@@ -120,5 +120,16 @@ describe('handleGenericAutomation', () => {
         characters,
       );
     });
+
+    it('does not handle compulsion since it uses spell gate multi-target path', async () => {
+      const executeHandler = vi.fn(async () => null);
+      // Actual compulsion spell data has NO automation.type, only status_effects and dc
+      const spell = { name: 'Compulsion', status_effects: ['Charmed'], dc: { dc_type: 'WIS', dc_success: 'none' } };
+
+      const result = await handleGenericAutomation(spell, executeHandler, null, makePlayerStats(), 'camp', 'map', []);
+
+      expect(result).toEqual({ handled: false });
+      expect(executeHandler).not.toHaveBeenCalled();
+    });
   });
 });
