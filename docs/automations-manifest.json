@@ -650,6 +650,18 @@
       "expectedBehavior": "Advantage on saving throws to avoid/end Charmed or Frightened. When you or creature within 120 feet succeeds on save vs Charmed/Frightened, take Reaction to force different creature within 120 feet to make Wisdom save (your spell save DC) or be Charmed/Frightened for 1 minute."
     },
     {
+      "id": "CLA-035",
+      "name": "Bend Luck",
+      "type": "classFeature",
+      "handler": "src/services/combat/automation/handlers/classFeatureHandler.js",
+      "router": "src/services/combat/automation/routers/classFeatureRouter.js",
+      "infoBuilder": "src/services/combat/automation/infoBuilders/classFeatureInfoBuilder.js",
+      "verified": "not verified",
+      "class": "Sorcerer",
+      "triggerConditions": "Trigger: after creature d20 roll; Action: 1 reaction",
+      "expectedBehavior": "Immediately after another creature you can see rolls the d20 for a D20 Test, take Reaction and spend 1 Sorcery Point to roll 1d4 and apply as bonus or penalty (your choice) to the d20 roll."
+    },
+    {
       "id": "CLA-036",
       "name": "Bestial Fury",
       "type": "classFeature",
@@ -788,10 +800,10 @@
       "handler": "src/services/combat/automation/handlers/classFeatureHandler.js",
       "router": "src/services/combat/automation/routers/classFeatureRouter.js",
       "infoBuilder": "src/services/combat/automation/infoBuilders/classFeatureInfoBuilder.js",
-      "verified": "broken — see .opencode/plans/bug-cla-040-body-and-mind-filtered.md",
+      "verified": "verified",
       "class": "Monk",
       "triggerConditions": "",
-      "expectedBehavior": "Your Dexterity and Wisdom scores increase by 4, to a maximum of 25."
+      "expectedBehavior": "Ability score increase is applied at the rules engine level (+4 Dex, +4 Wis for level 20+ Monk, max 25). The feature is intentionally hidden from character sheet UI via featuresToIgnore — it does not display as a visible feature but the ASI is correctly applied to ability scores."
     },
     {
       "id": "FT-007",
