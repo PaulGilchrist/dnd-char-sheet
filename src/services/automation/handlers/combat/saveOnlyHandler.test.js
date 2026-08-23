@@ -409,4 +409,31 @@ describe('saveOnlyHandler.handle - edge cases', () => {
     expect(result.type).toBe('popup');
     expect(result.payload.description).toContain('CON saving throw');
   });
+
+  it('applies blinded condition from automation.effects on failed save (Color Spray scenario)', async () => {
+    const ps = makePlayerStats();
+    const action = {
+      name: 'Color Spray',
+      automation: {
+        type: 'save_only',
+        saveType: 'CON',
+        effects: {
+          fail: [{ type: 'blinded', condition: 'blinded' }],
+        },
+      },
+    };
+
+    await handle(action, ps, campaignName, mapName);
+
+    window.dispatchEvent(new CustomEvent('save-result', {
+      detail: { promptId: 'prompt-123', success: false },
+    }));
+
+    expect(runtimeState.setRuntimeValue).toHaveBeenCalledWith(
+      'Goblin',
+      'activeConditions',
+      ['blinded'],
+      campaignName,
+    );
+  });
 });

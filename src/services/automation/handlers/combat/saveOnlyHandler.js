@@ -14,11 +14,11 @@ const STUNNING_STRIKE_EFFECTS = {
     ],
 };
 
-function getDefaultEffects(automationName) {
+function getDefaultEffects(automationName, auto) {
     if (automationName === 'Stunning Strike') {
         return STUNNING_STRIKE_EFFECTS;
     }
-    return { success: [], fail: [{ type: 'stunned', condition: 'stunned' }] };
+    return { success: [], fail: [{ type: 'stunned', condition: auto?.effects?.fail?.[0]?.condition || 'stunned' }] };
 }
 
 export async function handle(action, playerStats, campaignName, _mapName) {
@@ -28,7 +28,7 @@ export async function handle(action, playerStats, campaignName, _mapName) {
     const targetInfo = await resolveTarget(campaignName, playerStats.name);
     const targetName = targetInfo?.target?.name || playerStats.name;
 
-    const effects = auto.effects || getDefaultEffects(action.name);
+    const effects = auto.effects || getDefaultEffects(action.name, auto);
     const { promptId } = createSaveListener(campaignName, {
         targetName,
         saveType: auto.saveType || 'CON',

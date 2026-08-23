@@ -474,7 +474,7 @@ function AOEConditionModal({
         onClose();
     }, [onClose]);
 
-    const extraState = { selected: new Set(), setSelected: () => {}, toggleTarget: () => {}, heightenTarget, setHeightenTarget };
+    const extraState = { heightenTarget, setHeightenTarget };
 
     const renderBody = (ctx) => {
         if (!ctx.processing && !ctx.allResolved) {
