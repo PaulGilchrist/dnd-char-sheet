@@ -41,7 +41,7 @@ router.post('/api/campaigns/:campaign/positioning', asyncHandler((req, res) => {
     markDirty(campaign);
 
     // Broadcast positioning change
-    publish(`positioning-${campaign}`, positioning);
+    publish(`positioning-${campaign}`, positioning, campaign);
 
     res.json({ message: 'Positioning saved successfully' });
 }));
@@ -126,7 +126,7 @@ router.post('/api/campaigns/:campaign/:key', asyncHandler((req, res, next) => {
     markDirty(campaign);
 
     // Broadcast change
-    publish(`change-${campaign}-${key}`, propertyValue);
+    publish(`change-${campaign}-${key}`, propertyValue, campaign);
 
     res.json({ message: 'Data saved successfully' });
 }));
@@ -139,7 +139,7 @@ router.delete('/api/campaigns/:campaign/:key', asyncHandler((req, res, next) => 
         delete characterChangeData.get(campaign)[key];
         markDirty(campaign);
     }
-    publish(`change-${campaign}-${key}`, null);
+    publish(`change-${campaign}-${key}`, null, campaign);
 
     res.json({ message: 'Data deleted successfully' });
 }));

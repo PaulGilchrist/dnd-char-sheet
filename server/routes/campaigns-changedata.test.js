@@ -368,7 +368,7 @@ describe('campaignsChangedata - POST /api/campaigns/:campaign/positioning', () =
         const positioningData = { creature1: { x: 10, y: 20 } };
         const app = createTestApp();
         await request(app).post('/api/campaigns/test-campaign/positioning').send({ positioning: positioningData });
-        expect(publish).toHaveBeenCalledWith('positioning-test-campaign', positioningData);
+        expect(publish).toHaveBeenCalledWith('positioning-test-campaign', positioningData, 'test-campaign');
     });
 });
 
@@ -388,7 +388,7 @@ describe('campaignsChangedata - POST /api/campaigns/:campaign/:key calls markDir
     it('should broadcast change via publish after saving', async () => {
         const app = createTestApp();
         await request(app).post('/api/campaigns/test-campaign/character1').send({ value: { hp: 20 } });
-        expect(publish).toHaveBeenCalledWith('change-test-campaign-character1', { hp: 20 });
+        expect(publish).toHaveBeenCalledWith('change-test-campaign-character1', { hp: 20 }, 'test-campaign');
     });
 });
 
@@ -410,7 +410,7 @@ describe('campaignsChangedata - DELETE /api/campaigns/:campaign/:key calls markD
         characterChangeData.set('test-campaign', { character1: { hp: 25 } });
         const app = createTestApp();
         await request(app).delete('/api/campaigns/test-campaign/character1');
-        expect(publish).toHaveBeenCalledWith('change-test-campaign-character1', null);
+        expect(publish).toHaveBeenCalledWith('change-test-campaign-character1', null, 'test-campaign');
     });
 
     it('should not call markDirty when campaign does not exist', async () => {

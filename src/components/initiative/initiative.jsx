@@ -55,8 +55,8 @@ function Initiative({ characters, campaignName, onNpcsChange, isLocalhost, mapNa
     }, [campaignName, combatSummary])
     const setActiveCreatureNameG = useSSEEqualityGuard(setActiveCreatureName)
     const [npcImages, setNpcImages] = React.useState({})
-    const [viewingMonster, setViewingMonster] = useSyncedState(campaignName, 'combat-ui-viewingMonster', null, campaignName)
-    const [viewingMonsterCreatureName, setViewingMonsterCreatureName] = useSyncedState(campaignName, 'combat-ui-viewingMonsterCreatureName', null, campaignName)
+    const [viewingMonster, setViewingMonster] = useSyncedState('campaign', 'combat-ui-viewingMonster', null, campaignName)
+    const [viewingMonsterCreatureName, setViewingMonsterCreatureName] = useSyncedState('campaign', 'combat-ui-viewingMonsterCreatureName', null, campaignName)
     const carouselRef = React.useRef(null)
     const combatSummaryRef = React.useRef(null)
     const roundRef = React.useRef(combatSummary?.round ?? 1)
@@ -70,7 +70,7 @@ function Initiative({ characters, campaignName, onNpcsChange, isLocalhost, mapNa
 
     const [conditionPopup, setConditionPopup] = React.useState(null)
 
-    const [effectAdderTarget, setEffectAdderTarget] = useSyncedState(campaignName, 'combat-ui-effectAdderTarget', null, campaignName)
+    const [effectAdderTarget, setEffectAdderTarget] = useSyncedState('campaign', 'combat-ui-effectAdderTarget', null, campaignName)
     const [effectAdderTab, setEffectAdderTab] = React.useState('conditions')
 
     const [campaignNpcs, setCampaignNpcs] = React.useState([])

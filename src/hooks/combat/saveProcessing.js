@@ -16,6 +16,14 @@ export async function processSaveRoll(rollType, target, characterName, campaignN
     const targetIsPlayer = target?.type === 'player';
     const targetName = target?.name || context?.targetName;
 
+    console.debug(`[saveDebug] processSaveRoll branch decision`, {
+        rollType, saveDc, saveType, attackerName, actionName,
+        targetName, targetType: target?.type, targetIsPlayer,
+        explicitContextTargetName: context?.targetName,
+        branch: (!saveDc || !targetIsPlayer) ? 'processNpcSave' : 'processPlayerSave',
+        characterName,
+    });
+
     if (!saveDc || !targetIsPlayer) {
         return await processNpcSave(rollType, target, characterName, campaignName, context, bonus, r1, r2, logEntry, setPopupHtml, saveDc, saveType, attackerName, actionName, targetName);
     }

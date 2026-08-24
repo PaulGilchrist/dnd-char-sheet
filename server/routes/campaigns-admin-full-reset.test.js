@@ -111,8 +111,8 @@ describe('campaignsAdmin - POST /api/campaigns/:campaign/admin/full-reset', () =
         ensureCampaign('test-campaign');
         const { publish } = await import('../utils/changeData.js');
         await request(createTestApp()).post('/api/campaigns/test-campaign/admin/full-reset').set('Host', 'localhost');
-        expect(publish).toHaveBeenCalledWith('change-test-campaign-combatSummary', null);
-        expect(publish).toHaveBeenCalledWith('log-test-campaign', null);
+        expect(publish).toHaveBeenCalledWith('change-test-campaign-combatSummary', null, 'test-campaign');
+        expect(publish).toHaveBeenCalledWith('log-test-campaign', null, 'test-campaign');
     });
 
     it('should succeed even if change data file does not exist', async () => {

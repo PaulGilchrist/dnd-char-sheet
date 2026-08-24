@@ -436,6 +436,11 @@ function MonsterCardModal({ monster, onClose, campaignName, creatures, creatureN
 
   const handleSaveRoll = useCallback((action, saveDamageFormula, saveConditions) => {
     const target = getTarget();
+    console.debug(`[saveDebug] MonsterCardModal.handleSaveRoll`, {
+      monsterName, actionName: action.name, saveDc: action.save_dc, saveType: action.save_type,
+      target: target ? { name: target.name, type: target.type } : null,
+      creaturesAvailable: Array.isArray(creatures),
+    });
     const saveMod = getSaveModifierForSaveType(action.save_type, target, characters, creatures);
     rollSavingThrow(saveAbilityAbbr(action.save_type), saveMod, {
       attackerName: monsterName,

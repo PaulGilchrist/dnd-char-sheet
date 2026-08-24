@@ -1,0 +1,32 @@
+{
+  "description": "Existing test characters in 'test-campaign' keyed by class/subclass/race/subrace/feat/background, for reuse during automation verification.",
+  "characters": [
+    {
+      "name": "Disciplined_Monk",
+      "file": "public/campaigns/test-campaign/Disciplined_Monk.json",
+      "ruleset": "2024",
+      "class": "Monk",
+      "subclass": "Warrior of the Elements",
+      "level": 14,
+      "race": "Human",
+      "subrace": "Human",
+      "feats": [],
+      "background": "Acolyte"
+    }
+  ],
+  "monsters": [
+    {
+      "name": "Aarakocra Aeromancer",
+      "index": "aarakocra-aeromancer",
+      "source": "public/data/monsters.json",
+      "cr": "4",
+      "hp": 66,
+      "ac": 16,
+      "saveForcing": [
+        { "spell": "gust of wind", "save": "WIS", "dc": 13, "uses": "at will" },
+        { "spell": "lightning bolt", "save": "DEX", "dc": 13, "uses": "1/day" }
+      ],
+      "note": "Spellcasting is a proper action with save_dc/save_type fields. Known-good for failed-save scenarios."
+    }
+  ]
+}

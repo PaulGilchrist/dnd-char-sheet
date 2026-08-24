@@ -541,7 +541,8 @@ describe('maps - POST /api/campaigns/:campaign/maps', () => {
 
         expect(changeData.publish).toHaveBeenCalledWith(
             'maps-list-test-campaign',
-            { action: 'created', map: { name: 'Broadcast Test', fileName: 'broadcast-test.json' } }
+            { action: 'created', map: { name: 'Broadcast Test', fileName: 'broadcast-test.json' } },
+            'test-campaign'
         );
     });
 
@@ -841,7 +842,8 @@ describe('maps - PUT /api/campaigns/:campaign/maps/:mapname', () => {
 
         expect(changeData.publish).toHaveBeenCalledWith(
             'map-data-test-campaign-test-map',
-            expect.objectContaining({ displayName: 'Updated Map' })
+            expect.objectContaining({ displayName: 'Updated Map' }),
+            'test-campaign'
         );
     });
 
@@ -945,7 +947,8 @@ describe('maps - DELETE /api/campaigns/:campaign/maps/:mapname', () => {
 
         expect(changeData.publish).toHaveBeenCalledWith(
             'maps-list-test-campaign',
-            expect.objectContaining({ action: 'deleted' })
+            expect.objectContaining({ action: 'deleted' }),
+            'test-campaign'
         );
     });
 

@@ -100,7 +100,7 @@ describe('campaignsAdmin - POST /api/campaigns/:campaign/admin/clear-log', () =>
         const { publish } = await import('../utils/changeData.js');
         ensureCampaign('test-campaign');
         await request(createTestApp()).post('/api/campaigns/test-campaign/admin/clear-log').set('Host', 'localhost');
-        expect(publish).toHaveBeenCalledWith('log-test-campaign', null);
+        expect(publish).toHaveBeenCalledWith('log-test-campaign', null, 'test-campaign');
     });
 
     it('should return 500 on filesystem error', async () => {

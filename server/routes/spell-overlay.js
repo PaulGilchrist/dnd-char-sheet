@@ -53,7 +53,7 @@ router.post('/spell-overlay', asyncHandler((req, res) => {
             break;
     }
 
-    publish(`spell-overlay-${campaign}`, { action, overlays, overlayId });
+    publish(`spell-overlay-${campaign}`, { action, overlays, overlayId }, campaign);
     res.json({ ok: true });
 }));
 

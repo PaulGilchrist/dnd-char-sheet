@@ -31,7 +31,7 @@ router.post('/api/campaigns/:campaign/pipeline-event', asyncHandler((req, res) =
     characterChangeData.get(campaign)[`pipeline-${campaign}-${key}`] = storedData;
     markDirty(campaign);
 
-    publish(`pipeline-${campaign}-${key}`, storedData);
+    publish(`pipeline-${campaign}-${key}`, storedData, campaign);
 
     res.json({ message: 'Pipeline event recorded' });
 }));

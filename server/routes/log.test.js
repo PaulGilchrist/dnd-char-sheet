@@ -447,7 +447,8 @@ describe('POST /api/campaigns/:campaign/log', () => {
             expect.objectContaining({
                 type: 'test',
                 message: 'SSE test',
-            })
+            }),
+            'test-campaign'
         );
     });
 
@@ -461,7 +462,8 @@ describe('POST /api/campaigns/:campaign/log', () => {
 
         expect(publish).toHaveBeenCalledWith(
             'log-test-campaign-123',
-            expect.any(Object)
+            expect.any(Object),
+            'test-campaign-123'
         );
     });
 });

@@ -217,7 +217,7 @@ router.post('/api/campaigns/:campaign/admin/clear-change-data', asyncHandler((re
     characterChangeData.delete(campaign);
     activeMaps.delete(campaign);
     spellOverlayData.delete(campaign);
-    publish(`change-${campaign}-combatSummary`, null);
+    publish(`change-${campaign}-combatSummary`, null, campaign);
 
     res.json({ message: 'Change data cleared' });
 }));
@@ -241,7 +241,7 @@ router.post('/api/campaigns/:campaign/admin/clear-log', asyncHandler((req, res) 
     }
 
     logCache.delete(campaign);
-    publish(`log-${campaign}`, null);
+    publish(`log-${campaign}`, null, campaign);
 
     res.json({ message: 'Campaign log cleared' });
 }));
@@ -266,7 +266,7 @@ router.post('/api/campaigns/:campaign/admin/full-reset', asyncHandler((req, res)
     characterChangeData.delete(campaign);
     activeMaps.delete(campaign);
     spellOverlayData.delete(campaign);
-    publish(`change-${campaign}-combatSummary`, null);
+    publish(`change-${campaign}-combatSummary`, null, campaign);
 
     try {
         if (fs.existsSync(campaignDataFile(campaign, 'campaign-log.json'))) {
@@ -277,7 +277,7 @@ router.post('/api/campaigns/:campaign/admin/full-reset', asyncHandler((req, res)
         return res.status(500).json({ error: 'Failed to clear log' });
     }
     logCache.delete(campaign);
-    publish(`log-${campaign}`, null);
+    publish(`log-${campaign}`, null, campaign);
 
     res.json({ message: 'Full reset complete' });
 }));
@@ -332,7 +332,7 @@ function extractZipToDir(source, targetDir) {
 function reloadCampaign(campaign) {
     readFile();
     logCache.delete(campaign);
-    publish(`reload-${campaign}`, null);
+    publish(`reload-${campaign}`, null, campaign);
 }
 
 // POST /api/campaigns/:campaign/admin/snapshot

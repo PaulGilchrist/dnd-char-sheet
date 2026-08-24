@@ -302,7 +302,7 @@ describe('campaignsCharacter - PATCH /api/campaigns/:campaign/:file', () => {
             .patch('/api/campaigns/test-campaign/Thorin.json')
             .send({ level: 6 });
 
-        expect(publish).toHaveBeenCalledWith('character-test-campaign-Thorin.json', expect.any(Object));
+        expect(publish).toHaveBeenCalledWith('character-test-campaign-Thorin.json', expect.any(Object), 'test-campaign');
     });
 
     it('should write updated data to the file', async () => {

@@ -128,7 +128,7 @@ router.put('/api/campaigns/:campaign/:file', asyncHandler((req, res, next) => {
     }
 
     // Broadcast character update
-    publish(`character-${campaign}-${file}`, character);
+    publish(`character-${campaign}-${file}`, character, campaign);
 
     res.json({ message: 'Character updated successfully' });
 }));
@@ -169,7 +169,7 @@ router.patch('/api/campaigns/:campaign/:file', asyncHandler((req, res, next) => 
     fs.writeFileSync(filePath, JSON.stringify(character, null, 2));
 
     // Broadcast character update
-    publish(`character-${campaign}-${file}`, character);
+    publish(`character-${campaign}-${file}`, character, campaign);
 
     res.json({ message: 'Character updated successfully', character });
 }));
@@ -201,7 +201,7 @@ router.delete('/api/campaigns/:campaign/:file', asyncHandler((req, res, next) =>
     removeChangeDataKey(campaign, character.name);
 
     // Broadcast character deletion
-    publish(`character-delete-${campaign}-${file}`, { file });
+    publish(`character-delete-${campaign}-${file}`, { file }, campaign);
 
     res.json({ message: 'Character deleted successfully' });
 }));
@@ -234,7 +234,7 @@ router.post('/api/campaigns/:campaign', asyncHandler((req, res) => {
     fs.writeFileSync(filePath, JSON.stringify(character, null, 2));
 
     // Broadcast character creation
-    publish(`character-create-${campaign}-${fileName}`, character);
+    publish(`character-create-${campaign}-${fileName}`, character, campaign);
 
     res.status(201).json({ message: 'Character created successfully', character, fileName });
 }));

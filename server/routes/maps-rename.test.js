@@ -253,7 +253,8 @@ describe('maps - PUT /api/campaigns/:campaign/maps/:mapname/rename', () => {
             'maps-list-test-campaign',
             expect.objectContaining({
                 action: 'renamed',
-            })
+            }),
+            'test-campaign'
         );
     });
 
@@ -396,7 +397,8 @@ describe('maps - PUT /api/campaigns/:campaign/maps/:mapname/activate', () => {
 
         expect(changeData.publish).toHaveBeenCalledWith(
             'map-activate-test-campaign',
-            { activeMap: 'map-x' }
+            { activeMap: 'map-x' },
+            'test-campaign'
         );
     });
 
@@ -412,7 +414,8 @@ describe('maps - PUT /api/campaigns/:campaign/maps/:mapname/activate', () => {
 
         expect(changeData.publish).toHaveBeenCalledWith(
             'maps-list-test-campaign',
-            { action: 'activated', activeMap: 'map-y' }
+            { action: 'activated', activeMap: 'map-y' },
+            'test-campaign'
         );
     });
 
@@ -566,7 +569,8 @@ describe('maps - PUT /api/campaigns/:campaign/maps/:mapname/description', () => 
 
         expect(changeData.publish).toHaveBeenCalledWith(
             'map-data-test-campaign-test-map',
-            expect.objectContaining({ description: 'Broadcast test' })
+            expect.objectContaining({ description: 'Broadcast test' }),
+            'test-campaign'
         );
     });
 

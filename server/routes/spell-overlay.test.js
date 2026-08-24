@@ -640,7 +640,8 @@ describe('spell-overlay - POST /spell-overlay', () => {
 
             expect(publishSpy).toHaveBeenCalledWith(
                 'spell-overlay-test-campaign',
-                { action: 'add', overlays: [{ id: 'overlay-1', name: 'Fireball' }], overlayId: undefined }
+                { action: 'add', overlays: [{ id: 'overlay-1', name: 'Fireball' }], overlayId: undefined },
+                'test-campaign'
             );
 
             publishSpy.mockRestore();
@@ -660,7 +661,8 @@ describe('spell-overlay - POST /spell-overlay', () => {
 
             expect(publishSpy).toHaveBeenCalledWith(
                 'spell-overlay-test-campaign',
-                { action: 'remove', overlays: undefined, overlayId: 'overlay-42' }
+                { action: 'remove', overlays: undefined, overlayId: 'overlay-42' },
+                'test-campaign'
             );
 
             publishSpy.mockRestore();
@@ -679,7 +681,8 @@ describe('spell-overlay - POST /spell-overlay', () => {
 
             expect(publishSpy).toHaveBeenCalledWith(
                 'spell-overlay-test-campaign',
-                { action: 'clear', overlays: undefined, overlayId: undefined }
+                { action: 'clear', overlays: undefined, overlayId: undefined },
+                'test-campaign'
             );
 
             publishSpy.mockRestore();
@@ -699,7 +702,8 @@ describe('spell-overlay - POST /spell-overlay', () => {
 
             expect(publishSpy).toHaveBeenCalledWith(
                 'spell-overlay-test-campaign',
-                { action: 'update', overlays: [{ id: 'overlay-1', name: 'Updated' }], overlayId: undefined }
+                { action: 'update', overlays: [{ id: 'overlay-1', name: 'Updated' }], overlayId: undefined },
+                'test-campaign'
             );
 
             publishSpy.mockRestore();

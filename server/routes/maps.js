@@ -110,7 +110,7 @@ router.post('/api/campaigns/:campaign/maps', asyncHandler((req, res) => {
   fs.writeFileSync(filePath, JSON.stringify(defaultMapData, null, 2));
 
   // Broadcast maps list change
-  publish(`maps-list-${campaign}`, { action: 'created', map: { name: name.trim(), fileName } });
+  publish(`maps-list-${campaign}`, { action: 'created', map: { name: name.trim(), fileName } }, campaign);
 
   res.status(201).json({ message: 'Map created successfully', map: { name: name.trim(), fileName } });
 }));
@@ -147,7 +147,7 @@ router.put('/api/campaigns/:campaign/maps/:mapname', asyncHandler((req, res) => 
 
   // Broadcast map data change for real-time sync
   const eventMapName = fileName.replace(/\.json$/, '');
-  publish(`map-data-${campaign}-${eventMapName}`, mapData);
+  publish(`map-data-${campaign}-${eventMapName}`, mapData, campaign);
 
   res.json({ message: 'Map saved successfully' });
 }));
@@ -172,7 +172,7 @@ router.delete('/api/campaigns/:campaign/maps/:mapname', asyncHandler((req, res) 
   }
 
   // Broadcast maps list change
-  publish(`maps-list-${campaign}`, { action: 'deleted', map: mapKey });
+  publish(`maps-list-${campaign}`, { action: 'deleted', map: mapKey }, campaign);
 
   res.json({ message: 'Map deleted successfully' });
 }));
@@ -224,7 +224,7 @@ router.put('/api/campaigns/:campaign/maps/:mapname/rename', asyncHandler((req, r
     action: 'renamed',
     oldName: oldFileName.replace(/\.json$/, ''),
     newName: newFileName.replace(/\.json$/, '')
-  });
+  }, campaign);
 
   res.json({
     message: 'Map renamed successfully',
@@ -247,8 +247,8 @@ router.put('/api/campaigns/:campaign/maps/:mapname/activate', asyncHandler((req,
   activeMaps.set(campaign, mapKey);
 
   // Broadcast activation change
-  publish(`map-activate-${campaign}`, { activeMap: mapKey });
-  publish(`maps-list-${campaign}`, { action: 'activated', activeMap: mapKey });
+  publish(`map-activate-${campaign}`, { activeMap: mapKey }, campaign);
+  publish(`maps-list-${campaign}`, { action: 'activated', activeMap: mapKey }, campaign);
 
   res.json({ message: 'Map activated successfully', activeMap: mapKey });
 }));
@@ -277,7 +277,7 @@ router.put('/api/campaigns/:campaign/maps/:mapname/description', asyncHandler((r
   fs.writeFileSync(filePath, JSON.stringify(mapData, null, 2));
 
   // Broadcast updated map data
-  publish(`map-data-${campaign}-${fileName.replace(/\.json$/, '')}`, mapData);
+  publish(`map-data-${campaign}-${fileName.replace(/\.json$/, '')}`, mapData, campaign);
 
   res.json({ message: 'Map description updated successfully' });
 }));

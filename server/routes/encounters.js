@@ -44,7 +44,7 @@ router.post('/api/campaigns/:campaign/encounters', asyncHandler((req, res) => {
   writeEncounters(campaign, data);
 
   // Broadcast encounters list change
-  publish(`encounters-list-${campaign}`, { action: 'created', encounter: { name: trimmedName } });
+  publish(`encounters-list-${campaign}`, { action: 'created', encounter: { name: trimmedName } }, campaign);
 
   res.status(201).json({ message: 'Encounter saved successfully', encounter: { name: trimmedName } });
 }));
@@ -79,7 +79,7 @@ router.put('/api/campaigns/:campaign/encounters/:encountername', asyncHandler((r
   writeEncounters(campaign, data);
 
   // Broadcast encounter data change
-  publish(`encounter-data-${campaign}-${encountername}`, encounterData);
+  publish(`encounter-data-${campaign}-${encountername}`, encounterData, campaign);
 
   res.json({ message: 'Encounter updated successfully' });
 }));
@@ -98,7 +98,7 @@ router.delete('/api/campaigns/:campaign/encounters/:encountername', asyncHandler
   writeEncounters(campaign, data);
 
   // Broadcast encounters list change
-  publish(`encounters-list-${campaign}`, { action: 'deleted', encounter: encountername });
+  publish(`encounters-list-${campaign}`, { action: 'deleted', encounter: encountername }, campaign);
 
   res.json({ message: 'Encounter deleted successfully' });
 }));
@@ -132,7 +132,7 @@ router.put('/api/campaigns/:campaign/encounters/:encountername/rename', asyncHan
     action: 'renamed',
     oldName: encountername,
     newName: trimmedNewName
-  });
+  }, campaign);
 
   res.json({ message: 'Encounter renamed successfully', encounter: { name: trimmedNewName } });
 }));

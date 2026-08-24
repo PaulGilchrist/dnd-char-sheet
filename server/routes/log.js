@@ -57,7 +57,7 @@ function addEntry(campaign, entry) {
   logCache.set(campaign, log);
   saveLogFile();
 
-  publish(`log-${campaign}`, newEntry);
+  publish(`log-${campaign}`, newEntry, campaign);
   return newEntry;
 }
 

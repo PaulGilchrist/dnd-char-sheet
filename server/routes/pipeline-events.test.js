@@ -96,7 +96,8 @@ describe('pipeline-events - POST /api/campaigns/:campaign/pipeline-event', () =>
 
         expect(publishSpy).toHaveBeenCalledWith(
             'pipeline-test-campaign-damage:rolled',
-            { total: 20 }
+            { total: 20 },
+            'test-campaign'
         );
 
         publishSpy.mockRestore();

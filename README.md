@@ -377,7 +377,7 @@ Turn order, round counter, NPC management, battle notes, and keyboard shortcuts 
 - **Party setup** — Auto-populated from campaign characters or manual player/level inputs
 - **Save/Load encounters** — Full CRUD with rename and delete; working session auto-persisted to localStorage
 - **Encounter descriptions** — Markdown-supported text with preview toggle
-- **Start Combat** — Expands selected monsters into individual initiative-ready creatures, rolls initiative for each, loads HP, computes AC, sorts by initiative, and dispatches to the tracker
+- **Join Encounter** — Expands selected monsters into individual initiative-ready creatures, rolls initiative for each, loads HP, computes AC, sorts by initiative, and dispatches to the tracker
 - **XP Awarding** — Post-encounter XP summary with per-character split, auto-awards XP to all characters and logs details
 
 #### ✨ Auto-Generate Balanced Encounters

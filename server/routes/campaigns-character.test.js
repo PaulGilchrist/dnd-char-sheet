@@ -482,7 +482,7 @@ describe('campaignsCharacter - PUT /api/campaigns/:campaign/:file', () => {
             .put('/api/campaigns/test-campaign/Thorin.json')
             .send({ name: 'Thorin', class: 'Fighter', level: 10 });
 
-        expect(publish).toHaveBeenCalledWith('character-test-campaign-Thorin.json', expect.any(Object));
+        expect(publish).toHaveBeenCalledWith('character-test-campaign-Thorin.json', expect.any(Object), 'test-campaign');
     });
 
     it('should rename image file when character name no longer matches image filename on standard update', async () => {
@@ -683,7 +683,7 @@ describe('campaignsCharacter - DELETE /api/campaigns/:campaign/:file', () => {
         const app = createTestApp();
         await request(app).delete('/api/campaigns/test-campaign/Thorin.json');
 
-        expect(publish).toHaveBeenCalledWith('character-delete-test-campaign-Thorin.json', { file: 'Thorin.json' });
+        expect(publish).toHaveBeenCalledWith('character-delete-test-campaign-Thorin.json', { file: 'Thorin.json' }, 'test-campaign');
     });
 });
 

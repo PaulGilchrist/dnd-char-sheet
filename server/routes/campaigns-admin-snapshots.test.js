@@ -166,7 +166,7 @@ describe('campaignsAdmin - POST /api/campaigns/:campaign/admin/rollback', () => 
         ensureCampaign('test-campaign');
         ensureSnapshot('test-campaign');
         await request(createTestApp()).post('/api/campaigns/test-campaign/admin/rollback').set('Host', 'localhost');
-        expect(publish).toHaveBeenCalledWith('reload-test-campaign', null);
+        expect(publish).toHaveBeenCalledWith('reload-test-campaign', null, 'test-campaign');
     });
 });
 

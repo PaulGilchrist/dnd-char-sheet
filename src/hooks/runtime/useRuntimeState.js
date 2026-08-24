@@ -84,6 +84,13 @@ export function setRuntimeValue(characterKey, propertyName, value, campaignName)
             { characterKey, propertyName, value, campaignName, stack: new Error().stack }
         );
     }
+    if (campaignName && characterKey === campaignName) {
+        console.error(
+            '[setRuntimeValue] characterKey === campaignName. A campaign name was used as a creature/character key. ' +
+            `characterKey: "${characterKey}", propertyName: "${propertyName}".`,
+            { characterKey, propertyName, value, campaignName, stack: new Error().stack }
+        );
+    }
     const store = getStore(characterKey);
     const existing = store.get(propertyName);
     if (valuesEqual(existing, value)) {
@@ -128,6 +135,12 @@ export function setRuntimeValue(characterKey, propertyName, value, campaignName)
 
 export function setRuntimeObject(characterKey, fullObject, campaignName, skipSync = false) {
     if (!fullObject || typeof fullObject !== 'object') return;
+    if (campaignName && characterKey === campaignName) {
+        console.error(
+            '[setRuntimeObject] characterKey === campaignName. A campaign name was used as a creature/character key.',
+            { characterKey, keys: Object.keys(fullObject), campaignName, stack: new Error().stack }
+        );
+    }
     const store = getStore(characterKey);
     let changed = false;
     const changedKeys = [];

@@ -31,6 +31,7 @@ export function buildSaveDc(auto, playerStats) {
 
 export function createSaveListener(campaignName, config) {
     const promptId = utils.guid();
+    console.debug(`[saveDebug] createSaveListener creating prompt`, { promptId, campaignName, targetName: config.targetName, saveType: config.saveType, saveDc: config.saveDc });
 
     const pendingSaves = getRuntimeValue('campaign', 'pendingSavePrompts') || {};
     pendingSaves[promptId] = {
@@ -90,7 +91,7 @@ export function createSaveListener(campaignName, config) {
      });
 
     const saveResultPromise = promise.then(async (detail) => {
-        const promptData = pendingSaves[promptId];
+        const promptData = config;
         const attackerName = promptData?.attackerName || detail.attackerName || 'Unknown';
         const targetName = promptData?.targetName || detail.targetName || 'Unknown';
         const saveType = promptData?.saveType || detail.saveType || 'CON';

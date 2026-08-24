@@ -144,11 +144,16 @@ export const debouncedSave = () => {
  *
  * @param {string} key - Event key
  * @param {object} data - Event data
+ * @param {string} [campaignName] - Explicit target campaign. Preferred over
+ *   parsing the key, which is ambiguous when the campaign name contains hyphens.
  */
-export const publish = (key, data) => {
+export const publish = (key, data, campaignName) => {
     const unwrapped = data && typeof data === 'object' && 'value' in data && Object.keys(data).length === 1 ? data.value : data;
-    const campaignPrefix = key.match(/^(?:change|spell-overlay|map-data|maps-list|map-activate|positioning|log)-(.+?)(?:-|$)/);
-    const targetCampaign = campaignPrefix ? campaignPrefix[1] : null;
+    let targetCampaign = campaignName || null;
+    if (!targetCampaign) {
+        const campaignPrefix = key.match(/^(?:change|spell-overlay|map-data|maps-list|map-activate|positioning|log)-(.+?)(?:-|$)/);
+        targetCampaign = campaignPrefix ? campaignPrefix[1] : null;
+    }
     subscribers.forEach(client => {
         if (targetCampaign && client.campaignName && client.campaignName !== targetCampaign) return;
         try {
