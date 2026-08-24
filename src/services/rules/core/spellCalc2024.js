@@ -352,6 +352,17 @@ export function getSpellAbilities(allSpells, playerStats, playerSummary) {
                 }
             }
 
+            // Evocation Savant: read runtime state for player-chosen Evocation spells
+            const evocationSavantSelection = getRuntimeValue(playerStats.name, '_Evocation_Savant_selection', campaignName);
+            if (evocationSavantSelection) {
+                const evocationSpells = Array.isArray(evocationSavantSelection) ? evocationSavantSelection : [];
+                for (const spellName of evocationSpells) {
+                    if (!spellAbilities.spells.find(s => s.name === spellName)) {
+                        spellAbilities.spells.push({ name: spellName, prepared: 'Always' });
+                    }
+                }
+            }
+
             // Phantasmal Creatures: always prepare Summon Beast and Summon Fey
             const hasPhantasmalCreatures = playerStats.automation?.passives?.some(p => p.type === 'phantasmal_creatures');
             if (hasPhantasmalCreatures) {

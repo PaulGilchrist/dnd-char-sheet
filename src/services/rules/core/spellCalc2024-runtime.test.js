@@ -100,6 +100,7 @@ describe('spellCalc2024-runtime', () => {
         if (prop === '_Abjuration_Savant_selection') return ['Shield'];
         if (prop === '_Divination_Savant_selection') return ['Detect Magic'];
         if (prop === '_Illusion_Savant_selection') return ['Minor Illusion'];
+        if (prop === '_Evocation_Savant_selection') return ['Fire Bolt'];
         if (prop === 'SignatureSpells_selection') return ['Shield'];
         return null;
       });
@@ -108,6 +109,7 @@ describe('spellCalc2024-runtime', () => {
         makeSpell('Shield', 1),
         makeSpell('Detect Magic', 1),
         makeSpell('Minor Illusion', 0),
+        makeSpell('Fire Bolt', 0),
       ];
       const stats = makePlayerStats();
       stats.automation = {
@@ -115,6 +117,7 @@ describe('spellCalc2024-runtime', () => {
           { type: 'abjuration_savant' },
           { type: 'divination_savant' },
           { type: 'illusion_savant' },
+          { type: 'evocation_savant' },
           { type: 'signature_spells' },
         ],
       };
@@ -125,6 +128,7 @@ describe('spellCalc2024-runtime', () => {
       expect(names).toContain('Shield');
       expect(names).toContain('Detect Magic');
       expect(names).toContain('Minor Illusion');
+      expect(names).toContain('Fire Bolt');
       // Shield is already deduplicated (from abjuration_savant + signature_spells)
       expect(result.spells.filter(s => s.name === 'Shield').length).toBe(1);
     });
