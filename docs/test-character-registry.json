@@ -78,6 +78,32 @@
         "Magic Initiate"
       ],
       "background": "Acolyte"
+    },
+    {
+      "name": "ElderPaladin",
+      "file": "public/campaigns/test-campaign/ElderPaladin.json",
+      "ruleset": "2024",
+      "class": "Paladin",
+      "subclass": "Aura Guardian",
+      "level": 14,
+      "race": "Human",
+      "subrace": "Human",
+      "feats": [],
+      "background": "Acolyte",
+      "note": "Created for CLA-104 Elder Champion testing. Keep for future Paladin tests."
+    },
+    {
+      "name": "HexWarlock",
+      "file": "public/campaigns/test-campaign/HexWarlock.json",
+      "ruleset": "2024",
+      "class": "Warlock",
+      "subclass": "Great Old One",
+      "level": 10,
+      "race": "Human",
+      "subrace": "Human",
+      "feats": [],
+      "background": "Acolyte",
+      "note": "Created for CLA-107 Eldritch Hex testing. Keep for future Warlock tests."
     }
   ],
   "monsters": [

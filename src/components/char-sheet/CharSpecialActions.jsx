@@ -515,7 +515,6 @@ function CharSpecialActions({ playerStats, campaignName, cannotAct, characters, 
         setEpitomeModal(null);
     }, []);
     const handleDestructiveStrideConfirm = useCallback(async (result) => {
-        if (!destructiveStrideModal) return;
         setDestructiveStrideModal(null);
         if (result?.type === 'modal' && result.modalName === 'destructiveStrideTarget') {
             setDestructiveStrideTargetModal(result.payload);
@@ -523,7 +522,7 @@ function CharSpecialActions({ playerStats, campaignName, cannotAct, characters, 
             const html = `<b>${result.payload?.name || 'Destructive Stride'}</b><br/>${result.payload?.description || ''}<br/><span class="dice-roll-hint">click to dismiss</span>`;
             setPopupHtml(html);
         }
-    }, [destructiveStrideModal, setPopupHtml]);
+    }, [setPopupHtml]);
     const handleDestructiveStrideTargetConfirm = useCallback(async (targetName) => {
         if (!destructiveStrideTargetModal) return;
         const { action, playerStats: modalPlayerStats, campaignName: modalCampaign, chosenType, martialArtsDie } = destructiveStrideTargetModal;
