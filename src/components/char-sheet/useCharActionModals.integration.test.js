@@ -42,6 +42,9 @@ const useModalHandlers = (await import('./useModalHandlers.js')).default;
 const mockResolveAttackDamageResult = {
   resolveAttackDamage: vi.fn(),
   proceedWithDamage: vi.fn(),
+  handleAttackRiderManeuverUse: vi.fn(),
+  handleAttackRiderManeuverSkip: vi.fn(),
+  handleAttackRiderOptionSelect: vi.fn(),
 };
 
 const mockModalHandlersResult = {
@@ -84,7 +87,7 @@ describe('useCharActionModals — integration', () => {
   });
 
   describe('return object shape', () => {
-    it('returns exactly 27 properties with the expected keys', () => {
+    it('returns exactly 30 properties with the expected keys', () => {
       const { result } = renderHook(() => useCharActionModals(baseArgs));
       const expectedKeys = [
         'modalState',
@@ -98,6 +101,9 @@ describe('useCharActionModals — integration', () => {
         'handleCombatSuperiorityConfirm',
         'handleCombatSuperiorityReopenSelection',
         'resolveAttackDamage',
+        'handleAttackRiderManeuverUse',
+        'handleAttackRiderManeuverSkip',
+        'handleAttackRiderOptionSelect',
         'handleMasteryClose',
         'handleWeaponMasteryChoice',
         'handleDivineFuryDamageType',
@@ -147,6 +153,21 @@ describe('useCharActionModals — integration', () => {
     it('delegates resolveAttackDamage from useAttackDamageResolution', () => {
       const { result } = renderHook(() => useCharActionModals(baseArgs));
       expect(result.current.resolveAttackDamage).toBe(mockResolveAttackDamageResult.resolveAttackDamage);
+    });
+
+    it('delegates handleAttackRiderManeuverUse from useAttackDamageResolution', () => {
+      const { result } = renderHook(() => useCharActionModals(baseArgs));
+      expect(result.current.handleAttackRiderManeuverUse).toBe(mockResolveAttackDamageResult.handleAttackRiderManeuverUse);
+    });
+
+    it('delegates handleAttackRiderManeuverSkip from useAttackDamageResolution', () => {
+      const { result } = renderHook(() => useCharActionModals(baseArgs));
+      expect(result.current.handleAttackRiderManeuverSkip).toBe(mockResolveAttackDamageResult.handleAttackRiderManeuverSkip);
+    });
+
+    it('delegates handleAttackRiderOptionSelect from useAttackDamageResolution', () => {
+      const { result } = renderHook(() => useCharActionModals(baseArgs));
+      expect(result.current.handleAttackRiderOptionSelect).toBe(mockResolveAttackDamageResult.handleAttackRiderOptionSelect);
     });
 
     it('delegates all modal handlers from useModalHandlers', () => {

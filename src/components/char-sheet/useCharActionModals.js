@@ -19,7 +19,7 @@ export default function useCharActionModals({
 
     const [pendingDamage, setPendingDamage] = useSyncedState(campaignName, 'pipeline-pause', null, campaignName);
 
-    const { resolveAttackDamage, proceedWithDamage } = useAttackDamageResolution({
+    const { resolveAttackDamage, proceedWithDamage, handleAttackRiderManeuverUse, handleAttackRiderManeuverSkip, handleAttackRiderOptionSelect } = useAttackDamageResolution({
         playerStats, campaignName, mapName,
         popupHtml, setPopupHtml, rollDamage, buildCtx, buildCtxSync,
         setModalState, modalState,
@@ -71,6 +71,9 @@ export default function useCharActionModals({
         handleCombatSuperiorityConfirm,
         handleCombatSuperiorityReopenSelection,
         resolveAttackDamage,
+        handleAttackRiderManeuverUse,
+        handleAttackRiderManeuverSkip,
+        handleAttackRiderOptionSelect,
         handleMasteryClose,
         handleWeaponMasteryChoice,
         handleDivineFuryDamageType,

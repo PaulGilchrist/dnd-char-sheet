@@ -60,6 +60,9 @@ const { __resetPendingDamage } = await import('../../hooks/runtime/useSyncedStat
 const mockResolveAttackDamageResult = {
   resolveAttackDamage: vi.fn(),
   proceedWithDamage: vi.fn(),
+  handleAttackRiderManeuverUse: vi.fn(),
+  handleAttackRiderManeuverSkip: vi.fn(),
+  handleAttackRiderOptionSelect: vi.fn(),
 };
 
 const mockModalHandlersResult = {
