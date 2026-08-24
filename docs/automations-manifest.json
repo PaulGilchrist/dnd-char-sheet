@@ -1792,7 +1792,7 @@
       "handler": "src/services/combat/automation/handlers/classFeatureHandler.js",
       "router": "src/services/combat/automation/routers/classFeatureRouter.js",
       "infoBuilder": "src/services/combat/automation/infoBuilders/classFeatureInfoBuilder.js",
-      "verified": "broken — see .opencode/plans/bug-cla-093-divine-strike.md",
+      "verified": "verified",
       "class": "Cleric",
       "triggerConditions": "Passive; Cleric Divine Domain feature",
       "expectedBehavior": "You can channel divine energy into your weapon strikes. When you hit a target with a weapon attack, you can deal extra radiant damage to the target. The damage increases when you reach certain levels. (Cleric class feature - may be domain-specific)"

@@ -474,13 +474,16 @@ export function getAttacks(allEquipment, allSpells, playerStats) {
         const str = playerStats.abilities?.find(a => a.name === 'Strength');
         const strMod = str?.bonus || 0;
         const blessedWarriorHit = hasBlessedWarrior ? 2 : 0;
+        const unarmedDamage = strMod >= 0 ? `1d4+${strMod}` : `1d4${strMod}`;
+        const unarmedFormula = `Damage Formula = Unarmed Strike (1d4) + Strength Bonus (${strMod})`;
+        const unarmedHitFormula = `To Hit Bonus Formula = Strength Bonus (${strMod}) + Proficiency (${proficiency})${blessedWarriorHit ? ' + Blessed Warrior (2)' : ''}`;
         attacks.push({
             name: 'Unarmed Strike',
-            damage: `1d4+${strMod}`,
+            damage: unarmedDamage,
             damageType: 'Bludgeoning',
-            damageFormula: `Damage Formula = Unarmed Strike (1d4) + Strength Bonus (${strMod})`,
+            damageFormula: unarmedFormula,
             hitBonus: strMod + proficiency + blessedWarriorHit,
-            hitBonusFormula: `To Hit Bonus Formula = Strength Bonus (${strMod}) + Proficiency (${proficiency})${blessedWarriorHit ? ' + Blessed Warrior (2)' : ''}`,
+            hitBonusFormula: unarmedHitFormula,
             range: 5,
             type: 'Action',
             weaponType: 'unarmed',
@@ -490,11 +493,11 @@ export function getAttacks(allEquipment, allSpells, playerStats) {
         if (hasTwoWeapon) {
             attacks.push({
                 name: 'Unarmed Strike',
-                damage: `1d4+${strMod}`,
+                damage: unarmedDamage,
                 damageType: 'Bludgeoning',
-                damageFormula: `Damage Formula = Unarmed Strike (1d4) + Strength Bonus (${strMod})`,
+                damageFormula: unarmedFormula,
                 hitBonus: strMod + proficiency + blessedWarriorHit,
-                hitBonusFormula: `To Hit Bonus Formula = Strength Bonus (${strMod}) + Proficiency (${proficiency})${blessedWarriorHit ? ' + Blessed Warrior (2)' : ''}`,
+                hitBonusFormula: unarmedHitFormula,
                 range: 5,
                 type: 'Bonus Action',
                 weaponType: 'unarmed',

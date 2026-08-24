@@ -165,6 +165,29 @@ describe('attackCalc2024 - proficiency & edge cases', () => {
       expect(result).toHaveLength(1);
       expect(result[0].name).toBe('Unarmed Strike');
     });
+
+    it('formats unarmed strike damage correctly with negative strength modifier', () => {
+      findEquippedWeaponsStub.mockReturnValue([]);
+
+      const playerStats = defaultPlayerStats({
+        level: 3,
+        class: { name: 'Cleric' },
+        abilities: [
+          { name: 'Strength', baseScore: 8, abilityImprovements: 0, miscBonus: 0, bonus: -1 },
+          { name: 'Dexterity', baseScore: 14, abilityImprovements: 0, miscBonus: 0, bonus: 2 },
+          { name: 'Wisdom', baseScore: 16, abilityImprovements: 0, miscBonus: 0, bonus: 3 },
+        ],
+        proficiency: 2,
+      });
+
+      const result = getAttacks([], [], playerStats);
+
+      expect(result).toHaveLength(1);
+      expect(result[0].name).toBe('Unarmed Strike');
+      expect(result[0].damage).toBe('1d4-1');
+      expect(result[0].damageType).toBe('Bludgeoning');
+      expect(result[0].hitBonus).toBe(1);
+    });
   });
 
   describe('Combined attacks', () => {
