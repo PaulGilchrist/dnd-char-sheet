@@ -495,6 +495,9 @@ export function routeAutomation(info, auto, result) {
     case 'spell_thief':
         result.reactions.push(info)
         break
+    case 'shield':
+        result.reactions.push(info)
+        break
     case 'fast_hands':
         result.bonusActions.push(info)
         break

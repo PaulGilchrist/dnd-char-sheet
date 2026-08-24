@@ -694,3 +694,17 @@ registerStandardTests('dread_ambush_damage', 'dread_ambush_damage', {
         expect(result.recharge).toBe('short_rest')
     })
 })
+
+// ── shield ───────────────────────────────────────────────────────────
+
+registerStandardTests('shield', 'shield', {
+    type: 'shield',
+    casting_time: '1 reaction',
+    hasAutomation: true
+}, (handler) => {
+    it('passes through custom casting_time', () => {
+        const feature = makeFeature({ type: 'shield', casting_time: '1 reaction' })
+        const result = handler(feature, BASE_STATS)
+        expect(result.casting_time).toBe('1 reaction')
+    })
+})

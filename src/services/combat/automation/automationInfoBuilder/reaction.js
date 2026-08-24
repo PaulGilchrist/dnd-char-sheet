@@ -308,5 +308,15 @@ export const reactionHandlers = {
             casting_time: auto.casting_time || '1 reaction',
             hasAutomation: true
         }
+    },
+
+    'shield': (feature, _playerStats) => {
+        const auto = feature.automation
+        return {
+            type: 'shield',
+            name: feature.name,
+            casting_time: auto.casting_time || '1 reaction',
+            hasAutomation: true
+        }
     }
 }
