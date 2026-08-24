@@ -532,6 +532,13 @@ export function useSimpleSpellHandlers(createConfirmHandler, createSkipHandler, 
   }, (pending) => pending.creatureTargets)
   const handlePrismaticSpraySkip = createSkipHandler('prismatic_spray', (pending) => pending.creatureTargets)
 
+  const handleHexConfirm = createConfirmHandler('hex', async (pending, result) => {
+    const targetName = Array.isArray(result) ? result[0] : result
+    if (!targetName) return
+    onExecute(pending.spell, { targetName })
+  }, (pending) => pending.creatureTargets)
+  const handleHexSkip = createSkipHandler('hex', (pending) => pending.creatureTargets)
+
   const handleRevivifyConfirm = createConfirmHandler('revivify', async (pending, result) => {
     const targetName = result.targetName
     if (!targetName) return
@@ -664,6 +671,7 @@ export function useSimpleSpellHandlers(createConfirmHandler, createSkipHandler, 
     handleCharmMonsterConfirm, handleCharmMonsterSkip,
     handleBanishmentConfirm, handleBanishmentSkip,
     handlePrismaticSprayConfirm, handlePrismaticSpraySkip,
+    handleHexConfirm, handleHexSkip,
     handleRevivifyConfirm, handleRevivifySkip,
     handleStinkingCloudConfirm, handleStinkingCloudSkip,
     handleConfusionConfirm, handleConfusionSkip,

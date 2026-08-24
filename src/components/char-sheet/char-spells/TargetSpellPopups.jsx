@@ -101,6 +101,9 @@ const TargetSpellPopups = function TargetSpellPopups({
     handleResistanceTargetSelect,
     handleResistanceTypeSelect,
     handleResistanceSkip,
+    pendingHex,
+    handleHexConfirm,
+    handleHexSkip,
 }) {
     const getEffectsForTarget = async (targetName) => {
         const result = [];
@@ -569,6 +572,17 @@ const TargetSpellPopups = function TargetSpellPopups({
                     campaignName={campaignName}
                     onConfirm={handleResistanceTypeSelect}
                     onClose={handleResistanceSkip}
+                />
+            )}
+            {pendingHex && (
+                <SecondaryTargetModal
+                    title="Hex"
+                    targets={pendingHex.creatureTargets.map(name => ({ name, type: 'creature' }))}
+                    onTargetSelected={handleHexConfirm}
+                    onSkip={handleHexSkip}
+                    description="Choose a creature within 90 feet that you can see. You'll then select an ability for the target to have Disadvantage on."
+                    confirmLabel="Select Target"
+                    confirmIcon="fa-crown"
                 />
             )}
         </>

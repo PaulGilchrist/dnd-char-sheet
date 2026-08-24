@@ -633,6 +633,19 @@ function gateHeroism(spell, campaignName, cfSetPending, _playerStats, _metaCtx, 
   return false;
 }
 
+function gateHex(spell, campaignName, cfSetPending, playerStats, _metaCtx, _characters, _isSorcerer) {
+  const { creatureTargets } = getCsAndTargets(campaignName, { excludeCaster: true, casterName: playerStats.name });
+  if (creatureTargets.length > 0) {
+    cfSetPending('hex', makePending('hex', spell, {
+      range: spell.range || '90 feet',
+      creatureTargets,
+      maxTargets: 1,
+    }));
+    return true;
+  }
+  return false;
+}
+
 // ── Registry ─────────────────────────────────────────────────────────────────
 
 const spellGateMap = {
@@ -695,6 +708,7 @@ const spellGateMap = {
   'aura of vitality': gateAuraOfVitality,
   'death ward': gateDeathWard,
   'heroism': gateHeroism,
+  'hex': gateHex,
 };
 
 // ── Public API ───────────────────────────────────────────────────────────────

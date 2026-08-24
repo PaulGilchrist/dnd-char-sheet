@@ -71,6 +71,7 @@ export function useSpellMetamagicFlow(playerStats, campaignName, onExecute, setS
     handleCharmMonsterConfirm, handleCharmMonsterSkip,
     handleBanishmentConfirm, handleBanishmentSkip,
     handlePrismaticSprayConfirm, handlePrismaticSpraySkip,
+    handleHexConfirm, handleHexSkip,
     handleRevivifyConfirm, handleRevivifySkip,
   } = simpleHandlers
 
@@ -176,6 +177,7 @@ export function useSpellMetamagicFlow(playerStats, campaignName, onExecute, setS
   const pendingCharmMonster = getPending('charmMonster')
   const pendingBanishment = getPending('banishment')
   const pendingHeroism = getPending('heroism')
+  const pendingHex = getPending('hex')
   const _pendingDeathWard = getPending('deathWard')
 
   return {
@@ -205,6 +207,7 @@ export function useSpellMetamagicFlow(playerStats, campaignName, onExecute, setS
     pendingBanishment, handleBanishmentConfirm, handleBanishmentSkip,
     pendingDeathWard: _pendingDeathWard, handleDeathWardConfirm, handleDeathWardSkip,
     pendingHeroism, handleHeroismConfirm, handleHeroismSkip,
+    pendingHex, handleHexConfirm, handleHexSkip,
     handleAnimalFriendshipConfirm, handleAnimalFriendshipSkip,
     resistanceStage, enhanceAbilityStage, protectionFromEnergyStage,
     handleResistanceTargetSelect, handleResistanceTypeSelect, handleResistanceSkip,
