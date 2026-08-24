@@ -12,6 +12,46 @@
       "subrace": "Human",
       "feats": [],
       "background": "Acolyte"
+    },
+    {
+      "name": "Divine_Cleric",
+      "file": "public/campaigns/test-campaign/Divine_Cleric.json",
+      "ruleset": "2024",
+      "class": "Cleric",
+      "subclass": "Life Domain",
+      "level": 3,
+      "race": "Human",
+      "subrace": "Human",
+      "feats": [
+        "Magic Initiate"
+      ],
+      "background": "Acolyte"
+    },
+    {
+      "name": "Wild_Sage_Druid",
+      "file": "public/campaigns/test-campaign/Wild_Sage_Druid.json",
+      "ruleset": "2024",
+      "class": "Druid",
+      "subclass": "Circle of the Land",
+      "level": 9,
+      "race": "Human",
+      "subrace": "Human",
+      "feats": [
+        "Magic Initiate"
+      ],
+      "background": "Acolyte"
+    },
+    {
+      "name": "Bard_Spellcaster",
+      "file": "public/campaigns/test-campaign/Bard_Spellcaster.json",
+      "ruleset": "2024",
+      "class": "Bard",
+      "subclass": "College of Lore",
+      "level": 9,
+      "race": "Human",
+      "subrace": "Human",
+      "feats": [],
+      "background": "Sage"
     }
   ],
   "monsters": [
@@ -23,8 +63,18 @@
       "hp": 66,
       "ac": 16,
       "saveForcing": [
-        { "spell": "gust of wind", "save": "WIS", "dc": 13, "uses": "at will" },
-        { "spell": "lightning bolt", "save": "DEX", "dc": 13, "uses": "1/day" }
+        {
+          "spell": "gust of wind",
+          "save": "WIS",
+          "dc": 13,
+          "uses": "at will"
+        },
+        {
+          "spell": "lightning bolt",
+          "save": "DEX",
+          "dc": 13,
+          "uses": "1/day"
+        }
       ],
       "note": "Spellcasting is a proper action with save_dc/save_type fields. Known-good for failed-save scenarios."
     }

@@ -10650,5 +10650,38 @@
             "Lore",
             "Devotion"
         ]
+    },
+    {
+        "index": "friends",
+        "name": "Friends",
+        "description": [
+            "You attempt to beguile a creature. Choose one creature within 30 feet of you. It must succeed on a WIS saving throw or have Disadvantage on all attack rolls and ability checks until the spell ends, or until you or your companions deal damage to it."
+        ],
+        "range": "30 feet",
+        "components": [
+            "V",
+            "S"
+        ],
+        "ritual": false,
+        "duration": "1 minute",
+        "concentration": true,
+        "casting_time": "1 action",
+        "level": 1,
+        "attack_type": null,
+        "damage": null,
+        "school": "Enchantment",
+        "classes": [
+            "Bard"
+        ],
+        "subclasses": [
+            "Lore"
+        ],
+        "status_effects": [
+            "charmed"
+        ],
+        "dc": {
+            "dc_type": "WIS",
+            "dc_success": "none"
+        }
     }
 ]

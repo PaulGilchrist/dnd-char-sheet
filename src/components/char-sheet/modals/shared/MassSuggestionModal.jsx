@@ -25,7 +25,7 @@ function MassSuggestionModal({
     }, []);
 
     const applyCharmedToTarget = useCallback((targetName, campaignName) => {
-        const storedConditions = getRuntimeValue(targetName, 'activeConditions') || [];
+        const storedConditions = getRuntimeValue(targetName, 'activeConditions', campaignName) || [];
         const conditions = Array.isArray(storedConditions) ? storedConditions : [];
         const filtered = conditions.filter(c => String(c).toLowerCase() !== 'charmed');
         setRuntimeValue(targetName, 'activeConditions', [...filtered, 'charmed'], campaignName);
