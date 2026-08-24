@@ -1,5 +1,5 @@
 import { executeHandler } from '../../automation/index.js';
-import { getCombatContext } from '../combat/damageUtils.js';
+import { getCombatContext, getTargetFromAttacker } from '../combat/damageUtils.js';
 
 export async function triggerDominateMonster(spell, metaCtx, playerStats, campaignName, mapName) {
     const isDominateMonster = (spell.name || '').toLowerCase() === 'dominate monster';
@@ -9,8 +9,11 @@ export async function triggerDominateMonster(spell, metaCtx, playerStats, campai
     if (!targetName) {
         const cs = await getCombatContext(campaignName);
         if (cs?.creatures && cs.creatures.length > 0) {
-            const nonCaster = cs.creatures.find(c => c.name !== playerStats.name);
-            if (nonCaster) targetName = nonCaster.name;
+            const attackerTarget = getTargetFromAttacker(cs, playerStats.name);
+            if (attackerTarget) targetName = attackerTarget.name;
+        }
+        if (!targetName) {
+            console.error(`[dominateMonsterService] No target selected for Dominate Monster by ${playerStats.name}. Caster has no target in initiative view.`);
         }
     }
     if (!targetName) {

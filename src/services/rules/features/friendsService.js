@@ -1,5 +1,5 @@
 import { executeHandler } from '../../automation/index.js';
-import { getCombatContext } from '../combat/damageUtils.js';
+import { getCombatContext, getTargetFromAttacker } from '../combat/damageUtils.js';
 import { getRuntimeValue, setRuntimeValue } from '../../../hooks/runtime/useRuntimeState.js';
 import { getMonsterData } from '../../npcs/monsterUtils.js';
 import { addEntry } from '../../ui/logService.js';
@@ -58,12 +58,13 @@ export async function triggerFriends(spell, metaCtx, playerStats, campaignName, 
 
     let targetName = metaCtx?.targetName;
     if (!targetName) {
-        // Try to get target from combat context as a fallback
         const cs = await getCombatContext(campaignName);
         if (cs?.creatures && cs.creatures.length > 0) {
-            // Find the first creature that isn't the caster
-            const nonCaster = cs.creatures.find(c => c.name !== playerStats.name);
-            if (nonCaster) targetName = nonCaster.name;
+            const attackerTarget = getTargetFromAttacker(cs, playerStats.name);
+            if (attackerTarget) targetName = attackerTarget.name;
+        }
+        if (!targetName) {
+            console.error(`[friendsService] No target selected for Friends by ${playerStats.name}. Caster has no target in initiative view.`);
         }
     }
     if (!targetName) {

@@ -11,6 +11,7 @@ vi.mock('../../automation/index.js', () => ({
 
 vi.mock('../combat/damageUtils.js', () => ({
   getCombatContext: vi.fn(),
+  getTargetFromAttacker: vi.fn(),
 }));
 
 vi.mock('../../npcs/monsterUtils.js', () => ({
@@ -27,7 +28,7 @@ vi.mock('../../../hooks/runtime/useRuntimeState.js', () => ({
 }));
 
 import { triggerCharmMonster } from './charmMonsterService.js';
-import { getCombatContext } from '../combat/damageUtils.js';
+import { getCombatContext, getTargetFromAttacker } from "../combat/damageUtils.js";
 import { getMonsterData } from '../../npcs/monsterUtils.js';
 import { executeHandler } from '../../automation/index.js';
 import { getRuntimeValue } from '../../../hooks/runtime/useRuntimeState.js';
@@ -84,7 +85,7 @@ describe('charmMonsterService', () => {
       }
     });
 
-    it('selects first non-caster creature when no target specified', async () => {
+    it('logs error when no target specified', async () => {
       const baseStats = makePlayerStats();
       getCombatContext.mockResolvedValue({
         creatures: [
@@ -93,16 +94,20 @@ describe('charmMonsterService', () => {
           { name: 'Ogre', type: 'monster', saveBonuses: { WIS: 0 } },
         ],
       });
+      getTargetFromAttacker.mockReturnValue(null);
+      const consoleSpy = vi.spyOn(console, 'error');
 
       const result = await triggerCharmMonster(makeSpell(), undefined, baseStats, campaignName, mapName);
 
-      expect(result.type).toBe('popup');
-      expect(executeHandler).toHaveBeenCalledWith(
-        expect.objectContaining({ automation: expect.objectContaining({ targetName: 'Goblin' }) }),
-        baseStats,
-        campaignName,
-        mapName,
+      expect(consoleSpy).toHaveBeenCalledWith(
+        expect.stringContaining('[charmMonsterService] No target selected for Charm Monster'),
       );
+      expect(result).toEqual({
+        type: 'popup',
+        payload: { type: 'automation_info', name: 'Charm Monster', description: 'No target selected for Charm Monster.' },
+      });
+      expect(executeHandler).not.toHaveBeenCalled();
+      consoleSpy.mockRestore();
     });
 
     it('returns popup when no creatures available', async () => {

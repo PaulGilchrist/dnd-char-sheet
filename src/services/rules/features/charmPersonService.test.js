@@ -6,7 +6,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { triggerCharmPerson } from './charmPersonService.js';
 import { executeHandler } from '../../automation/index.js';
-import { getCombatContext } from '../combat/damageUtils.js';
+import { getCombatContext, getTargetFromAttacker } from "../combat/damageUtils.js";
 import { getMonsterData } from '../../npcs/monsterUtils.js';
 import { addEntry } from '../../ui/logService.js';
 
@@ -16,6 +16,7 @@ vi.mock('../../automation/index.js', () => ({
 
 vi.mock('../combat/damageUtils.js', () => ({
     getCombatContext: vi.fn(),
+    getTargetFromAttacker: vi.fn(),
 }));
 
 vi.mock('../../npcs/monsterUtils.js', () => ({
@@ -105,8 +106,7 @@ describe('charmPersonService', () => {
             expect(executeHandler).not.toHaveBeenCalled();
         });
 
-        it('auto-selects first non-caster creature from combat context when targetName is missing', async () => {
-            executeHandler.mockResolvedValue({ type: 'popup' });
+        it('logs error when no target selected from combat context when targetName is missing', async () => {
             getCombatContext.mockResolvedValue({
                 creatures: [
                     { name: 'Bard', type: 'player' },
@@ -114,19 +114,22 @@ describe('charmPersonService', () => {
                     { name: 'Orc', type: 'npc' },
                 ],
             });
+            getTargetFromAttacker.mockReturnValue(null);
+            const consoleSpy = vi.spyOn(console, 'error');
 
             const result = await callTrigger(baseSpell, { targetName: null }, baseStats);
-            expect(result).toEqual({ type: 'popup' });
-            expect(executeHandler).toHaveBeenCalledWith(
-                expect.objectContaining({
-                    automation: expect.objectContaining({ targetName: 'Goblin' }),
-                }),
-                baseStats, campaignName, mapName,
+            expect(consoleSpy).toHaveBeenCalledWith(
+                expect.stringContaining('[charmPersonService] No target selected for Charm Person'),
             );
+            expect(result).toEqual({
+                type: 'popup',
+                payload: { type: 'automation_info', name: 'Charm Person', description: 'No target selected for Charm Person.' },
+            });
+            expect(executeHandler).not.toHaveBeenCalled();
+            consoleSpy.mockRestore();
         });
 
-        it('auto-selects first creature whose name differs from caster', async () => {
-            executeHandler.mockResolvedValue({ type: 'popup' });
+        it('logs error when no target selected', async () => {
             getCombatContext.mockResolvedValue({
                 creatures: [
                     { name: 'Bard', type: 'player' },
@@ -134,16 +137,20 @@ describe('charmPersonService', () => {
                     { name: 'Goblin', type: 'npc' },
                 ],
             });
+            getTargetFromAttacker.mockReturnValue(null);
+            const consoleSpy = vi.spyOn(console, 'error');
 
-            await callTrigger(baseSpell, { targetName: null }, baseStats);
+            const result = await callTrigger(baseSpell, { targetName: null }, baseStats);
 
-            // First creature with name !== 'Bard' is 'Goblin'
-            expect(executeHandler).toHaveBeenCalledWith(
-                expect.objectContaining({
-                    automation: expect.objectContaining({ targetName: 'Goblin' }),
-                }),
-                baseStats, campaignName, mapName,
+            expect(consoleSpy).toHaveBeenCalledWith(
+                expect.stringContaining('[charmPersonService] No target selected for Charm Person'),
             );
+            expect(result).toEqual({
+                type: 'popup',
+                payload: { type: 'automation_info', name: 'Charm Person', description: 'No target selected for Charm Person.' },
+            });
+            expect(executeHandler).not.toHaveBeenCalled();
+            consoleSpy.mockRestore();
         });
 
         it('calls executeHandler with correct action shape including saveDc, targetName, and spell', async () => {
@@ -452,17 +459,24 @@ describe('charmPersonService', () => {
             );
         });
 
-        it('handles undefined metaCtx gracefully', async () => {
-            executeHandler.mockResolvedValue({ type: 'popup' });
+        it('logs error when metaCtx is undefined', async () => {
             getCombatContext.mockResolvedValue({
                 creatures: [{ name: 'Goblin', type: 'npc' }],
             });
-            getMonsterData.mockResolvedValue({ type: 'Humanoid' });
+            getTargetFromAttacker.mockReturnValue(null);
+            const consoleSpy = vi.spyOn(console, 'error');
 
             const result = await triggerCharmPerson(baseSpell, undefined, baseStats, campaignName, mapName);
 
-            expect(executeHandler).toHaveBeenCalled();
-            expect(result).toEqual({ type: 'popup' });
+            expect(consoleSpy).toHaveBeenCalledWith(
+                expect.stringContaining('[charmPersonService] No target selected for Charm Person'),
+            );
+            expect(result).toEqual({
+                type: 'popup',
+                payload: { type: 'automation_info', name: 'Charm Person', description: 'No target selected for Charm Person.' },
+            });
+            expect(executeHandler).not.toHaveBeenCalled();
+            consoleSpy.mockRestore();
         });
 
         it('does not call getMonsterData for player-type creatures', async () => {

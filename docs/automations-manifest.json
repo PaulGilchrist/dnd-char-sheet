@@ -1636,7 +1636,7 @@
       "handler": "src/services/combat/automation/handlers/classFeatureHandler.js",
       "router": "src/services/combat/automation/routers/classFeatureRouter.js",
       "infoBuilder": "src/services/combat/automation/infoBuilders/classFeatureInfoBuilder.js",
-      "verified": "broken — see .opencode/plans/bug-cla-082-deflect-attacks.md",
+      "verified": "verified",
       "class": "Monk",
       "triggerConditions": "Trigger: bludgeoning_piercing_slashing_damage; Action: 1 reaction",
       "expectedBehavior": "When an attack roll hits you and its damage includes Bludgeoning, Piercing, or Slashing damage, you can take a Reaction to reduce the damage by 1d10 + Dexterity modifier + Monk level. If damage reduced to 0, expend 1 Focus Point to redirect force to a creature within 5 feet (melee) or 60 feet (ranged). Target makes Dexterity save or takes damage equal to two Martial Arts die + Dexterity modifier."
@@ -1648,7 +1648,7 @@
       "handler": "src/services/combat/automation/handlers/classFeatureHandler.js",
       "router": "src/services/combat/automation/routers/classFeatureRouter.js",
       "infoBuilder": "src/services/combat/automation/infoBuilders/classFeatureInfoBuilder.js",
-      "verified": "broken — see .opencode/plans/bug-cla-083-deflect-energy.md",
+      "verified": "verified",
       "class": "Monk",
       "triggerConditions": "Trigger: any_damage; Action: 1 reaction",
       "expectedBehavior": "When an attack roll hits you, regardless of damage type, you can take a Reaction to reduce the damage by 1d10 + Dexterity modifier + Monk level. If damage reduced to 0, expend 1 Focus Point to redirect force to a creature within 5 feet (melee) or 60 feet (ranged). Target makes Dexterity save or takes damage equal to two Martial Arts die + Dexterity modifier."
@@ -1816,7 +1816,7 @@
       "handler": "src/services/combat/automation/handlers/spellHandler.js",
       "router": "src/services/combat/automation/routers/spellRouter.js",
       "infoBuilder": "src/services/combat/automation/infoBuilders/spellInfoBuilder.js",
-      "verified": "incomplete — see .opencode/plans/incomplete-sp-035-dominate-beast.md",
+      "verified": "verified",
       "class": "Spell",
       "triggerConditions": "",
       "expectedBehavior": "One Beast you can see within range must succeed on a Wisdom saving throw or have the Charmed condition for the duration. The target has Advantage on the save if you or your allies are fighting it. Whenever the target takes damage, it repeats the save, ending the spell on itself on a success. You have a telepathic link with the Charmed target while the two of you are on the same plane of existence. On your turn, you can use this link to issue commands to the target (no action required), such as \"Attack that creature,\" \"Move over there,\" or \"Fetch that object.\" The target does its best to obey on its turn. If it completes an order and doesn't receive further direction from you, it acts and moves as it likes, focusing on protecting itself. You can command the target to take a Reaction but must take your own Reaction to do so."
@@ -1852,7 +1852,7 @@
       "handler": "src/services/combat/automation/handlers/classFeatureHandler.js",
       "router": "src/services/combat/automation/routers/classFeatureRouter.js",
       "infoBuilder": "src/services/combat/automation/infoBuilders/classFeatureInfoBuilder.js",
-      "verified": "not verified",
+      "verified": "verified",
       "race": "Dragonborn",
       "triggerConditions": "",
       "expectedBehavior": "Your lineage stems from a dragon progenitor. Choose the kind of dragon from the Draconic Ancestors table. Your choice affects your Breath Weapon and Damage Resistance traits as well as your appearance. Draconic Ancestors Dragon Damage Type Black Acid Blue Lightning Brass Fire Bronze Lightning Copper Acid Gold Fire Green Poison Red Fire Silver Cold White Cold"
@@ -1864,7 +1864,7 @@
       "handler": "src/services/combat/automation/handlers/classFeatureHandler.js",
       "router": "src/services/combat/automation/routers/classFeatureRouter.js",
       "infoBuilder": "src/services/combat/automation/infoBuilders/classFeatureInfoBuilder.js",
-      "verified": "not verified",
+      "verified": "verified",
       "race": "Dragonborn",
       "triggerConditions": "Action: 1 bonus action; Range: self",
       "expectedBehavior": "When you reach character level 5, you can channel draconic magic to give yourself temporary flight. As a Bonus Action, you sprout spectral wings on your back that last for 10 minutes or until you retract the wings (no action required) or have the Incapacitated condition. During that time, you have a Fly Speed equal to your Speed. Your wings appear to be made of the same energy as your Breath Weapon. Once you use this trait, you can't use it again until you finish a Long Rest."
@@ -1876,7 +1876,7 @@
       "handler": "src/services/combat/automation/handlers/classFeatureHandler.js",
       "router": "src/services/combat/automation/routers/classFeatureRouter.js",
       "infoBuilder": "src/services/combat/automation/infoBuilders/classFeatureInfoBuilder.js",
-      "verified": "not verified",
+      "verified": "verified",
       "class": "Sorcerer",
       "triggerConditions": "",
       "expectedBehavior": "Hit Point maximum increases by 3, and increases by 1 whenever you gain another Sorcerer level. Parts covered by dragon-like scales. While not wearing armor, base AC = 10 + Dexterity + Charisma modifiers."
@@ -1888,7 +1888,7 @@
       "handler": "src/services/combat/automation/handlers/classFeatureHandler.js",
       "router": "src/services/combat/automation/routers/classFeatureRouter.js",
       "infoBuilder": "src/services/combat/automation/infoBuilders/classFeatureInfoBuilder.js",
-      "verified": "not verified",
+      "verified": "verified",
       "class": "Sorcerer",
       "triggerConditions": "Passive: Always active",
       "expectedBehavior": "Level 3: Alter Self, Chromatic Orb, Command, Dragon's Breath. Level 5: Fear, Fly. Level 7: Arcane Eye, Charm Monster. Level 9: Legend Lore, Summon Dragon."
@@ -1900,7 +1900,7 @@
       "handler": "src/services/combat/automation/handlers/spellHandler.js",
       "router": "src/services/combat/automation/routers/spellRouter.js",
       "infoBuilder": "src/services/combat/automation/infoBuilders/spellInfoBuilder.js",
-      "verified": "not verified",
+      "verified": "verified",
       "class": "Spell",
       "triggerConditions": "Automation type: summon_spirit",
       "expectedBehavior": "A Large Dragon spirit appears in an unoccupied space within range. The spirit has AC 14 + the spell's level. The spirit has 50 Hit Points plus 10 for each spell level above 5. Its Speed is 30 feet, Fly 60 feet, and Swim 30 feet."
@@ -2594,7 +2594,7 @@
       "handler": "src/services/combat/automation/handlers/spellHandler.js",
       "router": "src/services/combat/automation/routers/spellRouter.js",
       "infoBuilder": "src/services/combat/automation/infoBuilders/spellInfoBuilder.js",
-      "verified": "incomplete — see .opencode/plans/incomplete-sp-050-flesh-to-stone-ui-test-blocked.md",
+      "verified": "verified",
       "class": "Spell",
       "triggerConditions": "Automation type: flesh_to_stone",
       "expectedBehavior": "You attempt to turn one creature that you can see within range into stone. The target makes a Constitution saving throw. On a failed save, it has the Restrained condition for the duration. On a successful save, its Speed is 0 until the start of your next turn. Constructs automatically succeed on the save. A Restrained target makes another Constitution saving throw at the end of each of its turns. If it successfully saves against this spell three times, the spell ends. If it fails its saves three times, it is turned to stone and has the Petrified condition for the duration. The successes and failures needn't be consecutive; keep track of both until the target collects three of a kind. If you maintain your Concentration on this spell for the entire possible duration, the target is Petrified until the condition is ended by Greater Restoration or similar magic."
@@ -2690,7 +2690,7 @@
       "handler": "src/services/combat/automation/handlers/spellHandler.js",
       "router": "src/services/combat/automation/routers/spellRouter.js",
       "infoBuilder": "src/services/combat/automation/infoBuilders/spellInfoBuilder.js",
-      "verified": "incomplete — see .opencode/plans/incomplete-sp-053-friends-target-type.md",
+      "verified": "verified",
       "class": "Spell",
       "triggerConditions": "",
       "expectedBehavior": "You magically emanate a sense of friendship toward one creature you can see within range. The target must succeed on a Wisdom saving throw or have the Charmed condition for the duration. The target succeeds automatically if it isn't a Humanoid, if you're fighting it, or if you have cast this spell on it within the past 24 hours. The spell ends early if the target takes damage or if you make an attack roll, deal damage, or force anyone to make a saving throw. When the spell ends, the target knows it was Charmed by you."
@@ -3310,7 +3310,7 @@
       "handler": "src/services/combat/automation/handlers/spellHandler.js",
       "router": "src/services/combat/automation/routers/spellRouter.js",
       "infoBuilder": "src/services/combat/automation/infoBuilders/spellInfoBuilder.js",
-      "verified": "incomplete — see .opencode/plans/incomplete-sp-068-hunters-mark-incomplete-automation.md",
+      "verified": "verified",
       "class": "Spell",
       "triggerConditions": "",
       "expectedBehavior": "You magically mark one creature you can see within range as your quarry. Until the spell ends, you deal an extra 1d6 Force damage to the target whenever you hit it with an attack roll. You also have Advantage on any Wisdom (Perception or Survival) check you make to find it. If the target drops to 0 Hit Points before this spell ends, you can take a Bonus Action to move the mark to a new creature you can see within range."

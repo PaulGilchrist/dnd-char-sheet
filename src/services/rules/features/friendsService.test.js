@@ -6,7 +6,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { triggerFriends, endFriendsOnHostileAction } from './friendsService.js';
 import { executeHandler } from '../../automation/index.js';
-import { getCombatContext } from '../combat/damageUtils.js';
+import { getCombatContext, getTargetFromAttacker } from '../combat/damageUtils.js';
 import { getRuntimeValue, setRuntimeValue } from '../../../hooks/runtime/useRuntimeState.js';
 import { getMonsterData } from '../../npcs/monsterUtils.js';
 import { addEntry } from '../../ui/logService.js';
@@ -17,6 +17,7 @@ vi.mock('../../automation/index.js', () => ({
 
 vi.mock('../combat/damageUtils.js', () => ({
     getCombatContext: vi.fn(),
+    getTargetFromAttacker: vi.fn(),
 }));
 
 vi.mock('../../../hooks/runtime/useRuntimeState.js', () => ({
@@ -143,15 +144,14 @@ describe('friendsService', () => {
             expect(executeHandler).not.toHaveBeenCalled();
         });
 
-        it('falls back to first non-caster creature from combat context when targetName is missing', async () => {
+        it('logs error and returns popup when no target is selected and getTargetFromAttacker returns null', async () => {
             getCombatContext.mockResolvedValue({
                 creatures: [
                     { name: 'Goblin', type: 'npc', currentHp: 5, maxHp: 5 },
                 ],
             });
-            getMonsterData.mockResolvedValue({ type: 'Humanoid' });
-            getRuntimeValue.mockReturnValue(null);
-            executeHandler.mockResolvedValue({ type: 'popup' });
+            getTargetFromAttacker.mockReturnValue(null);
+            const consoleSpy = vi.spyOn(console, 'error');
 
             const result = await triggerFriends(
                 { name: 'Friends', level: 0 },
@@ -161,15 +161,14 @@ describe('friendsService', () => {
                 mapName,
             );
 
-            expect(executeHandler).toHaveBeenCalledWith(
-                expect.objectContaining({
-                    automation: expect.objectContaining({ targetName: 'Goblin' }),
-                }),
-                playerStats,
-                campaignName,
-                mapName,
+            expect(consoleSpy).toHaveBeenCalledWith(
+                expect.stringContaining('[friendsService] No target selected for Friends'),
             );
-            expect(result).toEqual({ type: 'popup' });
+            expect(result).toEqual({
+                type: 'popup',
+                payload: { type: 'automation_info', name: 'Friends', description: 'No target selected for Friends.' },
+            });
+            consoleSpy.mockRestore();
         });
 
         it('returns non-humanoid popup when target is not a Humanoid', async () => {

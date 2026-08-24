@@ -6,7 +6,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { triggerCrownOfMadness } from './crownOfMadnessService.js';
 import { executeHandler } from '../../automation/index.js';
-import { getCombatContext } from '../combat/damageUtils.js';
+import { getCombatContext, getTargetFromAttacker } from "../combat/damageUtils.js";
 import { getMonsterData } from '../../npcs/monsterUtils.js';
 
 vi.mock('../../automation/index.js', () => ({
@@ -15,6 +15,7 @@ vi.mock('../../automation/index.js', () => ({
 
 vi.mock('../combat/damageUtils.js', () => ({
     getCombatContext: vi.fn(),
+    getTargetFromAttacker: vi.fn(),
 }));
 
 vi.mock('../../npcs/monsterUtils.js', () => ({
@@ -45,6 +46,7 @@ describe('crownOfMadnessService', () => {
             ])('triggers for "%s" spell name (case-insensitive)', async (name) => {
                 executeHandler.mockResolvedValue({ type: 'popup' });
                 getCombatContext.mockResolvedValue({ creatures: [{ name: 'Goblin' }] });
+                getTargetFromAttacker.mockReturnValue({ name: 'Goblin' });
 
                 const result = await triggerCrownOfMadness(
                     { name, level: 2 },
@@ -146,14 +148,15 @@ describe('crownOfMadnessService', () => {
                 expect(executeHandler).not.toHaveBeenCalled();
             });
 
-            it('auto-selects first non-caster creature from combat context when targetName is missing', async () => {
-                executeHandler.mockResolvedValue({ type: 'popup' });
+            it('logs error when no target selected from combat context when targetName is missing', async () => {
                 getCombatContext.mockResolvedValue({
                     creatures: [
                         { name: 'Wizard', type: 'player' },
                         { name: 'Goblin', type: 'npc' },
                     ],
                 });
+                getTargetFromAttacker.mockReturnValue(null);
+                const consoleSpy = vi.spyOn(console, 'error');
 
                 const result = await triggerCrownOfMadness(
                     baseSpell,
@@ -163,15 +166,19 @@ describe('crownOfMadnessService', () => {
                     mapName,
                 );
 
-                expect(result).toEqual({ type: 'popup' });
-                expect(executeHandler).toHaveBeenCalledWith(
-                    expect.objectContaining({
-                        automation: expect.objectContaining({ targetName: 'Goblin' }),
-                    }),
-                    baseStats,
-                    campaignName,
-                    mapName,
+                expect(consoleSpy).toHaveBeenCalledWith(
+                    expect.stringContaining('[crownOfMadnessService] No target selected for Crown of Madness'),
                 );
+                expect(result).toEqual({
+                    type: 'popup',
+                    payload: {
+                        type: 'automation_info',
+                        name: 'Crown of Madness',
+                        description: 'No target selected for Crown of Madness.',
+                    },
+                });
+                expect(executeHandler).not.toHaveBeenCalled();
+                consoleSpy.mockRestore();
             });
 
             it('returns popup when all creatures match the caster name', async () => {
@@ -201,11 +208,12 @@ describe('crownOfMadnessService', () => {
                 expect(executeHandler).not.toHaveBeenCalled();
             });
 
-            it('handles null metaCtx by falling back to combat context', async () => {
-                executeHandler.mockResolvedValue({ type: 'popup' });
+            it('logs error when metaCtx is null', async () => {
                 getCombatContext.mockResolvedValue({
                     creatures: [{ name: 'Goblin', type: 'npc' }],
                 });
+                getTargetFromAttacker.mockReturnValue(null);
+                const consoleSpy = vi.spyOn(console, 'error');
 
                 const result = await triggerCrownOfMadness(
                     baseSpell,
@@ -215,15 +223,27 @@ describe('crownOfMadnessService', () => {
                     mapName,
                 );
 
-                expect(result).toEqual({ type: 'popup' });
-                expect(executeHandler).toHaveBeenCalled();
+                expect(consoleSpy).toHaveBeenCalledWith(
+                    expect.stringContaining('[crownOfMadnessService] No target selected for Crown of Madness'),
+                );
+                expect(result).toEqual({
+                    type: 'popup',
+                    payload: {
+                        type: 'automation_info',
+                        name: 'Crown of Madness',
+                        description: 'No target selected for Crown of Madness.',
+                    },
+                });
+                expect(executeHandler).not.toHaveBeenCalled();
+                consoleSpy.mockRestore();
             });
 
-            it('handles undefined metaCtx by falling back to combat context', async () => {
-                executeHandler.mockResolvedValue({ type: 'popup' });
+            it('logs error when metaCtx is undefined', async () => {
                 getCombatContext.mockResolvedValue({
                     creatures: [{ name: 'Goblin', type: 'npc' }],
                 });
+                getTargetFromAttacker.mockReturnValue(null);
+                const consoleSpy = vi.spyOn(console, 'error');
 
                 const result = await triggerCrownOfMadness(
                     baseSpell,
@@ -233,15 +253,27 @@ describe('crownOfMadnessService', () => {
                     mapName,
                 );
 
-                expect(result).toEqual({ type: 'popup' });
-                expect(executeHandler).toHaveBeenCalled();
+                expect(consoleSpy).toHaveBeenCalledWith(
+                    expect.stringContaining('[crownOfMadnessService] No target selected for Crown of Madness'),
+                );
+                expect(result).toEqual({
+                    type: 'popup',
+                    payload: {
+                        type: 'automation_info',
+                        name: 'Crown of Madness',
+                        description: 'No target selected for Crown of Madness.',
+                    },
+                });
+                expect(executeHandler).not.toHaveBeenCalled();
+                consoleSpy.mockRestore();
             });
 
-            it('handles empty metaCtx by falling back to combat context', async () => {
-                executeHandler.mockResolvedValue({ type: 'popup' });
+            it('logs error when metaCtx is empty', async () => {
                 getCombatContext.mockResolvedValue({
                     creatures: [{ name: 'Goblin', type: 'npc' }],
                 });
+                getTargetFromAttacker.mockReturnValue(null);
+                const consoleSpy = vi.spyOn(console, 'error');
 
                 const result = await triggerCrownOfMadness(
                     baseSpell,
@@ -251,8 +283,19 @@ describe('crownOfMadnessService', () => {
                     mapName,
                 );
 
-                expect(result).toEqual({ type: 'popup' });
-                expect(executeHandler).toHaveBeenCalled();
+                expect(consoleSpy).toHaveBeenCalledWith(
+                    expect.stringContaining('[crownOfMadnessService] No target selected for Crown of Madness'),
+                );
+                expect(result).toEqual({
+                    type: 'popup',
+                    payload: {
+                        type: 'automation_info',
+                        name: 'Crown of Madness',
+                        description: 'No target selected for Crown of Madness.',
+                    },
+                });
+                expect(executeHandler).not.toHaveBeenCalled();
+                consoleSpy.mockRestore();
             });
         });
 

@@ -1,5 +1,5 @@
 import { executeHandler } from '../../automation/index.js';
-import { getCombatContext } from '../combat/damageUtils.js';
+import { getCombatContext, getTargetFromAttacker } from '../combat/damageUtils.js';
 import { getMonsterData } from '../../npcs/monsterUtils.js';
 import { addEntry } from '../../ui/logService.js';
 import { setRuntimeValue, getRuntimeValue } from '../../../hooks/runtime/useRuntimeState.js';
@@ -37,8 +37,11 @@ export async function triggerDominateBeast(spell, metaCtx, playerStats, campaign
     if (!targetName) {
         const cs = await getCombatContext(campaignName);
         if (cs?.creatures && cs.creatures.length > 0) {
-            const nonCaster = cs.creatures.find(c => c.name !== playerStats.name);
-            if (nonCaster) targetName = nonCaster.name;
+            const attackerTarget = getTargetFromAttacker(cs, playerStats.name);
+            if (attackerTarget) targetName = attackerTarget.name;
+        }
+        if (!targetName) {
+            console.error(`[dominateBeastService] No target selected for Dominate Beast by ${playerStats.name}. Caster has no target in initiative view.`);
         }
     }
     if (!targetName) {

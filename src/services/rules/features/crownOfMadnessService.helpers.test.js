@@ -15,6 +15,7 @@ vi.mock('../../automation/index.js', () => ({
 
 vi.mock('../combat/damageUtils.js', () => ({
     getCombatContext: vi.fn(),
+    getTargetFromAttacker: vi.fn(),
 }));
 
 vi.mock('../../npcs/monsterUtils.js', () => ({

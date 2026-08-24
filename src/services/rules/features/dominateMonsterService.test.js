@@ -11,6 +11,7 @@ vi.mock('../../automation/index.js', () => ({
 
 vi.mock('../combat/damageUtils.js', () => ({
   getCombatContext: vi.fn(),
+  getTargetFromAttacker: vi.fn(),
 }));
 
 vi.mock('../../ui/logService.js', () => ({
@@ -19,7 +20,7 @@ vi.mock('../../ui/logService.js', () => ({
 
 import { triggerDominateMonster } from './dominateMonsterService.js';
 import { executeHandler } from '../../automation/index.js';
-import { getCombatContext } from '../combat/damageUtils.js';
+import { getCombatContext, getTargetFromAttacker } from "../combat/damageUtils.js";
 
 const campaignName = 'TestCampaign';
 
@@ -71,17 +72,26 @@ describe('dominateMonsterService', () => {
       expect(result.payload.description).toContain('No target selected');
     });
 
-    it('selects first non-caster creature as default target', async () => {
+    it('logs error when no target selected', async () => {
       getCombatContext.mockResolvedValue({
         creatures: [
           { name: 'TestCaster' },
           { name: 'Goblin' },
         ],
       });
+      getTargetFromAttacker.mockReturnValue(null);
+      const consoleSpy = vi.spyOn(console, 'error');
 
-      await triggerDominateMonster(makeSpell(), {}, makePlayerStats(), campaignName, null);
+      const result = await triggerDominateMonster(makeSpell(), {}, makePlayerStats(), campaignName, null);
 
-      expect(executeHandler).toHaveBeenCalled();
+      expect(consoleSpy).toHaveBeenCalledWith(
+        expect.stringContaining('[dominateMonsterService] No target selected for Dominate Monster'),
+      );
+      expect(result).toEqual({
+        type: 'popup',
+        payload: { type: 'automation_info', name: 'Dominate Monster', description: 'No target selected for Dominate Monster.' },
+      });
+      consoleSpy.mockRestore();
     });
   });
 

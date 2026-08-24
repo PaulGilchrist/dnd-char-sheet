@@ -116,3 +116,6 @@ case 'shield':
 4. Verify +5 AC is applied
 5. Verify damage rollback if attack would miss with +5 AC
 6. Verify "Done" button dismisses the popup
+
+## Initial Review
+This may not be an issue as it sound like the AI never tried to click the reaction.  Reaction are not automatic modals, and only happen when the user decides to use them by clicking.  Confirm if there is or is not an issue, by testing the clicking of the reaction after the monk is hit by an attack.

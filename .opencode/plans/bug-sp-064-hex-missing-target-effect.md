@@ -81,3 +81,6 @@ The Hex spell needs a target selection step similar to other target-dependent sp
 1. Prompt for target selection after ability choice
 2. Apply `hex_ability_check_disadvantage` to the selected target
 3. Set up the necrotic damage rider on the caster's attack automation
+
+## Initial Review
+This may not be an issue as it sound like the AI never selected a target using the player's creature card on initiative.jsx

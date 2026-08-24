@@ -11,6 +11,7 @@ vi.mock('../../automation/index.js', () => ({
 
 vi.mock('../combat/damageUtils.js', () => ({
   getCombatContext: vi.fn(),
+  getTargetFromAttacker: vi.fn(),
 }));
 
 vi.mock('../../npcs/monsterUtils.js', () => ({
@@ -28,7 +29,7 @@ vi.mock('../../../hooks/runtime/useRuntimeState.js', () => ({
 
 import { triggerDominatePerson } from './dominatePersonService.js';
 import { executeHandler } from '../../automation/index.js';
-import { getCombatContext } from '../combat/damageUtils.js';
+import { getCombatContext, getTargetFromAttacker } from "../combat/damageUtils.js";
 import { getMonsterData } from '../../npcs/monsterUtils.js';
 import { getRuntimeValue, setRuntimeValue } from '../../../hooks/runtime/useRuntimeState.js';
 
@@ -82,17 +83,26 @@ describe('dominatePersonService', () => {
       expect(result.payload.description).toContain('No target selected');
     });
 
-    it('selects first non-caster creature as default target', async () => {
+    it('logs error when no target selected', async () => {
       getCombatContext.mockResolvedValue({
         creatures: [
           { name: 'TestCaster' },
           { name: 'Villager' },
         ],
       });
+      getTargetFromAttacker.mockReturnValue(null);
+      const consoleSpy = vi.spyOn(console, 'error');
 
-      await triggerDominatePerson(makeSpell(), {}, makePlayerStats(), campaignName, null);
+      const result = await triggerDominatePerson(makeSpell(), {}, makePlayerStats(), campaignName, null);
 
-      expect(executeHandler).toHaveBeenCalled();
+      expect(consoleSpy).toHaveBeenCalledWith(
+        expect.stringContaining('[dominatePersonService] No target selected for Dominate Person'),
+      );
+      expect(result).toEqual({
+        type: 'popup',
+        payload: { type: 'automation_info', name: 'Dominate Person', description: 'No target selected for Dominate Person.' },
+      });
+      consoleSpy.mockRestore();
     });
   });
 

@@ -52,6 +52,32 @@
       "subrace": "Human",
       "feats": [],
       "background": "Sage"
+    },
+    {
+      "name": "DraconicDragon",
+      "file": "public/campaigns/test-campaign/DraconicDragon.json",
+      "ruleset": "2024",
+      "class": "Barbarian",
+      "subclass": "Path of the Berserker",
+      "level": 5,
+      "race": "Dragonborn",
+      "subrace": "Red",
+      "feats": [],
+      "background": "Acolyte"
+    },
+    {
+      "name": "DraconicSorcerer",
+      "file": "public/campaigns/test-campaign/DraconicSorcerer.json",
+      "ruleset": "2024",
+      "class": "Sorcerer",
+      "subclass": "Draconic Sorcery",
+      "level": 5,
+      "race": "Human",
+      "subrace": "Human",
+      "feats": [
+        "Magic Initiate"
+      ],
+      "background": "Acolyte"
     }
   ],
   "monsters": [
