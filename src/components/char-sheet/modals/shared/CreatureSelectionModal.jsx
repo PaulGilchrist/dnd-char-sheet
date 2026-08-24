@@ -66,7 +66,6 @@ export default function CreatureSelectionModal({
                                 <label
                                     key={i}
                                     className={`secondary-target-row ${isSelected ? 'secondary-target-selected' : ''} ${atMax ? 'secondary-target-disabled' : ''}`}
-                                    onClick={() => !atMax && toggleTarget(name)}
                                 >
                                     <input
                                         type="checkbox"

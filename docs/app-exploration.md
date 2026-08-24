@@ -174,12 +174,6 @@ D&D Character Sheet is a full-stack React 19 + Express 5 app for managing D&D 5e
 
 ## Session Findings — 2026-08-20
 
-### Bugs Found (4 total)
-1. **[bug-dice-tray-overlay-blocking-ui.md](./bug-dice-tray-overlay-blocking-ui.md)** — Dice tray overlay blocks interaction with other UI elements (minor UX)
-2. **[bug-create-map-button-disabled.md](./bug-create-map-button-disabled.md)** — Create Map button always disabled (broken feature)
-3. **[bug-add-to-initiative-ambiguous-buttons.md](./bug-add-to-initiative-ambiguous-buttons.md)** — Multiple "Add to Initiative" buttons with identical accessible names (minor UX/accessibility)
-4. **[bug-initiative-add-buttons-identical-names.md](./bug-initiative-add-buttons-identical-names.md)** — ~101 "Add" buttons on Initiative page with identical names (minor UX/accessibility)
-
 ### Features Verified Working
 - NPC creation, editing, and deletion with confirmation dialogs
 - Character sheet display with all sections

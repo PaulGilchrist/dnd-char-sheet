@@ -259,6 +259,34 @@ describe('CreatureSelectionModal', () => {
       checkboxes.forEach(cb => expect(cb.checked).toBe(false));
     });
 
+    it('toggles a target selection when checkbox is clicked directly', async () => {
+      render(<CreatureSelectionModal {...makeProps()} />);
+      const checkboxes = document.querySelectorAll('.secondary-target-list input[type="checkbox"]');
+      await act(async () => {
+        fireEvent.click(checkboxes[0]);
+      });
+      await waitFor(() => {
+        expect(checkboxes[0]).toBeChecked();
+      });
+    });
+
+    it('deselects a target when its checkbox is clicked directly', async () => {
+      render(<CreatureSelectionModal {...makeProps()} />);
+      const checkboxes = document.querySelectorAll('.secondary-target-list input[type="checkbox"]');
+      await act(async () => {
+        fireEvent.click(checkboxes[0]);
+      });
+      await waitFor(() => {
+        expect(checkboxes[0]).toBeChecked();
+      });
+      await act(async () => {
+        fireEvent.click(checkboxes[0]);
+      });
+      await waitFor(() => {
+        expect(checkboxes[0]).not.toBeChecked();
+      });
+    });
+
     it('toggles a target selection on row click', async () => {
       render(<CreatureSelectionModal {...makeProps()} />);
       await act(async () => selectTarget(0));
