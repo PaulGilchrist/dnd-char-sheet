@@ -1804,7 +1804,7 @@
       "handler": "src/services/combat/automation/handlers/baseActionHandler.js",
       "router": "src/services/combat/automation/routers/baseActionRouter.js",
       "infoBuilder": "src/services/combat/automation/infoBuilders/baseActionInfoBuilder.js",
-       "verified": "verified",
+      "verified": "verified",
       "class": "Base Action",
       "triggerConditions": "Take the Dodge action on your turn",
       "expectedBehavior": "When you take the Dodge action, until your next turn, any creature making an attack roll against you has Disadvantage. Your movement is not difficult terrain for yourself."
@@ -1912,7 +1912,7 @@
       "handler": "src/services/combat/automation/handlers/classFeatureHandler.js",
       "router": "src/services/combat/automation/routers/classFeatureRouter.js",
       "infoBuilder": "src/services/combat/automation/infoBuilders/classFeatureInfoBuilder.js",
-      "verified": "not verified",
+      "verified": "verified",
       "class": "Sorcerer",
       "triggerConditions": "Action: bonus action; Duration: 1_hour",
       "expectedBehavior": "Bonus Action, cause draconic wings to appear for 1 hour. Fly Speed 60 feet. Once per Long Rest (or spend 3 SP to restore)."
@@ -1924,7 +1924,7 @@
       "handler": "src/services/combat/automation/handlers/classFeatureHandler.js",
       "router": "src/services/combat/automation/routers/classFeatureRouter.js",
       "infoBuilder": "src/services/combat/automation/infoBuilders/classFeatureInfoBuilder.js",
-      "verified": "not verified",
+      "verified": "verified",
       "class": "Ranger",
       "triggerConditions": "Automation type: undefined",
       "expectedBehavior": "Ambusher's Leap: at start of first turn of each combat, Speed +10 until end of that turn. Dreadful Strike: when you hit with a weapon, deal extra 2d6 Psychic damage (uses = Wisdom modifier, minimum once, regain on Long Rest). Initiative Bonus: add Wisdom modifier to Initiative roll."
@@ -1936,7 +1936,7 @@
       "handler": "src/services/combat/automation/handlers/classFeatureHandler.js",
       "router": "src/services/combat/automation/routers/classFeatureRouter.js",
       "infoBuilder": "src/services/combat/automation/infoBuilders/classFeatureInfoBuilder.js",
-      "verified": "not verified",
+      "verified": "verified",
       "class": "Ranger",
       "triggerConditions": "Trigger: weapon_attack_hit; Once per turn: yes",
       "expectedBehavior": "When you hit with a weapon, deal extra 1d4 Psychic damage (increases to 1d6 at Ranger level 11). Extra damage can only be taken once per turn."
@@ -1948,7 +1948,7 @@
       "handler": "src/services/combat/automation/handlers/fightingStyleHandler.js",
       "router": "src/services/combat/automation/routers/fightingStyleRouter.js",
       "infoBuilder": "src/services/combat/automation/infoBuilders/fightingStyleInfoBuilder.js",
-      "verified": "not verified",
+      "verified": "verified",
       "class": "Fighting Style",
       "triggerConditions": "",
       "expectedBehavior": "You gain a +2 bonus to damage rolls you make with melee weapons."
@@ -1960,7 +1960,7 @@
       "handler": "src/services/combat/automation/handlers/fightingStyleHandler.js",
       "router": "src/services/combat/automation/routers/fightingStyleRouter.js",
       "infoBuilder": "src/services/combat/automation/infoBuilders/fightingStyleInfoBuilder.js",
-      "verified": "not verified",
+      "verified": "verified",
       "class": "Fighting Style",
       "triggerConditions": "",
       "expectedBehavior": "When you are wielding a melee weapon in one hand and no other weapons, you gain a +2 bonus to damage rolls with that weapon."
@@ -1972,7 +1972,7 @@
       "handler": "src/services/combat/automation/handlers/featHandler.js",
       "router": "src/services/combat/automation/routers/featRouter.js",
       "infoBuilder": "src/services/combat/automation/infoBuilders/featInfoBuilder.js",
-      "verified": "not verified",
+      "verified": "verified",
       "triggerConditions": "When making death_saving_throws checks",
       "expectedBehavior": "You have Advantage on Death Saving Throws."
     },
@@ -1983,7 +1983,7 @@
       "handler": "src/services/combat/automation/handlers/classFeatureHandler.js",
       "router": "src/services/combat/automation/routers/classFeatureRouter.js",
       "infoBuilder": "src/services/combat/automation/infoBuilders/classFeatureInfoBuilder.js",
-      "verified": "not verified",
+      "verified": "broken — see .opencode/plans/bug-cla-102-dwarven-resilience-advantage-missing.md",
       "race": "Dwarf",
       "triggerConditions": "When making saving_throw checks; while poison",
       "expectedBehavior": "You have Resistance to Poison damage. You also have Advantage on saving throws you make to avoid or end the Poisoned condition."
@@ -1995,7 +1995,7 @@
       "handler": "src/services/combat/automation/handlers/classFeatureHandler.js",
       "router": "src/services/combat/automation/routers/classFeatureRouter.js",
       "infoBuilder": "src/services/combat/automation/infoBuilders/classFeatureInfoBuilder.js",
-      "verified": "not verified",
+      "verified": "verified",
       "race": "Dwarf",
       "triggerConditions": "",
       "expectedBehavior": "You Hit Point maximum increases by 1, and it increases by 1 again whenever you gain a level."
