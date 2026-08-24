@@ -570,6 +570,12 @@ function computeConditionEffects(conditions = [], saveModifiers = [], targetEffe
     if (te.effect === 'ac_penalty') {
       effects.acPenalty = (effects.acPenalty || 0) + (te.value || 2);
     }
+    if (te.effect === 'dodge') {
+      effects.targetDisadvantageCount = (effects.targetDisadvantageCount || 0) + 1;
+      if (!effects.saveAdvantage.includes('dex')) {
+        effects.saveAdvantage.push('dex');
+      }
+    }
     if (te.effect === 'bane_penalty') {
       effects.banePenalty = true;
     }

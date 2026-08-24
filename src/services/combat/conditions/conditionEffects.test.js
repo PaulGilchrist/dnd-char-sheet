@@ -350,6 +350,12 @@ describe('conditionEffects', () => {
         expect(rayResult.strCheckDisadvantage).toBe(true);
         expect(rayResult.rayOfEnfeebleDamageReduction).toBe(true);
       });
+
+      it('handles dodge effect with targetDisadvantageCount and saveAdvantage', () => {
+        const dodgeResult = computeConditionEffects([], [], [{ effect: 'dodge' }]);
+        expect(dodgeResult.targetDisadvantageCount).toBe(1);
+        expect(dodgeResult.saveAdvantage).toContain('dex');
+      });
     });
 
     describe('targetEffects: movement, positioning, and combat actions', () => {
@@ -490,6 +496,12 @@ describe('conditionEffects', () => {
       expect(combineAttackModes(attacker, target, 5, 'Goblin')).toBe('advantage');
       expect(combineAttackModes(attacker, target, 5, 'Orc')).toBe('normal');
       expect(combineAttackModes({ ...attacker, vexAdvantageTargets: null }, target, 5, 'Goblin')).toBe('normal');
+    });
+
+    it('handles dodge targetDisadvantageCount', () => {
+      const attacker = { attackAdvantageCount: 0, attackDisadvantageCount: 0, restoreBalance: false };
+      const targetWithDodge = { targetAdvantageCount: 0, targetDisadvantageCount: 1 };
+      expect(combineAttackModes(attacker, targetWithDodge, 10)).toBe('disadvantage');
     });
   });
 

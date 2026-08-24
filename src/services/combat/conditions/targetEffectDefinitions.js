@@ -94,6 +94,14 @@ const TARGET_EFFECT_DEFINITIONS = [
 
   // ── Defensive ──────────────────────────────────────────
   {
+    effect: 'dodge',
+    label: 'Disadvantage on attacks',
+    description: 'Attacks against the target have Disadvantage. The target has Advantage on Dexterity saving throws.',
+    icon: 'fa-shield-halved',
+    cls: 'effect-target-disadv',
+    group: 'Defensive',
+  },
+  {
     effect: 'escape_the_horde',
     label: 'Escape the Horde',
     description: 'Attacks against the target have Disadvantage (Escape the Horde).',
