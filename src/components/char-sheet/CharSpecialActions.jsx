@@ -22,6 +22,7 @@ import { addEntry } from '../../services/ui/logService.js';
 import { getCombatContext } from '../../services/rules/combat/damageUtils.js';
 import { confirmBolsteringPerformance } from '../../services/automation/handlers/buffs/tempHpBuffHandler.js';
 import { confirmEncouragingSong, skipEncouragingSong } from '../../services/automation/handlers/buffs/encouragingSongHandler.js';
+import { confirmElfisLineage } from '../../services/automation/handlers/class-other/elfishLineageHandler.js';
 import CharSpecialActionsModals from './CharSpecialActionsModals.jsx';
 import './CharSpecialActions.css';
 function CharSpecialActions({ playerStats, campaignName, cannotAct, characters, mapName }) {
@@ -55,6 +56,7 @@ function CharSpecialActions({ playerStats, campaignName, cannotAct, characters, 
     const [bolsteringTreatsModal, setBolsteringTreatsModal] = useState(null);
     const [bolsteringPerformanceModal, setBolsteringPerformanceModal] = useState(null);
     const [encouragingSongModal, setEncouragingSongModal] = useState(null);
+    const [elfishLineageModal, setElfisLineageModal] = useState(null);
     const [fightingStylesMap, setFightingStylesMap] = useState(null);
     const { setPopupHtml } = useDiceRollPopup();
     const { rollAttack, rollDamage } = useLoggedDiceRoll(playerStats?.name, campaignName, {
@@ -250,6 +252,15 @@ function CharSpecialActions({ playerStats, campaignName, cannotAct, characters, 
         }
         setEncouragingSongModal(null);
     }, [encouragingSongModal, setPopupHtml]);
+    const handleElfisLineageConfirm = useCallback(async (chosenLineage, playerStats, campaignName) => {
+        if (!elfishLineageModal) return;
+        const result = await confirmElfisLineage(playerStats, chosenLineage, campaignName);
+        if (result?.payload) {
+            const html = `<b>${result.payload.name}</b><br/>${result.payload.description}<br/><span class="dice-roll-hint">click to dismiss</span>`;
+            setPopupHtml(html);
+        }
+        setElfisLineageModal(null);
+    }, [elfishLineageModal, setPopupHtml]);
     useEffect(() => {
         let cancelled = false;
         loadFightingStyles().then(styles => {
@@ -439,6 +450,8 @@ function CharSpecialActions({ playerStats, campaignName, cannotAct, characters, 
                 setBolsteringPerformanceModal(result.payload);
             } else if (result.modalName === 'encouragingSongTarget') {
                 setEncouragingSongModal(result.payload);
+            } else if (result.modalName === 'elfishLineage') {
+                setElfisLineageModal(result.payload);
             }
         } else if (result.type === 'popup') {
             const payload = result.payload;
@@ -669,6 +682,7 @@ function CharSpecialActions({ playerStats, campaignName, cannotAct, characters, 
                 bolsteringTreatsModal={bolsteringTreatsModal} setBolsteringTreatsModal={setBolsteringTreatsModal}
                 bolsteringPerformanceModal={bolsteringPerformanceModal} setBolsteringPerformanceModal={setBolsteringPerformanceModal}
                 encouragingSongModal={encouragingSongModal} setEncouragingSongModal={setEncouragingSongModal}
+                elfishLineageModal={elfishLineageModal} setElfisLineageModal={setElfisLineageModal}
                 featureChoiceModal={featureChoiceModal} setFeatureChoiceModal={setFeatureChoiceModal}
                 aspectOfTheWildsModal={aspectOfTheWildsModal} setAspectOfTheWildsModal={setAspectOfTheWildsModal}
                 playerStats={playerStats} campaignName={campaignName}
@@ -697,6 +711,8 @@ function CharSpecialActions({ playerStats, campaignName, cannotAct, characters, 
                 handleBolsteringPerformanceConfirm={handleBolsteringPerformanceConfirm}
                 handleEncouragingSongConfirm={handleEncouragingSongConfirm}
                 handleEncouragingSongSkip={handleEncouragingSongSkip}
+                handleElfisLineageConfirm={handleElfisLineageConfirm}
+                setElfisLineageModal={setElfisLineageModal}
                 setPopupHtml={setPopupHtml}
                 />
                 {uniqueActions.map((specialAction, index) => {

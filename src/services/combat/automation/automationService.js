@@ -48,6 +48,9 @@ const INTERACTIVE_HANDLER_TYPES = new Set([
     'heroic_inspiration_buff',
     'brew_poison',
     'telekinetic_shove',
+    'elfish_lineage',
+    'gnomish_lineage',
+    'fiendish_legacy',
 ]);
 
 const INTERACTIVE_PASSIVE_EFFECTS = new Set([

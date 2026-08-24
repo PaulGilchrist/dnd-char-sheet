@@ -24,6 +24,7 @@ import ClairvoyantCombatantModal from './modals/ClairvoyantCombatantModal.jsx';
 import CreatureSelectionModal from './modals/shared/CreatureSelectionModal.jsx';
 import FeatureChoiceModal from './FeatureChoiceModal.jsx';
 import AspectOfTheWildsModal from './AspectOfTheWildsModal.jsx';
+import ElfisLineageModal from './ElfisLineageModal.jsx';
 
 function getEventDisplayLabel(eventType, eventData) {
     if (eventType === 'attack') {
@@ -65,6 +66,7 @@ function CharSpecialActionsModals({
     bolsteringTreatsModal, setBolsteringTreatsModal,
     bolsteringPerformanceModal, setBolsteringPerformanceModal,
     encouragingSongModal,
+    elfishLineageModal,
     featureChoiceModal,
     aspectOfTheWildsModal,
     playerStats, campaignName,
@@ -93,6 +95,8 @@ function CharSpecialActionsModals({
     handleBolsteringPerformanceConfirm,
     handleEncouragingSongConfirm,
     handleEncouragingSongSkip,
+    handleElfisLineageConfirm,
+    setElfisLineageModal,
     setPopupHtml,
 }) {
     return (
@@ -410,6 +414,13 @@ function CharSpecialActionsModals({
                     confirmIcon="fa-music"
                     onConfirm={handleEncouragingSongConfirm}
                     onSkip={handleEncouragingSongSkip}
+                />
+            )}
+            {elfishLineageModal && (
+                <ElfisLineageModal
+                    elfishLineageModal={elfishLineageModal}
+                    handleElfisLineageConfirm={handleElfisLineageConfirm}
+                    handleElfisLineageSkip={() => setElfisLineageModal(null)}
                 />
             )}
         </>
