@@ -214,54 +214,54 @@
     fill: #8a8a8a;
 }
 
-/* Fallback: system light mode when no explicit theme is set */
+/* Fallback: system light mode only until an explicit theme is chosen */
 @media (prefers-color-scheme: light) {
-    .map .grid-bg {
+    body:not([data-theme="dark"]) .map .grid-bg {
         fill: #f5f5f5;
     }
 
-    .map .grid-line {
+    body:not([data-theme="dark"]) .map .grid-line {
         stroke: #d0d0d0;
     }
 
-    .map .creature-circle {
+    body:not([data-theme="dark"]) .map .creature-circle {
         fill: #4a90d9;
         stroke: #2c5f8a;
     }
 
-    .map .creature-circle.dragging {
+    body:not([data-theme="dark"]) .map .creature-circle.dragging {
         fill: #ff6b6b;
         stroke: #c0392b;
     }
 
-    .map .creature-circle.selected {
+    body:not([data-theme="dark"]) .map .creature-circle.selected {
         stroke: #B8860B;
         stroke-width: 3;
     }
 
-    .map .creature-name {
+    body:not([data-theme="dark"]) .map .creature-name {
         fill: #fff;
         text-shadow: 0 0 3px #000, 0 0 3px #000, 0 0 3px #000;
     }
 
-    .map .toolbar button {
+    body:not([data-theme="dark"]) .map .toolbar button {
         background: #e8e8e8;
         border-color: #ccc;
         color: #333;
     }
 
-    .map .toolbar button:hover {
+    body:not([data-theme="dark"]) .map .toolbar button:hover {
         background: #d8d8d8;
         border-color: #aaa;
     }
 
-    .map .toolbar button.active {
+    body:not([data-theme="dark"]) .map .toolbar button.active {
         background: #4a90d9;
         border-color: #2c5f8a;
         color: #fff;
     }
 
-    .map .wall-cell {
+    body:not([data-theme="dark"]) .map .wall-cell {
         fill: #8a8a8a;
     }
 }
@@ -429,23 +429,23 @@
     border-color: #999;
 }
 
-/* System light mode */
+/* System light mode (only when no explicit dark theme is set) */
 @media (prefers-color-scheme: light) {
-    .map .items-panel {
+    body:not([data-theme="dark"]) .map .items-panel {
         background: #e8e8e8;
         border-left-color: #ccc;
     }
 
-    .map .items-panel-close {
+    body:not([data-theme="dark"]) .map .items-panel-close {
         color: #333;
     }
 
-    .map .items-panel-item {
+    body:not([data-theme="dark"]) .map .items-panel-item {
         border-color: #bbb;
         color: #333;
     }
 
-    .map .items-panel-item:hover {
+    body:not([data-theme="dark"]) .map .items-panel-item:hover {
         background: #d8d8d8;
         border-color: #999;
     }
@@ -603,10 +603,10 @@
 }
 
 @media (prefers-color-scheme: light) {
-    .map .room-highlight {
+    body:not([data-theme="dark"]) .map .room-highlight {
     }
 
-    .map .room-label {
+    body:not([data-theme="dark"]) .map .room-label {
         fill: rgba(0, 0, 0, 0.35);
     }
 }

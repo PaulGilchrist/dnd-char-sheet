@@ -390,71 +390,71 @@
     color: #333;
 }
 
-/* ===== System light mode fallback ===== */
+/* ===== System light mode fallback (only when no explicit dark theme is set) ===== */
 
 @media (prefers-color-scheme: light) {
-    .maps-manager-header .back-button {
+    body:not([data-theme="dark"]) .maps-manager-header .back-button {
         background: #e8e8e8;
         border-color: #ccc;
         color: #333;
     }
 
-    .maps-manager-header .back-button:hover {
+    body:not([data-theme="dark"]) .maps-manager-header .back-button:hover {
         background: #d8d8d8;
         border-color: #aaa;
     }
 
-    .maps-manager-create button {
+    body:not([data-theme="dark"]) .maps-manager-create button {
         background: #e8e8e8;
         border-color: #ccc;
         color: #333;
     }
 
-    .maps-manager-create button:hover:not(:disabled) {
+    body:not([data-theme="dark"]) .maps-manager-create button:hover:not(:disabled) {
         background: #d8d8d8;
         border-color: #aaa;
     }
 
-    .maps-manager-item-actions button {
+    body:not([data-theme="dark"]) .maps-manager-item-actions button {
         background: #e8e8e8;
         border-color: #ccc;
         color: #333;
     }
 
-    .maps-manager-item-actions button:hover {
+    body:not([data-theme="dark"]) .maps-manager-item-actions button:hover {
         background: #d8d8d8;
         border-color: #aaa;
     }
 
-    .maps-manager-item-actions .delete-btn {
+    body:not([data-theme="dark"]) .maps-manager-item-actions .delete-btn {
         border-color: var(--color-error-border);
         color: var(--color-error);
     }
 
-    .maps-manager-item-actions .delete-btn:hover {
+    body:not([data-theme="dark"]) .maps-manager-item-actions .delete-btn:hover {
         background: var(--background-color-error);
         border-color: var(--color-error);
         color: var(--color-error);
     }
 
-    .maps-manager-modal-actions button {
+    body:not([data-theme="dark"]) .maps-manager-modal-actions button {
         background: #e8e8e8;
         border-color: #ccc;
         color: #333;
     }
 
-    .maps-manager-modal-actions button:hover {
+    body:not([data-theme="dark"]) .maps-manager-modal-actions button:hover {
         background: #d8d8d8;
         border-color: #aaa;
     }
 
-    .maps-manager-modal-actions .delete-confirm-btn {
+    body:not([data-theme="dark"]) .maps-manager-modal-actions .delete-confirm-btn {
         background-color: var(--color-error);
         border-color: var(--color-error);
         color: var(--color-text-inverse);
     }
 
-    .maps-manager-modal-actions .delete-confirm-btn:hover {
+    body:not([data-theme="dark"]) .maps-manager-modal-actions .delete-confirm-btn:hover {
         background-color: var(--color-error-light);
         border-color: var(--color-error-light);
     }
@@ -535,7 +535,7 @@
 }
 
 @media (prefers-color-scheme: light) {
-  .maps-manager .generate-dungeon-btn {
+  body:not([data-theme="dark"]) .maps-manager .generate-dungeon-btn {
     background: #4a7db5 !important;
     color: #fff !important;
   }

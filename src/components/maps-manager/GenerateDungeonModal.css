@@ -176,35 +176,35 @@
 }
 
 @media (prefers-color-scheme: light) {
-    .maps-manager-modal-overlay .dungeon-gen-mode-btn {
+    body:not([data-theme="dark"]) .maps-manager-modal-overlay .dungeon-gen-mode-btn {
         background: #e8e8e8;
         border-color: #ccc;
         color: #333;
     }
 
-    .maps-manager-modal-overlay .dungeon-gen-mode-btn:hover {
+    body:not([data-theme="dark"]) .maps-manager-modal-overlay .dungeon-gen-mode-btn:hover {
         background: #d8d8d8;
         border-color: #aaa;
     }
 
-    .maps-manager-modal-overlay .dungeon-gen-mode-btn.active {
+    body:not([data-theme="dark"]) .maps-manager-modal-overlay .dungeon-gen-mode-btn.active {
         background: #4a7db5;
         border-color: #3a6a9a;
         color: #fff;
     }
 
-    .maps-manager-modal-overlay .dungeon-gen-option-btn {
+    body:not([data-theme="dark"]) .maps-manager-modal-overlay .dungeon-gen-option-btn {
         background: #e8e8e8;
         border-color: #ccc;
         color: #333;
     }
 
-    .maps-manager-modal-overlay .dungeon-gen-option-btn:hover {
+    body:not([data-theme="dark"]) .maps-manager-modal-overlay .dungeon-gen-option-btn:hover {
         background: #d8d8d8;
         border-color: #aaa;
     }
 
-    .maps-manager-modal-overlay .dungeon-gen-option-btn.active {
+    body:not([data-theme="dark"]) .maps-manager-modal-overlay .dungeon-gen-option-btn.active {
         background: #4a7db5;
         border-color: #3a6a9a;
         color: #fff;
@@ -234,7 +234,7 @@
 }
 
 @media (prefers-color-scheme: light) {
-    .maps-manager-modal-overlay .dungeon-gen-generate-btn {
+    body:not([data-theme="dark"]) .maps-manager-modal-overlay .dungeon-gen-generate-btn {
         background: #4a7db5 !important;
         color: #fff !important;
     }

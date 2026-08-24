@@ -219,7 +219,7 @@ input[type="checkbox"] {
 }
 
 @media (prefers-color-scheme: light) {
-    .sectionHeader {
+    body:not([data-theme="dark"]) .sectionHeader {
         color: var(--color-section-heading-light);
     }
 }
@@ -365,9 +365,11 @@ th {
     color: var(--color-link-hover);
 }
 
-/* Fallback: system light mode when no explicit theme is set */
+/* Fallback: system light mode only until an explicit theme is chosen.
+   Must not apply once data-theme is set, or dark can never win when
+   the browser itself prefers light (e.g. Chrome default). */
 @media (prefers-color-scheme: light) {
-    :root {
+    body:not([data-theme]) {
         /* Backgrounds */
         --background-color-main: #fff;
         --background-color-button: #f9f9f9;
@@ -462,11 +464,11 @@ th {
         --shadow-selected: rgba(76, 175, 80, 0.4);
     }
 
-    a:hover {
+    body:not([data-theme]) a:hover {
         color: var(--color-link-hover);
     }
 
-    button {
+    body:not([data-theme]) button {
         background-color: #f9f9f9;
     }
 }

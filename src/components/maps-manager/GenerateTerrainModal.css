@@ -96,7 +96,7 @@
 }
 
 @media (prefers-color-scheme: light) {
-    .maps-manager-modal-overlay .terrain-gen-modal .dungeon-gen-generate-btn {
+    body:not([data-theme="dark"]) .maps-manager-modal-overlay .terrain-gen-modal .dungeon-gen-generate-btn {
         background: #4a7db5 !important;
         color: #fff !important;
     }
