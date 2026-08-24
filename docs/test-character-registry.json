@@ -104,6 +104,19 @@
       "feats": [],
       "background": "Acolyte",
       "note": "Created for CLA-107 Eldritch Hex testing. Keep for future Warlock tests."
+    },
+    {
+      "name": "ElusiveRogue",
+      "file": "public/campaigns/test-campaign/ElusiveRogue.json",
+      "ruleset": "2024",
+      "class": "Rogue",
+      "subclass": "Thief",
+      "level": 18,
+      "race": "Human",
+      "subrace": "Human",
+      "feats": [],
+      "background": "Acolyte",
+      "note": "Created for CLA-119 Elusive testing. Keep for future Rogue tests."
     }
   ],
   "monsters": [
