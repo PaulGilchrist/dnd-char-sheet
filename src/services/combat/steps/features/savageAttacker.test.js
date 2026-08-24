@@ -258,7 +258,7 @@ describe('savageAttacker', () => {
         getRuntimeValue.mockReturnValue(null);
 
         const ctx = makeCtx({
-          attack: { damage: '3d6+2' },
+          attack: { damage: '2d6+2d6' },
           playerStats: {
             automation: {
               passives: [
@@ -268,7 +268,7 @@ describe('savageAttacker', () => {
           },
         });
 
-        const prevData = { formula: '3d6+2', total: 15, rolls: [3, 5, 7] };
+        const prevData = { formula: '2d6+2d6', total: 15, rolls: [3, 5, 7] };
         const result = await savageAttacker.handler(ctx, prevData);
 
         expect(result).toEqual({ data: prevData });

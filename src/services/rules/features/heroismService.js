@@ -91,6 +91,12 @@ export async function applyHeroism(heroismAction, playerStats, campaignName, _ma
             source: HEROISM_BUFF_NAME,
             duration: 'concentration',
         });
+        effects.push({
+            target: targetName,
+            effect: 'wisdom_save_advantage',
+            source: HEROISM_BUFF_NAME,
+            duration: 'concentration',
+        });
         setRuntimeValue('campaign', 'targetEffects', effects, campaignName);
 
         addExpiration(casterName, targetName, [

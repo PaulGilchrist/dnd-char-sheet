@@ -611,6 +611,12 @@ function computeConditionEffects(conditions = [], saveModifiers = [], targetEffe
         effects.saveDisadvantage.push('dex');
       }
     }
+    // Handle Heroism — Advantage on Wisdom saving throws
+    if (te.effect === 'wisdom_save_advantage') {
+      effects.saveAdvantageAbilities = [...(effects.saveAdvantageAbilities || []), 'WIS'];
+      effects.saveAdvantageCount = (effects.saveAdvantageCount || 0) + 1;
+      effects.saveAdvantageReasons = [...(effects.saveAdvantageReasons || []), te.source || 'Heroism'];
+    }
   }
 
   return effects

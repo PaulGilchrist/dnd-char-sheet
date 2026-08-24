@@ -432,7 +432,7 @@ const TARGET_EFFECT_DEFINITIONS = [
   {
     effect: 'heroism',
     label: 'Heroism',
-    description: 'Target is immune to Frightened and gains temp HP at start of each turn. Concentration, up to 1 minute.',
+    description: 'Target has Advantage on Wisdom saving throws, is immune to Frightened, and gains temp HP at start of each turn. Concentration, up to 1 minute.',
     icon: 'fa-dragon',
     cls: 'effect-buff',
     group: 'Spells',

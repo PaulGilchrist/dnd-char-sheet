@@ -169,6 +169,29 @@ describe('heroismService', () => {
             });
         });
 
+        it('registers wisdom_save_advantage targetEffect for WIS save advantage', async () => {
+            getRuntimeValue.mockReturnValue([]);
+
+            await applyHeroism(
+                { name: 'Heroism', spell: makeSpell() },
+                PLAYER_STATS,
+                CAMPAIGN_NAME,
+                MAP_NAME,
+                ['Fighter']
+            );
+
+            const effectCalls = setRuntimeValue.mock.calls.filter(call => call[1] === 'targetEffects');
+            expect(effectCalls.length).toBeGreaterThanOrEqual(1);
+            const lastEffectCall = effectCalls[effectCalls.length - 1];
+            const effects = lastEffectCall[2];
+            expect(effects).toContainEqual({
+                target: 'Fighter',
+                effect: 'wisdom_save_advantage',
+                source: 'Heroism',
+                duration: 'concentration',
+            });
+        });
+
         it('adds turnStartEffects for heroism temp HP', async () => {
             getRuntimeValue.mockReturnValue(null);
 

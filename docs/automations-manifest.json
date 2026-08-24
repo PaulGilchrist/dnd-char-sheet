@@ -3178,10 +3178,10 @@
       "handler": "src/services/combat/automation/handlers/spellHandler.js",
       "router": "src/services/combat/automation/routers/spellRouter.js",
       "infoBuilder": "src/services/combat/automation/infoBuilders/spellInfoBuilder.js",
-      "verified": "broken — see .opencode/plans/bug-sp-062-heroism-missing-wis-save-advantage.md",
+      "verified": "verified",
       "class": "Spell",
       "triggerConditions": "Duration: Concentration, up to 1 minute",
-      "expectedBehavior": "A willing creature you touch is imbued with bravery. Until the spell ends, the creature is immune to the Frightened condition and gains Temporary Hit Points equal to your spellcasting ability modifier at the start of each of its turns."
+      "expectedBehavior": "A willing creature you touch is imbued with bravery. Until the spell ends, the creature has Advantage on Wisdom saving throws, is immune to the Frightened condition, and gains Temporary Hit Points equal to your spellcasting ability modifier at the start of each of its turns."
     },
     {
       "id": "SP-063",
