@@ -324,7 +324,7 @@ describe('useAttackDamageResolution - automation damage bonuses', () => {
                 weaponType: 'melee', properties: ['Heavy'], abilityName: 'Strength',
             };
 
-            await resolveAttackDamage(attack);
+            await resolveAttackDamage(attack, { hit: true });
             await tick();
 
             expect(mockRollDamage).toHaveBeenCalledWith(
@@ -358,7 +358,7 @@ describe('useAttackDamageResolution - automation damage bonuses', () => {
                 weaponType: 'melee', properties: ['Heavy'], abilityName: 'Strength',
             };
 
-            await resolveAttackDamage(attack);
+            await resolveAttackDamage(attack, { hit: true });
             await tick();
 
             const rollDamageCalls = mockRollDamage.mock.calls;

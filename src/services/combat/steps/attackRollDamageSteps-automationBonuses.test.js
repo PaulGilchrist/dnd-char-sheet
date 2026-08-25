@@ -134,9 +134,15 @@ describe('buildAttackRollDamageSteps - automationBonuses', () => {
       const frenzyBase = { isMeleeOrUnarmed: true, playerStats: { name: 'TestChar', automation: { actions: [{ type: 'damage_bonus', trigger: 'reckless_attack_hit_while_raging', damageExpression: '2', damageType: '' }] }, level: 5 }, attack: { abilityName: 'Strength' }, formula: '1d8+3', total: 11, rolls: [8, 3] };
       it('applies frenzy when reckless+raging+strength', async () => {
         gvImpl((_, p) => p === '_frenzyUsedRound' ? null : p === 'activeBuffs' ? [{ effect: 'advantage_attacks_advantage_against' }, { damageBonusExpression: '1d6' }] : null);
-        const r = await steps[10].handler(makeCtx({ ...frenzyBase, playerStats: { ...frenzyBase.playerStats, class: { class_levels: [{ rage_damage: 2 }] } } }));
+        const r = await steps[10].handler(makeCtx({ ...frenzyBase, hit: true, playerStats: { ...frenzyBase.playerStats, class: { class_levels: [{ rage_damage: 2 }] } } }));
         expect(r.data.formula).toContain('+ 2');
         expect(setRuntimeValue).toHaveBeenCalledWith('TestChar', '_frenzyUsedRound', 1, 'test-campaign');
+      });
+      it('skips frenzy when attack misses', async () => {
+        gvImpl((_, p) => p === '_frenzyUsedRound' ? null : p === 'activeBuffs' ? [{ effect: 'advantage_attacks_advantage_against' }, { damageBonusExpression: '1d6' }] : null);
+        const r = await steps[10].handler(makeCtx({ ...frenzyBase, hit: false, playerStats: { ...frenzyBase.playerStats, class: { class_levels: [{ rage_damage: 2 }] } } }));
+        expect(r.data.formula).not.toContain('+ 2');
+        expect(setRuntimeValue).not.toHaveBeenCalledWith('TestChar', '_frenzyUsedRound', expect.any(Number), 'test-campaign');
       });
       it('skips frenzy when not reckless', async () => {
         gvImpl((_, p) => p === '_frenzyUsedRound' ? null : p === 'activeBuffs' ? [{ damageBonusExpression: '1d6' }] : null);

@@ -159,9 +159,7 @@ export async function buildAttackContextSync(attack, playerStats, campaignName, 
                     if (frenzyResolved) {
                         frenzyDamageFormula = frenzyResolved;
                     }
-                    if (frenzyOncePerTurn && frenzyDamageFormula) {
-                        setRuntimeValue(playerName, '_frenzyUsedRound', getCurrentCombatRound(), campaignName);
-                    }
+
                 }
             }
         }

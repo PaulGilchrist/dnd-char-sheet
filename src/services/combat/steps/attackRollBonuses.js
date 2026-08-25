@@ -52,7 +52,7 @@ export function buildAutomationBonusesStep() {
       if (frenzy.length > 0) {
         const used = getRuntimeValue(ctx.playerStats.name, '_frenzyUsedRound', ctx.campaignName);
         const round = getCurrentCombatRound();
-        if (used !== round) {
+        if (used !== round && ctx.hit) {
           const buffs = getRuntimeValue(ctx.playerStats.name, 'activeBuffs', ctx.campaignName) || [];
           const isReckless = buffs.some(b => b.effect === 'advantage_attacks_advantage_against');
           const isRaging = buffs.some(b => b.damageBonusExpression);
