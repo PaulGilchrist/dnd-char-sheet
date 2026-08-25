@@ -499,4 +499,82 @@ describe('CharSpecialActions - Feature Choice Modal', () => {
 
   });
 
+  describe('CLA-116 Elemental Fury regression', () => {
+    const elementalFuryAction = {
+      name: 'Elemental Fury',
+      description: 'The might of the elements flows through you.',
+      automation: {
+        type: 'damage_bonus',
+        trigger: 'weapon_or_beast_form_attack_hit',
+        damageExpression: '1d8',
+        damageType: 'Cold Fire Lightning or Thunder',
+        oncePerTurn: true,
+        options: ['Potent Spellcasting', 'Primal Strike'],
+        casting_time: 'passive',
+      },
+    };
+
+    it('opens feature choice modal with Potent Spellcasting and Primal Strike options', async () => {
+      const playerStats = createPlayerStats({
+        specialActions: [elementalFuryAction],
+      });
+      render(<CharSpecialActions playerStats={playerStats} campaignName="test" />);
+
+      fireEvent.click(screen.getByText(/Elemental Fury/));
+
+      await waitFor(() => {
+        expect(screen.getByText('Potent Spellcasting')).toBeInTheDocument();
+        expect(screen.getByText('Primal Strike')).toBeInTheDocument();
+      });
+    });
+
+    it('stores choice under _Elemental_Fury_option runtime key', async () => {
+      const playerStats = createPlayerStats({
+        specialActions: [elementalFuryAction],
+      });
+      render(<CharSpecialActions playerStats={playerStats} campaignName="test" />);
+
+      fireEvent.click(screen.getByText(/Elemental Fury/));
+
+      await waitFor(() => {
+        expect(screen.getByText('Primal Strike')).toBeInTheDocument();
+      });
+
+      fireEvent.click(screen.getByText('Primal Strike'));
+
+      await waitFor(() => {
+        expect(setRuntimeValue).toHaveBeenCalledWith(
+          'TestCharacter',
+          '_Elemental_Fury_option',
+          'Primal Strike',
+          'test'
+        );
+      });
+    });
+
+    it('logs the Elemental Fury choice to the campaign log', async () => {
+      const playerStats = createPlayerStats({
+        specialActions: [elementalFuryAction],
+      });
+      render(<CharSpecialActions playerStats={playerStats} campaignName="test" />);
+
+      fireEvent.click(screen.getByText(/Elemental Fury/));
+
+      await waitFor(() => {
+        expect(screen.getByText('Potent Spellcasting')).toBeInTheDocument();
+      });
+
+      fireEvent.click(screen.getByText('Potent Spellcasting'));
+
+      await waitFor(() => {
+        expect(addEntry).toHaveBeenCalledWith('test', expect.objectContaining({
+          type: 'ability_use',
+          characterName: 'TestCharacter',
+          abilityName: 'Elemental Fury',
+          description: expect.stringContaining('Chose option: Potent Spellcasting'),
+        }));
+      });
+    });
+  });
+
 });
