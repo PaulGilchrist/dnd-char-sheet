@@ -2418,7 +2418,8 @@
       "verified": "verified",
       "class": "Sorcerer",
       "triggerConditions": "Action: passive",
-      "expectedBehavior": "Manipulate chaos to give yourself Advantage on one D20 Test before rolling. Must cast Sorcerer spell with spell slot or finish Long Rest before using again. If you cast Sorcerer spell with spell slot before Long Rest, automatically roll on Wild Magic Surge table."
+      "expectedBehavior": "Manipulate chaos to give yourself Advantage on one D20 Test before rolling. Must cast Sorcerer spell with spell slot or finish Long Rest before using again. If you cast Sorcerer spell with spell slot before Long Rest, automatically roll on Wild Magic Surge table.",
+      "notes": "Test character DraconicSorcerer is Draconic Sorcery — must change class.subclass.name and class.major.name to 'Wild Magic Sorcery' and replace class.major.features with Wild Magic Sorcery features (Wild Magic Surge, Feats of Chaos, Bend Luck) before testing, then revert after."
     },
     {
       "id": "SP-046",
