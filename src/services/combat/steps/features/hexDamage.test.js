@@ -219,7 +219,7 @@ describe('hexDamage', () => {
         const prevData = { formula: '1d8+3', total: 11, rolls: [8, 3] };
         const result = await hexDamage.handler(makeCtx(), prevData);
 
-        expect(result.data.formula).toBe('1d8+3 + 1d6 [Necrotic]');
+        expect(result.data.formula).toBe('1d8+3 + 1d6 [necrotic]');
         expect(result.data.total).toBe(15);
         expect(result.data.rolls).toEqual([8, 3, 4]);
       });
@@ -236,7 +236,7 @@ describe('hexDamage', () => {
         const prevData = { formula: '2d6+4', total: 15, rolls: [3, 5, 4] };
         const result = await hexDamage.handler(makeCtx(), prevData);
 
-        expect(result.data.formula).toBe('2d6+4 + 1d6 [Necrotic]');
+        expect(result.data.formula).toBe('2d6+4 + 1d6 [necrotic]');
         expect(result.data.total).toBe(21);
         expect(result.data.rolls).toEqual([3, 5, 4, 6]);
       });
@@ -253,7 +253,7 @@ describe('hexDamage', () => {
         const prevData = { formula: '1d8+5', total: 13, rolls: [8, 5] };
         const result = await hexDamage.handler(makeCtx(), prevData);
 
-        expect(result.data.formula).toBe('1d8+5 + 1d6 [Necrotic]');
+        expect(result.data.formula).toBe('1d8+5 + 1d6 [necrotic]');
         expect(result.data.total).toBe(14);
         expect(result.data.rolls).toEqual([8, 5, 1]);
       });
@@ -270,7 +270,7 @@ describe('hexDamage', () => {
         const prevData = { formula: '1d8+3', total: 11, rolls: [8, 3] };
         const result = await hexDamage.handler(makeCtx(), prevData);
 
-        expect(result.data.formula).toBe('1d8+3 + 1d6 [Necrotic]');
+        expect(result.data.formula).toBe('1d8+3 + 1d6 [necrotic]');
         expect(result.data.total).toBe(14);
         expect(result.data.rolls).toEqual([8, 3, 3]);
       });
@@ -287,7 +287,7 @@ describe('hexDamage', () => {
         const prevData = { formula: 'flat', total: 5, rolls: [] };
         const result = await hexDamage.handler(makeCtx(), prevData);
 
-        expect(result.data.formula).toBe('flat + 1d6 [Necrotic]');
+        expect(result.data.formula).toBe('flat + 1d6 [necrotic]');
         expect(result.data.total).toBe(10);
         expect(result.data.rolls).toEqual([5]);
       });
@@ -304,7 +304,7 @@ describe('hexDamage', () => {
         const prevData = { formula: '1d8+3', total: 11 };
         const result = await hexDamage.handler(makeCtx(), prevData);
 
-        expect(result.data.formula).toBe('1d8+3 + 1d6 [Necrotic]');
+        expect(result.data.formula).toBe('1d8+3 + 1d6 [necrotic]');
         expect(result.data.total).toBe(14);
         expect(result.data.rolls).toEqual([3]);
       });
@@ -325,7 +325,7 @@ describe('hexDamage', () => {
         const prevData = { formula: '1d10+2', total: 9, rolls: [7, 2] };
         const result = await hexDamage.handler(ctx, prevData);
 
-        expect(result.data.formula).toBe('1d10+2 + 1d6 [Necrotic]');
+        expect(result.data.formula).toBe('1d10+2 + 1d6 [necrotic]');
         expect(result.data.total).toBe(11);
         expect(result.data.rolls).toEqual([7, 2, 2]);
       });

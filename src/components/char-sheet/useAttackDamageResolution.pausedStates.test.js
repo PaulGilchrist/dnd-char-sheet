@@ -143,6 +143,7 @@ describe('useAttackDamageResolution - pipeline paused states', () => {
                 bonusTotal: 6,
                 bonusRolls: [4, 2],
                 _weaponHitOnceKey: '_DivineFury_usedRound',
+                _damageTypeModifier: undefined,
             };
             mockPendingDamageRef.current = pausedCtx;
 
@@ -166,7 +167,34 @@ describe('useAttackDamageResolution - pipeline paused states', () => {
                 bonusTotal: pausedCtx.bonusTotal,
                 bonusRolls: pausedCtx.bonusRolls,
                 oncePerTurnKey: pausedCtx._weaponHitOnceKey,
+                _damageTypeModifier: undefined,
             });
+        });
+
+        it('passes _damageTypeModifier through pendingDamage for Empowered Strikes', async () => {
+            const empMod = { name: 'Empowered Strikes', type: 'damage_type_modifier', trigger: 'unarmed_strike_hit' };
+            const pausedCtx = {
+                _pausedStep: 'damageTypeModifiers',
+                _modalType: 'damageTypeChoice',
+                _modalProps: { title: 'Empowered Strikes — Damage Type', types: ['Force', 'Bludgeoning'] },
+                attack: { name: 'Unarmed Strike', damage: '1d12+3', damageType: 'bludgeoning' },
+                formula: '1d12+3',
+                total: 10,
+                rolls: [7],
+                modifier: 3,
+                _damageTypeModifier: empMod,
+            };
+            mockPendingDamageRef.current = pausedCtx;
+
+            const { resolveAttackDamage } = UseAttackDamageResolution();
+            const attack = { name: 'Unarmed Strike', damage: '1d12+3', damageType: 'bludgeoning' };
+
+            await resolveAttackDamage(attack);
+            await tick();
+
+            expect(mockSetPendingDamage).toHaveBeenCalledWith(
+                expect.objectContaining({ _damageTypeModifier: empMod })
+            );
         });
     });
 

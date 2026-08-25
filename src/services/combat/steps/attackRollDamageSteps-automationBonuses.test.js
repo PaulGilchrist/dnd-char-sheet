@@ -127,7 +127,7 @@ describe('buildAttackRollDamageSteps - automationBonuses', () => {
       });
       it('defaults to Slashing for heavy when no damageType', async () => {
         const r = await steps[10].handler(makeCtx({ isMeleeOrUnarmed: true, playerStats: { automation: { actions: [{ type: 'damage_bonus', trigger: 'melee_heavy_weapon_hit', damageExpression: '1d6' }] } }, attack: { properties: ['Heavy'] }, formula: '1d8+3', total: 11, rolls: [8, 3] }));
-        expect(r.data.formula).toContain('+ 1d6 [Slashing]');
+        expect(r.data.formula).toContain('+ 1d6 [slashing]');
       });
 
       // Frenzy tests

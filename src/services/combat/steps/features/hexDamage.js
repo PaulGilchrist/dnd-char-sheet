@@ -18,7 +18,7 @@ export const hexDamage = {
     if (!r) return { data: prevData };
 
     const data = {
-      formula: `${prevData.formula} + 1d6 [Necrotic]`,
+      formula: `${prevData.formula} + 1d6 [necrotic]`,
       total: prevData.total + r.total,
       rolls: [...(prevData.rolls || []), ...r.rolls],
     };

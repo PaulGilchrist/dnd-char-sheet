@@ -137,7 +137,7 @@ describe('parseExpression', () => {
   });
 
   it('strips square-bracket tags before parsing', () => {
-    expect(parseExpression('2d6[Fire]')).toEqual({ count: 2, sides: 6, modifier: 0 });
+    expect(parseExpression('2d6[fire]')).toEqual({ count: 2, sides: 6, modifier: 0 });
     expect(parseExpression('[Damage] 1d8+3')).toEqual({ count: 1, sides: 8, modifier: 3 });
     expect(parseExpression('1d8 [tag] +3')).toEqual({ count: 1, sides: 8, modifier: 3 });
   });
@@ -394,7 +394,7 @@ describe('formatDamageFormula', () => {
   });
 
   it('strips brackets before formatting', () => {
-    expect(formatDamageFormula('1d8+3[Fire]', [5], false)).toBe('1d8+3 (5)');
+    expect(formatDamageFormula('1d8+3[fire]', [5], false)).toBe('1d8+3 (5)');
   });
 
   it('formats multiple rolls separated by commas', () => {

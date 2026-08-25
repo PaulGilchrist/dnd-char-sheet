@@ -2161,7 +2161,7 @@
       "handler": "src/services/combat/automation/handlers/classFeatureHandler.js",
       "router": "src/services/combat/automation/routers/classFeatureRouter.js",
       "infoBuilder": "src/services/combat/automation/infoBuilders/classFeatureInfoBuilder.js",
-      "verified": "broken — see .opencode/plans/bug-cla-121-empowered-strikes-no-modal.md",
+      "verified": "verified",
       "class": "Monk",
       "triggerConditions": "Trigger: unarmed_strike_hit; Action: passive",
       "expectedBehavior": "Whenever you deal damage with your Unarmed Strike, it can deal Force damage or its normal damage type (your choice)."

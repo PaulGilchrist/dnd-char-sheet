@@ -104,7 +104,7 @@ describe('useModalHandlers - damage type handlers', () => {
             expect(deps.setPendingDamage).toHaveBeenCalledWith(null);
             expect(deps.proceedWithDamage).toHaveBeenCalledWith(
                 expect.any(Object),
-                '1d8 + 1d8 [Radiant]',
+                '1d8 + 1d8 [radiant]',
                 9,
                 [5, 4],
                 0
@@ -152,7 +152,7 @@ describe('useModalHandlers - damage type handlers', () => {
             );
             expect(deps.proceedWithDamage).toHaveBeenLastCalledWith(
                 expect.any(Object),
-                '2d6 + 1d6 [Thunder]',
+                '2d6 + 1d6 [thunder]',
                 10,
                 [3, 4, 3],
                 1
@@ -235,7 +235,7 @@ describe('useModalHandlers - damage type handlers', () => {
             );
             expect(deps.proceedWithDamage).toHaveBeenCalledWith(
                 expect.any(Object),
-                '1d8 + 1d8 [Thunder]',
+                '1d8 + 1d8 [thunder]',
                 9,
                 [5, 4],
                 0
@@ -261,7 +261,7 @@ describe('useModalHandlers - damage type handlers', () => {
             expect(deps.setModalState).toHaveBeenCalledWith({ damageTypeChoice: null });
             expect(deps.proceedWithDamage).toHaveBeenCalledWith(
                 expect.any(Object),
-                '1d6 + 1d6 [Fire]',
+                '1d6 + 1d6 [fire]',
                 8,
                 [5, 3],
                 0
@@ -354,6 +354,29 @@ describe('useModalHandlers - damage type handlers', () => {
                 '_Empowered_Strikes_usedRound',
                 1,
                 'test-campaign'
+            );
+        });
+
+        it('replaces the first damage type annotation in the formula string', () => {
+            const deps = createDeps({
+                pendingDamage: {
+                    attack: { name: 'Unarmed Strike', damageType: 'bludgeoning' },
+                    formula: '1d12+3 [bludgeoning] + 3d6 [fire]',
+                    total: 31,
+                    rolls: [31],
+                    modifier: 3,
+                    _damageTypeModifier: { name: 'Empowered Strikes' },
+                },
+            });
+            const { handleDamageTypeModifierChoice } = useModalHandlers(deps);
+            handleDamageTypeModifierChoice('Force');
+            expect(deps.pendingDamage.attack.damageType).toBe('force');
+            expect(deps.proceedWithDamage).toHaveBeenCalledWith(
+                deps.pendingDamage.attack,
+                '1d12+3 [force] + 3d6 [fire]',
+                31,
+                [31],
+                3
             );
         });
 

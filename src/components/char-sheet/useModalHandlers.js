@@ -95,13 +95,14 @@ export default function useModalHandlers({
         }
         const { attack, formula, total, rolls, modifier, _damageTypeModifier } = pending;
         if (_damageTypeModifier) {
-            attack.damageType = chosenType;
+            attack.damageType = chosenType.toLowerCase();
             const usedKey = `_${_damageTypeModifier.name.replace(/\s+/g, '_')}_usedRound`;
             setRuntimeValue(playerStats.name, usedKey, getCurrentCombatRound(), campaignName);
         }
+        const newFormula = formula.replace(/\[[^\]]+\]/, `[${chosenType.toLowerCase()}]`);
         setModalState({ damageTypeChoice: null });
         setPendingDamage(null);
-        proceedWithDamage(attack, formula, total, rolls, modifier);
+        proceedWithDamage(attack, newFormula, total, rolls, modifier);
     };
 
     const handleDamageTypeModifierSkip = () => {

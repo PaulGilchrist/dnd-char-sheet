@@ -86,8 +86,10 @@ export function buildDamageTypeModifiersStep() {
             }
           }
 
-          ctx.attack.damageType = chosenType;
-          break;
+          return {
+            data: { formula, total, rolls, _damageTypeModifier: mod },
+            modal: { type: 'damageTypeChoice', props: { title: `${mod.name} — Damage Type`, types: mod.options.map(o => o.name) } },
+          };
         }
       }
 

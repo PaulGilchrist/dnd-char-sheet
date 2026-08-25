@@ -243,6 +243,7 @@ export default function useAttackDamageResolution({
                     bonusTotal: paused.bonusTotal,
                     bonusRolls: paused.bonusRolls,
                     oncePerTurnKey: paused._weaponHitOnceKey,
+                    _damageTypeModifier: paused._damageTypeModifier,
                 });
             } else if (paused._modalType === 'divineFury') {
                 setModalState({ divineFuryChoice: paused._modalProps });

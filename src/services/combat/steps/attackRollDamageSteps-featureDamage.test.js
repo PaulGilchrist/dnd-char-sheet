@@ -494,7 +494,7 @@ describe('buildAttackRollDamageSteps - featureRiders, damageTypeModifiers', () =
         );
       });
 
-      it('auto-selects normal type when target has no relevant resistances', async () => {
+      it('returns damageTypeChoice modal when target has no relevant resistances', async () => {
         getRuntimeValue.mockReturnValue(null);
         getCombatContext.mockResolvedValue({ creatures: [] });
         getTargetFromAttacker.mockReturnValue({ resistances: ['Piercing'], immunities: [] });
@@ -523,12 +523,14 @@ describe('buildAttackRollDamageSteps - featureRiders, damageTypeModifiers', () =
         });
         const result = await steps[15].handler(ctx);
 
-        expect(ctx.attack.damageType).toBe('Bludgeoning');
-        expect(result).not.toHaveProperty('popup');
-        expect(addEntry).not.toHaveBeenCalled();
+        expect(result.modal).toEqual({
+          type: 'damageTypeChoice',
+          props: { title: 'Empowered Strikes — Damage Type', types: ['Force', 'Bludgeoning'] },
+        });
+        expect(result.data._damageTypeModifier).toEqual(expect.objectContaining({ name: 'Empowered Strikes' }));
       });
 
-      it('falls back to normal type when target not found', async () => {
+      it('returns damageTypeChoice modal when target not found', async () => {
         getRuntimeValue.mockReturnValue(null);
         getTargetFromAttacker.mockReturnValue(null);
 
@@ -556,8 +558,10 @@ describe('buildAttackRollDamageSteps - featureRiders, damageTypeModifiers', () =
         });
         const result = await steps[15].handler(ctx);
 
-        expect(ctx.attack.damageType).toBe('Bludgeoning');
-        expect(result).not.toHaveProperty('popup');
+        expect(result.modal).toEqual({
+          type: 'damageTypeChoice',
+          props: { title: 'Empowered Strikes — Damage Type', types: ['Force', 'Bludgeoning'] },
+        });
       });
 
       it('uses case-insensitive comparison for resistances', async () => {

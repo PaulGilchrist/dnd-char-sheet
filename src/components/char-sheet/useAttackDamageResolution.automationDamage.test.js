@@ -232,7 +232,7 @@ describe('useAttackDamageResolution - automation damage bonuses', () => {
 
             expect(mockRollDamage).toHaveBeenCalledWith(
                 'Greataxe',
-                expect.stringContaining('1d4 [Force]'),
+                expect.stringContaining('1d4 [force]'),
                 expect.any(Number),
                 expect.any(Array),
                 expect.any(Number),
@@ -261,7 +261,7 @@ describe('useAttackDamageResolution - automation damage bonuses', () => {
 
             expect(mockRollDamage).toHaveBeenCalledWith(
                 'Greataxe',
-                expect.stringContaining('1d4 [Slashing]'),
+                expect.stringContaining('1d4 [slashing]'),
                 expect.any(Number),
                 expect.any(Array),
                 expect.any(Number),
@@ -291,7 +291,7 @@ describe('useAttackDamageResolution - automation damage bonuses', () => {
             expect(mockRollDamage).toHaveBeenCalled();
             const formula = mockRollDamage.mock.calls[0][1];
             expect(formula).toContain('1d8+3');
-            expect(formula).not.toContain('1d4 [Force]');
+            expect(formula).not.toContain('1d4 [force]');
         });
     });
 

@@ -21,7 +21,7 @@ export const huntersMarkDamage = {
     if (!r) return { data: prevData };
 
     const data = {
-      formula: `${prevData.formula} + ${die} [Force]`,
+      formula: `${prevData.formula} + ${die} [force]`,
       total: prevData.total + r.total,
       rolls: [...(prevData.rolls || []), ...r.rolls],
     };
