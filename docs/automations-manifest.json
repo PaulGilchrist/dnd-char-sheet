@@ -2173,7 +2173,7 @@
       "handler": "src/services/combat/automation/handlers/classFeatureHandler.js",
       "router": "src/services/combat/automation/routers/classFeatureRouter.js",
       "infoBuilder": "src/services/combat/automation/infoBuilders/classFeatureInfoBuilder.js",
-      "verified": "broken — see .opencode/plans/bug-cla-122-empowered-spell-no-damage-popup.md",
+      "verified": "verified",
       "class": "Sorcerer",
       "triggerConditions": "Passive; Sorcerer feature",
       "expectedBehavior": "When you roll damage for a sorcerer spell and have the Empowering Spell benefit, you can reroll damage dice that roll 1 or 2. You must use the new rolls. (Sorcerer feature - name may vary in 2024 rules)"

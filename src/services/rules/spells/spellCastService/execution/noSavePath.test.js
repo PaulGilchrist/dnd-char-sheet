@@ -128,4 +128,35 @@ describe('handleNoSavePath', () => {
     expect(executeMagicMissile).toHaveBeenCalled();
     expect(rollAttack).not.toHaveBeenCalled();
   });
+
+  it('resolves autoDamageFormula from damage_at_character_level when spell.damage.formula is absent (CLAUDE-122)', async () => {
+    const { getTargetInfo, rollAttack, spellToHit } = makeDeps();
+    const fireBolt = makeSpell({
+      name: 'Fire Bolt',
+      level: 0,
+      baseLevel: 0,
+      damage: { damage_type: 'Fire', damage_at_character_level: { 1: '1d10', 5: '2d10' } },
+    });
+    await handleNoSavePath(fireBolt, {}, { name: 'Mage', level: 6 }, 'campaign', null, null,
+      getTargetInfo, rollAttack, spellToHit, '');
+    expect(rollAttack).toHaveBeenCalledWith('Fire Bolt', 5, expect.objectContaining({
+      autoDamageFormula: '2d10',
+      damageType: 'Fire',
+      isCantrip: true,
+    }));
+  });
+
+  it('resolves autoDamageFormula from damage_at_slot_level when damage_at_character_level is absent', async () => {
+    const { getTargetInfo, rollAttack, spellToHit } = makeDeps();
+    const acidArrow = makeSpell({
+      name: 'Acid Arrow',
+      level: 1,
+      damage: { damage_type: 'Acid', damage_at_slot_level: { 1: '1d12' } },
+    });
+    await handleNoSavePath(acidArrow, {}, { name: 'Mage', level: 1 }, 'campaign', null, null,
+      getTargetInfo, rollAttack, spellToHit, '');
+    expect(rollAttack).toHaveBeenCalledWith('Acid Arrow', 5, expect.objectContaining({
+      autoDamageFormula: '1d12',
+    }));
+  });
 });

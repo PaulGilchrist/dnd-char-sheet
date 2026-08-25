@@ -1,6 +1,7 @@
 import { rollExpression } from '../../../../dice/diceRoller.js';
 import { isInnateSorceryActive } from '../../../../combat/buffs/buffService.js';
 import { isMagicMissile, executeMagicMissile } from './helpers.js';
+import { resolveSpellDamageAtLevel } from '../../../core/spellDamageUtils.js';
 
 async function handleNoSavePath(spell, metaCtx, playerStats, campaignName, mapName, characters,
     getTargetInfo, rollAttack, spellToHit, damageType) {
@@ -13,7 +14,7 @@ async function handleNoSavePath(spell, metaCtx, playerStats, campaignName, mapNa
     if (spell.attack_type || spell.damage) {
         const target = await getTargetInfo();
         const rollCtx = isInnateSorceryActive(playerStats.name, campaignName) && !metaCtx?.forcedMode ? { ...metaCtx, forcedMode: 'advantage' } : metaCtx;
-        const overchannelFormula = metaCtx?.overchannelFormula || spell.damage?.formula || '';
+        const overchannelFormula = metaCtx?.overchannelFormula || spell.damage?.formula || resolveSpellDamageAtLevel(spell, playerStats.level) || '';
         const overchannelActive = metaCtx?.overchannelActive || false;
         const overchannelUseCount = metaCtx?.overchannelUseCount || 0;
         const finalFormula = metaCtx?.finalFormula || overchannelFormula;
