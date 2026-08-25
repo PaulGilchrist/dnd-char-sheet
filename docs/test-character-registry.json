@@ -104,6 +104,19 @@
       "feats": [],
       "background": "Acolyte",
       "note": "Created for CLA-107 Eldritch Hex testing. Keep for future Warlock tests."
+    },
+    {
+      "name": "VenomStrike",
+      "file": "public/campaigns/test-campaign/VenomStrike.json",
+      "ruleset": "5e",
+      "class": "Rogue",
+      "subclass": "Assassin",
+      "level": 13,
+      "race": "Human",
+      "subrace": "",
+      "feats": ["Magic Initiate"],
+      "background": "Acolyte",
+      "note": "Existing Rogue for Cunning Strike / Envenom Weapons testing."
     }
   ],
   "monsters": [

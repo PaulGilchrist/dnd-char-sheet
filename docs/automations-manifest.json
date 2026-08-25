@@ -2224,8 +2224,8 @@
       "infoBuilder": "src/services/combat/automation/infoBuilders/classFeatureInfoBuilder.js",
       "verified": "not verified",
       "class": "Rogue",
-      "triggerConditions": "Trigger: cunning_strike_poison_save_fail; Once per turn: no",
-      "expectedBehavior": "When using Poison option of Cunning Strike, target also takes 2d6 Poison damage on failed save. This damage ignores Resistance to Poison damage."
+      "triggerConditions": "Rogue uses Cunning Strike with Poison option on a target; target fails its saving throw; Once per turn: no",
+      "expectedBehavior": "When the Rogue uses the Poison option of Cunning Strike against a target and the target fails its saving throw, the target takes an additional 2d6 Poison damage. This Poison damage ignores Resistance to Poison damage (applies full damage even if target has Poison resistance)."
     },
     {
       "id": "CLA-124",

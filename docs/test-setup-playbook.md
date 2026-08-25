@@ -7,6 +7,10 @@ Accumulated known-good recipes for setting up combat automation verification sce
 - **Monsters are created from the ENCOUNTER BUILDER, not the NPCs sidebar.** To get a monster into combat: Encounter Builder view → search `public/data/monsters.json` / `public/data/2024/monsters.json` names → add monster → add to initiative. Do NOT use the NPCs sidebar to create combat targets. (NPCs sidebar entries like the "Goblin" in test-campaign are story NPCs, not valid statblock combatants.)
 - **Clean up after testing:** remove monster creature cards from initiative when a test finishes, then clear change-data cache and campaign log via the Admin panel. Keep test-campaign data clean.
 
+## Manifest ambiguity pattern
+
+Many triggerConditions fields use cryptic internal event names like `cunning_strike_poison_save_fail`. These are ambiguous about *whose* save/roll is being checked. The rule: **the trigger always refers to the target's save, not the character's** — Cunning Strike is the Rogue applying a feature to an enemy, so the enemy's failed save triggers the poison damage. When dispatching subagents, translate these internal names into clear natural language.
+
 ## Recipes
 
 ### Encounter Builder → combat (save-forcing monster setup)

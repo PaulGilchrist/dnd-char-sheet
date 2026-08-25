@@ -99,7 +99,7 @@ export function buildWeaponAttack(opts) {
     }
 
     if (magicBonus || includeAbilityBonusInDamage || extraDamage) {
-        damage += `+${totalDamageModifier}`;
+        damage += totalDamageModifier >= 0 ? `+${totalDamageModifier}` : `${totalDamageModifier}`;
     }
 
     if (magicBonus) {
@@ -146,7 +146,7 @@ export function buildMonkAttacks(opts) {
     return [
         {
             name: 'Unarmed Strike',
-            damage: `${diceStr}+${dexterityBonus}`,
+            damage: `${diceStr}${dexterityBonus >= 0 ? '+' : ''}${dexterityBonus}`,
             damageType: 'Bludgeoning',
             damageFormula: `Damage Formula = Monk Open Hand (${diceStr}) + Dexterity Bonus (${dexterityBonus})`,
             hitBonus: dexterityBonus + proficiency,
@@ -157,7 +157,7 @@ export function buildMonkAttacks(opts) {
         },
         {
             name: 'Unarmed Strike',
-            damage: `${diceStr}+${dexterityBonus}`,
+            damage: `${diceStr}${dexterityBonus >= 0 ? '+' : ''}${dexterityBonus}`,
             damageType: 'Bludgeoning',
             damageFormula: `Damage Formula = Monk Open Hand (${diceStr}) + Dexterity Bonus (${dexterityBonus})`,
             hitBonus: dexterityBonus + proficiency,
@@ -580,7 +580,7 @@ export function getAttacks(allEquipment, allSpells, playerStats) {
           const blessedWarriorHit = hasBlessedWarrior ? 2 : 0;
           attacks.push({
               name: 'Unarmed Strike',
-              damage: `1d4+${strMod}`,
+              damage: `1d4${strMod >= 0 ? '+' : ''}${strMod}`,
               damageType: 'Bludgeoning',
               damageFormula: `Damage Formula = Unarmed Strike (1d4) + Strength Bonus (${strMod})`,
               hitBonus: strMod + proficiency + blessedWarriorHit,
@@ -594,7 +594,7 @@ export function getAttacks(allEquipment, allSpells, playerStats) {
           if (hasTwoWeapon) {
               attacks.push({
                   name: 'Unarmed Strike',
-                  damage: `1d4+${strMod}`,
+                  damage: `1d4${strMod >= 0 ? '+' : ''}${strMod}`,
                   damageType: 'Bludgeoning',
                   damageFormula: `Damage Formula = Unarmed Strike (1d4) + Strength Bonus (${strMod})`,
                   hitBonus: strMod + proficiency + blessedWarriorHit,

@@ -21,7 +21,7 @@ This list exists because subagents kept giving up on fixable problems. Treat it 
 
 ## Primary agent steps
 
-1. Kill all running processes for this project: `lsof -ti:5173 -ti:80 | xargs kill -9 2>/dev/null; pkill -f "node.*server" 2>/dev/null; pkill -f "vite" 2>/dev/null; pkill -f "concurrently" 2>/dev/null`
+1. Kill all running processes for this project: `pkill -9 -f "node.*server" 2>/dev/null; pkill -9 -f "vite" 2>/dev/null; pkill -9 -f "concurrently" 2>/dev/null; pkill -9 -f "dnd-campaign" 2>/dev/null; echo "all killed"`
 2. Read `docs/automations-manifest.json`. Your queue is every row marked "not verified." Also read `docs/test-setup-playbook.md` and `docs/test-character-registry.json` if present (create empty versions if not) — you'll pass both to each subagent.
 3. For each row, one at a time:
 
