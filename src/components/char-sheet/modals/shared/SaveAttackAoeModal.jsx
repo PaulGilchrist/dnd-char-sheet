@@ -3,7 +3,7 @@ import { rollExpression } from '../../../../services/dice/diceRoller.js';
 import { resolveScaling } from '../../../../services/combat/automation/automationExpressions.js';
 import { getRuntimeValue, setRuntimeValue } from '../../../../hooks/runtime/useRuntimeState.js';
 import { sendSavePrompt } from '../../../../services/combat/conditions/savePromptService.js';
-import { applyDamageToTarget, computeDamageAfterSave, computeDamageAfterEvasion, computeDamageAfterResistancesWithDetails, hasEvasionForSave, normalizeSaveType } from '../../../../services/rules/combat/applyDamage.js';
+import { applyDamageToTarget, computeDamageAfterEvasion, computeDamageAfterResistancesWithDetails, hasEvasionForSave, normalizeSaveType } from '../../../../services/rules/combat/applyDamage.js';
 import { addEntry } from '../../../../services/ui/logService.js';
 import { getCombatSummary } from '../../../../services/encounters/combatData.js';
 import { getAllyList } from '../../../../hooks/useAllySelection.js';
@@ -219,13 +219,17 @@ function SaveAttackAoeModal({
         const saveBonus = detail.saveBonus ?? 0;
 
         const rawDamage = detail.rawDamage ?? 0;
-        const finalDamage = computeDamageAfterSave(rawDamage, success, dcSuccess);
+
+        const combatSummary = getCombatSummary(campaignName);
+        const targetChar = (combatSummary?.creatures?.filter(c => c.type === 'player') || []).find(c => c.name === targetName);
+        const evasionEffects = targetChar?.computedStats?.evasionEffects;
+        const normalizedSaveType = normalizeSaveType(detail.saveType);
+        const evasionActive = hasEvasionForSave(evasionEffects, normalizedSaveType);
+        const finalDamage = computeDamageAfterEvasion(rawDamage, success, dcSuccess, evasionActive);
 
         const scalingEntry = resolveScaling(playerStats, action.automation?.scaling);
         const resolvedDamage = scalingEntry?.damage || damage;
         const damageRoll = rollExpression(resolvedDamage);
-
-        const combatSummary = getCombatSummary(campaignName);
 
         if (finalDamage > 0) {
             addEntry(campaignName, {

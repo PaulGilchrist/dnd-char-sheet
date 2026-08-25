@@ -1,5 +1,5 @@
 import { hitTestOverlay } from '../../../models/SpellOverlay.js';
-import { rollSaveForCreature, applyDamageToTarget, computeDamageAfterEvasion } from './applyDamage.js';
+import { rollSaveForCreature, applyDamageToTarget, computeDamageAfterEvasion, hasEvasionForSave, normalizeSaveType } from './applyDamage.js';
 import { sendSavePrompt } from '../../combat/conditions/savePromptService.js';
 import utils from '../../ui/utils.js';
 import { getRuntimeValue, setRuntimeValue } from '../../../hooks/runtime/useRuntimeState.js';
@@ -66,7 +66,8 @@ export function processAoeNpcs(combatSummary, affected, rawDamage, damageType, s
     const advantage = isCircleOfPowerActive(creature.name, campaignName);
     const saveResult = rollSaveForCreature(creature, saveType, saveDc, disadvantage, advantage);
     const isSoulstitchProtected = hasSoulstitchProtection(creature.name, attackerName, campaignName);
-    const hasEvasion = isCircleOfPowerActive(creature.name, campaignName);
+    const evasionEffects = creature.evasionEffects || [];
+    const hasEvasion = hasEvasionForSave(evasionEffects, normalizeSaveType(saveType));
     const finalDamage = isSoulstitchProtected ? 0 : computeDamageAfterEvasion(rawDamage, saveResult.success, dcSuccess, hasEvasion);
     const applyResult = applyDamageToTarget(combatSummary, creature.name, finalDamage, [damageType], campaignName, characters, false, attackerName);
     results.push({

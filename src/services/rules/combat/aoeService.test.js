@@ -17,6 +17,8 @@ vi.mock('./applyDamage.js', () => ({
   computeDamageAfterSave: vi.fn(),
   applyDamageToTarget: vi.fn(),
   computeDamageAfterEvasion: vi.fn(),
+  hasEvasionForSave: vi.fn(),
+  normalizeSaveType: vi.fn(),
 }));
 
 vi.mock('../../combat/conditions/savePromptService.js', () => ({ sendSavePrompt: vi.fn() }));
@@ -44,6 +46,8 @@ import {
   rollSaveForCreature,
   applyDamageToTarget,
   computeDamageAfterEvasion,
+  hasEvasionForSave,
+  normalizeSaveType,
 } from './applyDamage.js';
 import { sendSavePrompt } from '../../combat/conditions/savePromptService.js';
 import utils from '../../ui/utils.js';
@@ -176,6 +180,8 @@ describe('processAoeNpcs', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     getRuntimeValue.mockReturnValue(undefined);
+    hasEvasionForSave.mockReturnValue(false);
+    normalizeSaveType.mockImplementation((t) => t);
   });
 
   it('returns empty array for no affected creatures', () => {
@@ -414,6 +420,52 @@ describe('processAoeNpcs', () => {
     );
 
     expect(rollSaveForCreature).toHaveBeenCalledWith(npc, 'dexterity', 15, true, false);
+  });
+
+  it('applies evasion when creature has matching evasionEffects', () => {
+    const npc = createNpcCreature('Rogue');
+    npc.evasionEffects = [{ saveType: 'DEX' }];
+    hasEvasionForSave.mockReturnValue(true);
+    rollSaveForCreature.mockReturnValue({ success: true, roll: 18, bonus: 3 });
+    computeDamageAfterEvasion.mockReturnValue(0);
+    applyDamageToTarget.mockReturnValue({ finalDamage: 0, newHp: 20 });
+
+    processAoeNpcs(
+      makeCombatSummary([npc]), [{ creature: npc }],
+      6, 'Fire', 15, 'dexterity', 'half', 'TestCampaign', 'TestHero'
+    );
+
+    expect(computeDamageAfterEvasion).toHaveBeenCalledWith(6, true, 'half', true);
+    expect(hasEvasionForSave).toHaveBeenCalledWith([{ saveType: 'DEX' }], 'dexterity');
+  });
+
+  it('does not apply evasion when creature has no evasionEffects', () => {
+    const npc = createNpcCreature('Goblin');
+    rollSaveForCreature.mockReturnValue({ success: true, roll: 15, bonus: 2 });
+    computeDamageAfterEvasion.mockReturnValue(3);
+    applyDamageToTarget.mockReturnValue({ finalDamage: 3, newHp: 17 });
+
+    processAoeNpcs(
+      makeCombatSummary([npc]), [{ creature: npc }],
+      6, 'Fire', 15, 'dexterity', 'half', 'TestCampaign', 'TestHero'
+    );
+
+    expect(computeDamageAfterEvasion).toHaveBeenCalledWith(6, true, 'half', false);
+  });
+
+  it('does not apply evasion when save type does not match evasionEffects', () => {
+    const npc = createNpcCreature('Rogue');
+    npc.evasionEffects = [{ saveType: 'CON' }];
+    rollSaveForCreature.mockReturnValue({ success: true, roll: 15, bonus: 2 });
+    computeDamageAfterEvasion.mockReturnValue(3);
+    applyDamageToTarget.mockReturnValue({ finalDamage: 3, newHp: 17 });
+
+    processAoeNpcs(
+      makeCombatSummary([npc]), [{ creature: npc }],
+      6, 'Fire', 15, 'dexterity', 'half', 'TestCampaign', 'TestHero'
+    );
+
+    expect(computeDamageAfterEvasion).toHaveBeenCalledWith(6, true, 'half', false);
   });
 
   it('consumes disadvantage_on_next_save effect after applying', () => {
