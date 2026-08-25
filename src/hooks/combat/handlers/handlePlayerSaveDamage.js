@@ -192,7 +192,8 @@ export function createPlayerSaveDamageHandler(deps) {
             attackerStats: context?.playerStats,
             targetName: target.name,
         });
-        let saveDisadvantage = (context?.metamagicHeighten || false) || coronaDisadvantage || elderChampionDisadvantage.disadvantage;
+        const hasRiderSaveDisadvantage = targetEffects.some(te => te.effect === 'disadvantage_on_next_save');
+        let saveDisadvantage = (context?.metamagicHeighten || false) || coronaDisadvantage || elderChampionDisadvantage.disadvantage || hasRiderSaveDisadvantage;
         if (restoreBalance && saveDisadvantage) {
             const disadvantageSources = [context?.metamagicHeighten, coronaDisadvantage, elderChampionDisadvantage.disadvantage].filter(Boolean).length;
             saveDisadvantage = disadvantageSources > 1;

@@ -531,4 +531,43 @@ describe('handleNpcSaveDamage - basic save damage flow', () => {
             expect(addEntry).not.toHaveBeenCalled();
         });
     });
+
+    // CLA-109: multi-target (Words of Creation) disadvantage_on_next_save regression
+    describe('multi-target disadvantage_on_next_save', () => {
+        it('applies disadvantage for multi-target when target has disadvantage_on_next_save', async () => {
+            const multiTarget = { name: 'Orc', type: 'npc', currentHp: 20, maxHp: 20 };
+            const combatSummaryWithMulti = {
+                creatures: [
+                    { name: 'Goblin', type: 'npc', currentHp: 13, maxHp: 13 },
+                    multiTarget,
+                ],
+            };
+
+            getRuntimeValue.mockImplementation((key, prop, cn) => {
+                if (key === 'campaign' && prop === 'targetEffects' && cn === 'test-campaign') return [
+                    { target: 'Orc', effect: 'disadvantage_on_next_save' },
+                ];
+                if (key === 'Goblin' && prop === 'activeConditions') return [];
+                return null;
+            });
+
+            rollSaveForCreature
+                .mockReturnValueOnce({ roll: 12, total: 14, bonus: 2, success: false, rawRolls: [12] })
+                .mockReturnValueOnce({ roll: 8, total: 10, bonus: 2, success: false, rawRolls: [8] });
+
+            const context = {
+                ...defaultContext,
+                multiTarget: 'Orc',
+            };
+
+            await callHandler(createFn(), context, combatSummaryWithMulti);
+
+            expect(rollSaveForCreature).toHaveBeenCalledWith(
+                multiTarget, 'dex', 12, true, false
+            );
+            expect(setRuntimeValue).toHaveBeenCalledWith(
+                'campaign', 'targetEffects', expect.any(Array), 'test-campaign'
+            );
+        });
+    });
 });

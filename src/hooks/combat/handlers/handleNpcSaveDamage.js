@@ -513,7 +513,15 @@ export function createNpcSaveDamageHandler(deps) {
                     const multiCharacter = (characters || []).find(c => utils.getName(c.name) === multiTarget.name);
                     const multiSaveModifiers = multiCharacter?.saveModifiers || multiCharacter?.computedStats?.saveModifiers || [];
                     const multiAdvantage = multiSaveModifiers.some(mod => mod.target === 'saving_throw' && mod.effect === 'advantage' && mod.condition === 'against_spell');
-                    const multiSaveResult = rollSaveForCreature(multiTarget, saveType, saveDc, false, multiAdvantage);
+                    let multiDisadvantage = false;
+                    const multiTargetEffects = getRuntimeValue('campaign', 'targetEffects', campaignName) || [];
+                    const multiIdx = multiTargetEffects.findIndex(te => te.target === multiTarget.name && te.effect === 'disadvantage_on_next_save');
+                    if (multiIdx !== -1) {
+                        multiDisadvantage = true;
+                        multiTargetEffects.splice(multiIdx, 1);
+                        setRuntimeValue('campaign', 'targetEffects', [...multiTargetEffects], campaignName);
+                    }
+                    const multiSaveResult = rollSaveForCreature(multiTarget, saveType, saveDc, multiDisadvantage, multiAdvantage);
                     let multiFinalDamage = computeDamageAfterSave(adjustedTotal, multiSaveResult.success, dcSuccess);
                     if (hasPotentFlag && isCantripFlag && multiSaveResult.success && dcSuccess === 'none') {
                         multiFinalDamage = Math.floor(adjustedTotal / 2);

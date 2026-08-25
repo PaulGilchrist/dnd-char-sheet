@@ -27,6 +27,7 @@ vi.mock('../../ui/utils.js', () => ({
 
 vi.mock('../../../hooks/runtime/useRuntimeState.js', () => ({
   getRuntimeValue: vi.fn(),
+  setRuntimeValue: vi.fn(),
   getStore: vi.fn(() => ({ keys: () => [] })),
 }));
 
@@ -46,7 +47,7 @@ import {
 } from './applyDamage.js';
 import { sendSavePrompt } from '../../combat/conditions/savePromptService.js';
 import utils from '../../ui/utils.js';
-import { getRuntimeValue } from '../../../hooks/runtime/useRuntimeState.js';
+import { getRuntimeValue, setRuntimeValue } from '../../../hooks/runtime/useRuntimeState.js';
 
 // ── Helpers ─────────────────────────────────────────────────────
 
@@ -394,6 +395,48 @@ describe('processAoeNpcs', () => {
 
     expect(result[0].soulstitchProtected).toBe(false);
   });
+
+  it('applies disadvantage when target has disadvantage_on_next_save targetEffect', () => {
+    const npc = createNpcCreature('Goblin');
+    getRuntimeValue.mockImplementation((key, prop) => {
+      if (key === 'campaign' && prop === 'targetEffects') {
+        return [{ target: 'Goblin', effect: 'disadvantage_on_next_save' }];
+      }
+      return null;
+    });
+    rollSaveForCreature.mockReturnValue({ success: false, roll: 5, bonus: 0 });
+    computeDamageAfterEvasion.mockReturnValue(6);
+    applyDamageToTarget.mockReturnValue({ finalDamage: 6, newHp: 14 });
+
+    processAoeNpcs(
+      makeCombatSummary([npc]), [{ creature: npc }],
+      6, 'Fire', 15, 'dexterity', 'half', 'TestCampaign', 'TestHero'
+    );
+
+    expect(rollSaveForCreature).toHaveBeenCalledWith(npc, 'dexterity', 15, true, false);
+  });
+
+  it('consumes disadvantage_on_next_save effect after applying', () => {
+    const npc = createNpcCreature('Goblin');
+    getRuntimeValue.mockImplementation((key, prop) => {
+      if (key === 'campaign' && prop === 'targetEffects') {
+        return [{ target: 'Goblin', effect: 'disadvantage_on_next_save' }];
+      }
+      return null;
+    });
+    rollSaveForCreature.mockReturnValue({ success: false, roll: 5, bonus: 0 });
+    computeDamageAfterEvasion.mockReturnValue(6);
+    applyDamageToTarget.mockReturnValue({ finalDamage: 6, newHp: 14 });
+
+    processAoeNpcs(
+      makeCombatSummary([npc]), [{ creature: npc }],
+      6, 'Fire', 15, 'dexterity', 'half', 'TestCampaign', 'TestHero'
+    );
+
+    expect(setRuntimeValue).toHaveBeenCalledWith(
+      'campaign', 'targetEffects', [], 'TestCampaign'
+    );
+  });
 });
 
 // ── Tests for sendAoePlayerSaves ────────────────────────────────
@@ -528,5 +571,25 @@ describe('sendAoePlayerSaves', () => {
       rawDamage: 7,
       disadvantage: false,
     });
+  });
+
+  it('includes disadvantage in prompt when target has disadvantage_on_next_save', () => {
+    utils.guid.mockReturnValue('guid-rider');
+    getRuntimeValue.mockImplementation((key, prop) => {
+      if (key === 'campaign' && prop === 'targetEffects') {
+        return [{ target: 'Hero', effect: 'disadvantage_on_next_save' }];
+      }
+      return null;
+    });
+
+    sendAoePlayerSaves(
+      [{ creature: createPlayerCreature('Hero') }], 8, 'Fire', 15, 'dexterity', 'half',
+      'TestCampaign', 'Fireball', 'Wizard', [], '8d6'
+    );
+
+    expect(sendSavePrompt).toHaveBeenCalledWith('TestCampaign', expect.objectContaining({
+      targetName: 'Hero',
+      disadvantage: true,
+    }));
   });
 });

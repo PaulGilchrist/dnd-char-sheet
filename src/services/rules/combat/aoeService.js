@@ -2,7 +2,7 @@ import { hitTestOverlay } from '../../../models/SpellOverlay.js';
 import { rollSaveForCreature, applyDamageToTarget, computeDamageAfterEvasion } from './applyDamage.js';
 import { sendSavePrompt } from '../../combat/conditions/savePromptService.js';
 import utils from '../../ui/utils.js';
-import { getRuntimeValue } from '../../../hooks/runtime/useRuntimeState.js';
+import { getRuntimeValue, setRuntimeValue } from '../../../hooks/runtime/useRuntimeState.js';
 import { getCoronaSaveDisadvantage } from '../../combat/auras/coronaAuraUtils.js';
 import { isCircleOfPowerActive } from '../../automation/handlers/buffs/circleOfPowerHandler.js';
 
@@ -54,6 +54,15 @@ export function processAoeNpcs(combatSummary, affected, rawDamage, damageType, s
     if (!disadvantage && heightenTarget && creature.name === heightenTarget) {
       disadvantage = true;
     }
+    if (!disadvantage) {
+      const targetEffects = getRuntimeValue('campaign', 'targetEffects') || [];
+      const idx = targetEffects.findIndex(te => te.target === creature.name && te.effect === 'disadvantage_on_next_save');
+      if (idx !== -1) {
+        disadvantage = true;
+        targetEffects.splice(idx, 1);
+        setRuntimeValue('campaign', 'targetEffects', [...targetEffects], campaignName);
+      }
+    }
     const advantage = isCircleOfPowerActive(creature.name, campaignName);
     const saveResult = rollSaveForCreature(creature, saveType, saveDc, disadvantage, advantage);
     const isSoulstitchProtected = hasSoulstitchProtection(creature.name, attackerName, campaignName);
@@ -92,7 +101,9 @@ export function sendAoePlayerSaves(affected, rawDamage, damageType, saveDc, save
       skipRangeCheck: true,
     });
     const heightenDisadvantage = !!(heightenTarget && creature.name === heightenTarget);
-    const disadvantage = coronaResult.disadvantage || heightenDisadvantage;
+    const targetEffects = getRuntimeValue('campaign', 'targetEffects') || [];
+    const hasRiderDisadvantage = targetEffects.some(te => te.target === creature.name && te.effect === 'disadvantage_on_next_save');
+    const disadvantage = coronaResult.disadvantage || heightenDisadvantage || hasRiderDisadvantage;
 
     sendSavePrompt(campaignName, {
       promptId,

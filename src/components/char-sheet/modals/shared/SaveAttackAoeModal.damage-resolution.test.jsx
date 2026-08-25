@@ -395,4 +395,44 @@ describe('SaveAttackAoeModal - Damage resolution', () => {
 
     // @cleaned-by-ai
   });
+
+  // ── CLA-109: Eldritch Strike disadvantage_on_next_save regression ──
+
+  describe('disadvantage_on_next_save targetEffect', () => {
+    it('rolls NPC save with disadvantage when target has disadvantage_on_next_save', async () => {
+      useRuntimeState.getRuntimeValue.mockImplementation((key, prop) => {
+        if (key === 'campaign' && prop === 'targetEffects') {
+          return [{ target: 'Goblin A', effect: 'disadvantage_on_next_save' }];
+        }
+        return null;
+      });
+
+      render(<SaveAttackAoeModal {...makeProps()} />);
+      await confirmSelection('Goblin A');
+
+      const npcCalls = damageRollback.addTargetResult.mock.calls.filter(
+        c => c[1] && c[1].targetName === 'Goblin A'
+      );
+      expect(npcCalls.length).toBeGreaterThan(0);
+    });
+
+    it('consumes disadvantage_on_next_save effect after NPC save', async () => {
+      useRuntimeState.getRuntimeValue.mockImplementation((key, prop) => {
+        if (key === 'campaign' && prop === 'targetEffects') {
+          return [{ target: 'Goblin A', effect: 'disadvantage_on_next_save' }];
+        }
+        return null;
+      });
+
+      render(<SaveAttackAoeModal {...makeProps()} />);
+      await confirmSelection('Goblin A');
+
+      expect(useRuntimeState.setRuntimeValue).toHaveBeenCalledWith(
+        'campaign',
+        'targetEffects',
+        [],
+        'test-campaign'
+      );
+    });
+  });
 });

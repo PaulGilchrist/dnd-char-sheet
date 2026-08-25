@@ -83,7 +83,10 @@ function SaveAttackAoeModal({
                 const carefulSpellProtected = isCarefulSpell && isCarefulAlly(targetName);
                 const isHeightenTarget = heightenTarget === targetName;
 
-                const saveRoll = isHeightenTarget ? Math.min(Math.floor(Math.random() * 20) + 1, Math.floor(Math.random() * 20) + 1) : Math.floor(Math.random() * 20) + 1;
+                const targetEffects = getRuntimeValue('campaign', 'targetEffects') || [];
+                const hasRiderDisadvantage = targetEffects.some(te => te.target === targetName && te.effect === 'disadvantage_on_next_save');
+
+                const saveRoll = (isHeightenTarget || hasRiderDisadvantage) ? Math.min(Math.floor(Math.random() * 20) + 1, Math.floor(Math.random() * 20) + 1) : Math.floor(Math.random() * 20) + 1;
                 const saveTotal = saveRoll + saveBonus;
                 const success = saveTotal >= saveDc;
                 const damageRoll = rollExpression(resolvedDamage);
@@ -131,6 +134,11 @@ function SaveAttackAoeModal({
                         finalDamage: finalDamage,
                         timestamp: Date.now(),
                     }).catch((e) => { console.error('[SaveAttackAoeModal] Error logging save:', e); });
+                }
+
+                if (hasRiderDisadvantage) {
+                    const updatedEffects = targetEffects.filter(te => !(te.target === targetName && te.effect === 'disadvantage_on_next_save'));
+                    setRuntimeValue('campaign', 'targetEffects', updatedEffects, campaignName);
                 }
 
                 addTargetResult(campaignName, {
