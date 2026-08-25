@@ -574,7 +574,7 @@
             },
             {
                 "name": "Hill Giant",
-                "description": "When you hit a Large or smaller creature with an attack roll and deal damage to it, you can give that target the Prone condition. You can use this a number of times equal to your Proficiency Bonus, and you regain all expended uses when you finish a Long Rest.",
+                "description": "When you hit a Large or smaller creature with an attack roll and deal damage to it, you can give that creature Disadvantage on its next attack roll before the end of its next turn. You can use this a number of times equal to your Proficiency Bonus, and you regain all expended uses when you finish a Long Rest.",
                 "languages": [
                     "Common",
                     "Giant"
@@ -582,11 +582,11 @@
                 "traits": [
                     {
                         "name": "Hill's Tumble",
-                        "description": "When you hit a Large or smaller creature with an attack roll and deal damage to it, you can give that target the Prone condition. You can use this a number of times equal to your Proficiency Bonus, and you regain all expended uses when you finish a Long Rest.",
+                        "description": "When you hit a Large or smaller creature with an attack roll and deal damage to it, you can give that creature Disadvantage on its next attack roll before the end of its next turn. You can use this a number of times equal to your Proficiency Bonus, and you regain all expended uses when you finish a Long Rest.",
                         "automation": {
                             "type": "hills_tumble",
                             "trigger": "melee_hit",
-                            "effect": "prone",
+                            "effect": "disadvantage_next_attack",
                             "uses": "proficiency_bonus",
                             "recharge": "long_rest",
                             "casting_time": "1 action"

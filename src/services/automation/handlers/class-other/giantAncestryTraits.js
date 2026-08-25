@@ -6,6 +6,7 @@ import { getCombatContext } from '../../../rules/combat/damageUtils.js';
 import { applyDamageToTarget } from '../../../rules/combat/applyDamage.js';
 import { applyHealingToTarget } from '../../../rules/combat/applyHealing.js';
 import { getRuntimeUsesKey } from './giantAncestryOptions.js';
+import { addExpiration } from '../../../rules/effects/expirations.js';
 
 export async function handleCloudsJauntDirect(action, playerStats, campaignName) {
     const usesKey = getRuntimeUsesKey("Cloud's Jaunt");
@@ -350,38 +351,45 @@ export async function handleHillsTumbleDirect(action, playerStats, campaignName)
         };
     }
 
-    const storedConds = getRuntimeValue(targetName, 'activeConditions', campaignName) || [];
-    if (storedConds.includes('prone')) {
-        return {
-            type: 'popup',
-            payload: {
-                type: 'automation_info',
-                name: optName,
-                description: `${targetName} is already prone.`,
-                automation: action.automation,
-            },
-        };
-    }
-
     await setRuntimeValue(playerStats.name, usesKey, currentUses - 1, campaignName);
 
-    const newConds = Array.isArray(storedConds) ? [...storedConds, 'prone'] : ['prone'];
-    await setRuntimeValue(targetName, 'activeConditions', newConds, campaignName);
+    const allTargetEffects = [...getRuntimeValue('campaign', 'targetEffects') || []];
+    const existingIndex = allTargetEffects.findIndex(
+        te => te.target === targetName && te.effect === 'disadvantage_next_attack' && te.source === playerStats.name
+    );
+
+    const tumbleEffect = {
+        target: targetName,
+        source: playerStats.name,
+        effect: 'disadvantage_next_attack',
+    };
+
+    if (existingIndex >= 0) {
+        allTargetEffects[existingIndex] = tumbleEffect;
+    } else {
+        allTargetEffects.push(tumbleEffect);
+    }
+
+    setRuntimeValue('campaign', 'targetEffects', allTargetEffects, campaignName);
+
+    addExpiration(playerStats.name, targetName, [
+        { type: 'remove_target_effect', effectKey: 'disadvantage_next_attack', source: playerStats.name },
+    ], campaignName, undefined, playerStats.name);
 
     await addEntry(campaignName, {
         type: 'ability_use',
         characterName: playerStats.name,
         abilityName: optName,
-        description: `${playerStats.name} used ${optName} to knock ${targetName} prone.`,
+        description: `${playerStats.name} used ${optName} to give ${targetName} Disadvantage on their next attack roll.`,
     }).catch((e) => { console.error("[giantAncestry] Error:", e); });
 
     await addEntry(campaignName, {
         type: 'condition',
         characterName: playerStats.name,
         targetName,
-        condition: 'prone',
+        condition: 'Disadvantage on next attack',
         source: optName,
-        description: `${playerStats.name} used ${optName} to apply the prone condition to ${targetName}.`,
+        description: `${playerStats.name} used ${optName} to apply Disadvantage on the next attack roll to ${targetName} until the end of their next turn.`,
     }).catch((e) => { console.error("[giantAncestry] Error:", e); });
 
     return {
@@ -390,7 +398,7 @@ export async function handleHillsTumbleDirect(action, playerStats, campaignName)
             type: 'automation_info',
             name: optName,
             automationType: 'hills_tumble',
-            description: `${optName}: Knocked <strong>${targetName}</strong> prone.`,
+            description: `${optName}: <strong>${targetName}</strong> has Disadvantage on its next attack roll until the end of its next turn.`,
             automation: action.automation,
         },
     };

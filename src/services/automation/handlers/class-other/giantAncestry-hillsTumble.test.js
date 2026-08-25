@@ -10,6 +10,10 @@ vi.mock('../../../../hooks/runtime/useRuntimeState.js', () => ({
     setRuntimeValue: vi.fn(async () => {}),
 }));
 
+vi.mock('../../../rules/effects/expirations.js', () => ({
+    addExpiration: vi.fn(),
+}));
+
 vi.mock('../../../dice/diceRoller.js', () => ({
     rollExpression: vi.fn((_expr) => ({ total: 5, rolls: [5], modifier: 0 })),
 }));
@@ -67,21 +71,26 @@ function makeUsesMock(usesKey, value) {
 
 describe('giantAncestry selection & dispatch', () => {
     describe('handleHillsTumble', () => {
-        const option = { name: "Hill's Tumble", type: 'auto_effect', trigger: 'melee_hit', effect: 'prone' };
+        const option = { name: "Hill's Tumble", type: 'auto_effect', trigger: 'melee_hit', effect: 'disadvantage_next_attack' };
 
-        it('knocks target prone', async () => {
-            getRuntimeValue.mockImplementation((_name, key, campaign) => {
+        it('applies disadvantage_next_attack targetEffect', async () => {
+            getRuntimeValue.mockImplementation((_name, key, _campaign) => {
                 if (key === 'hillsTumbleUses') return 3;
-                if (campaign && key === 'activeConditions') return [];
                 return null;
             });
             const result = await handleHillsTumble(makeAction(), makePlayerStats(), 'campaign', option);
 
             expect(result.type).toBe('popup');
             expect(result.payload.description).toContain('Goblin');
-            expect(result.payload.description).toContain('prone');
+            expect(result.payload.description).toContain('Disadvantage');
             expect(setRuntimeValue).toHaveBeenCalledWith('TestHero', 'hillsTumbleUses', 2, 'campaign');
-            expect(setRuntimeValue).toHaveBeenCalledWith('Goblin', 'activeConditions', ['prone'], 'campaign');
+            expect(setRuntimeValue).toHaveBeenCalledWith('campaign', 'targetEffects', expect.arrayContaining([
+                expect.objectContaining({
+                    target: 'Goblin',
+                    effect: 'disadvantage_next_attack',
+                    source: 'TestHero',
+                }),
+            ]), 'campaign');
             expect(addEntry).toHaveBeenCalledWith('campaign', expect.objectContaining({
                 type: 'ability_use',
                 abilityName: "Hill's Tumble",
@@ -89,7 +98,7 @@ describe('giantAncestry selection & dispatch', () => {
             expect(addEntry).toHaveBeenCalledWith('campaign', expect.objectContaining({
                 type: 'condition',
                 targetName: 'Goblin',
-                condition: 'prone',
+                condition: 'Disadvantage on next attack',
                 source: "Hill's Tumble",
             }));
         });
@@ -145,16 +154,26 @@ describe('giantAncestry selection & dispatch', () => {
             expect(result.payload.description).toContain('requires a target');
         });
 
-        it('returns popup when target is already prone', async () => {
-            getRuntimeValue.mockImplementation((_name, key, campaign) => {
+        it('replaces existing disadvantage_next_attack from same source', async () => {
+            getRuntimeValue.mockImplementation((_name, key) => {
                 if (key === 'hillsTumbleUses') return 3;
-                if (campaign && key === 'activeConditions') return ['prone'];
+                if (key === 'targetEffects') return [
+                    { target: 'Goblin', effect: 'disadvantage_next_attack', source: 'TestHero' },
+                ];
                 return null;
             });
             const result = await handleHillsTumble(makeAction(), makePlayerStats(), 'campaign', option);
 
             expect(result.type).toBe('popup');
-            expect(result.payload.description).toContain('already prone');
+            expect(result.payload.description).toContain('Disadvantage');
+            expect(setRuntimeValue).toHaveBeenCalledWith('TestHero', 'hillsTumbleUses', 2, 'campaign');
+            expect(setRuntimeValue).toHaveBeenCalledWith('campaign', 'targetEffects', expect.arrayContaining([
+                expect.objectContaining({
+                    target: 'Goblin',
+                    effect: 'disadvantage_next_attack',
+                    source: 'TestHero',
+                }),
+            ]), 'campaign');
         });
 
         it('returns info popup when no uses remaining', async () => {
@@ -172,26 +191,31 @@ describe('giantAncestry selection & dispatch', () => {
             automation: {
                 type: 'hills_tumble',
                 trigger: 'melee_hit',
-                effect: 'prone',
+                effect: 'disadvantage_next_attack',
                 uses: 'proficiency_bonus',
                 recharge: 'long_rest',
                 casting_time: '1 action',
             },
         };
 
-        it('knocks target prone', async () => {
-            getRuntimeValue.mockImplementation((_name, key, campaign) => {
+        it('applies disadvantage_next_attack targetEffect', async () => {
+            getRuntimeValue.mockImplementation((_name, key, _campaign) => {
                 if (key === 'hillsTumbleUses') return 3;
-                if (campaign && key === 'activeConditions') return [];
                 return null;
             });
             const result = await handleHillsTumbleDirect(directAction, makePlayerStats(), 'campaign');
 
             expect(result.type).toBe('popup');
             expect(result.payload.description).toContain('Goblin');
-            expect(result.payload.description).toContain('prone');
+            expect(result.payload.description).toContain('Disadvantage');
             expect(setRuntimeValue).toHaveBeenCalledWith('TestHero', 'hillsTumbleUses', 2, 'campaign');
-            expect(setRuntimeValue).toHaveBeenCalledWith('Goblin', 'activeConditions', ['prone'], 'campaign');
+            expect(setRuntimeValue).toHaveBeenCalledWith('campaign', 'targetEffects', expect.arrayContaining([
+                expect.objectContaining({
+                    target: 'Goblin',
+                    effect: 'disadvantage_next_attack',
+                    source: 'TestHero',
+                }),
+            ]), 'campaign');
             expect(addEntry).toHaveBeenCalledWith('campaign', expect.objectContaining({
                 type: 'ability_use',
                 abilityName: "Hill's Tumble",
@@ -199,7 +223,7 @@ describe('giantAncestry selection & dispatch', () => {
             expect(addEntry).toHaveBeenCalledWith('campaign', expect.objectContaining({
                 type: 'condition',
                 targetName: 'Goblin',
-                condition: 'prone',
+                condition: 'Disadvantage on next attack',
                 source: "Hill's Tumble",
             }));
         });
@@ -255,16 +279,26 @@ describe('giantAncestry selection & dispatch', () => {
             expect(result.payload.description).toContain('requires a target');
         });
 
-        it('returns popup when target is already prone', async () => {
-            getRuntimeValue.mockImplementation((_name, key, campaign) => {
+        it('replaces existing disadvantage_next_attack from same source', async () => {
+            getRuntimeValue.mockImplementation((_name, key) => {
                 if (key === 'hillsTumbleUses') return 3;
-                if (campaign && key === 'activeConditions') return ['prone'];
+                if (key === 'targetEffects') return [
+                    { target: 'Goblin', effect: 'disadvantage_next_attack', source: 'TestHero' },
+                ];
                 return null;
             });
             const result = await handleHillsTumbleDirect(directAction, makePlayerStats(), 'campaign');
 
             expect(result.type).toBe('popup');
-            expect(result.payload.description).toContain('already prone');
+            expect(result.payload.description).toContain('Disadvantage');
+            expect(setRuntimeValue).toHaveBeenCalledWith('TestHero', 'hillsTumbleUses', 2, 'campaign');
+            expect(setRuntimeValue).toHaveBeenCalledWith('campaign', 'targetEffects', expect.arrayContaining([
+                expect.objectContaining({
+                    target: 'Goblin',
+                    effect: 'disadvantage_next_attack',
+                    source: 'TestHero',
+                }),
+            ]), 'campaign');
         });
 
         it('returns info popup when no uses remaining', async () => {
