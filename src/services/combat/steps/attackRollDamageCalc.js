@@ -15,7 +15,7 @@ export function buildRollBaseDamageStep() {
       if (wasCrit && ctx.setPopupHtml) ctx.setPopupHtml(null);
 
       let formula = ctx.autoFormulaOverride || ctx.attack.damage;
-      const baseDamageType = ctx.attack?.damageType || '';
+      const baseDamageType = (ctx.attack?.damageType || '').toLowerCase();
       if (baseDamageType) {
         formula = `${formula} [${baseDamageType}]`;
       }
@@ -183,7 +183,7 @@ export function buildTargetEffectsStep() {
       for (const te of riders) {
         const r = rollExpression(te.damageExpression);
         if (r) {
-          const dt = te.label || te.damageType || ctx.attack?.damageType || 'same_as_weapon';
+          const dt = te.label || (te.damageType || ctx.attack?.damageType || 'same_as_weapon').toLowerCase();
           formula += ` + ${te.damageExpression} [${dt}]`;
           total += r.total;
           rolls = [...rolls, ...r.rolls];
@@ -208,13 +208,14 @@ export function buildSuperiorityDieBonusesStep() {
       let formula = ctx.formula;
       let total = ctx.total;
       let rolls = [...(ctx.rolls || [])];
-      const defaultDmg = ctx.attack?.damageType || 'same_as_weapon';
+      const defaultDmg = (ctx.attack?.damageType || 'same_as_weapon').toLowerCase();
 
       const consume = (key, label) => {
         const raw = getRuntimeValue(ctx.playerStats.name, key, ctx.campaignName);
         if (raw && Number(raw) > 0) {
           const val = Number(raw);
-          formula += ` + ${val} [${label}]`;
+          const labelLower = typeof label === 'string' && !['Bardic Inspiration'].includes(label) ? label.toLowerCase() : label;
+          formula += ` + ${val} [${labelLower}]`;
           total += val;
           rolls = [...rolls, val];
           setRuntimeValue(ctx.playerStats.name, key, null, ctx.campaignName);

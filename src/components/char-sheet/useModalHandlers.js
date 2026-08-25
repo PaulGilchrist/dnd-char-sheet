@@ -34,7 +34,7 @@ export default function useModalHandlers({
             return;
         }
         const { attack, formula, total, rolls, modifier, bonusExpr, bonusTotal, bonusRolls } = pending;
-        const newFormula = `${formula} + ${bonusExpr} [${chosenType}]`;
+        const newFormula = `${formula} + ${bonusExpr} [${chosenType.toLowerCase()}]`;
         const newTotal = total + bonusTotal;
         const newRolls = [...rolls, ...bonusRolls];
         const playerName = playerStats.name;
@@ -64,7 +64,7 @@ export default function useModalHandlers({
             return;
         }
         const { attack, formula, total, rolls, modifier, bonusExpr, bonusTotal, bonusRolls, oncePerTurnKey } = pending;
-        const newFormula = `${formula} + ${bonusExpr} [${chosenType}]`;
+        const newFormula = `${formula} + ${bonusExpr} [${chosenType.toLowerCase()}]`;
         const newTotal = total + bonusTotal;
         const newRolls = [...rolls, ...bonusRolls];
         if (oncePerTurnKey) {

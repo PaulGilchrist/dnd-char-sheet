@@ -20,7 +20,7 @@ export function buildAutomationBonusesStep() {
 
       for (const a of actions.filter(x => x.type === 'damage_bonus' && x.trigger === 'melee_weapon_hit')) {
         const r = rollExpression(a.damageExpression);
-        if (r) { formula += ` + ${a.damageExpression} [${a.damageType}]`; total += r.total; rolls = [...rolls, ...r.rolls]; }
+        if (r) { formula += ` + ${a.damageExpression} [${a.damageType.toLowerCase()}]`; total += r.total; rolls = [...rolls, ...r.rolls]; }
       }
 
       for (const a of actions.filter(x => x.type === 'damage_bonus' && x.trigger === 'monk_weapon_or_unarmed_hit')) {
@@ -38,8 +38,8 @@ export function buildAutomationBonusesStep() {
           const evalResult = evaluateAutoExpression(a.damageExpression, ctx.playerStats);
           const bonusValue = r ? r.total : evalResult;
           if (bonusValue) {
-            const dt = a.damageType || ctx.attack?.damageType || 'Slashing';
-            const label = dt === 'same_as_weapon' ? (a.name || 'Slashing') : dt;
+            const dt = (a.damageType || ctx.attack?.damageType || 'Slashing').toLowerCase();
+            const label = dt === 'same_as_weapon' ? (a.name || 'slashing') : dt;
             const displayExpr = r ? a.damageExpression : String(bonusValue);
             formula += ` + ${displayExpr} [${label}]`;
             total += bonusValue;
@@ -67,7 +67,7 @@ export function buildAutomationBonusesStep() {
               const resolvedExpr = resolveDiceExpression(a.damageExpression, ctx.playerStats);
               const r = rollExpression(resolvedExpr);
               if (r) {
-                const dt = a.damageType === 'same_as_weapon' ? (ctx.attack?.damageType || 'Slashing') : a.damageType;
+                const dt = a.damageType === 'same_as_weapon' ? (ctx.attack?.damageType || 'Slashing').toLowerCase() : a.damageType.toLowerCase();
                 formula += ` + ${resolvedExpr} [${dt}]`;
                 total += r.total;
                 rolls = [...rolls, ...r.rolls];
@@ -123,7 +123,7 @@ export function buildAutomationBonusesStep() {
         if (rider) {
           const r = rollExpression(rider.damageExpression);
           if (r) {
-            formula += ` + ${rider.damageExpression} [${rider.damageType || 'same_as_weapon'}]`;
+            formula += ` + ${rider.damageExpression} [${(rider.damageType || 'same_as_weapon').toLowerCase()}]`;
             total += r.total;
             rolls = [...rolls, ...r.rolls];
           }
@@ -212,7 +212,7 @@ export function buildWeaponHitBonusesStep() {
             modal: { type: 'damageTypeChoice', props: { title: `${bonus.name} — Damage Type`, types: dt.split(/\s+or\s+/).flatMap(t => t.split(/\s+/)).filter(Boolean) } },
           };
         }
-        formula += ` + ${bonus.damageExpression} [${dt}]`;
+        formula += ` + ${bonus.damageExpression} [${dt.toLowerCase()}]`;
         total += r.total;
         rolls = [...rolls, ...r.rolls];
 
@@ -308,7 +308,8 @@ export function buildCelestialRevelationStep() {
 
       const r = rollExpression(rider.damageExpression);
       if (r) {
-        const formula = `${ctx.formula} + ${rider.damageExpression} [${rider.damageType || ''}]`;
+        const dt = (rider.damageType || '').toLowerCase();
+        const formula = `${ctx.formula} + ${rider.damageExpression} [${dt}]`;
         const total = ctx.total + r.total;
         const rolls = [...(ctx.rolls || []), ...r.rolls];
         if (rider.oncePerTurn) setRuntimeValue(ctx.playerStats.name, usedKey, round, ctx.campaignName);
