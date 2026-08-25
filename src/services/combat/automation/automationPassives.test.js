@@ -425,6 +425,31 @@ describe('getDamageResistances', () => {
   it('handles null automation', () => {
     expect(getDamageResistances({ automation: null })).toEqual([])
   })
+
+  it('collects resistance from damage_type_choice with fiendish_resilience effect', () => {
+    getChosenRuntimeValue.mockReturnValue('Fire')
+    const playerStats = {
+      automation: {
+        passives: [
+          { type: 'passive_immunity', damageResistance: ['acid'] },
+          { type: 'damage_type_choice', effect: 'fiendish_resilience', name: 'Fiendish Resilience' },
+        ],
+      },
+    }
+    expect(getDamageResistances(playerStats)).toEqual(['acid', 'Fire'])
+  })
+
+  it('returns empty for fiendish_resilience when no chosen type', () => {
+    getChosenRuntimeValue.mockReturnValue(undefined)
+    const playerStats = {
+      automation: {
+        passives: [
+          { type: 'damage_type_choice', effect: 'fiendish_resilience', name: 'Fiendish Resilience' },
+        ],
+      },
+    }
+    expect(getDamageResistances(playerStats)).toEqual([])
+  })
 })
 
 // ── isResilientSphereActive / getResilientSphereSource ────────────

@@ -278,6 +278,12 @@ export function getDamageResistances(playerStats) {
         if (passive.type === 'passive_buff' && Array.isArray(passive.resistances)) {
             resistances.push(...passive.resistances);
         }
+        if (passive.type === 'damage_type_choice' && passive.effect === 'fiendish_resilience') {
+            const chosenType = getChosenRuntimeValue(playerStats, passive.name, 'chosenType');
+            if (chosenType) {
+                resistances.push(chosenType);
+            }
+        }
     }
     return [...new Set(resistances)];
 }
