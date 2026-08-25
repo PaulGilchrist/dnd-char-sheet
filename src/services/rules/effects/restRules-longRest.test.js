@@ -352,6 +352,29 @@ describe('applyLongRest', () => {
       await applyLongRest(makeStats(), CAMPAIGN)
       expect(rollD20).not.toHaveBeenCalled()
     })
+
+    it('refreshes Portent dice when feature is in passives (5e ruleset)', async () => {
+      const stats = makeStats({ automation: { passives: [{ type: 'passive_buff', name: 'Portent', effect: 'portent_d20_pool' }] } })
+      await applyLongRest(stats, CAMPAIGN)
+
+      expect(rollD20).toHaveBeenCalledTimes(2)
+      expect(setRuntimeValue).toHaveBeenCalledWith(
+        'Test Hero', 'portentDice', JSON.stringify([10, 10]), CAMPAIGN, true,
+      )
+    })
+
+    it('refreshes 3 Portent dice at level 14+ when feature is in passives (5e ruleset)', async () => {
+      const stats14 = makeStats({
+        level: 14,
+        automation: { passives: [{ type: 'passive_buff', name: 'Portent', effect: 'portent_d20_pool' }] },
+      })
+      await applyLongRest(stats14, CAMPAIGN)
+
+      expect(rollD20).toHaveBeenCalledTimes(3)
+      expect(setRuntimeValue).toHaveBeenCalledWith(
+        'Test Hero', 'portentDice', JSON.stringify([10, 10, 10]), CAMPAIGN, true,
+      )
+    })
   })
 
   describe('Arcane Ward', () => {

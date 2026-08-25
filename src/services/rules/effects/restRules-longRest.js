@@ -486,6 +486,8 @@ export async function applyLongRest(playerStats, campaignName) {
     // Refresh Portent dice on long rest
     const hasPortent = (playerStats.automation?.specialActions ?? []).some(
       a => a.type === 'portent' || a.name === 'Portent'
+    ) || (playerStats.automation?.passives ?? []).some(
+      a => a.type === 'portent' || a.name === 'Portent'
     )
     if (hasPortent) {
       const maxDice = playerStats.level >= 14 ? 3 : 2
