@@ -2270,7 +2270,7 @@
       "handler": "src/services/combat/automation/handlers/classFeatureHandler.js",
       "router": "src/services/combat/automation/routers/classFeatureRouter.js",
       "infoBuilder": "src/services/combat/automation/infoBuilders/classFeatureInfoBuilder.js",
-      "verified": "broken — see .opencode/plans/bug-cla-126-evocation-savant-missing-spellbook.md",
+      "verified": "verified",
       "class": "Wizard",
       "triggerConditions": "Passive",
       "expectedBehavior": "Choose two Wizard spells from Evocation school (no higher than level 2), add to spellbook for free. Whenever you gain access to a new level of spell slots, add one Evocation school spell to spellbook for free if you can't cast it. (Wizard Evoker - Evocation Savant)"
