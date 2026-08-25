@@ -15,7 +15,7 @@ vi.mock('../../services/combat/automation/automationService.js', () => ({
   isInteractiveAutomation: vi.fn((action) => {
     if (!action?.automation) return false;
     const auto = Array.isArray(action.automation) ? action.automation[0] : action.automation;
-    const interactiveTypes = ['teleport', 'signature_spells', 'spell_mastery', 'combat_superiority', 'weapon_kind_mastery', 'weapon_mastery_choice', 'defensive_tactics', 'hunter_prey', 'animal_aspect', 'passive_rule', 'temp_hp_buff', 'brew_poison', 'stride_of_the_elements', 'elemental_epitome', 'destructive_stride', 'quivering_palm', 'steps_of_the_fey_taunt', 'hurl_through_hell', 'clairvoyant_combatant', 'portent', 'boon_of_energy_resistance', 'generic', 'silent', 'resource_pool', 'natural_recovery', 'circle_of_the_land', 'elemental_affinity', 'wild_magic_surge', 'stride_of_elements', 'celestial_resilience', 'fiendish_resilience', 'heroic_inspiration_buff', 'magical_cunning', 'tactical_mind', 'concentration_bonus_attack', 'font_of_inspiration', 'combat_stance', 'damage_type_choice', 'wild_magic_tamed', 'feats_of_chaos', 'initiative_action', 'magical_cunning', 'bewitching_magic', 'lucky_point', 'telekinetic_shove'];
+    const interactiveTypes = ['teleport', 'signature_spells', 'spell_mastery', 'combat_superiority', 'weapon_kind_mastery', 'weapon_mastery_choice', 'defensive_tactics', 'hunter_prey', 'animal_aspect', 'passive_rule', 'temp_hp_buff', 'brew_poison', 'stride_of_the_elements', 'elemental_epitome', 'destructive_stride', 'quivering_palm', 'steps_of_the_fey_taunt', 'hurl_through_hell', 'clairvoyant_combatant', 'portent', 'boon_of_energy_resistance', 'generic', 'silent', 'resource_pool', 'natural_recovery', 'circle_of_the_land', 'elemental_affinity', 'wild_magic_surge', 'stride_of_elements', 'celestial_resilience', 'fiendish_resilience', 'fiendish_legacy', 'heroic_inspiration_buff', 'magical_cunning', 'tactical_mind', 'concentration_bonus_attack', 'font_of_inspiration', 'combat_stance', 'damage_type_choice', 'wild_magic_tamed', 'feats_of_chaos', 'initiative_action', 'magical_cunning', 'bewitching_magic', 'lucky_point', 'telekinetic_shove'];
     if (auto.type === 'passive_rule') {
       const interactiveEffects = ['abjuration_savant', 'divination_savant', 'evocation_savant', 'illusion_savant', 'bonus_healing'];
       return interactiveEffects.includes(auto.effect);
@@ -284,6 +284,16 @@ vi.mock('./modals/FiendishResilienceModal.jsx', () => ({
   default: ({ onClose }) => (
     <div data-testid="fiendish-resilience-modal">
       <span>Fiendish Resilience</span>
+      <button onClick={onClose}>Close</button>
+    </div>
+  ),
+}));
+
+// Mock FiendishLegacyModal
+vi.mock('./modals/FiendishLegacyModal.jsx', () => ({
+  default: ({ onClose }) => (
+    <div data-testid="fiendish-legacy-modal">
+      <span>Fiendish Legacy</span>
       <button onClick={onClose}>Close</button>
     </div>
   ),
@@ -573,6 +583,14 @@ const modalTests = [
     automation: { type: 'fiendish_resilience' },
     payload: { action: { name: 'Fiendish Resilience' }, playerStats: basePlayerStats, campaignName: 'test' },
     testId: 'single-resistance-modal',
+  },
+  {
+    name: 'FiendishLegacyModal',
+    modalName: 'fiendishLegacy',
+    actionName: 'Fiendish Legacy',
+    automation: { type: 'fiendish_legacy' },
+    payload: { action: { name: 'Fiendish Legacy' }, playerStats: basePlayerStats, campaignName: 'test' },
+    testId: 'fiendish-legacy-modal',
   },
   {
     name: 'MultiResistanceSelectionModal',

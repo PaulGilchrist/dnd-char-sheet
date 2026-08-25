@@ -47,6 +47,7 @@ function CharSpecialActions({ playerStats, campaignName, cannotAct, characters, 
     const [quiveringPalmModal, setQuiveringPalmModal] = useState(null);
     const [celestialResilienceModal, setCelestialResilienceModal] = useState(null);
     const [fiendishResilienceModal, setFiendishResilienceModal] = useState(null);
+    const [fiendishLegacyModal, setFiendishLegacyModal] = useState(null);
     const [multiResistanceModal, setMultiResistanceModal] = useState(null);
     const [stepsOfTheFeyTauntModal, setStepsOfTheFeyTauntModal] = useState(null);
     const [hurlThroughHellModal, setHurlThroughHellModal] = useState(null);
@@ -455,6 +456,8 @@ function CharSpecialActions({ playerStats, campaignName, cannotAct, characters, 
                 setElfisLineageModal(result.payload);
             } else if (result.modalName === 'feyReinforcements') {
                 setFeyReinforcementsModal(result.payload);
+            } else if (result.modalName === 'fiendishLegacy') {
+                setFiendishLegacyModal(result.payload);
             }
         } else if (result.type === 'popup') {
             const payload = result.payload;
@@ -687,6 +690,7 @@ function CharSpecialActions({ playerStats, campaignName, cannotAct, characters, 
                 encouragingSongModal={encouragingSongModal} setEncouragingSongModal={setEncouragingSongModal}
                 elfishLineageModal={elfishLineageModal} setElfisLineageModal={setElfisLineageModal}
                 feyReinforcementsModal={feyReinforcementsModal} setFeyReinforcementsModal={setFeyReinforcementsModal}
+                fiendishLegacyModal={fiendishLegacyModal} setFiendishLegacyModal={setFiendishLegacyModal}
                 featureChoiceModal={featureChoiceModal} setFeatureChoiceModal={setFeatureChoiceModal}
                 aspectOfTheWildsModal={aspectOfTheWildsModal} setAspectOfTheWildsModal={setAspectOfTheWildsModal}
                 playerStats={playerStats} campaignName={campaignName}
