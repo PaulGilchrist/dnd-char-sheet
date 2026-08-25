@@ -26,6 +26,7 @@ import CreatureSelectionModal from './modals/shared/CreatureSelectionModal.jsx';
 import FeatureChoiceModal from './FeatureChoiceModal.jsx';
 import AspectOfTheWildsModal from './AspectOfTheWildsModal.jsx';
 import ElfisLineageModal from './ElfisLineageModal.jsx';
+import FeyReinforcementsModal from './modals/FeyReinforcementsModal.jsx';
 
 function getEventDisplayLabel(eventType, eventData) {
     if (eventType === 'attack') {
@@ -68,6 +69,7 @@ function CharSpecialActionsModals({
     bolsteringPerformanceModal, setBolsteringPerformanceModal,
     encouragingSongModal,
     elfishLineageModal,
+    feyReinforcementsModal, setFeyReinforcementsModal,
     featureChoiceModal,
     aspectOfTheWildsModal,
     playerStats, campaignName,
@@ -431,6 +433,12 @@ function CharSpecialActionsModals({
                     elfishLineageModal={elfishLineageModal}
                     handleElfisLineageConfirm={handleElfisLineageConfirm}
                     handleElfisLineageSkip={() => setElfisLineageModal(null)}
+                />
+            )}
+            {feyReinforcementsModal && (
+                <FeyReinforcementsModal
+                    {...feyReinforcementsModal}
+                    onClose={() => setFeyReinforcementsModal(null)}
                 />
             )}
         </>

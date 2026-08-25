@@ -51,6 +51,7 @@ const INTERACTIVE_HANDLER_TYPES = new Set([
     'elfish_lineage',
     'gnomish_lineage',
     'fiendish_legacy',
+    'fey_reinforcements',
 ]);
 
 const INTERACTIVE_PASSIVE_EFFECTS = new Set([

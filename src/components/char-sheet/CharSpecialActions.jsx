@@ -57,6 +57,7 @@ function CharSpecialActions({ playerStats, campaignName, cannotAct, characters, 
     const [bolsteringPerformanceModal, setBolsteringPerformanceModal] = useState(null);
     const [encouragingSongModal, setEncouragingSongModal] = useState(null);
     const [elfishLineageModal, setElfisLineageModal] = useState(null);
+    const [feyReinforcementsModal, setFeyReinforcementsModal] = useState(null);
     const [fightingStylesMap, setFightingStylesMap] = useState(null);
     const { setPopupHtml } = useDiceRollPopup();
     const { rollAttack, rollDamage } = useLoggedDiceRoll(playerStats?.name, campaignName, {
@@ -452,6 +453,8 @@ function CharSpecialActions({ playerStats, campaignName, cannotAct, characters, 
                 setEncouragingSongModal(result.payload);
             } else if (result.modalName === 'elfishLineage') {
                 setElfisLineageModal(result.payload);
+            } else if (result.modalName === 'feyReinforcements') {
+                setFeyReinforcementsModal(result.payload);
             }
         } else if (result.type === 'popup') {
             const payload = result.payload;
@@ -460,7 +463,7 @@ function CharSpecialActions({ playerStats, campaignName, cannotAct, characters, 
             const html = `<b>${name}</b><br/>${description}<br/><span class="dice-roll-hint">click to dismiss</span>`;
             setPopupHtml(html);
         }
-    }, [playerStats, campaignName, cannotAct, mapName, characters, setCombatSuperiorityModal, setPopupHtml, handleReplenishingMealClick, handleBolsteringTreatsClick, handleBrewPoisonClick]);
+    }, [playerStats, campaignName, cannotAct, mapName, characters, setCombatSuperiorityModal, setPopupHtml, handleReplenishingMealClick, handleBolsteringTreatsClick, handleBrewPoisonClick, setFeyReinforcementsModal]);
     const handleStrideConfirm = useCallback(async (optionName, buffEntry) => {
         if (!strideModal) return;
         const { action, playerStats: modalPlayerStats, campaignName: modalCampaign } = strideModal;
@@ -683,6 +686,7 @@ function CharSpecialActions({ playerStats, campaignName, cannotAct, characters, 
                 bolsteringPerformanceModal={bolsteringPerformanceModal} setBolsteringPerformanceModal={setBolsteringPerformanceModal}
                 encouragingSongModal={encouragingSongModal} setEncouragingSongModal={setEncouragingSongModal}
                 elfishLineageModal={elfishLineageModal} setElfisLineageModal={setElfisLineageModal}
+                feyReinforcementsModal={feyReinforcementsModal} setFeyReinforcementsModal={setFeyReinforcementsModal}
                 featureChoiceModal={featureChoiceModal} setFeatureChoiceModal={setFeatureChoiceModal}
                 aspectOfTheWildsModal={aspectOfTheWildsModal} setAspectOfTheWildsModal={setAspectOfTheWildsModal}
                 playerStats={playerStats} campaignName={campaignName}
