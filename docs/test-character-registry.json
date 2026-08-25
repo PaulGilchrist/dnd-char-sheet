@@ -114,9 +114,20 @@
       "level": 13,
       "race": "Human",
       "subrace": "",
-      "feats": ["Magic Initiate"],
+      "feats": [
+        "Magic Initiate"
+      ],
       "background": "Acolyte",
       "note": "Existing Rogue for Cunning Strike / Envenom Weapons testing."
+    },
+    {
+      "name": "EvasiveFighter",
+      "ruleset": "2024",
+      "class": "Fighter",
+      "subclass": "Battle Master",
+      "level": 5,
+      "race": "Human",
+      "note": "Created for MN-007 testing. Has 4/4 Superiority Dice (d8)."
     }
   ],
   "monsters": [

@@ -26,7 +26,7 @@ export async function handle(action, playerStats, campaignName, _mapName) {
         };
     }
 
-    const isGreater = auto.upgradeTo === 'wish';
+    const isGreater = auto.upgradeTo === 'wish' || playerStats.level >= 20;
     const allSpells = await loadSpells(playerStats.rules || '2024');
     const eligibleSpells = allSpells.filter(s => {
         if (isGreater) {
@@ -60,7 +60,7 @@ export async function onSpellSelected(action, playerStats, campaignName, selecte
 
     if (currentUses <= 0) return null;
 
-    const isGreater = auto.upgradeTo === 'wish';
+    const isGreater = auto.upgradeTo === 'wish' || playerStats.level >= 20;
     let newUses = currentUses - 1;
     let rechargeMessage = 'until you finish a Long Rest.';
 

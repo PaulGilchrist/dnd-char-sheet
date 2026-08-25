@@ -70,3 +70,23 @@ Campaign → Characters sidebar → **Add Character** → wizard overlay opens.
 **Known-good character: DraconicDragon** — Red Dragonborn, Barbarian (Path of the Berserker), Level 5, Acolyte background, 2024 ruleset. File: `public/campaigns/test-campaign/DraconicDragon.json`. Has Fire resistance, Breath Weapon action, and Draconic Flight bonus action.
 
 **Overlay gotcha**: The Magic Items step may show a "Magic Initiate" overlay (`.mi-overlay`) that blocks the Next button. Click the overlay backdrop or a close button to dismiss it before proceeding.
+
+### Fast Hands data issue (Thief subclass vs base Rogue)
+
+Fast Hands is incorrectly defined as a **Thief subclass** feature in  rather than a base Rogue feature at level 2. Non-Thief Rogues (Assassin, Soulknife, Arcane Trickster) cannot access it. To test: create a Thief subclass Rogue or fix the 2024 class data to move Fast Hands from  to .
+
+### NPC click handler issue (runtime encounter creatures)
+
+Clicking on a runtime encounter creature in the initiative tracker does NOT open the monster stat block modal with attack options. This blocks testing of reaction-based automations (Glorious Defense, etc.) that require NPC attacks.
+
+### Aarakocra variants have null AC
+
+All three Aarakocra variants (Aarakocra, Aarakocra Aeromancer, Aarakocra Skirmisher) have `AC: null` in `public/data/monsters.json`. This prevents the attack system from determining hit/miss, blocking all attack rider maneuvers. Fix: set appropriate AC values (Aarakocra: 12, Aarakocra Aeromancer: ~13, Aarakocra Skirmisher: ~12). Use different monsters for attack testing.
+
+### Spell class verification for 2024 ruleset
+
+Grease (SP-056) is only available to Sorcerer and Wizard in 2024 — NOT Druid or Bard. Always check `public/data/2024/spells.json` for the `classes` array before assuming a character can cast a spell.
+
+### Hold Monster/Person target selection issue
+
+When casting Hold Monster or Hold Person, the target selection modal only shows characters from the combat summary, not encounter creatures. The `resolveHumanoids()` function calls `getCombatSummary()` which returns null if no combat session is active. To fix: start combat (Join Encounter should work) before casting these spells, or add the target as a character instead of an encounter creature.
