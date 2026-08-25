@@ -577,8 +577,11 @@ function SavePromptModal({ campaignName, characters, activeMapName }) {
         />
       )}
       {current && (
-        <div className={`sp-overlay${evasionSelection !== null ? ' sp-overlay--dimmed' : ''}`} onClick={handleDismiss}>
-          <div className="sp-modal" onClick={e => e.stopPropagation()}>
+        <div className={`sp-overlay${evasionSelection !== null ? ' sp-overlay--dimmed' : ''}`} onClick={(e) => {
+          if (e.target.closest('.sp-modal')) return;
+          handleDismiss?.();
+        }}>
+          <div className="sp-modal">
             <div className="sp-header">
               <i className="fa-solid fa-shield-halved"></i> Saving Throw Required
               {queueCount > 1 && (
@@ -659,8 +662,11 @@ function SavePromptModal({ campaignName, characters, activeMapName }) {
         </div>
       )}
       {evasionSelection !== null && (
-        <div className="sp-overlay sp-overlay--evasion" onClick={() => handleEvasionSkip()}>
-          <div className="sp-modal" onClick={e => e.stopPropagation()}>
+        <div className="sp-overlay sp-overlay--evasion" onClick={(e) => {
+          if (e.target.closest('.sp-modal')) return;
+          handleEvasionSkip?.();
+        }}>
+          <div className="sp-modal">
             <div className="sp-header">
               <i className="fa-solid fa-shield-halved"></i> Leading Evasion — Choose Allies
             </div>

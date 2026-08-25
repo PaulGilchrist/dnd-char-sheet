@@ -38,8 +38,11 @@ function TeleportModal({ action, playerStats, campaignName, onClose, triggeredBy
 
     if (applied && result) {
         return (
-            <div className="sp-overlay" onClick={onClose}>
-                <div className="sp-modal" onClick={e => e.stopPropagation()}>
+            <div className="sp-overlay" onClick={(e) => {
+        if (e.target.closest('.sp-modal')) return;
+        onClose?.();
+    }}>
+                <div className="sp-modal">
                     <div className="sp-header">
                         <i className={`fa-solid ${isSwap ? 'fa-arrows-rotate' : triggeredByElementalStride ? 'fa-wind' : 'fa-tree'}`}></i> {action.name}
                     </div>
@@ -55,8 +58,11 @@ function TeleportModal({ action, playerStats, campaignName, onClose, triggeredBy
 
     if (triggeredByElementalStride) {
         return (
-            <div className="sp-overlay" onClick={onClose}>
-                <div className="sp-modal" onClick={e => e.stopPropagation()}>
+            <div className="sp-overlay" onClick={(e) => {
+        if (e.target.closest('.sp-modal')) return;
+        onClose?.();
+    }}>
+                <div className="sp-modal">
                     <div className="sp-header">
                         <i className="fa-solid fa-wind"></i> {action.name} — Thunder
                     </div>
@@ -76,8 +82,11 @@ function TeleportModal({ action, playerStats, campaignName, onClose, triggeredBy
 
     if (isSwap) {
         return (
-            <div className="sp-overlay" onClick={onClose}>
-                <div className="sp-modal" onClick={e => e.stopPropagation()}>
+            <div className="sp-overlay" onClick={(e) => {
+        if (e.target.closest('.sp-modal')) return;
+        onClose?.();
+    }}>
+                <div className="sp-modal">
                     <div className="sp-header">
                         <i className="fa-solid fa-arrows-rotate"></i> {action.name}
                     </div>
@@ -99,8 +108,11 @@ function TeleportModal({ action, playerStats, campaignName, onClose, triggeredBy
     const extendedDistance = (auto && auto.extendedDistance) || '150 ft';
 
     return (
-        <div className="sp-overlay" onClick={onClose}>
-            <div className="sp-modal" onClick={e => e.stopPropagation()}>
+        <div className="sp-overlay" onClick={(e) => {
+        if (e.target.closest('.sp-modal')) return;
+        onClose?.();
+    }}>
+            <div className="sp-modal">
                 <div className="sp-header">
                     <i className={isMoonlightStep ? "fa-solid fa-moon" : "fa-solid fa-tree"}></i> {action.name}
                 </div>

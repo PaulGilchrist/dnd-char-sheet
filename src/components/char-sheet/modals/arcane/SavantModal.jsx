@@ -10,8 +10,11 @@ function SavantModal({ payload, onConfirm, onClose }) {
     };
 
     return (
-        <div className="popup-overlay" data-testid={`${school.toLowerCase()}-savant-modal`} role="presentation" onClick={onClose}>
-            <div className="popup-modal" onClick={(e) => e.stopPropagation()}>
+        <div className="popup-overlay" data-testid={`${school.toLowerCase()}-savant-modal`} role="presentation" onClick={(e) => {
+            if (e.target.closest('.popup-modal')) return;
+            onClose?.();
+        }}>
+            <div className="popup-modal">
                 <div style={{ padding: '16px' }}>
                     <h3 style={{ marginTop: 0 }}>{school} Savant</h3>
                     <p>Choose two Wizard spells from the {school} school (no higher than level 2), add to spellbook for free. These are always prepared.</p>

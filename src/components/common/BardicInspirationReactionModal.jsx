@@ -129,8 +129,11 @@ function BardicInspirationReactionModal({ campaignName }) {
                 />
             )}
             {current && (
-                <div className="sp-overlay" onClick={handleDismiss}>
-                    <div className="sp-modal" onClick={e => e.stopPropagation()}>
+                <div className="sp-overlay" onClick={(e) => {
+                    if (e.target.closest('.sp-modal')) return;
+                    handleDismiss?.();
+                }}>
+                    <div className="sp-modal">
                         <div className="sp-header">
                             <i className="fa-solid fa-bard"></i> {current.mode === 'defense' ? 'Combat Inspiration - Defense' : 'Combat Inspiration - Offense'}
                         </div>

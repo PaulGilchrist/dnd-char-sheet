@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { isInteractive } from '../../../services/ui/modalDismissUtils.js';
 import { onSurgeSelected, onTamedSurgeSelected } from '../../../services/automation/handlers/class-sorcerer/wildMagicSurgeHandler.js';
 import '../CharSheet.css';
 import './WildMagicSurgeModal.css';
@@ -49,8 +50,8 @@ function WildMagicSurgeModal({ featureName, surgeTable, campaignName, playerStat
 
     if (mode === 'controlledChaos') {
         return (
-                <div className="sp-overlay wms-overlay--no-dismiss" onClick={e => e.stopPropagation()}>
-                    <div className="sp-modal sp-modal--wide wms-modal--centered" data-testid="wild-magic-surge-modal" onClick={e => e.stopPropagation()}>
+                <div className="sp-overlay wms-overlay--no-dismiss">
+                    <div className="sp-modal sp-modal--wide wms-modal--centered" data-testid="wild-magic-surge-modal">
                         <div className="sp-header">
                             <i className="fa-solid fa-bolt"></i> {featureName}
                         </div>
@@ -82,8 +83,14 @@ function WildMagicSurgeModal({ featureName, surgeTable, campaignName, playerStat
     if (mode === 'tamedSurge') {
         const availableSurges = getAvailableSurges();
         return (
-            <div className="sp-overlay" onClick={onClose}>
-                <div className="sp-modal sp-modal--wide" data-testid="wild-magic-surge-modal" onClick={e => e.stopPropagation()}>
+            <div className="sp-overlay" onClick={(e) => {
+                if (e.target.closest('.sp-modal')) return;
+                onClose?.();
+            }}>
+                <div className="sp-modal sp-modal--wide" data-testid="wild-magic-surge-modal" onClick={(e) => {
+                    if (isInteractive(e.target)) return;
+                    onClose?.();
+                }}>
                     <div className="sp-header">
                         <i className="fa-solid fa-bolt"></i> {featureName}
                     </div>
@@ -123,8 +130,14 @@ function WildMagicSurgeModal({ featureName, surgeTable, campaignName, playerStat
     }
 
     return (
-        <div className="sp-overlay" onClick={onClose}>
-            <div className="sp-modal sp-modal--wide" data-testid="wild-magic-surge-modal" onClick={e => e.stopPropagation()}>
+        <div className="sp-overlay" onClick={(e) => {
+            if (e.target.closest('.sp-modal')) return;
+            onClose?.();
+        }}>
+            <div className="sp-modal sp-modal--wide" data-testid="wild-magic-surge-modal" onClick={(e) => {
+                if (isInteractive(e.target)) return;
+                onClose?.();
+            }}>
                 <div className="sp-header">
                     <i className="fa-solid fa-bolt"></i> {featureName}
                 </div>

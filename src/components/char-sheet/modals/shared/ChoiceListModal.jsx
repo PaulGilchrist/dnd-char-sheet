@@ -55,8 +55,11 @@ export function ChoiceListModal({
 
   if (applied && result) {
     return (
-      <div className="sp-overlay" onClick={onClose}>
-        <div className="sp-modal" onClick={e => e.stopPropagation()}>
+      <div className="sp-overlay" onClick={(e) => {
+        if (e.target.closest('.sp-modal')) return;
+        onClose?.();
+      }}>
+        <div className="sp-modal">
           <div className="sp-header">
             <i className={`fa-solid ${icon}`}></i> {title}
           </div>
@@ -71,8 +74,11 @@ export function ChoiceListModal({
   }
 
   return (
-    <div className="sp-overlay" onClick={onClose}>
-      <div className="sp-modal" onClick={e => e.stopPropagation()}>
+    <div className="sp-overlay" onClick={(e) => {
+      if (e.target.closest('.sp-modal')) return;
+      onClose?.();
+    }}>
+      <div className="sp-modal">
         <div className="sp-header">
           <i className={`fa-solid ${icon}`}></i> {title}
         </div>

@@ -34,8 +34,11 @@ function HealingIllusionModal({ action, playerStats, campaignName, onClose }) {
 
     if (applied && result) {
         return (
-            <div className="sp-overlay" onClick={onClose}>
-                <div className="sp-modal" onClick={e => e.stopPropagation()}>
+            <div className="sp-overlay" onClick={(e) => {
+                if (e.target.closest('.sp-modal')) return;
+                onClose?.();
+            }}>
+                <div className="sp-modal">
                     <div className="sp-header">
                         <i className="fa-solid fa-heart"></i> Healing Illusion
                     </div>
@@ -51,8 +54,11 @@ function HealingIllusionModal({ action, playerStats, campaignName, onClose }) {
     }
 
     return (
-        <div className="sp-overlay" onClick={onClose}>
-            <div className="sp-modal" onClick={e => e.stopPropagation()}>
+        <div className="sp-overlay" onClick={(e) => {
+            if (e.target.closest('.sp-modal')) return;
+            onClose?.();
+        }}>
+            <div className="sp-modal">
                 <div className="sp-header">
                     <i className="fa-solid fa-heart"></i> Healing Illusion
                 </div>

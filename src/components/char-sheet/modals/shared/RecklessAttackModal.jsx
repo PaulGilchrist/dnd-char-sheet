@@ -49,8 +49,11 @@ function RecklessAttackModal({ playerStats: _playerStats, campaignName: _campaig
 
     if (isBrutalOnly) {
         return (
-            <div className="sp-overlay" onClick={handleCancel}>
-                <div className="sp-modal" onClick={e => e.stopPropagation()}>
+            <div className="sp-overlay" onClick={(e) => {
+                if (e.target.closest('.sp-modal')) return;
+                handleCancel?.();
+            }}>
+                <div className="sp-modal">
                     <div className="sp-header">
                         <i className="fa-solid fa-bolt"></i> Brutal Strike
                     </div>
@@ -116,8 +119,11 @@ function RecklessAttackModal({ playerStats: _playerStats, campaignName: _campaig
     }
 
     return (
-        <div className="sp-overlay" onClick={handleCancel}>
-            <div className="sp-modal" onClick={e => e.stopPropagation()}>
+        <div className="sp-overlay" onClick={(e) => {
+            if (e.target.closest('.sp-modal')) return;
+            handleCancel?.();
+        }}>
+            <div className="sp-modal">
                 <div className="sp-header">
                     <i className="fa-solid fa-shield-halved"></i> Reckless Attack
                 </div>

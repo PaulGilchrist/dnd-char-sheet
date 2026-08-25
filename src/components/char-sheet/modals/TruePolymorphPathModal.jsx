@@ -9,8 +9,11 @@ function TruePolymorphPathModal({ onConfirm, onCancel }) {
     }, [onCancel]);
 
     return (
-        <div className="sp-overlay sp-overlay--evasion" onClick={onCancel}>
-            <div className="sp-modal sp-modal--wide" onClick={(e) => e.stopPropagation()}>
+        <div className="sp-overlay sp-overlay--evasion" onClick={(e) => {
+            if (e.target.closest('.sp-modal')) return;
+            onCancel?.();
+        }}>
+            <div className="sp-modal">
                 <div className="sp-header"><i className="fa-solid fa-paw"></i> True Polymorph</div>
                 <div className="sp-body">
                     <p>Choose the type of transformation:</p>

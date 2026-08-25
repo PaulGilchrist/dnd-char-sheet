@@ -16,8 +16,11 @@ export default function PrimalCompanionSummonModal({ action, playerStats, campai
 
     if (applied && result) {
         return (
-            <div className="sp-overlay" onClick={onClose}>
-                <div className="sp-modal" onClick={e => e.stopPropagation()}>
+            <div className="sp-overlay" onClick={(e) => {
+        if (e.target.closest('.sp-modal')) return;
+        onClose?.();
+    }}>
+                <div className="sp-modal">
                     <div className="sp-header">
                         <i className="fa-solid fa-paw"></i> {action.name}
                     </div>
@@ -33,8 +36,11 @@ export default function PrimalCompanionSummonModal({ action, playerStats, campai
     }
 
     return (
-        <div className="sp-overlay" onClick={onClose}>
-            <div className="sp-modal" onClick={e => e.stopPropagation()}>
+        <div className="sp-overlay" onClick={(e) => {
+        if (e.target.closest('.sp-modal')) return;
+        onClose?.();
+    }}>
+            <div className="sp-modal">
                 <div className="sp-header">
                     <i className="fa-solid fa-paw"></i> Primal Companion
                 </div>

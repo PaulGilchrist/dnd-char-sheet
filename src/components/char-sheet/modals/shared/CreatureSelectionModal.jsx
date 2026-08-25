@@ -44,8 +44,11 @@ export default function CreatureSelectionModal({
     const label = confirmLabel || 'Confirm';
 
     return (
-        <div className="sp-overlay" onClick={onSkip}>
-            <div className="sp-modal" onClick={e => e.stopPropagation()}>
+        <div className="sp-overlay" onClick={(e) => {
+            if (e.target.closest('.sp-modal')) return;
+            onSkip?.();
+        }}>
+            <div className="sp-modal">
                 <div className="sp-header">
                     <i className={`fa-solid ${icon}`}></i> {title}
                 </div>

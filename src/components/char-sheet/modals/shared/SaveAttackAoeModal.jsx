@@ -552,8 +552,8 @@ function SaveAttackAoeModal({
 
     if (summary) {
         return (
-            <div className="sp-overlay" onClick={() => {}}>
-                <div className="sp-modal" onClick={e => e.stopPropagation()}>
+            <div className="sp-overlay">
+                <div className="sp-modal">
                     <div className="sp-header">
                         <i className="fa-solid fa-bomb"></i> {action.name} — Results
                     </div>

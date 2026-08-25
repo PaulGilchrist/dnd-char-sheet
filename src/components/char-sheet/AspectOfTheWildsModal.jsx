@@ -1,3 +1,4 @@
+
 const aspectOptions = [
     { name: 'Owl', description: 'You have Darkvision with a range of 60 feet. If you already have Darkvision, its range increases by 60 feet.', icon: 'eye' },
     { name: 'Panther', description: 'You have a Climb Speed equal to your Speed.', icon: 'paw' },
@@ -7,8 +8,11 @@ const aspectOptions = [
 function AspectOfTheWildsModal({ aspectOfTheWildsModal, handleAspectOfTheWildsConfirm, handleAspectOfTheWildsSkip }) {
     if (!aspectOfTheWildsModal) return null;
     return (
-        <div className="sp-overlay" onClick={handleAspectOfTheWildsSkip}>
-            <div className="sp-modal" onClick={e => e.stopPropagation()}>
+        <div className="sp-overlay" onClick={(e) => {
+            if (e.target.closest('.sp-modal')) return;
+            handleAspectOfTheWildsSkip?.();
+        }}>
+            <div className="sp-modal">
                 <div className="sp-header">
                     <i className="fa-solid fa-paw"></i> Aspect of the Wilds
                 </div>

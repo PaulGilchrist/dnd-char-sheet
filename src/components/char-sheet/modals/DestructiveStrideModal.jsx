@@ -34,8 +34,11 @@ function DestructiveStrideModal({ action, playerStats, campaignName, onConfirm, 
     };
 
     return (
-        <div className="sp-overlay" onClick={handleSkip}>
-            <div className="sp-modal" onClick={e => e.stopPropagation()}>
+        <div className="sp-overlay" onClick={(e) => {
+        if (e.target.closest('.sp-modal')) return;
+        handleSkip?.();
+    }}>
+            <div className="sp-modal">
                 <div className="sp-header">
                     <i className="fa-solid fa-person-running"></i> {action?.name || 'Destructive Stride'}
                 </div>

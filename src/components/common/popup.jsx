@@ -1,24 +1,23 @@
  
-import { useEffect, useCallback } from 'react';
+import { useCallback } from 'react';
 import { sanitizeHtml } from '../../services/ui/sanitize.js';
+import { isInteractive } from '../../services/ui/modalDismissUtils.js';
 import './popup.css'
 
 function Popup({ html, children, onClickOrKeyDown }) {
-    const handleOnClickOrKeyDown = useCallback(() => {
-        document.removeEventListener("keydown", handleOnClickOrKeyDown);
-        onClickOrKeyDown();
+    const handleOverlayClick = useCallback((e) => {
+        if (e.target.closest('.popup-modal')) return;
+        onClickOrKeyDown?.();
     }, [onClickOrKeyDown]);
 
-    useEffect(() => {
-        document.addEventListener("keydown", handleOnClickOrKeyDown);
-        return () => {
-            document.removeEventListener("keydown", handleOnClickOrKeyDown);
-        };
-    }, [handleOnClickOrKeyDown]);
+    const handleModalClick = useCallback((e) => {
+        if (isInteractive(e.target)) return;
+        onClickOrKeyDown?.();
+    }, [onClickOrKeyDown]);
 
     return (
-        <div className="popup-overlay" data-testid="popup-overlay" role="presentation" onClick={handleOnClickOrKeyDown}>
-             <div className="popup-modal" onClick={(e) => e.stopPropagation()}>
+        <div className="popup-overlay" data-testid="popup-overlay" role="presentation" onClick={handleOverlayClick}>
+             <div className="popup-modal" onClick={handleModalClick}>
                   {html ? <div dangerouslySetInnerHTML={{ __html: sanitizeHtml(html) }}></div> : children}
               </div>
         </div>

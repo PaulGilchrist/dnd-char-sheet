@@ -131,8 +131,8 @@ function PolymorphSelectionModal({ playerStats, maxCR, campaignName, title = 'Wi
 
     if (loading) {
         return (
-            <div className="sp-overlay sp-overlay--evasion" onClick={onCancel}>
-                <div className="sp-modal sp-modal--wide" onClick={(e) => e.stopPropagation()}>
+            <div className="sp-overlay sp-overlay--evasion">
+                <div className="sp-modal">
                     <div className="sp-header"><i className={`fa-solid ${icon}`}></i> {title}</div>
                     <div className="sp-body"><p>Loading available creatures...</p></div>
                 </div>
@@ -142,8 +142,8 @@ function PolymorphSelectionModal({ playerStats, maxCR, campaignName, title = 'Wi
 
     if (error) {
         return (
-            <div className="sp-overlay sp-overlay--evasion" onClick={onCancel}>
-                <div className="sp-modal sp-modal--wide" onClick={(e) => e.stopPropagation()}>
+            <div className="sp-overlay sp-overlay--evasion">
+                <div className="sp-modal">
                     <div className="sp-header"><i className={`fa-solid ${icon}`}></i> {title}</div>
                     <div className="sp-body"><p className="sp-note">{error}</p></div>
                     <div className="sp-actions">
@@ -163,8 +163,11 @@ function PolymorphSelectionModal({ playerStats, maxCR, campaignName, title = 'Wi
         : `No beasts match ${wildShapeLimitations ? 'your Wild Shape limitations' : 'the target\'s CR requirement'}.`;
 
     return (
-        <div className="sp-overlay sp-overlay--evasion" onClick={onCancel}>
-            <div className="sp-modal sp-modal--wide" onClick={(e) => e.stopPropagation()}>
+        <div className="sp-overlay sp-overlay--evasion" onClick={(e) => {
+            if (e.target.closest('.sp-modal')) return;
+            onCancel();
+        }}>
+            <div className="sp-modal">
                 <div className="sp-header"><i className={`fa-solid ${icon}`}></i> {title}</div>
                 <div className="sp-body">
                     <p>{listLabel}</p>

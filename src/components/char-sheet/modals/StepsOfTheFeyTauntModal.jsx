@@ -301,8 +301,11 @@ function StepsOfTheFeyTauntModal({ mode, title, targets, action, playerStats, ca
     };
 
     const renderChoiceStep = () => (
-        <div className="sp-overlay" onClick={handleSkipChoice}>
-            <div className="sp-modal" onClick={e => e.stopPropagation()}>
+        <div className="sp-overlay" onClick={(e) => {
+        if (e.target.closest('.sp-modal')) return;
+        handleSkipChoice?.();
+    }}>
+            <div className="sp-modal">
                 <div className="sp-header">
                     <i className={`fa-solid fa-wand-sparkles`}></i> {title || featureName}
                 </div>
@@ -346,8 +349,11 @@ function StepsOfTheFeyTauntModal({ mode, title, targets, action, playerStats, ca
     );
 
     const renderDisappearingConfirm = () => (
-        <div className="sp-overlay" onClick={onClose}>
-            <div className="sp-modal" onClick={e => e.stopPropagation()}>
+        <div className="sp-overlay" onClick={(e) => {
+        if (e.target.closest('.sp-modal')) return;
+        handleSkipChoice?.();
+    }}>
+            <div className="sp-modal">
                 <div className="sp-header">
                     <i className="fa-solid fa-eye-slash"></i> {title || featureName}
                 </div>
@@ -366,8 +372,11 @@ function StepsOfTheFeyTauntModal({ mode, title, targets, action, playerStats, ca
     );
 
     const renderRefreshingConfirm = () => (
-        <div className="sp-overlay" onClick={onClose}>
-            <div className="sp-modal" onClick={e => e.stopPropagation()}>
+        <div className="sp-overlay" onClick={(e) => {
+        if (e.target.closest('.sp-modal')) return;
+        handleSkipChoice?.();
+    }}>
+            <div className="sp-modal">
                 <div className="sp-header">
                     <i className="fa-solid fa-heart-pulse"></i> {title || featureName}
                 </div>
@@ -415,8 +424,11 @@ function StepsOfTheFeyTauntModal({ mode, title, targets, action, playerStats, ca
 
     if (applied && result) {
         return (
-            <div className="sp-overlay" onClick={onClose}>
-                <div className="sp-modal" onClick={e => e.stopPropagation()}>
+            <div className="sp-overlay" onClick={(e) => {
+        if (e.target.closest('.sp-modal')) return;
+        handleSkipChoice?.();
+    }}>
+                <div className="sp-modal">
                     <div className="sp-header">
                         <i className="fa-solid fa-wand-sparkles"></i> {title || featureName}
                     </div>

@@ -1,4 +1,5 @@
 import React from 'react';
+import { isInteractive } from '../../../services/ui/modalDismissUtils.js';
 import { confirmTeleport } from '../../../services/automation/handlers/class-warlock/tempTeleportHandler.js';
 
 export default function InlineChoiceModals({
@@ -43,8 +44,14 @@ export default function InlineChoiceModals({
     return (
         <>
             {moonlightStepFallbackModal && (
-                <div className="sp-overlay" onClick={() => setModalState({ moonlightStepFallbackModal: null })}>
-                    <div className="sp-modal" onClick={e => e.stopPropagation()}>
+                <div className="sp-overlay" onClick={(e) => {
+                    if (e.target.closest('.sp-modal')) return;
+                    setModalState({ moonlightStepFallbackModal: null });
+                }}>
+                    <div className="sp-modal" onClick={(e) => {
+                        if (isInteractive(e.target)) return;
+                        setModalState({ moonlightStepFallbackModal: null });
+                    }}>
                         <div className="sp-header">
                             <i className="fa-solid fa-moon"></i> {moonlightStepFallbackModal.action.name}
                         </div>
@@ -72,8 +79,14 @@ export default function InlineChoiceModals({
                 </div>
             )}
             {attackRiderOptionsModal && (
-                <div className="sp-overlay" onClick={() => setModalState({ attackRiderOptionsModal: null })}>
-                    <div className="sp-modal" onClick={e => e.stopPropagation()}>
+                <div className="sp-overlay" onClick={(e) => {
+                    if (e.target.closest('.sp-modal')) return;
+                    setModalState({ attackRiderOptionsModal: null });
+                }}>
+                    <div className="sp-modal" onClick={(e) => {
+                        if (isInteractive(e.target)) return;
+                        setModalState({ attackRiderOptionsModal: null });
+                    }}>
                         <div className="sp-header">
                             <i className="fa-solid fa-bolt"></i> {attackRiderOptionsModal.maneuver.name} — Choose Effect
                         </div>
@@ -107,8 +120,11 @@ export default function InlineChoiceModals({
                 </div>
             )}
             {divineFuryChoice && (
-                <div className="sp-overlay" onClick={() => handleDivineFurySkip()}>
-                    <div className="sp-modal" onClick={e => e.stopPropagation()}>
+                <div className="sp-overlay" onClick={(e) => {
+                    if (e.target.closest('.sp-modal')) return;
+                    handleDivineFurySkip?.();
+                }}>
+                    <div className="sp-modal">
                         <div className="sp-header">
                             <i className="fa-solid fa-bolt"></i> Divine Fury — Damage Type
                         </div>
@@ -130,12 +146,13 @@ export default function InlineChoiceModals({
                 </div>
             )}
             {damageTypeChoice && (
-                <div className="sp-overlay" onClick={() => {
+                <div className="sp-overlay" onClick={(e) => {
+                    if (e.target.closest('.sp-modal')) return;
                     if (pendingDamage?._attackRider) handleEnhancedUnarmedSkip();
                     else if (pendingDamage?._damageTypeModifier) handleDamageTypeModifierSkip();
                     else handleGenericDamageTypeSkip();
                 }}>
-                    <div className="sp-modal" onClick={e => e.stopPropagation()}>
+                    <div className="sp-modal">
                         <div className="sp-header">
                             <i className="fa-solid fa-bolt"></i> {damageTypeChoice.title}
                         </div>
@@ -169,8 +186,11 @@ export default function InlineChoiceModals({
                 </div>
             )}
             {featureChoice && (
-                <div className="sp-overlay" onClick={handleFeatureChoiceSkip}>
-                    <div className="sp-modal" onClick={e => e.stopPropagation()}>
+                <div className="sp-overlay" onClick={(e) => {
+                    if (e.target.closest('.sp-modal')) return;
+                    handleFeatureChoiceSkip?.();
+                }}>
+                    <div className="sp-modal">
                         <div className="sp-header">
                             <i className="fa-solid fa-bolt"></i> {featureChoice.action.name}
                         </div>
@@ -200,8 +220,14 @@ export default function InlineChoiceModals({
                 </div>
             )}
             {clockworkCavalcadeRepairModal && (
-                <div className="sp-overlay" onClick={() => setModalState({ clockworkCavalcadeRepairModal: null })}>
-                    <div className="sp-modal" onClick={e => e.stopPropagation()}>
+                <div className="sp-overlay" onClick={(e) => {
+                    if (e.target.closest('.sp-modal')) return;
+                    setModalState({ clockworkCavalcadeRepairModal: null });
+                }}>
+                    <div className="sp-modal" onClick={(e) => {
+                        if (isInteractive(e.target)) return;
+                        setModalState({ clockworkCavalcadeRepairModal: null });
+                    }}>
                         <div className="sp-header">
                             <i className="fa-solid fa-hammer"></i> Clockwork Cavalcade: Repair
                         </div>

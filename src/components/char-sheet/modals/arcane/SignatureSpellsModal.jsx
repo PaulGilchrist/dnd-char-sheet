@@ -10,8 +10,11 @@ function SignatureSpellsModal({ payload, onConfirm, onClose }) {
     };
 
     return (
-        <div className="popup-overlay" data-testid="signature-spells-modal" role="presentation" onClick={onClose}>
-            <div className="popup-modal" onClick={(e) => e.stopPropagation()}>
+        <div className="popup-overlay" data-testid="signature-spells-modal" role="presentation" onClick={(e) => {
+            if (e.target.closest('.popup-modal')) return;
+            onClose?.();
+        }}>
+            <div className="popup-modal">
                 <div style={{ padding: '16px' }}>
                     <h3 style={{ marginTop: 0 }}>Signature Spells</h3>
                     <p>Choose two level 3 spells in your spellbook as your signature spells. You always have these spells prepared, and you can cast each of them once at level 3 without expending a spell slot. Recharges on a Short or Long Rest.</p>

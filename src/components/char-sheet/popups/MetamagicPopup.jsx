@@ -76,8 +76,11 @@ export default function MetamagicPopup({ spell, playerStats, campaignName, onCon
 
   if (options.length === 0) {
     return (
-      <div className="popup-overlay" onClick={onSkip}>
-        <div className="popup-modal metamagic-popup" onClick={e => e.stopPropagation()}>
+      <div className="popup-overlay" onClick={(e) => {
+        if (e.target.closest('.popup-modal')) return;
+        onSkip?.();
+      }}>
+        <div className="popup-modal metamagic-popup">
           <div className="metamagic-popup-inner">
             <h3>Metamagic</h3>
             <p>Your character is not a Sorcerer with available Metamagic options.</p>
@@ -105,8 +108,11 @@ export default function MetamagicPopup({ spell, playerStats, campaignName, onCon
    const psionicAffordable = !psionicActive && (currentSP - totalCost) >= psionicCost;
 
    return (
-     <div className="popup-overlay" onClick={onSkip}>
-       <div className="popup-modal metamagic-popup" onClick={e => e.stopPropagation()}>
+      <div className="popup-overlay" onClick={(e) => {
+        if (e.target.closest('.popup-modal')) return;
+        onSkip?.();
+      }}>
+        <div className="popup-modal metamagic-popup">
          <div className="metamagic-popup-inner">
            <h3><i className="fa-solid fa-wand-magic-sparkles"></i> Metamagic</h3>
            <p className="metamagic-spell-name">

@@ -138,8 +138,11 @@ function CombatSuperiorityModal({ payload, onConfirm, onReopenSelection, onClose
 
     if (!selectionMode && applied && result) {
         return (
-            <div className="sp-overlay" onClick={onClose}>
-                <div className="sp-modal sp-modal--wide" onClick={e => e.stopPropagation()}>
+            <div className="sp-overlay" onClick={(e) => {
+        if (e.target.closest('.sp-modal')) return;
+        onClose?.();
+    }}>
+                <div className="sp-modal">
                     <div className="sp-header">
                         <i className="fa-solid fa-bolt"></i> {result.payload.name || 'Maneuver'}
                     </div>
@@ -155,8 +158,11 @@ function CombatSuperiorityModal({ payload, onConfirm, onReopenSelection, onClose
 
     if (!selectionMode && !hasSuperiorityDice) {
         return (
-            <div className="sp-overlay" onClick={onClose}>
-                <div className="sp-modal sp-modal--wide" onClick={e => e.stopPropagation()}>
+            <div className="sp-overlay" onClick={(e) => {
+        if (e.target.closest('.sp-modal')) return;
+        onClose?.();
+    }}>
+                <div className="sp-modal">
                     <div className="sp-header">
                         <i className="fa-solid fa-bolt"></i> Combat Superiority
                     </div>
@@ -174,8 +180,11 @@ function CombatSuperiorityModal({ payload, onConfirm, onReopenSelection, onClose
     if (selectionMode) {
         const isKnown = knownManeuvers.length > 0;
         return (
-            <div className="sp-overlay" onClick={onClose}>
-                <div className="sp-modal sp-modal--wide" onClick={e => e.stopPropagation()}>
+            <div className="sp-overlay" onClick={(e) => {
+        if (e.target.closest('.sp-modal')) return;
+        onClose?.();
+    }}>
+                <div className="sp-modal">
                     <div className="sp-header">
                         <i className="fa-solid fa-bolt"></i> {isPrompt ? 'Combat Superiority — Choose Maneuver' : 'Combat Superiority — Select Maneuvers'}
                     </div>
@@ -260,8 +269,11 @@ function CombatSuperiorityModal({ payload, onConfirm, onReopenSelection, onClose
 
     if (knownManeuverObjects.length === 0) {
         return (
-            <div className="sp-overlay" onClick={onClose}>
-                <div className="sp-modal sp-modal--wide" onClick={e => e.stopPropagation()}>
+            <div className="sp-overlay" onClick={(e) => {
+        if (e.target.closest('.sp-modal')) return;
+        onClose?.();
+    }}>
+                <div className="sp-modal">
                     <div className="sp-header">
                         <i className="fa-solid fa-bolt"></i> Combat Superiority
                     </div>
@@ -277,8 +289,11 @@ function CombatSuperiorityModal({ payload, onConfirm, onReopenSelection, onClose
     }
 
     return (
-        <div className="sp-overlay" onClick={onClose}>
-            <div className="sp-modal sp-modal--wide" onClick={e => e.stopPropagation()}>
+        <div className="sp-overlay" onClick={(e) => {
+        if (e.target.closest('.sp-modal')) return;
+        onClose?.();
+    }}>
+            <div className="sp-modal">
                 <div className="sp-header">
                     <i className="fa-solid fa-bolt"></i> {isPrompt ? 'Combat Superiority — Use Maneuver' : 'Combat Superiority — Choose Maneuver'}
                 </div>

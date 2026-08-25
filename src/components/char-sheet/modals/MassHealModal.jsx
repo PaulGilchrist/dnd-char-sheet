@@ -75,8 +75,11 @@ export default function MassHealModal({
     const selectedTargets = creatureTargets.slice(0, maxTargets);
 
     return (
-        <div className="sp-overlay" onClick={onSkip}>
-            <div className="sp-modal sp-modal--wide" onClick={e => e.stopPropagation()}>
+        <div className="sp-overlay" onClick={(e) => {
+        if (e.target.closest('.sp-modal')) return;
+        onSkip?.();
+    }}>
+            <div className="sp-modal">
                 <div className="sp-header">
                     <i className={`fa-solid ${icon}`}></i> {title}
                 </div>

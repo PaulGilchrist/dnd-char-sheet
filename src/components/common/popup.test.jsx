@@ -52,7 +52,7 @@ describe('Popup', () => {
   // ── Overlay click behavior ──
 
   describe('overlay click', () => {
-    it('calls onClickOrKeyDown when the overlay background is clicked but not when the modal content is clicked', () => {
+    it('calls onClickOrKeyDown when the overlay background is clicked', () => {
       const handleClose = vi.fn();
       render(<Popup html="<b>Test Content</b>" onClickOrKeyDown={handleClose} />);
 
@@ -60,25 +60,38 @@ describe('Popup', () => {
       expect(handleClose).toHaveBeenCalledTimes(1);
     });
 
-    it('does NOT call onClickOrKeyDown when the modal or its content is clicked', () => {
+    it('calls onClickOrKeyDown when non-interactive modal content is clicked', () => {
       const handleClose = vi.fn();
       render(<Popup html="<b>Test Content</b>" onClickOrKeyDown={handleClose} />);
 
       const modal = screen.getByTestId('popup-overlay').querySelector('.popup-modal');
       fireEvent.click(modal);
+      expect(handleClose).toHaveBeenCalledTimes(1);
+    });
+
+    it('does NOT call onClickOrKeyDown when a button inside the modal is clicked', () => {
+      const handleClose = vi.fn();
+      render(
+        <Popup onClickOrKeyDown={handleClose}>
+          <button>Click Me</button>
+        </Popup>
+      );
+
+      fireEvent.click(screen.getByText('Click Me'));
       expect(handleClose).not.toHaveBeenCalled();
     });
-  });
 
-  // ── Keyboard behavior ──
-
-  describe('keyboard', () => {
-    it('calls onClickOrKeyDown when any key is pressed (e.g. Escape)', () => {
+    it('does NOT call onClickOrKeyDown when an input inside the modal is clicked', () => {
       const handleClose = vi.fn();
-      render(<Popup html="<b>Test</b>" onClickOrKeyDown={handleClose} />);
+      render(
+        <Popup onClickOrKeyDown={handleClose}>
+          <input type="text" />
+        </Popup>
+      );
 
-      fireEvent.keyDown(document, { key: 'Escape' });
-      expect(handleClose).toHaveBeenCalledTimes(1);
+      const input = screen.getByRole('textbox');
+      fireEvent.click(input);
+      expect(handleClose).not.toHaveBeenCalled();
     });
   });
 });

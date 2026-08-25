@@ -24,8 +24,11 @@ function QuiveringPalmModal({ action, playerStats, campaignName, targetName, isR
         const p = result.payload;
         const saveText = p.success ? 'Success' : 'Failure';
         return (
-            <div className="sp-overlay" onClick={onClose}>
-                <div className="sp-modal" onClick={e => e.stopPropagation()}>
+            <div className="sp-overlay" onClick={(e) => {
+        if (e.target.closest('.sp-modal')) return;
+        onClose?.();
+    }}>
+                <div className="sp-modal">
                     <div className="sp-header">
                         <i className="fa-solid fa-hand-fist"></i> {action.name}
                     </div>
@@ -44,8 +47,11 @@ function QuiveringPalmModal({ action, playerStats, campaignName, targetName, isR
 
     if (isRelease) {
         return (
-            <div className="sp-overlay" onClick={onClose}>
-                <div className="sp-modal" onClick={e => e.stopPropagation()}>
+            <div className="sp-overlay" onClick={(e) => {
+        if (e.target.closest('.sp-modal')) return;
+        onClose?.();
+    }}>
+                <div className="sp-modal">
                     <div className="sp-header">
                         <i className="fa-solid fa-hand-fist"></i> {action.name}
                     </div>
@@ -65,8 +71,11 @@ function QuiveringPalmModal({ action, playerStats, campaignName, targetName, isR
     }
 
     return (
-        <div className="sp-overlay" onClick={onClose}>
-            <div className="sp-modal" onClick={e => e.stopPropagation()}>
+        <div className="sp-overlay" onClick={(e) => {
+        if (e.target.closest('.sp-modal')) return;
+        onClose?.();
+    }}>
+            <div className="sp-modal">
                 <div className="sp-header">
                     <i className="fa-solid fa-hand-fist"></i> {action.name}
                 </div>

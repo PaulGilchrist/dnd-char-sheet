@@ -105,8 +105,11 @@ function DeathSavePromptModal({ campaignName }) {
         />
       )}
       {current && (
-        <div className="dsp-overlay" onClick={handleNext}>
-          <div className="dsp-modal" onClick={e => e.stopPropagation()}>
+        <div className="dsp-overlay" onClick={(e) => {
+          if (e.target.closest('.dsp-modal')) return;
+          handleNext?.();
+        }}>
+          <div className="dsp-modal">
             <div className="dsp-header">
               <i className="fas fa-skull-crossbones"></i> Death Saving Throw
               {queueCount > 1 && (

@@ -15,8 +15,11 @@ function SpellMasteryModal({ payload, onConfirm, onClose }) {
     };
 
     return (
-        <div className="popup-overlay" data-testid="spell-mastery-modal" role="presentation" onClick={onClose}>
-            <div className="popup-modal" onClick={(e) => e.stopPropagation()}>
+        <div className="popup-overlay" data-testid="spell-mastery-modal" role="presentation" onClick={(e) => {
+            if (e.target.closest('.popup-modal')) return;
+            onClose?.();
+        }}>
+            <div className="popup-modal">
                 <div style={{ padding: '16px' }}>
                     <h3 style={{ marginTop: 0 }}>Spell Mastery</h3>
                     <p>Choose a level 1 and a level 2 spell from your spellbook with casting time of an action. You can cast them at will at their lowest level without expending a spell slot.</p>

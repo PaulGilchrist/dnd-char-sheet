@@ -44,8 +44,11 @@ export default function MagicMissileTargetPopup({ spell, playerStats, campaignNa
   }, [onSkip]);
 
   return (
-    <div className="popup-overlay" onClick={onSkip}>
-      <div className="popup-modal magic-missile-popup" onClick={e => e.stopPropagation()}>
+    <div className="popup-overlay" onClick={(e) => {
+      if (e.target.closest('.popup-modal')) return;
+      onSkip?.();
+    }}>
+      <div className="popup-modal magic-missile-popup">
         <div className="magic-missile-popup-inner">
           <h3><i className="fa-solid fa-bolt"></i> Distribute Magic Missiles</h3>
           <p className="metamagic-spell-name">

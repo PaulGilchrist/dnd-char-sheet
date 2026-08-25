@@ -283,8 +283,11 @@ function CalmEmotionsModal({
     const includedTargets = eligibleTargets.filter(c => targetChoices[c.name] !== false);
 
     return (
-        <div className="sp-overlay" onClick={onClose}>
-            <div className="sp-modal" onClick={e => e.stopPropagation()}>
+        <div className="sp-overlay" onClick={(e) => {
+            if (e.target.closest('.sp-modal')) return;
+            onClose?.();
+        }}>
+            <div className="sp-modal">
                 <div className="sp-header">
                     <i className="fa-solid fa-hand-holding-heart"></i> Calm Emotions
                 </div>

@@ -112,8 +112,8 @@ function AnimalShapesSelectionModal({ targets, maxCR, campaignName, title = 'Ani
 
     if (loading) {
         return (
-            <div className="sp-overlay sp-overlay--evasion" onClick={onCancel}>
-                <div className="sp-modal sp-modal--wide" onClick={(e) => e.stopPropagation()}>
+            <div className="sp-overlay sp-overlay--evasion">
+                <div className="sp-modal">
                     <div className="sp-header"><i className={`fa-solid ${icon}`}></i> {title}</div>
                     <div className="sp-body"><p>Loading available creatures...</p></div>
                 </div>
@@ -123,8 +123,8 @@ function AnimalShapesSelectionModal({ targets, maxCR, campaignName, title = 'Ani
 
     if (error) {
         return (
-            <div className="sp-overlay sp-overlay--evasion" onClick={onCancel}>
-                <div className="sp-modal sp-modal--wide" onClick={(e) => e.stopPropagation()}>
+            <div className="sp-overlay sp-overlay--evasion">
+                <div className="sp-modal">
                     <div className="sp-header"><i className={`fa-solid ${icon}`}></i> {title}</div>
                     <div className="sp-body"><p className="sp-note">{error}</p></div>
                     <div className="sp-actions">
@@ -139,8 +139,11 @@ function AnimalShapesSelectionModal({ targets, maxCR, campaignName, title = 'Ani
     const selectedCount = Object.keys(selectedBeasts).length;
 
     return (
-        <div className="sp-overlay sp-overlay--evasion" onClick={onCancel}>
-            <div className="sp-modal sp-modal--very-wide" onClick={(e) => e.stopPropagation()}>
+        <div className="sp-overlay sp-overlay--evasion" onClick={(e) => {
+            if (e.target.closest('.sp-modal')) return;
+            onCancel();
+        }}>
+            <div className="sp-modal">
                 <div className="sp-header"><i className={`fa-solid ${icon}`}></i> {title}</div>
                 <div className="sp-body">
                     <p>Choose a beast form (CR {maxCR || 4} or lower, Small or Large) for each target:</p>

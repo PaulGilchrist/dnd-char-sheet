@@ -23,8 +23,11 @@ function HexAbilityModal({
   const iconClass = icon ?? 'fa-eye';
 
   return (
-    <div className="sp-overlay" onClick={onCancel}>
-      <div className="sp-modal sp-modal--wide" onClick={(e) => e.stopPropagation()}>
+    <div className="sp-overlay" onClick={(e) => {
+        if (e.target.closest('.sp-modal')) return;
+        onCancel?.();
+    }}>
+      <div className="sp-modal">
         <div className="sp-header">
           <i className={`fa-solid ${iconClass}`}></i> {modalTitle}
         </div>

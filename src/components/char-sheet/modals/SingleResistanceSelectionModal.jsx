@@ -27,8 +27,11 @@ function SingleResistanceSelectionModal({ title, icon, action, playerStats, camp
 
     if (applied && result && !onConfirm) {
         return (
-            <div className="sp-overlay" onClick={onClose}>
-                <div className="sp-modal" onClick={e => e.stopPropagation()}>
+            <div className="sp-overlay" onClick={(e) => {
+        if (e.target.closest('.sp-modal')) return;
+        onClose?.();
+    }}>
+                <div className="sp-modal">
                     <div className="sp-header">
                         <i className={`fa-solid ${icon || 'fa-shield-halved'}`}></i> {title || action?.name || 'Resistance Selection'}
                     </div>
@@ -43,8 +46,11 @@ function SingleResistanceSelectionModal({ title, icon, action, playerStats, camp
     }
 
     return (
-        <div className="sp-overlay" onClick={onClose}>
-            <div className="sp-modal" onClick={e => e.stopPropagation()}>
+        <div className="sp-overlay" onClick={(e) => {
+        if (e.target.closest('.sp-modal')) return;
+        onClose?.();
+    }}>
+            <div className="sp-modal">
                 <div className="sp-header">
                     <i className={`fa-solid ${icon || 'fa-shield-halved'}`}></i> {title || action?.name || 'Resistance Selection'}
                 </div>

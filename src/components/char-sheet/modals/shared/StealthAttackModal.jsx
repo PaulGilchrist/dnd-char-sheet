@@ -14,8 +14,11 @@ function StealthAttackModal({ action, playerStats, campaignName, costD6, availab
 
     if (applied && result) {
         return (
-            <div className="sp-overlay" onClick={onClose}>
-                <div className="sp-modal" onClick={e => e.stopPropagation()}>
+            <div className="sp-overlay" onClick={(e) => {
+                if (e.target.closest('.sp-modal')) return;
+                onClose?.();
+            }}>
+                <div className="sp-modal">
                     <div className="sp-header">
                         <i className="fa-solid fa-eye-slash"></i> {action.name}
                     </div>
@@ -32,8 +35,11 @@ function StealthAttackModal({ action, playerStats, campaignName, costD6, availab
     const sneakAttackDiceValue = (playerStats.class?.class_levels?.[playerStats.level - 1]?.sneak_attack_dice_value || 6);
 
     return (
-        <div className="sp-overlay" onClick={onClose}>
-            <div className="sp-modal" onClick={e => e.stopPropagation()}>
+        <div className="sp-overlay" onClick={(e) => {
+            if (e.target.closest('.sp-modal')) return;
+            onClose?.();
+        }}>
+            <div className="sp-modal">
                 <div className="sp-header">
                     <i className="fa-solid fa-eye-slash"></i> {action.name}
                 </div>

@@ -72,8 +72,11 @@ function AttackRiderModal({ action, playerStats, campaignName, targetName, onClo
     if (versatileTricksterTargets && versatileTricksterTargets.length > 0) {
         if (vtApplied && vtResult) {
             return (
-                <div className="sp-overlay" onClick={onClose}>
-                    <div className="sp-modal" onClick={e => e.stopPropagation()}>
+                <div className="sp-overlay" onClick={(e) => {
+                    if (e.target.closest('.sp-modal')) return;
+                    onClose?.();
+                }}>
+                    <div className="sp-modal">
                         <div className="sp-header">
                             <i className="fa-solid fa-bolt"></i> Versatile Trickster
                         </div>
@@ -113,8 +116,11 @@ function AttackRiderModal({ action, playerStats, campaignName, targetName, onClo
     if (stalkersFlurryTargets && stalkersFlurryTargets.length > 0) {
         if (sfApplied && sfResult) {
             return (
-                <div className="sp-overlay" onClick={onClose}>
-                    <div className="sp-modal" onClick={e => e.stopPropagation()}>
+                <div className="sp-overlay" onClick={(e) => {
+                    if (e.target.closest('.sp-modal')) return;
+                    onClose?.();
+                }}>
+                    <div className="sp-modal">
                         <div className="sp-header">
                             <i className="fa-solid fa-bolt"></i> Stalker's Flurry
                         </div>
@@ -182,8 +188,11 @@ function AttackRiderModal({ action, playerStats, campaignName, targetName, onClo
     if (applied) {
         if (result) {
             return (
-                <div className="sp-overlay" onClick={onClose}>
-                    <div className="sp-modal" onClick={e => e.stopPropagation()}>
+                <div className="sp-overlay" onClick={(e) => {
+                    if (e.target.closest('.sp-modal')) return;
+                    onClose?.();
+                }}>
+                    <div className="sp-modal">
                         <div className="sp-header">
                             <i className="fa-solid fa-bolt"></i> {action.name}
                         </div>
@@ -206,8 +215,11 @@ function AttackRiderModal({ action, playerStats, campaignName, targetName, onClo
     const canApply = multiSelect ? selectedMulti.length > 0 : !!selected;
 
     return (
-        <div className="sp-overlay" onClick={onClose}>
-            <div className="sp-modal" onClick={e => e.stopPropagation()}>
+        <div className="sp-overlay" onClick={(e) => {
+            if (e.target.closest('.sp-modal')) return;
+            onClose?.();
+        }}>
+            <div className="sp-modal">
                 <div className="sp-header">
                     <i className="fa-solid fa-bolt"></i> {action.name}
                 </div>

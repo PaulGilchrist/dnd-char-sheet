@@ -53,8 +53,11 @@ function WeaponMasteryModal({ attackName, baseMastery, extraMasteries, playerSta
 
     if (applied && result) {
         return (
-            <div className="sp-overlay" onClick={onClose}>
-                <div className="sp-modal" onClick={e => e.stopPropagation()}>
+            <div className="sp-overlay" onClick={(e) => {
+        if (e.target.closest('.sp-modal')) return;
+        onClose?.();
+    }}>
+                <div className="sp-modal">
                     <div className="sp-header">
                         <i className="fa-solid fa-crosshairs"></i> Weapon Mastery
                     </div>
@@ -69,8 +72,11 @@ function WeaponMasteryModal({ attackName, baseMastery, extraMasteries, playerSta
     }
 
     return (
-        <div className="sp-overlay" onClick={onClose}>
-            <div className="sp-modal" onClick={e => e.stopPropagation()}>
+        <div className="sp-overlay" onClick={(e) => {
+        if (e.target.closest('.sp-modal')) return;
+        onClose?.();
+    }}>
+            <div className="sp-modal">
                 <div className="sp-header">
                     <i className="fa-solid fa-crosshairs"></i> Weapon Mastery — {attackName}
                 </div>

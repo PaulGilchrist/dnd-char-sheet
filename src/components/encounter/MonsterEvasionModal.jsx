@@ -1,7 +1,11 @@
+
 export function MonsterEvasionModal({ evasionSelection, setEvasionSelection, creatures, monsterName, handleEvasionConfirm, handleEvasionSkip }) {
   return (
-    <div className="mc-overlay mc-overlay--evasion" onClick={handleEvasionSkip}>
-      <div className="sp-modal" onClick={e => e.stopPropagation()}>
+    <div className="mc-overlay mc-overlay--evasion" onClick={(e) => {
+      if (e.target.closest('.sp-modal')) return;
+      handleEvasionSkip?.();
+    }}>
+      <div className="sp-modal">
         <div className="sp-header">
           <i className="fa-solid fa-shield-halved"></i> Leading Evasion — Choose Allies
         </div>

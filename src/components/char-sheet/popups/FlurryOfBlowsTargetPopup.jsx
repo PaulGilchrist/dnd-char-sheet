@@ -57,8 +57,11 @@ export default function FlurryOfBlowsTargetPopup({ totalAttacks, creatureTargets
   }, [onSkip]);
 
   return (
-    <div className="popup-overlay" onClick={onSkip}>
-      <div className="popup-modal flurry-of-blows-popup" onClick={e => e.stopPropagation()}>
+    <div className="popup-overlay" onClick={(e) => {
+      if (e.target.closest('.popup-modal')) return;
+      onSkip?.();
+    }}>
+      <div className="popup-modal flurry-of-blows-popup">
         <div className="flurry-popup-inner">
           <h3><i className="fa-solid fa-hand-fist"></i> Distribute Flurry of Blows Attacks</h3>
           <p className="metamagic-spell-name">

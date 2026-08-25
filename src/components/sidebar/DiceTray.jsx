@@ -67,8 +67,11 @@ function DicePopup({ result, onClose }) {
       };
 
     return (
-           <div className="dice-tray-popup-overlay" onClick={onClose}>
-               <div className="dice-tray-popup-modal" onClick={(e) => e.stopPropagation()}>
+            <div className="dice-tray-popup-overlay" onClick={(e) => {
+                if (e.target.closest('.dice-tray-popup-modal')) return;
+                onClose?.();
+            }}>
+                <div className="dice-tray-popup-modal">
                    <button className="dice-tray-popup-close" onClick={onClose} aria-label="Close">
                        <i className="fa-solid fa-xmark"></i>
                    </button>

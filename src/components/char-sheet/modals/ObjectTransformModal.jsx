@@ -28,8 +28,11 @@ function ObjectTransformModal({ onConfirm, onCancel }) {
     };
 
     return (
-        <div className="sp-overlay sp-overlay--evasion" onClick={onCancel}>
-            <div className="sp-modal sp-modal--medium" onClick={(e) => e.stopPropagation()}>
+        <div className="sp-overlay sp-overlay--evasion" onClick={(e) => {
+            if (e.target.closest('.sp-modal')) return;
+            onCancel?.();
+        }}>
+            <div className="sp-modal">
                 <div className="sp-header"><i className="fa-solid fa-paw"></i> Creature into Object</div>
                 <div className="sp-body">
                     <p>Select the object form for the transformation:</p>
