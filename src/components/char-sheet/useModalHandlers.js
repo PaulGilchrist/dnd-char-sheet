@@ -1,5 +1,5 @@
 import { rollExpression } from '../../services/dice/diceRoller.js';
-import { getCurrentCombatRound } from '../../services/encounters/combatData.js';
+import { getCurrentCombatRound, getCombatSummary } from '../../services/encounters/combatData.js';
 import { setRuntimeValue } from '../../hooks/runtime/useRuntimeState.js';
 import { applyConstellationOption } from '../../services/automation/handlers/class-sorcerer/starryFormHandler.js';
 import { applyConstellationOption as twinklingApply } from '../../services/automation/handlers/class-sorcerer/twinklingConstellationHandler.js';
@@ -208,7 +208,104 @@ export default function useModalHandlers({
         const { action, playerStats, campaignName, mapName, numAttacks } = flurryPayload;
         setModalState({ flurryOfBlowsModal: null });
 
+        const hasFlurryHealingHarm = playerStats.specialActions?.some(f => f.name === "Flurry of Healing and Harm");
+
+        if (hasFlurryHealingHarm) {
+            const cs = getCombatSummary(campaignName);
+            if (cs) {
+                const healingTargets = cs.creatures
+                    .filter(c => c.name !== playerStats.name)
+                    .map(c => ({ name: c.name, currentHp: c.currentHp, maxHp: c.maxHp }));
+
+                if (healingTargets.length > 0) {
+                    setModalState({
+                        secondaryTargetModal: {
+                            title: 'Select Target for Hand of Healing',
+                            targets: healingTargets,
+                            description: 'Choose a creature to heal with Hand of Healing. Subsequent strikes will use Hand of Harm.',
+                            confirmLabel: 'Heal',
+                            confirmIcon: 'fa-heart',
+                            showHp: true,
+                            onTargetSelected: async (selectedTarget) => {
+                                setModalState({ secondaryTargetModal: null });
+                                await executeFlurryWithHealing(action, playerStats, campaignName, mapName, numAttacks, result.distribution, selectedTarget);
+                            },
+                            onSkip: () => {
+                                setModalState({ secondaryTargetModal: null });
+                                executeFlurryWithoutHealing(action, playerStats, campaignName, mapName, numAttacks, result.distribution);
+                            },
+                        },
+                    });
+                    return;
+                }
+            }
+        }
+
         const applyResult = await applyFlurryOfBlows(action, playerStats, campaignName, mapName, result.distribution, numAttacks);
+        if (!applyResult) return;
+
+        if (applyResult.handOfHarmSavePromises && applyResult.handOfHarmSavePromises.length > 0) {
+            try {
+                await Promise.all(applyResult.handOfHarmSavePromises);
+            } catch (e) {
+                console.error('[useModalHandlers] Error waiting for Hand of Harm saves:', e);
+            }
+        }
+
+        if (applyResult.openHandTargets && applyResult.openHandTargets.length > 0) {
+            const firstTarget = applyResult.openHandTargets[0];
+            const ohAuto = firstTarget.action;
+            const saveDc = buildSaveDc(ohAuto, playerStats);
+            setModalState({
+                openHandFromFlurry: {
+                    targets: applyResult.openHandTargets,
+                    saveDc,
+                    currentIndex: 0,
+                    popupHtml: applyResult.payload,
+                },
+            });
+            return;
+        }
+
+        if (applyResult?.type === 'popup') {
+            setPopupHtml(applyResult.payload);
+        }
+    };
+
+    const executeFlurryWithHealing = async (action, playerStats, campaignName, mapName, numAttacks, distribution, healingTarget) => {
+        const applyResult = await applyFlurryOfBlows(action, playerStats, campaignName, mapName, distribution, numAttacks, healingTarget);
+        if (!applyResult) return;
+
+        if (applyResult.handOfHarmSavePromises && applyResult.handOfHarmSavePromises.length > 0) {
+            try {
+                await Promise.all(applyResult.handOfHarmSavePromises);
+            } catch (e) {
+                console.error('[useModalHandlers] Error waiting for Hand of Harm saves:', e);
+            }
+        }
+
+        if (applyResult.openHandTargets && applyResult.openHandTargets.length > 0) {
+            const firstTarget = applyResult.openHandTargets[0];
+            const ohAuto = firstTarget.action;
+            const saveDc = buildSaveDc(ohAuto, playerStats);
+            setModalState({
+                openHandFromFlurry: {
+                    targets: applyResult.openHandTargets,
+                    saveDc,
+                    currentIndex: 0,
+                    popupHtml: applyResult.payload,
+                },
+            });
+            return;
+        }
+
+        if (applyResult?.type === 'popup') {
+            setPopupHtml(applyResult.payload);
+        }
+    };
+
+    const executeFlurryWithoutHealing = async (action, playerStats, campaignName, mapName, numAttacks, distribution) => {
+        const applyResult = await applyFlurryOfBlows(action, playerStats, campaignName, mapName, distribution, numAttacks);
         if (!applyResult) return;
 
         if (applyResult.openHandTargets && applyResult.openHandTargets.length > 0) {

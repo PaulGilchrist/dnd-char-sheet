@@ -2607,7 +2607,7 @@
       "handler": "src/services/combat/automation/handlers/classFeatureHandler.js",
       "router": "src/services/combat/automation/routers/classFeatureRouter.js",
       "infoBuilder": "src/services/combat/automation/infoBuilders/classFeatureInfoBuilder.js",
-      "verified": "broken — see .opencode/plans/bug-cla-144-flurry-healing-harm-monk.md",
+      "verified": "verified",
       "class": "Monk",
       "triggerConditions": "Passive: Always active",
       "expectedBehavior": "When using Flurry of Blows, replace each Unarmed Strike with Hand of Healing without expending Focus Points. When making Unarmed Strike with Flurry and dealing damage, use Hand of Harm without expending Focus Point. Uses equal to Wisdom modifier (minimum once)."

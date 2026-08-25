@@ -4,8 +4,10 @@ import { addEntry } from '../../../ui/logService.js';
 import { rollD20, rollExpression, rollExpressionDoubled } from '../../../dice/diceRoller.js';
 import { applyDamageToTarget } from '../../../rules/combat/applyDamage.js';
 import { endInvisibilityOnHostileAction } from '../../../rules/features/invisibilityService.js';
-import { getRuntimeValue } from '../../../../hooks/runtime/useRuntimeState.js';
+import { getRuntimeValue, setRuntimeValue } from '../../../../hooks/runtime/useRuntimeState.js';
 import { DEBUG_FORCE_CRIT } from '../../../ui/utils.js';
+import { applyHealingDirectly } from '../../common/healingRoll.js';
+import { createSaveListener, buildSaveDc } from '../../common/savePrompt.js';
 
 export async function handle(action, playerStats, campaignName, _mapName) {
     const auto = action.automation;
@@ -66,7 +68,7 @@ export async function handle(action, playerStats, campaignName, _mapName) {
     };
 }
 
-export async function applyFlurryOfBlows(action, playerStats, campaignName, _mapName, distribution, numAttacks) {
+export async function applyFlurryOfBlows(action, playerStats, campaignName, _mapName, distribution, numAttacks, healingTarget = null) {
     const playerName = playerStats.name;
     const featureName = action.name;
 
@@ -95,8 +97,21 @@ export async function applyFlurryOfBlows(action, playerStats, campaignName, _map
     const attackResults = [];
     let totalDamage = 0;
     const pendingOpenHandTargets = new Map();
+    const handOfHarmSavePromises = [];
 
     const openHandFeature = playerStats.automation?.actions?.find(a => a.type === 'open_hand_technique');
+
+    const hasFlurryHealingHarm = playerStats.specialActions?.some(f => f.name === "Flurry of Healing and Harm");
+    let flurryHealingHarmUses = 0;
+    let handOfHarmAuto = null;
+
+    if (hasFlurryHealingHarm) {
+        flurryHealingHarmUses = Number(getRuntimeValue(playerStats.name, 'flurryHealingHarmUses', campaignName) || 0);
+        const handOfHarmAction = playerStats.specialActions?.find(a => a.name === "Hand of Harm");
+        if (handOfHarmAction) {
+            handOfHarmAuto = handOfHarmAction.automation;
+        }
+    }
 
     for (const [targetName, attackCount] of Object.entries(distribution)) {
         if (!attackCount || attackCount <= 0) continue;
@@ -116,43 +131,187 @@ export async function applyFlurryOfBlows(action, playerStats, campaignName, _map
             let finalDamage = 0;
 
             if (hit) {
-                const rollFn = isCrit ? rollExpressionDoubled : rollExpression;
-                const rollResult = rollFn(damageFormula);
-                const rawDamage = rollResult?.total || 0;
+                const isHealingStrike = hasFlurryHealingHarm && flurryHealingHarmUses > 0 && healingTarget;
+                const isHandOfHarmStrike = hasFlurryHealingHarm && !isHealingStrike && handOfHarmAuto;
 
-                const characters = getRuntimeValue('characters', 'characters', campaignName) || [];
-                const applyResult = applyDamageToTarget(
-                    cs,
-                    targetName,
-                    rawDamage,
-                    [damageType],
-                    campaignName,
-                    characters,
-                    false,
-                    playerName
-                );
+                if (isHealingStrike) {
+                    const healFormula = handOfHarmAuto?.healExpression || 'martial_arts_die + WIS modifier';
+                    const martialArtsDie = playerStats.class?.class_levels?.find(cl => cl.level === playerStats.level)?.martial_arts_die || 4;
+                    const resolvedHealFormula = healFormula.replace(/martial_arts_die/gi, `1d${martialArtsDie}`);
+                    const wisBonus = playerStats.abilities?.find(a => a.name === 'Wisdom')?.bonus || 0;
+                    const healResult = rollExpression(`${resolvedHealFormula} + ${wisBonus}`);
+                    const healAmount = healResult?.total || 0;
 
-                finalDamage = applyResult?.finalDamage || 0;
-                totalDamage += finalDamage;
-                damageResult = {
-                    rollResult,
-                    rawDamage,
-                    finalDamage,
-                    isCrit,
-                };
+                    const healTargetStats = getRuntimeValue('characters', 'characters', campaignName)
+                        ?.find(c => c.name === healingTarget) || playerStats;
 
-                if (finalDamage > 0) {
-                    endInvisibilityOnHostileAction(playerName, campaignName);
-                }
+                    const { newHp, actualHeal } = applyHealingDirectly(healTargetStats, healingTarget, healAmount, campaignName);
 
-                if (openHandFeature && !pendingOpenHandTargets.has(targetName)) {
-                    pendingOpenHandTargets.set(targetName, {
+                    addEntry(campaignName, {
+                        type: 'hp_change',
+                        targetName: healingTarget,
+                        delta: actualHeal,
+                        currentHp: newHp,
+                        maxHp: healTargetStats.hitPoints || healTargetStats.maxHitPoints || newHp,
+                        isHealing: true,
+                        isUnconscious: false,
+                        sourceName: playerName,
+                        note: `${featureName} — Hand of Healing`,
+                    }).catch((e) => { console.error("[bonusAttacksHandler:heal-error]", e); });
+
+                    addEntry(campaignName, {
+                        type: 'roll',
+                        characterName: playerName,
+                        rollType: 'damage',
+                        name: 'Hand of Healing',
+                        formula: `${resolvedHealFormula} + ${wisBonus}`,
+                        rolls: healResult?.rolls || [],
+                        total: healAmount,
+                        modifier: wisBonus,
+                        targetName: healingTarget,
+                        finalDamage: -actualHeal,
+                        isCrit: false,
+                        timestamp: Date.now(),
+                    }).catch((e) => { console.error("[bonusAttacksHandler:heal-log-error]", e); });
+
+                    flurryHealingHarmUses = Math.max(0, flurryHealingHarmUses - 1);
+                    await setRuntimeValue(playerStats.name, 'flurryHealingHarmUses', flurryHealingHarmUses, campaignName);
+
+                    damageResult = {
+                        rollResult: healResult,
+                        rawDamage: healAmount,
+                        finalDamage: 0,
+                        isCrit: false,
+                        isHealing: true,
+                    };
+                } else {
+                    const rollFn = isCrit ? rollExpressionDoubled : rollExpression;
+                    const rollResult = rollFn(damageFormula);
+                    const rawDamage = rollResult?.total || 0;
+
+                    const characters = getRuntimeValue('characters', 'characters', campaignName) || [];
+                    const applyResult = applyDamageToTarget(
+                        cs,
                         targetName,
-                        action: openHandFeature,
-                        playerStats,
+                        rawDamage,
+                        [damageType],
                         campaignName,
-                        mapName: _mapName,
-                    });
+                        characters,
+                        false,
+                        playerName
+                    );
+
+                    finalDamage = applyResult?.finalDamage || 0;
+                    totalDamage += finalDamage;
+                    damageResult = {
+                        rollResult,
+                        rawDamage,
+                        finalDamage,
+                        isCrit,
+                    };
+
+                    if (finalDamage > 0) {
+                        endInvisibilityOnHostileAction(playerName, campaignName);
+                    }
+
+                    if (isHandOfHarmStrike && handOfHarmAuto && finalDamage > 0) {
+                        const saveDc = buildSaveDc(handOfHarmAuto, playerStats);
+                        const { promptId, promise } = createSaveListener(campaignName, {
+                            targetName,
+                            attackerName: playerName,
+                            saveType: handOfHarmAuto.saveType || 'CON',
+                            saveDc,
+                            sourceName: featureName,
+                        });
+
+                        const scaling = handOfHarmAuto.scaling || {};
+                        const levels = Object.keys(scaling).map(Number).sort((a, b) => a - b);
+                        let damageExpression = handOfHarmAuto.damageExpression || '1d6';
+                        for (const level of levels) {
+                            if (playerStats.level >= level) {
+                                damageExpression = scaling[level];
+                            }
+                        }
+
+                        const handleSaveResult = async (saveDetail) => {
+                            if (saveDetail.promptId !== promptId) return;
+
+                            if (!saveDetail.success) {
+                                const damageResult2 = rollExpression(damageExpression);
+                                const necroticDamage = damageResult2?.total || 0;
+
+                                if (necroticDamage > 0) {
+                                    const harmCharacters = getRuntimeValue('characters', 'characters', campaignName) || [];
+                                    const harmApplyResult = applyDamageToTarget(
+                                        cs,
+                                        targetName,
+                                        necroticDamage,
+                                        [handOfHarmAuto.damageType || 'Necrotic'],
+                                        campaignName,
+                                        harmCharacters,
+                                        false,
+                                        playerName
+                                    );
+
+                                    const finalHarmDamage = harmApplyResult?.finalDamage || 0;
+                                    totalDamage += finalHarmDamage;
+
+                                    addEntry(campaignName, {
+                                        type: 'roll',
+                                        characterName: playerName,
+                                        rollType: 'damage',
+                                        name: 'Hand of Harm',
+                                        formula: damageExpression,
+                                        rolls: damageResult2.rolls || [],
+                                        total: necroticDamage,
+                                        damageType: handOfHarmAuto.damageType || 'Necrotic',
+                                        targetName,
+                                        finalDamage: finalHarmDamage,
+                                        isCrit: false,
+                                        timestamp: Date.now(),
+                                    }).catch((e) => { console.error("[bonusAttacksHandler:harm-error]", e); });
+
+                                    addEntry(campaignName, {
+                                        type: 'hp_change',
+                                        targetName,
+                                        delta: -finalHarmDamage,
+                                        currentHp: (targetSnapshots[targetName]?.currentHp || 0) - finalHarmDamage,
+                                        maxHp: targetSnapshots[targetName]?.maxHp || 0,
+                                        isHealing: false,
+                                        sourceName: playerName,
+                                        note: `${featureName} — Hand of Harm`,
+                                    }).catch((e) => { console.error("[bonusAttacksHandler:harm-log-error]", e); });
+
+                                    if (handOfHarmAuto.alsoInflicts) {
+                                        const storedEffects = getRuntimeValue('campaign', 'targetEffects') || [];
+                                        const newEffects = [...storedEffects, {
+                                            target: targetName,
+                                            source: featureName,
+                                            option: handOfHarmAuto.alsoInflicts,
+                                            effect: handOfHarmAuto.alsoInflicts,
+                                            duration: 'until_used',
+                                        }];
+                                        await setRuntimeValue('campaign', 'targetEffects', newEffects, campaignName);
+                                    }
+                                }
+                            }
+
+                            window.removeEventListener('save-result', handleSaveResult);
+                        };
+
+                        window.addEventListener('save-result', handleSaveResult);
+                        handOfHarmSavePromises.push(promise);
+                    }
+
+                    if (openHandFeature && !pendingOpenHandTargets.has(targetName)) {
+                        pendingOpenHandTargets.set(targetName, {
+                            targetName,
+                            action: openHandFeature,
+                            playerStats,
+                            campaignName,
+                            mapName: _mapName,
+                        });
+                    }
                 }
             }
 
@@ -218,11 +377,15 @@ export async function applyFlurryOfBlows(action, playerStats, campaignName, _map
         }
     }
 
+    let abilityDesc = `${playerName} used ${featureName}, making ${numAttacks} unarmed strikes. Total damage dealt: ${totalDamage}.`;
+    if (hasFlurryHealingHarm) {
+        abilityDesc = `${playerName} used ${featureName} (Flurry of Healing and Harm), making ${numAttacks} strikes. Total damage: ${totalDamage}.`;
+    }
     addEntry(campaignName, {
         type: 'ability_use',
         characterName: playerName,
         abilityName: featureName,
-        description: `${playerName} used ${featureName}, making ${numAttacks} unarmed strikes. Total damage dealt: ${totalDamage}.`,
+        description: abilityDesc,
         timestamp: Date.now(),
     }).catch((e) => { console.error("[bonusAttacksHandler:log-error]", e); });
 
@@ -256,6 +419,10 @@ export async function applyFlurryOfBlows(action, playerStats, campaignName, _map
             description,
         },
     };
+
+    if (handOfHarmSavePromises.length > 0) {
+        result.handOfHarmSavePromises = handOfHarmSavePromises;
+    }
 
     if (pendingOpenHandTargets.size > 0) {
         const openHandTargets = Array.from(pendingOpenHandTargets.values()).map(target => ({

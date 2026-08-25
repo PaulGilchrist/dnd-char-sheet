@@ -32,6 +32,7 @@ vi.mock('../../../rules/combat/damageUtils.js', () => ({
 
 vi.mock('../../../../hooks/runtime/useRuntimeState.js', () => ({
   getRuntimeValue: vi.fn(),
+  setRuntimeValue: vi.fn().mockResolvedValue(undefined),
 }));
 
 vi.mock('../../../rules/features/invisibilityService.js', () => ({
@@ -42,6 +43,19 @@ vi.mock('../../../ui/utils.js', () => ({
   DEBUG_FORCE_CRIT: false,
 }));
 
+vi.mock('../../common/healingRoll.js', () => ({
+  applyHealingDirectly: vi.fn(),
+}));
+
+vi.mock('../../common/savePrompt.js', () => ({
+  createSaveListener: vi.fn(),
+  buildSaveDc: vi.fn(),
+}));
+
+vi.mock('../../../combat/automation/automationService.js', () => ({
+  evaluateAutoExpression: vi.fn(),
+}));
+
 // ── Imports ────────────────────────────────────────────────────
 
 import { handle, applyFlurryOfBlows } from './bonusAttacksHandler.js';
@@ -50,8 +64,10 @@ import { addEntry } from '../../../ui/logService.js';
 import { rollD20, rollExpression, rollExpressionDoubled } from '../../../dice/diceRoller.js';
 import { applyDamageToTarget } from '../../../rules/combat/applyDamage.js';
 import { getTargetFromAttacker } from '../../../rules/combat/damageUtils.js';
-import { getRuntimeValue } from '../../../../hooks/runtime/useRuntimeState.js';
+import { getRuntimeValue, setRuntimeValue } from '../../../../hooks/runtime/useRuntimeState.js';
 import { endInvisibilityOnHostileAction } from '../../../rules/features/invisibilityService.js';
+import { applyHealingDirectly } from '../../common/healingRoll.js';
+import { createSaveListener, buildSaveDc } from '../../common/savePrompt.js';
 
 // ── Helpers ────────────────────────────────────────────────────
 
@@ -700,6 +716,235 @@ describe('bonusAttacksHandler', () => {
       expect(abilityEntries[0][1].abilityName).toBe(action.name);
       expect(abilityEntries[0][1].description).toContain('2 unarmed strikes');
       expect(abilityEntries[0][1].description).toContain('Total damage dealt: 8');
+    });
+
+    describe('Flurry of Healing and Harm integration', () => {
+      const actionWithFlurry = {
+        name: 'Heightened Flurry of Blows',
+        automation: {
+          type: 'bonus_attacks',
+          attacks: 3,
+        },
+      };
+
+      function makeWarriorOfMercyMonk(overrides = {}) {
+        return makePlayerStats({
+          level: 11,
+          abilities: [{ name: 'Wisdom', bonus: 3 }],
+          class: { class_levels: [{ level: 11, martial_arts_die: 6 }] },
+          specialActions: [
+            { name: 'Flurry of Healing and Harm' },
+            {
+              name: 'Hand of Harm',
+              automation: {
+                type: 'reaction_damage',
+                damageExpression: '2d6',
+                damageType: 'Necrotic',
+                saveType: 'CON',
+                saveDc: 14,
+                scaling: { 11: '2d6', 17: '3d6' },
+                alsoInflicts: 'disadvantage_next_attack',
+              },
+            },
+          ],
+          ...overrides,
+        });
+      }
+
+      beforeEach(() => {
+        applyHealingDirectly.mockReturnValue({ newHp: 15, actualHeal: 5, maxHp: 20 });
+        createSaveListener.mockReturnValue({ promptId: 'test-prompt', promise: Promise.resolve({ success: false }) });
+        buildSaveDc.mockReturnValue(14);
+      });
+
+      it('applies Hand of Healing when flurryHealingHarmUses > 0 and healingTarget is provided', async () => {
+        getCombatSummary.mockReturnValue(combatSummary);
+        vi.mocked(rollD20).mockReturnValue(18);
+        vi.mocked(rollExpression).mockReturnValue({ total: 9, rolls: [6, 3], modifier: 0 });
+        getRuntimeValue.mockImplementation((key, field, _cn) => {
+          if (key === 'TestMonk' && field === 'flurryHealingHarmUses') return 3;
+          return null;
+        });
+
+        const playerStats = makeWarriorOfMercyMonk();
+
+        await applyFlurryOfBlows(
+          actionWithFlurry,
+          playerStats,
+          campaignName,
+          mapName,
+          { Goblin: 1 },
+          1,
+          'Goblin'
+        );
+
+        expect(applyHealingDirectly).toHaveBeenCalledWith(
+          expect.any(Object),
+          'Goblin',
+          expect.any(Number),
+          campaignName
+        );
+        expect(setRuntimeValue).toHaveBeenCalledWith('TestMonk', 'flurryHealingHarmUses', 2, campaignName);
+      });
+
+      it('decrements flurryHealingHarmUses for each healing strike', async () => {
+        getCombatSummary.mockReturnValue(combatSummary);
+        vi.mocked(rollD20).mockReturnValue(18);
+        vi.mocked(rollExpression).mockReturnValue({ total: 9, rolls: [6, 3], modifier: 0 });
+        getRuntimeValue.mockImplementation((key, field, _cn) => {
+          if (key === 'TestMonk' && field === 'flurryHealingHarmUses') return 2;
+          return null;
+        });
+
+        const playerStats = makeWarriorOfMercyMonk();
+
+        await applyFlurryOfBlows(
+          actionWithFlurry,
+          playerStats,
+          campaignName,
+          mapName,
+          { Goblin: 2 },
+          2,
+          'Goblin'
+        );
+
+        expect(setRuntimeValue).toHaveBeenCalledTimes(2);
+        expect(setRuntimeValue).toHaveBeenNthCalledWith(1, 'TestMonk', 'flurryHealingHarmUses', 1, campaignName);
+        expect(setRuntimeValue).toHaveBeenNthCalledWith(2, 'TestMonk', 'flurryHealingHarmUses', 0, campaignName);
+      });
+
+      it('switches to Hand of Harm after healing uses exhausted', async () => {
+        getCombatSummary.mockReturnValue(combatSummary);
+        vi.mocked(rollD20).mockReturnValue(18);
+        vi.mocked(rollExpression).mockReturnValue({ total: 5, rolls: [3, 2], modifier: 0 });
+        applyDamageToTarget.mockReturnValue({ finalDamage: 4, newHp: 6 });
+        getRuntimeValue.mockImplementation((key, field, _cn) => {
+          if (key === 'TestMonk' && field === 'flurryHealingHarmUses') return 1;
+          return null;
+        });
+
+        const playerStats = makeWarriorOfMercyMonk();
+
+        await applyFlurryOfBlows(
+          actionWithFlurry,
+          playerStats,
+          campaignName,
+          mapName,
+          { Goblin: 2 },
+          2,
+          'Goblin'
+        );
+
+        expect(applyHealingDirectly).toHaveBeenCalledTimes(1);
+        expect(createSaveListener).toHaveBeenCalledTimes(1);
+      });
+
+      it('triggers CON save for Hand of Harm strikes on hit', async () => {
+        getCombatSummary.mockReturnValue(combatSummary);
+        vi.mocked(rollD20).mockReturnValue(18);
+        vi.mocked(rollExpression).mockReturnValue({ total: 5, rolls: [3, 2], modifier: 0 });
+        applyDamageToTarget.mockReturnValue({ finalDamage: 4, newHp: 6 });
+        getRuntimeValue.mockImplementation((key, field, _cn) => {
+          if (key === 'TestMonk' && field === 'flurryHealingHarmUses') return 0;
+          return null;
+        });
+
+        const playerStats = makeWarriorOfMercyMonk();
+
+        await applyFlurryOfBlows(
+          actionWithFlurry,
+          playerStats,
+          campaignName,
+          mapName,
+          { Goblin: 1 },
+          1,
+          'Ally'
+        );
+
+        expect(createSaveListener).toHaveBeenCalledWith(campaignName, expect.objectContaining({
+          targetName: 'Goblin',
+          saveType: 'CON',
+          saveDc: 14,
+        }));
+      });
+
+      it('does not apply Flurry of Healing and Harm when player lacks the feature', async () => {
+        getCombatSummary.mockReturnValue(combatSummary);
+        vi.mocked(rollD20).mockReturnValue(18);
+        applyDamageToTarget.mockReturnValue({ finalDamage: 4, newHp: 6 });
+        getRuntimeValue.mockReturnValue(null);
+
+        const playerStats = makePlayerStats();
+
+        const result = await applyFlurryOfBlows(
+          actionWithFlurry,
+          playerStats,
+          campaignName,
+          mapName,
+          { Goblin: 1 },
+          1,
+          'Goblin'
+        );
+
+        expect(applyHealingDirectly).not.toHaveBeenCalled();
+        expect(createSaveListener).not.toHaveBeenCalled();
+        expect(result.handOfHarmSavePromises).toBeUndefined();
+      });
+
+      it('does not apply Hand of Harm when hit but finalDamage is 0', async () => {
+        getCombatSummary.mockReturnValue(combatSummary);
+        vi.mocked(rollD20).mockReturnValue(18);
+        vi.mocked(rollExpression).mockReturnValue({ total: 5, rolls: [3, 2], modifier: 0 });
+        applyDamageToTarget.mockReturnValue({ finalDamage: 0, newHp: 7 });
+        getRuntimeValue.mockImplementation((key, field, _cn) => {
+          if (key === 'TestMonk' && field === 'flurryHealingHarmUses') return 0;
+          return null;
+        });
+
+        const playerStats = makeWarriorOfMercyMonk();
+
+        await applyFlurryOfBlows(
+          actionWithFlurry,
+          playerStats,
+          campaignName,
+          mapName,
+          { Goblin: 1 },
+          1,
+          'Ally'
+        );
+
+        expect(createSaveListener).not.toHaveBeenCalled();
+      });
+
+      it('logs hp_change entry with isHealing: true for Hand of Healing strikes', async () => {
+        getCombatSummary.mockReturnValue(combatSummary);
+        vi.mocked(rollD20).mockReturnValue(18);
+        vi.mocked(rollExpression).mockReturnValue({ total: 9, rolls: [6, 3], modifier: 0 });
+        getRuntimeValue.mockImplementation((key, field, _cn) => {
+          if (key === 'TestMonk' && field === 'flurryHealingHarmUses') return 1;
+          return null;
+        });
+
+        const playerStats = makeWarriorOfMercyMonk();
+
+        await applyFlurryOfBlows(
+          actionWithFlurry,
+          playerStats,
+          campaignName,
+          mapName,
+          { Goblin: 1 },
+          1,
+          'Goblin'
+        );
+
+        const hpEntries = addEntry.mock.calls.filter(
+          call => call[1].type === 'hp_change'
+        );
+        const healingEntry = hpEntries.find(entry => entry[1].isHealing === true);
+        expect(healingEntry).toBeDefined();
+        expect(healingEntry[1].targetName).toBe('Goblin');
+        expect(healingEntry[1].note).toContain('Hand of Healing');
+      });
     });
   });
 });
