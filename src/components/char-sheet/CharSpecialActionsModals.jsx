@@ -26,6 +26,7 @@ import CreatureSelectionModal from './modals/shared/CreatureSelectionModal.jsx';
 import FeatureChoiceModal from './FeatureChoiceModal.jsx';
 import AspectOfTheWildsModal from './AspectOfTheWildsModal.jsx';
 import ElfisLineageModal from './ElfisLineageModal.jsx';
+import GnomishLineageModal from './GnomishLineageModal.jsx';
 import FeyReinforcementsModal from './modals/FeyReinforcementsModal.jsx';
 import FiendishLegacyModal from './modals/FiendishLegacyModal.jsx';
 
@@ -70,6 +71,7 @@ function CharSpecialActionsModals({
     bolsteringPerformanceModal, setBolsteringPerformanceModal,
     encouragingSongModal,
     elfishLineageModal,
+    gnomishLineageModal, setGnomishLineageModal,
     feyReinforcementsModal, setFeyReinforcementsModal,
     fiendishLegacyModal, setFiendishLegacyModal,
     featureChoiceModal,
@@ -102,6 +104,7 @@ function CharSpecialActionsModals({
     handleEncouragingSongSkip,
     handleElfisLineageConfirm,
     setElfisLineageModal,
+    handleGnomishLineageConfirm,
     setPopupHtml,
 }) {
     return (
@@ -435,6 +438,13 @@ function CharSpecialActionsModals({
                     elfishLineageModal={elfishLineageModal}
                     handleElfisLineageConfirm={handleElfisLineageConfirm}
                     handleElfisLineageSkip={() => setElfisLineageModal(null)}
+                />
+            )}
+            {gnomishLineageModal && (
+                <GnomishLineageModal
+                    gnomishLineageModal={gnomishLineageModal}
+                    handleGnomishLineageConfirm={handleGnomishLineageConfirm}
+                    handleGnomishLineageSkip={() => setGnomishLineageModal(null)}
                 />
             )}
             {feyReinforcementsModal && (

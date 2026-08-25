@@ -4,6 +4,7 @@ import { mergeCategorizedFeatures, categorizeFeatures } from '../featureCategori
 import utils from '../../ui/utils.js';
 import { computePassiveSkills } from '../../shared/computePassiveSkills.js';
 import { deduplicateAndSort } from '../../shared/deduplicateAndSort.js';
+import { getRuntimeValue } from '../../../hooks/runtime/useRuntimeState.js';
 
 const featureCategories = getCategories('2024');
 
@@ -184,9 +185,11 @@ const raceRules = {
               passiveSenses.push({ name: 'Blindvision', value: '10 ft.' });
           }
 
-          // Elfish Lineage: Drow lineage overrides Darkvision to 120 ft.
-          const elfisLineage = playerStats.race?.lineage || playerStats.race?.subrace?.name;
-          if (elfisLineage === 'Drow') {
+           // Elfish Lineage: Drow lineage overrides Darkvision to 120 ft.
+           const elfisLineage = playerStats.race?.lineage
+               || getRuntimeValue(playerStats.name, '_elfishLineageSelection', playerStats.campaignName)
+               || playerStats.race?.subrace?.name;
+           if (elfisLineage === 'Drow') {
              const darkvisionIndex = passiveSenses.findIndex(s => s.name === 'Darkvision');
              if (darkvisionIndex !== -1) {
                  const currentFeet = extractDarkvisionFeet(passiveSenses[darkvisionIndex].value);
@@ -198,9 +201,11 @@ const raceRules = {
              }
          }
 
-          // Gnomish Lineage: Deep Gnome lineage overrides Darkvision to 120 ft.
-          const gnomishLineage = playerStats.race?.lineage || playerStats.race?.subrace?.name;
-          if (gnomishLineage === 'Deep Gnome') {
+           // Gnomish Lineage: Deep Gnome lineage overrides Darkvision to 120 ft.
+           const gnomishLineage = playerStats.race?.lineage
+               || getRuntimeValue(playerStats.name, '_gnomishLineageSelection', playerStats.campaignName)
+               || playerStats.race?.subrace?.name;
+           if (gnomishLineage === 'Deep Gnome') {
              const darkvisionIndex = passiveSenses.findIndex(s => s.name === 'Darkvision');
              if (darkvisionIndex !== -1) {
                  const currentFeet = extractDarkvisionFeet(passiveSenses[darkvisionIndex].value);
@@ -220,11 +225,14 @@ const raceRules = {
         let traits = raceRules.addTraits(playerStats.race?.traits);
 
             // Handle lineage-specific traits
-        if (playerStats.race?.lineage && playerStats.race.traits) {
+        const resolvedLineage = playerStats.race?.lineage
+            || getRuntimeValue(playerStats.name, '_gnomishLineageSelection', playerStats.campaignName)
+            || getRuntimeValue(playerStats.name, '_elfishLineageSelection', playerStats.campaignName);
+        if (resolvedLineage && playerStats.race.traits) {
             const lineageTraits = [];
             playerStats.race.traits.forEach(trait => {
                 if (trait.sub_traits) {
-                    const selectedLineage = trait.sub_traits.find(st => st.name === playerStats.race.lineage);
+                    const selectedLineage = trait.sub_traits.find(st => st.name === resolvedLineage);
                     if (selectedLineage) {
                         lineageTraits.push({
                             name: `${trait.name} (${selectedLineage.name})`,

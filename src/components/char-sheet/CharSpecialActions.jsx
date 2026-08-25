@@ -23,6 +23,7 @@ import { getCombatContext } from '../../services/rules/combat/damageUtils.js';
 import { confirmBolsteringPerformance } from '../../services/automation/handlers/buffs/tempHpBuffHandler.js';
 import { confirmEncouragingSong, skipEncouragingSong } from '../../services/automation/handlers/buffs/encouragingSongHandler.js';
 import { confirmElfisLineage } from '../../services/automation/handlers/class-other/elfishLineageHandler.js';
+import { confirmGnomishLineage } from '../../services/automation/handlers/class-other/gnomishLineageHandler.js';
 import CharSpecialActionsModals from './CharSpecialActionsModals.jsx';
 import './CharSpecialActions.css';
 function CharSpecialActions({ playerStats, campaignName, cannotAct, characters, mapName }) {
@@ -58,6 +59,7 @@ function CharSpecialActions({ playerStats, campaignName, cannotAct, characters, 
     const [bolsteringPerformanceModal, setBolsteringPerformanceModal] = useState(null);
     const [encouragingSongModal, setEncouragingSongModal] = useState(null);
     const [elfishLineageModal, setElfisLineageModal] = useState(null);
+    const [gnomishLineageModal, setGnomishLineageModal] = useState(null);
     const [feyReinforcementsModal, setFeyReinforcementsModal] = useState(null);
     const [fightingStylesMap, setFightingStylesMap] = useState(null);
     const { setPopupHtml } = useDiceRollPopup();
@@ -263,6 +265,15 @@ function CharSpecialActions({ playerStats, campaignName, cannotAct, characters, 
         }
         setElfisLineageModal(null);
     }, [elfishLineageModal, setPopupHtml]);
+    const handleGnomishLineageConfirm = useCallback(async (chosenLineage, playerStats, campaignName) => {
+        if (!gnomishLineageModal) return;
+        const result = await confirmGnomishLineage(playerStats, chosenLineage, campaignName);
+        if (result?.payload) {
+            const html = `<b>${result.payload.name}</b><br/>${result.payload.description}<br/><span class="dice-roll-hint">click to dismiss</span>`;
+            setPopupHtml(html);
+        }
+        setGnomishLineageModal(null);
+    }, [gnomishLineageModal, setPopupHtml]);
     useEffect(() => {
         let cancelled = false;
         loadFightingStyles().then(styles => {
@@ -454,6 +465,8 @@ function CharSpecialActions({ playerStats, campaignName, cannotAct, characters, 
                 setEncouragingSongModal(result.payload);
             } else if (result.modalName === 'elfishLineage') {
                 setElfisLineageModal(result.payload);
+            } else if (result.modalName === 'gnomishLineage') {
+                setGnomishLineageModal(result.payload);
             } else if (result.modalName === 'feyReinforcements') {
                 setFeyReinforcementsModal(result.payload);
             } else if (result.modalName === 'fiendishLegacy') {
@@ -466,7 +479,7 @@ function CharSpecialActions({ playerStats, campaignName, cannotAct, characters, 
             const html = `<b>${name}</b><br/>${description}<br/><span class="dice-roll-hint">click to dismiss</span>`;
             setPopupHtml(html);
         }
-    }, [playerStats, campaignName, cannotAct, mapName, characters, setCombatSuperiorityModal, setPopupHtml, handleReplenishingMealClick, handleBolsteringTreatsClick, handleBrewPoisonClick, setFeyReinforcementsModal]);
+    }, [playerStats, campaignName, cannotAct, mapName, characters, setCombatSuperiorityModal, setPopupHtml, handleReplenishingMealClick, handleBolsteringTreatsClick, handleBrewPoisonClick, setFeyReinforcementsModal, setGnomishLineageModal]);
     const handleStrideConfirm = useCallback(async (optionName, buffEntry) => {
         if (!strideModal) return;
         const { action, playerStats: modalPlayerStats, campaignName: modalCampaign } = strideModal;
@@ -689,6 +702,7 @@ function CharSpecialActions({ playerStats, campaignName, cannotAct, characters, 
                 bolsteringPerformanceModal={bolsteringPerformanceModal} setBolsteringPerformanceModal={setBolsteringPerformanceModal}
                 encouragingSongModal={encouragingSongModal} setEncouragingSongModal={setEncouragingSongModal}
                 elfishLineageModal={elfishLineageModal} setElfisLineageModal={setElfisLineageModal}
+                gnomishLineageModal={gnomishLineageModal} setGnomishLineageModal={setGnomishLineageModal}
                 feyReinforcementsModal={feyReinforcementsModal} setFeyReinforcementsModal={setFeyReinforcementsModal}
                 fiendishLegacyModal={fiendishLegacyModal} setFiendishLegacyModal={setFiendishLegacyModal}
                 featureChoiceModal={featureChoiceModal} setFeatureChoiceModal={setFeatureChoiceModal}
@@ -721,6 +735,8 @@ function CharSpecialActions({ playerStats, campaignName, cannotAct, characters, 
                 handleEncouragingSongSkip={handleEncouragingSongSkip}
                 handleElfisLineageConfirm={handleElfisLineageConfirm}
                 setElfisLineageModal={setElfisLineageModal}
+                handleGnomishLineageConfirm={handleGnomishLineageConfirm}
+                setGnomishLineageModal={setGnomishLineageModal}
                 setPopupHtml={setPopupHtml}
                 />
                 {uniqueActions.map((specialAction, index) => {
