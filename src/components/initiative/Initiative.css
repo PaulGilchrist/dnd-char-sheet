@@ -163,6 +163,10 @@
     color: #374151;
 }
 
+.initiative .avatar-wrapper.clickable {
+    cursor: pointer;
+}
+
 .initiative .avatar-initial {
     font-weight: bold;
     text-transform: uppercase;

@@ -36,7 +36,7 @@ import { createConcentrationHandlers } from './initiative-concentration.jsx'
 import { createEffectAdderHandlers } from './initiative-effect-adder.jsx'
 import { createAutoBreakConditionHandler } from './initiative-auto-break.jsx'
 
-function Initiative({ characters, campaignName, onNpcsChange, isLocalhost, mapName }) {
+function Initiative({ characters, campaignName, onNpcsChange, isLocalhost, mapName, onViewCharacter }) {
     const [combatSummary, setCombatSummary] = React.useState(null)
     const setCombatSummaryG = useSSEEqualityGuard(setCombatSummary)
     const [activeCreatureName, setActiveCreatureName] = React.useState(null)
@@ -591,6 +591,7 @@ function Initiative({ characters, campaignName, onNpcsChange, isLocalhost, mapNa
                             coronaDisadvantage={coronaDisadvantage}
                             characters={characters}
                             mapName={mapName}
+                            onViewCharacter={onViewCharacter}
                         />
                     )
                 })}

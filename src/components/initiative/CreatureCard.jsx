@@ -7,6 +7,7 @@ import CreatureHp from './CreatureHp.jsx'
 import { getAbilityLabel } from '../../services/combat/conditions/conditionUtils.js'
 import { useRuntimeValue, getRuntimeValue, setRuntimeValue } from '../../hooks/runtime/useRuntimeState.js';
 import ConditionEffectBadges from './ConditionEffectBadges.jsx'
+import utils from '../../services/ui/utils.js'
 
 const FLESH_TO_STONE_PREFIX = '_fleshToStone_';
 const PRISMATIC_SPRAY_INDIGO_PREFIX = '_prismaticSprayIndigo_';
@@ -56,6 +57,7 @@ function CreatureCard({
     coronaDisadvantage,
     characters,
     mapName,
+    onViewCharacter,
 }) {
     const isUnconscious = creature.currentHp <= 0
     const allTargetEffects = useRuntimeValue('campaign', 'targetEffects') ?? [];
@@ -118,7 +120,7 @@ function CreatureCard({
                         <i className={`fa-solid ${creature.polymorphObject.icon || 'fa-circle'}`}></i>
                     </div>
                 ) : (creature.type === 'player' && !creature.wildShapeSource && !creature.polymorphSource && !creature.animalShapesSource && !creature.shapechangeSource) ? (
-                    <AvatarImage name={creature.name} imagePath={creature.imagePath} campaignName={campaignName} size={150} />
+                    <AvatarImage name={creature.name} imagePath={creature.imagePath} campaignName={campaignName} size={150} onClick={onViewCharacter ? () => onViewCharacter(characters.find(ch => utils.getName(ch.name) === creature.name)) : undefined} />
                 ) : (
                     <NpcAvatar
                         name={creature.polymorphSource || creature.animalShapesSource || creature.wildShapeSource || creature.shapechangeSource ? (creature.beastName || creature.formName || creature.name) : creature.name}
