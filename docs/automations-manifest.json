@@ -1983,7 +1983,7 @@
       "handler": "src/services/combat/automation/handlers/classFeatureHandler.js",
       "router": "src/services/combat/automation/routers/classFeatureRouter.js",
       "infoBuilder": "src/services/combat/automation/infoBuilders/classFeatureInfoBuilder.js",
-      "verified": "broken — see .opencode/plans/bug-cla-102-dwarven-resilience-advantage-missing.md",
+      "verified": "verified",
       "race": "Dwarf",
       "triggerConditions": "When making saving_throw checks; while poison",
       "expectedBehavior": "You have Resistance to Poison damage. You also have Advantage on saving throws you make to avoid or end the Poisoned condition."

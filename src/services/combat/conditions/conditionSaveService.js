@@ -49,9 +49,10 @@ async function rollConditionSave(creature, condition, characters, campaignNpcs, 
         const playerCharacter = characters.find(c => getName(c.name) === creature.name)
         const playerStats = playerCharacter?.computedStats || playerCharacter
         const saveModifiers = playerStats?.saveModifiers || playerCharacter?.saveModifiers
+        const CONDITION_KEYWORD_TO_KEY = { poison: 'poisoned' }
         if (saveModifiers) {
             const matchingModifier = saveModifiers.find(mod =>
-                mod.saveType && mod.condition && mod.target === 'saving_throw' && mod.effect === 'advantage' && (!mod.abilities || mod.abilities.length === 0) && mod.condition === conditionKey
+                mod.target === 'saving_throw' && mod.effect === 'advantage' && (!mod.abilities || mod.abilities.length === 0) && (mod.condition === conditionKey || CONDITION_KEYWORD_TO_KEY[mod.condition] === conditionKey)
             )
             if (matchingModifier) {
                 hasPassiveImmunityAdvantage = true

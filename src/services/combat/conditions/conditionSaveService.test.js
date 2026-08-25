@@ -625,4 +625,76 @@ describe('rollConditionSave', () => {
     expect(result.advantage).toBe(true);
     expect(result.starryDragonFloor).toBe(true);
   });
+
+  it('grants advantage from Dwarven Resilience conditional_advantage on poisoned saves (CLA-102)', async () => {
+    getAbilitySaveBonus.mockReturnValue(2);
+    computeAuraBonus.mockResolvedValue({ bonus: 0 });
+    isAuraOfPurityActive.mockReturnValue(false);
+    rollD20.mockReturnValueOnce(8).mockReturnValueOnce(15);
+
+    const characters = [{
+      name: 'Ironhold',
+      computedStats: {
+        saveModifiers: [{
+          source: 'Dwarven Resilience',
+          target: 'saving_throw',
+          condition: 'poison',
+          effect: 'advantage',
+          abilities: [],
+          skills: [],
+        }],
+      },
+    }];
+
+    const result = await rollConditionSave(
+      { type: 'player', name: 'Ironhold' },
+      { ability: 'con', key: 'poisoned', dc: 12 },
+      characters,
+      [],
+      'Campaign',
+      '',
+      defaultGetName,
+    );
+
+    expect(rollD20).toHaveBeenCalledTimes(2);
+    expect(result.advantage).toBe(true);
+    expect(result.roll).toBe(15);
+    expect(result.total).toBe(17);
+    expect(result.success).toBe(true);
+  });
+
+  it('does not grant advantage from conditional_advantage when condition does not match', async () => {
+    getAbilitySaveBonus.mockReturnValue(2);
+    computeAuraBonus.mockResolvedValue({ bonus: 0 });
+    isAuraOfPurityActive.mockReturnValue(false);
+    rollD20.mockReturnValue(10);
+
+    const characters = [{
+      name: 'Ironhold',
+      computedStats: {
+        saveModifiers: [{
+          source: 'Dwarven Resilience',
+          target: 'saving_throw',
+          condition: 'poison',
+          effect: 'advantage',
+          abilities: [],
+          skills: [],
+        }],
+      },
+    }];
+
+    const result = await rollConditionSave(
+      { type: 'player', name: 'Ironhold' },
+      { ability: 'wis', key: 'frightened', dc: 12 },
+      characters,
+      [],
+      'Campaign',
+      '',
+      defaultGetName,
+    );
+
+    expect(rollD20).toHaveBeenCalledTimes(1);
+    expect(result.advantage).toBeUndefined();
+    expect(result.roll).toBe(10);
+  });
 });
