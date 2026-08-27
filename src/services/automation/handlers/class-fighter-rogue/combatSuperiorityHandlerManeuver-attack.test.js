@@ -289,4 +289,41 @@ describe('executeManeuver — attack/bonus action effects', () => {
         expect(result.payload.description).toContain('Relentless');
         expect(setRuntimeValue).toHaveBeenCalledWith('TestFighter', 'relentlessUsedRound', 1, 'test-campaign');
     });
+
+    it('MN-008: Feinting Attack — regression test for advantage_and_damage effect', async () => {
+        const mockTargetEffects = [];
+        getRuntimeValue.mockImplementation((_playerName, key, _campaignName) => {
+            if (key === 'superiorityDice') return 4;
+            if (key === SELECTION_KEY) return ['Feinting Attack'];
+            if (key === 'targetEffects') return mockTargetEffects;
+            return undefined;
+        });
+
+        const result = await executeManeuver(
+            { name: 'Test', automation: { type: 'combat_superiority' } },
+            makePlayerStats(),
+            'test-campaign',
+            'Feinting Attack'
+        );
+
+        expect(result.type).toBe('popup');
+        expect(result.payload.description).toContain('Advantage on your next attack roll');
+        expect(setRuntimeValue).toHaveBeenCalledWith('TestFighter', 'feintingAttackDieValue', 4, 'test-campaign');
+
+        const targetEffectsCalls = setRuntimeValue.mock.calls.filter(
+            call => call[1] === 'targetEffects'
+        );
+        expect(targetEffectsCalls.length).toBeGreaterThan(0);
+        const lastTargetEffectCall = targetEffectsCalls[targetEffectsCalls.length - 1];
+        const newEffect = lastTargetEffectCall[2].slice(-1)[0];
+        expect(newEffect.effect).toBe('next_attack_advantage');
+        expect(newEffect.target).toBe('TestFighter');
+        expect(newEffect.vexTarget).toBe('Goblin');
+        expect(newEffect.duration).toBe('until_end_of_turn');
+
+        expect(result.logEntries).toHaveLength(1);
+        expect(result.logEntries[0].type).toBe('ability_use');
+        expect(result.logEntries[0].characterName).toBe('TestFighter');
+        expect(result.logEntries[0].abilityName).toBe('Feinting Attack');
+    });
 });

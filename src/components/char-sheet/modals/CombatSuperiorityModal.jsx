@@ -184,7 +184,7 @@ function CombatSuperiorityModal({ payload, onConfirm, onReopenSelection, onClose
         if (e.target.closest('.sp-modal')) return;
         onClose?.();
     }}>
-                <div className="sp-modal">
+                <div className="sp-modal sp-modal--wide">
                     <div className="sp-header">
                         <i className="fa-solid fa-bolt"></i> {isPrompt ? 'Combat Superiority — Choose Maneuver' : 'Combat Superiority — Select Maneuvers'}
                     </div>
