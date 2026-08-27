@@ -211,6 +211,7 @@ import { handle as handleTruePolymorph } from './handlers/spells/truePolymorphHa
 import { handle as handleShapechange } from './handlers/spells/shapechangeHandler.js';
 import { handle as handleMaze, handleEscape as handleMazeEscape, removeMazeEffect } from './handlers/spells/mazeHandler.js';
 import { handle as handleFriends } from './handlers/spells/friendsHandler.js';
+import { handle as handleForesight } from './handlers/spells/foresightHandler.js';
 import { handle as handleCharmPerson } from './handlers/spells/charmPersonHandler.js';
 import { handle as handleCharmMonster } from './handlers/spells/charmMonsterHandler.js';
 import { handle as handleCompulsion } from './handlers/spells/compulsionHandler.js';
@@ -535,6 +536,7 @@ const HANDLER_MAP = {
         maze_escape: handleMazeEscape,
         remove_maze: removeMazeEffect,
         friends: handleFriends,
+        foresight: handleForesight,
         charm_person: handleCharmPerson,
         charm_monster: handleCharmMonster,
         compulsion: handleCompulsion,
