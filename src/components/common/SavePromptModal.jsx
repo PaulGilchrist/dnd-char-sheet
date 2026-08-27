@@ -221,7 +221,7 @@ function SavePromptModal({ campaignName, characters, activeMapName }) {
       const combatSummary = getCombatSummary(campaignName);
       const attackerCreature = combatSummary?.creatures?.find(c => utils.getName(c.name) === utils.getName(attackerName));
       if (attackerCreature) {
-        const attackerType = (attackerCreature.type || '').toLowerCase();
+        const attackerType = (attackerCreature.monsterType || '').toLowerCase();
         if (attackerType === 'fiend' || attackerType === 'undead') {
           for (const character of (characters || [])) {
             const charName = character.name;

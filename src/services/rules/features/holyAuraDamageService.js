@@ -17,7 +17,7 @@ export async function checkHolyAuraDamage(creature, attackerName, combatSummary,
         if (!isTargetProtected) return null;
         const attackerCreature = combatSummary.creatures.find(c => c.name === attackerName);
         if (!attackerCreature) return null;
-        const attackerType = (attackerCreature.type || '').toLowerCase();
+        const attackerType = (attackerCreature.monsterType || '').toLowerCase();
         const attackerTemplate = (attackerCreature.template || []).map(t => t.toLowerCase());
         const isFiendOrUndead = attackerType === 'fiend' || attackerType === 'undead' ||
             attackerTemplate.includes('fiend') || attackerTemplate.includes('undead');

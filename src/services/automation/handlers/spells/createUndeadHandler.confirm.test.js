@@ -267,7 +267,8 @@ describe('createUndeadHandler - confirmCreateUndead', () => {
             const ghoul = combatSummary.creatures.find(c => c.name === 'Ghoul');
             expect(ghoul).toBeDefined();
             expect(ghoul.name).toBe('Ghoul');
-            expect(ghoul.type).toBe('Undead');
+            expect(ghoul.type).toBe('npc');
+            expect(ghoul.monsterType).toBe('Undead');
             expect(ghoul.ac).toBe(12);
             expect(ghoul.maxHp).toBe(22);
             expect(ghoul.currentHp).toBe(22);
@@ -308,7 +309,8 @@ describe('createUndeadHandler - confirmCreateUndead', () => {
             );
 
             const creature = combatSummary.creatures.find(c => c.monsterIndex === 'ghoul');
-            expect(creature.type).toBe('Undead');
+            expect(creature.type).toBe('npc');
+            expect(creature.monsterType).toBe('Undead');
             expect(creature.ac).toBe(10);
             expect(creature.maxHp).toBe(10);
         });

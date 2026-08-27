@@ -42,7 +42,8 @@ function buildGhoulEntry(baseName, monster, initiativeValue, existingCreatures) 
     const npcHp = monster.hit_points || 10;
     return {
         name,
-        type: monster.type || 'Undead',
+        type: 'npc',
+        monsterType: monster.type || 'Undead',
         initiative: String(initiativeValue - 0.1),
         targetName: null,
         ac: typeof monster.armor_class === 'number' ? monster.armor_class : 10,

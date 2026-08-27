@@ -363,7 +363,8 @@ describe('confirmAnimateDead - creature creation', () => {
         const skeleton = combatSummary.creatures.find(c => c.name === 'Skeleton');
         expect(skeleton).toBeDefined();
         expect(skeleton.name).toBe('Skeleton');
-        expect(skeleton.type).toBe('Undead');
+        expect(skeleton.type).toBe('npc');
+        expect(skeleton.monsterType).toBe('Undead');
         expect(skeleton.ac).toBe(13);
         expect(skeleton.maxHp).toBe(13);
         expect(skeleton.currentHp).toBe(13);
@@ -383,7 +384,8 @@ describe('confirmAnimateDead - creature creation', () => {
         const zombie = combatSummary.creatures.find(c => c.name === 'Zombie');
         expect(zombie).toBeDefined();
         expect(zombie.name).toBe('Zombie');
-        expect(zombie.type).toBe('Undead');
+        expect(zombie.type).toBe('npc');
+        expect(zombie.monsterType).toBe('Undead');
         expect(zombie.ac).toBe(8);
         expect(zombie.maxHp).toBe(22);
         expect(zombie.currentHp).toBe(22);
@@ -454,7 +456,8 @@ describe('confirmAnimateDead - creature creation', () => {
         );
 
         const creature = combatSummary.creatures.find(c => c.monsterIndex === 'skeleton');
-        expect(creature.type).toBe('Undead');
+        expect(creature.type).toBe('npc');
+        expect(creature.monsterType).toBe('Undead');
         expect(creature.ac).toBe(10);
         expect(creature.maxHp).toBe(10);
     });

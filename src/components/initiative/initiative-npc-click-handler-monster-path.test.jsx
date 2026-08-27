@@ -91,7 +91,7 @@ describe('createNpcClickHandler - Regular monster from campaign data path', () =
         expect(monster.name).toBe('Goblin');
         expect(monster.armor_class).toBe(15);
         expect(monster.hit_points).toBe(7);
-        expect(monster.type).toBe('npc');
+        expect(monster.type).toBe('Humanoid');
         expect(monster.size).toBe('Small');
         expect(monster.speed).toEqual({ walk: '30 ft.' });
         expect(monster.saving_throws.dex.modifier).toBe(4);

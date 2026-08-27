@@ -239,7 +239,7 @@ describe('SavePromptModal — save bonus sources', () => {
       return null;
     });
     vi.mocked(getCombatSummary).mockReturnValue({
-      creatures: [{ name: attackerName, type: attackerName === 'Fiend' ? 'Fiend' : 'Humanoid' }, { name: 'testTarget', type: 'player' }],
+      creatures: [{ name: attackerName, type: 'npc', monsterType: attackerName === 'Fiend' ? 'Fiend' : 'Humanoid' }, { name: 'testTarget', type: 'player' }],
     });
     vi.mocked(getAllyList).mockReturnValue(['testTarget']);
 

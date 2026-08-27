@@ -61,7 +61,8 @@ function buildPrimalCompanionCreature(monster, companionTypeConfig, displayName,
 
     return {
         name: displayName,
-        type: monster.type || 'beast',
+        type: 'npc',
+        monsterType: monster.type,
         initiative: String(initiativeValue - 0.1),
         targetName: null,
         ac: 13 + wisModifier,

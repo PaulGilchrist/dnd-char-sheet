@@ -27,7 +27,7 @@ vi.mock('../../../services/encounters/combatData.js', () => ({
   getCombatSummary: vi.fn(() => ({
     creatures: [
       { name: 'Goblin1', type: 'npc' },
-      { name: 'Orc Warrior', type: 'fiend' },
+      { name: 'Orc Warrior', type: 'npc', monsterType: 'fiend' },
       { name: 'Elf Mage', type: 'player' },
     ],
   })),
@@ -111,7 +111,7 @@ describe('HurlThroughHellModal', () => {
     combatData.getCombatSummary.mockImplementation(() => ({
       creatures: [
         { name: 'Goblin1', type: 'npc' },
-        { name: 'Orc Warrior', type: 'fiend' },
+        { name: 'Orc Warrior', type: 'npc', monsterType: 'fiend' },
         { name: 'Elf Mage', type: 'player' },
       ],
     }));
@@ -244,7 +244,7 @@ describe('HurlThroughHellModal', () => {
       });
       combatData.getCombatSummary.mockReturnValue({
         creatures: [
-          { name: 'Orc Warrior', type: 'fiend' },
+          { name: 'Orc Warrior', type: 'npc', monsterType: 'fiend' },
           { name: 'Elf Mage', type: 'player' },
         ],
       });

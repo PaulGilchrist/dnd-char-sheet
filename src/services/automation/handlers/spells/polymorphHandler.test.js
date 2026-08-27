@@ -261,7 +261,7 @@ describe('polymorphHandler.handle', () => {
     it('detects shapechanger via type string', async () => {
       getCombatContext.mockResolvedValue({
         creatures: [
-          { name: targetName, type: 'Shapechanger', currentHp: 5, maxHp: 7 },
+          { name: targetName, type: 'npc', monsterType: 'Shapechanger', currentHp: 5, maxHp: 7 },
           { name: casterName, type: 'player' },
         ],
       });
@@ -276,7 +276,7 @@ describe('polymorphHandler.handle', () => {
     it('detects shapechanger via type string containing "shapechanger"', async () => {
       getCombatContext.mockResolvedValue({
         creatures: [
-          { name: targetName, type: 'greater shapechanger', currentHp: 5, maxHp: 7 },
+          { name: targetName, type: 'npc', monsterType: 'greater shapechanger', currentHp: 5, maxHp: 7 },
           { name: casterName, type: 'player' },
         ],
       });

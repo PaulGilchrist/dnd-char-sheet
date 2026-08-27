@@ -88,19 +88,20 @@ export async function expandMonstersToCreatures(selectedMonsters, characters, _c
       for (let i = 0; i < qty; i++) {
           const name = qty === 1 ? baseName : `${baseName} ${i + 1}`;
           const rollResult = rollNpcInitiative(monster);
-          creatureList.push({
-            name,
-            type: monster.type || 'npc',
-            initiative: String(rollResult.total),
-            targetName: null,
-            ac: typeof monster.armor_class === 'number' ? monster.armor_class : (console.error(`[AC] Monster "${name}" has no armor_class defined. Defaulting to 10.`), 10),
-            resistances: monster.damage_resistances || [],
-            immunities: monster.damage_immunities || [],
-            concentration: null,
-            maxHp: npcHp,
-            currentHp: npcHp,
-            saveBonuses: getMonsterSaveBonuses(monster),
-          });
+           creatureList.push({
+             name,
+             type: 'npc',
+             monsterType: monster.type,
+             initiative: String(rollResult.total),
+             targetName: null,
+             ac: typeof monster.armor_class === 'number' ? monster.armor_class : (console.error(`[AC] Monster "${name}" has no armor_class defined. Defaulting to 10.`), 10),
+             resistances: monster.damage_resistances || [],
+             immunities: monster.damage_immunities || [],
+             concentration: null,
+             maxHp: npcHp,
+             currentHp: npcHp,
+             saveBonuses: getMonsterSaveBonuses(monster),
+           });
           npcRollResults.push({ name, rollResult });
           }
       });
@@ -175,20 +176,21 @@ export async function addMonstersToInitiative(selectedMonsters, characters, camp
         for (let i = 0; i < qty; i++) {
             const name = getNextUniqueMonsterName(baseName, combatSummary.creatures);
             const rollResult = rollNpcInitiative(monster);
-            combatSummary.creatures.push({
-                name,
-                type: monster.type || 'npc',
-                initiative: String(rollResult.total),
-                targetName: null,
-                ac: typeof monster.armor_class === 'number' ? monster.armor_class : (console.error(`[AC] Monster "${name}" has no armor_class defined. Defaulting to 10.`), 10),
-                resistances: monster.damage_resistances || [],
-                immunities: monster.damage_immunities || [],
-                concentration: null,
-                maxHp: npcHp,
-                currentHp: npcHp,
-                saveBonuses: getMonsterSaveBonuses(monster),
-                monsterIndex: monster.index || null,
-            });
+             combatSummary.creatures.push({
+                 name,
+                 type: 'npc',
+                 monsterType: monster.type,
+                 initiative: String(rollResult.total),
+                 targetName: null,
+                 ac: typeof monster.armor_class === 'number' ? monster.armor_class : (console.error(`[AC] Monster "${name}" has no armor_class defined. Defaulting to 10.`), 10),
+                 resistances: monster.damage_resistances || [],
+                 immunities: monster.damage_immunities || [],
+                 concentration: null,
+                 maxHp: npcHp,
+                 currentHp: npcHp,
+                 saveBonuses: getMonsterSaveBonuses(monster),
+                 monsterIndex: monster.index || null,
+             });
             npcRollResults.push({ name, rollResult });
         }
     });

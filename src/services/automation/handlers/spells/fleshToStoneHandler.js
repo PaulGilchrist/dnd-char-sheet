@@ -51,7 +51,7 @@ export async function handle(action, playerStats, campaignName, _mapName) {
     const targetCreature = cs.creatures.find(c => c.name === targetName);
 
     // Constructs automatically succeed on the save
-    const creatureType = targetCreature?.type || '';
+    const creatureType = targetCreature?.monsterType || '';
     const isConstruct = creatureType.toLowerCase() === 'construct';
     if (isConstruct) {
         addEntry(campaignName, {

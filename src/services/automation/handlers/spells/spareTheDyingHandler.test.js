@@ -133,7 +133,7 @@ describe('spareTheDyingHandler', () => {
         it('excludes undead creatures', async () => {
             getCombatContext.mockResolvedValue({
                 creatures: [
-                    { name: 'Zombie', type: 'Undead' },
+                    { name: 'Zombie', type: 'npc', monsterType: 'Undead' },
                 ],
             })
             getRuntimeValue.mockImplementation((target, key) => {
@@ -155,7 +155,7 @@ describe('spareTheDyingHandler', () => {
         it('excludes construct creatures', async () => {
             getCombatContext.mockResolvedValue({
                 creatures: [
-                    { name: 'IronGolem', type: 'Construct' },
+                    { name: 'IronGolem', type: 'npc', monsterType: 'Construct' },
                 ],
             })
             getRuntimeValue.mockImplementation((target, key) => {

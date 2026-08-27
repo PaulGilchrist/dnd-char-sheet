@@ -105,6 +105,16 @@ describe('expandMonstersToCreatures', () => {
       expect(npcs[0].maxHp).toBe(10);
     });
 
+    it('sets type to npc even when monster data includes a creature type', async () => {
+      rollD20.mockReturnValueOnce(15).mockReturnValueOnce(10);
+      const monster = createMonster('Aarakocra', { type: 'humanoid' });
+      const result = await expandMonstersToCreatures([monster], [], 'TestCampaign');
+
+      const npc = result.creatures.find((c) => c.name === 'Aarakocra');
+      expect(npc.type).toBe('npc');
+      expect(npc.monsterType).toBe('humanoid');
+    });
+
     it('creates multiple npc creatures from qty > 1 with sequential names', async () => {
       rollD20.mockImplementation(() => [15, 3].shift() || 10);
       const monster = createMonster('Orc', { qty: 3, hit_points: 15 });
@@ -473,6 +483,17 @@ describe('addMonstersToInitiative', () => {
 
     const npc = result.creatures.find((c) => c.type === 'npc');
     expect(npc.monsterIndex).toBe('goblin');
+  });
+
+  it('sets type to npc and monsterType from monster data', async () => {
+    rollD20.mockReturnValueOnce(15).mockReturnValueOnce(10);
+    const monsters = [{ index: 'aarakocra', name: 'Aarakocra', type: 'humanoid', qty: 1, hit_points: 7, armor_class: 13 }];
+
+    const result = await addMonstersToInitiative(monsters, [], 'TestCampaign');
+
+    const npc = result.creatures.find((c) => c.name === 'Aarakocra 1');
+    expect(npc.type).toBe('npc');
+    expect(npc.monsterType).toBe('humanoid');
   });
 
   it('uses unique names when monsters already exist', async () => {

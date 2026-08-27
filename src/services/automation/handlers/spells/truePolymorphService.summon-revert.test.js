@@ -323,7 +323,8 @@ describe('truePolymorphService.summonCreatureFromObject', () => {
 
     const cs = getCombatSummary(campaignName);
     const creature = cs.creatures.find(c => c.name === 'Empty');
-    expect(creature.type).toBe('monstrosity');
+    expect(creature.type).toBe('npc');
+    expect(creature.monsterType).toBeUndefined();
     expect(creature.size).toBe('Medium');
     expect(creature.speed).toEqual({ walk: '30 ft.' });
     expect(creature.actions).toEqual([]);

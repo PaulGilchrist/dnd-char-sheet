@@ -220,7 +220,7 @@ export async function handle(action, playerStats, campaignName, _mapName) {
             }, campaignName);
 
             // Check if target is a creature type that gets permanently banished
-            const creatureType = (targetCreature?.type || '').toLowerCase().replace(/\s+/g, '');
+            const creatureType = (targetCreature?.monsterType || '').toLowerCase().replace(/\s+/g, '');
             const isPermanentType = PERMANENT_BANISHMENT_TYPES.has(creatureType);
             const permanentNote = isPermanentType
                 ? ' (permanent banishment - target will not return)'

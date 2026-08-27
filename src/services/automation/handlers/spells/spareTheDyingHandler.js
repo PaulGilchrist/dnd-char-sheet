@@ -26,15 +26,15 @@ export async function handle(action, playerStats, campaignName, _mapName) {
         .map(c => {
             const hp = getRuntimeValue(c.name, 'currentHitPoints', campaignName) || 0;
             const isDead = getRuntimeValue(c.name, 'isDead', campaignName) || false;
-            const isUndead = c.type && String(c.type).toLowerCase().includes('undead');
-            const isConstruct = c.type && String(c.type).toLowerCase().includes('construct');
+            const isUndead = c.monsterType && String(c.monsterType).toLowerCase().includes('undead');
+            const isConstruct = c.monsterType && String(c.monsterType).toLowerCase().includes('construct');
             const isValidTarget = hp === 0 && !isDead && !isUndead && !isConstruct;
             return {
                 name: c.name,
                 isValidTarget,
                 hp,
                 isDead,
-                type: c.type,
+                type: c.monsterType,
             };
         })
         .filter(c => c.isValidTarget);

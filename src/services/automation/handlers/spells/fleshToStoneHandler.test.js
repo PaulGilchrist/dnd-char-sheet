@@ -151,7 +151,7 @@ describe('fleshToStoneHandler.handle', () => {
     const constructContext = {
       ...baseCombatContext,
       creatures: [
-        { name: targetName, type: 'construct', currentHp: 5, maxHp: 7 },
+        { name: targetName, type: 'npc', monsterType: 'construct', currentHp: 5, maxHp: 7 },
         { name: 'Orc', type: 'monster', currentHp: 15, maxHp: 22 },
         { name: casterName, gridX: 5, gridY: 10 },
       ],
@@ -160,7 +160,7 @@ describe('fleshToStoneHandler.handle', () => {
     function setupConstruct(existingConditions = []) {
       getCombatContext.mockResolvedValue(constructContext);
       buildSaveDc.mockReturnValue(15);
-      resolveTarget.mockResolvedValue({ target: { name: targetName, type: 'construct' } });
+      resolveTarget.mockResolvedValue({ target: { name: targetName, type: 'npc', monsterType: 'construct' } });
       getRuntimeValue.mockImplementation((_entity, keyOrProp, _camp) => {
         if (keyOrProp === '_fleshToStone_Goblin') return null;
         if (keyOrProp === 'activeConditions') return existingConditions;
@@ -572,14 +572,14 @@ describe('fleshToStoneHandler.handle', () => {
       const constructContext = {
         ...baseCombatContext,
         creatures: [
-          { name: targetName, type: 'construct', currentHp: 5, maxHp: 7 },
+          { name: targetName, type: 'npc', monsterType: 'construct', currentHp: 5, maxHp: 7 },
           { name: 'Orc', type: 'monster', currentHp: 15, maxHp: 22 },
           { name: casterName, gridX: 5, gridY: 10 },
         ],
       };
       getCombatContext.mockResolvedValue(constructContext);
       buildSaveDc.mockReturnValue(15);
-      resolveTarget.mockResolvedValue({ target: { name: targetName, type: 'construct' } });
+      resolveTarget.mockResolvedValue({ target: { name: targetName, type: 'npc', monsterType: 'construct' } });
       getRuntimeValue.mockImplementation((_entity, keyOrProp, _camp) => {
         if (keyOrProp === 'activeConditions') return [];
         return [];
@@ -596,14 +596,14 @@ describe('fleshToStoneHandler.handle', () => {
       const constructContext = {
         ...baseCombatContext,
         creatures: [
-          { name: targetName, type: 'construct', currentHp: 5, maxHp: 7 },
+          { name: targetName, type: 'npc', monsterType: 'construct', currentHp: 5, maxHp: 7 },
           { name: 'Orc', type: 'monster', currentHp: 15, maxHp: 22 },
           { name: casterName, gridX: 5, gridY: 10 },
         ],
       };
       getCombatContext.mockResolvedValue(constructContext);
       buildSaveDc.mockReturnValue(15);
-      resolveTarget.mockResolvedValue({ target: { name: targetName, type: 'construct' } });
+      resolveTarget.mockResolvedValue({ target: { name: targetName, type: 'npc', monsterType: 'construct' } });
       getRuntimeValue.mockImplementation((_entity, keyOrProp, _camp) => {
         if (keyOrProp === '_fleshToStone_Goblin') return null;
         if (keyOrProp === 'activeConditions') return [];

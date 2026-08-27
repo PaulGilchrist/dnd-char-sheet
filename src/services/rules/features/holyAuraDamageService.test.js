@@ -44,7 +44,7 @@ describe('holyAuraDamageService', () => {
     const campaignName = 'TestCampaign';
 
     function makeCombatSummary(attackerCreature, ...otherCreatures) {
-        const baseCreature = { name: 'Paladin', type: 'Humanoid', template: [] };
+        const baseCreature = { name: 'Paladin', type: 'player', template: [] };
         const attacker = attackerCreature
             ? { ...attackerCreature, template: attackerCreature.template ?? [] }
             : null;
@@ -77,7 +77,7 @@ describe('holyAuraDamageService', () => {
             checkHolyAuraDamage(
                 { name: 'Goblin' },
                 null,
-                makeCombatSummary({ name: 'Warlock', type: 'Fiend' }),
+                makeCombatSummary({ name: 'Warlock', type: 'npc', monsterType: 'Fiend' }),
                 campaignName,
                 5,
             );
@@ -91,7 +91,7 @@ describe('holyAuraDamageService', () => {
             checkHolyAuraDamage(
                 { name: 'Goblin' },
                 'Goblin',
-                makeCombatSummary({ name: 'Warlock', type: 'Fiend' }),
+                makeCombatSummary({ name: 'Warlock', type: 'npc', monsterType: 'Fiend' }),
                 campaignName,
                 5,
             );
@@ -103,7 +103,7 @@ describe('holyAuraDamageService', () => {
             checkHolyAuraDamage(
                 { name: 'Goblin' },
                 'Warlock',
-                makeCombatSummary({ name: 'Warlock', type: 'Fiend' }),
+                makeCombatSummary({ name: 'Warlock', type: 'npc', monsterType: 'Fiend' }),
                 campaignName,
                 0,
             );
@@ -115,7 +115,7 @@ describe('holyAuraDamageService', () => {
             checkHolyAuraDamage(
                 { name: 'Goblin' },
                 'Warlock',
-                makeCombatSummary({ name: 'Warlock', type: 'Fiend' }),
+                makeCombatSummary({ name: 'Warlock', type: 'npc', monsterType: 'Fiend' }),
                 campaignName,
                 -1,
             );
@@ -126,7 +126,7 @@ describe('holyAuraDamageService', () => {
 
     describe('Holy Aura activation check', () => {
         beforeEach(() => {
-            loadCombatSummary.mockResolvedValue(makeCombatSummary({ name: 'Warlock', type: 'Fiend' }));
+            loadCombatSummary.mockResolvedValue(makeCombatSummary({ name: 'Warlock', type: 'npc', monsterType: 'Fiend' }));
         });
 
         it('does nothing when no holy_aura targetEffects exist', () => {
@@ -135,7 +135,7 @@ describe('holyAuraDamageService', () => {
             checkHolyAuraDamage(
                 { name: 'Goblin' },
                 'Warlock',
-                makeCombatSummary({ name: 'Warlock', type: 'Fiend' }),
+                makeCombatSummary({ name: 'Warlock', type: 'npc', monsterType: 'Fiend' }),
                 campaignName,
                 5,
             );
@@ -154,7 +154,7 @@ describe('holyAuraDamageService', () => {
             checkHolyAuraDamage(
                 { name: 'Goblin' },
                 'Warlock',
-                makeCombatSummary({ name: 'Warlock', type: 'Fiend' }),
+                makeCombatSummary({ name: 'Warlock', type: 'npc', monsterType: 'Fiend' }),
                 campaignName,
                 5,
             );
@@ -175,7 +175,7 @@ describe('holyAuraDamageService', () => {
             checkHolyAuraDamage(
                 { name: 'Goblin' },
                 'Warlock',
-                makeCombatSummary({ name: 'Warlock', type: 'Fiend' }),
+                makeCombatSummary({ name: 'Warlock', type: 'npc', monsterType: 'Fiend' }),
                 campaignName,
                 5,
             );
@@ -194,7 +194,7 @@ describe('holyAuraDamageService', () => {
             checkHolyAuraDamage(
                 { name: 'Goblin' },
                 'Warlock',
-                makeCombatSummary({ name: 'Warlock', type: 'Fiend' }),
+                makeCombatSummary({ name: 'Warlock', type: 'npc', monsterType: 'Fiend' }),
                 campaignName,
                 5,
             );
@@ -214,7 +214,7 @@ describe('holyAuraDamageService', () => {
             checkHolyAuraDamage(
                 { name: 'Goblin' },
                 'Warlock',
-                makeCombatSummary({ name: 'Warlock', type: 'Fiend' }),
+                makeCombatSummary({ name: 'Warlock', type: 'npc', monsterType: 'Fiend' }),
                 campaignName,
                 5,
             );
@@ -236,7 +236,7 @@ describe('holyAuraDamageService', () => {
             checkHolyAuraDamage(
                 { name: 'Goblin' },
                 'UnknownAttacker',
-                makeCombatSummary({ name: 'Warlock', type: 'Fiend' }),
+                makeCombatSummary({ name: 'Warlock', type: 'npc', monsterType: 'Fiend' }),
                 campaignName,
                 5,
             );
@@ -261,7 +261,7 @@ describe('holyAuraDamageService', () => {
             checkHolyAuraDamage(
                 { name: 'Goblin' },
                 'Warlock',
-                makeCombatSummary({ name: 'Warlock', type: 'Fiend' }),
+                makeCombatSummary({ name: 'Warlock', type: 'npc', monsterType: 'Fiend' }),
                 campaignName,
                 5,
             );
@@ -275,7 +275,7 @@ describe('holyAuraDamageService', () => {
             checkHolyAuraDamage(
                 { name: 'Goblin' },
                 'Warlock',
-                makeCombatSummary({ name: 'Warlock', type: 'Undead' }),
+                makeCombatSummary({ name: 'Warlock', type: 'npc', monsterType: 'Undead' }),
                 campaignName,
                 5,
             );
@@ -289,7 +289,7 @@ describe('holyAuraDamageService', () => {
             checkHolyAuraDamage(
                 { name: 'Goblin' },
                 'Warlock',
-                makeCombatSummary({ name: 'Warlock', type: 'Humanoid', template: ['Fiend'] }),
+                makeCombatSummary({ name: 'Warlock', type: 'npc', monsterType: 'Humanoid', template: ['Fiend'] }),
                 campaignName,
                 5,
             );
@@ -303,7 +303,7 @@ describe('holyAuraDamageService', () => {
             checkHolyAuraDamage(
                 { name: 'Goblin' },
                 'Warlock',
-                makeCombatSummary({ name: 'Warlock', type: 'Humanoid', template: ['Undead'] }),
+                makeCombatSummary({ name: 'Warlock', type: 'npc', monsterType: 'Humanoid', template: ['Undead'] }),
                 campaignName,
                 5,
             );
@@ -323,7 +323,7 @@ describe('holyAuraDamageService', () => {
             checkHolyAuraDamage(
                 { name: 'Goblin' },
                 'Warlock',
-                makeCombatSummary({ name: 'Warlock', type: 'Humanoid' }),
+                makeCombatSummary({ name: 'Warlock', type: 'npc', monsterType: 'Humanoid' }),
                 campaignName,
                 5,
             );
@@ -344,7 +344,7 @@ describe('holyAuraDamageService', () => {
             checkHolyAuraDamage(
                 { name: 'Goblin' },
                 'Warlock',
-                makeCombatSummary({ name: 'Warlock', type: 'Humanoid', template: ['Dragon'] }),
+                makeCombatSummary({ name: 'Warlock', type: 'npc', monsterType: 'Humanoid', template: ['Dragon'] }),
                 campaignName,
                 5,
             );
@@ -378,7 +378,7 @@ describe('holyAuraDamageService', () => {
             checkHolyAuraDamage(
                 { name: 'Goblin' },
                 'Warlock',
-                makeCombatSummary({ name: 'Warlock', type: 'Fiend' }),
+                makeCombatSummary({ name: 'Warlock', type: 'npc', monsterType: 'Fiend' }),
                 campaignName,
                 5,
             );
@@ -400,7 +400,7 @@ describe('holyAuraDamageService', () => {
             checkHolyAuraDamage(
                 { name: 'Goblin' },
                 'Warlock',
-                makeCombatSummary({ name: 'Warlock', type: 'Fiend', ability_score_modifiers: { CON: 3 } }),
+                makeCombatSummary({ name: 'Warlock', type: 'npc', monsterType: 'Fiend', ability_score_modifiers: { CON: 3 } }),
                 campaignName,
                 5,
             );
@@ -419,7 +419,7 @@ describe('holyAuraDamageService', () => {
             checkHolyAuraDamage(
                 { name: 'Goblin' },
                 'Warlock',
-                makeCombatSummary({ name: 'Warlock', type: 'Fiend' }),
+                makeCombatSummary({ name: 'Warlock', type: 'npc', monsterType: 'Fiend' }),
                 campaignName,
                 5,
             );
@@ -430,7 +430,7 @@ describe('holyAuraDamageService', () => {
     });
 
     describe('Blinded condition application', () => {
-        const fiendWarlock = { name: 'Warlock', type: 'Fiend', ability_score_modifiers: { CON: 3 } };
+        const fiendWarlock = { name: 'Warlock', type: 'npc', monsterType: 'Fiend', ability_score_modifiers: { CON: 3 } };
         beforeEach(() => {
             loadCombatSummary.mockResolvedValue(makeCombatSummary(fiendWarlock));
         });
@@ -594,7 +594,7 @@ describe('holyAuraDamageService', () => {
             await checkHolyAuraDamage(
                 { name: 'Goblin' },
                 'Warlock',
-                makeCombatSummary({ name: 'Warlock', type: 'Fiend' }),
+                makeCombatSummary({ name: 'Warlock', type: 'npc', monsterType: 'Fiend' }),
                 campaignName,
                 5,
             );
@@ -619,7 +619,7 @@ describe('holyAuraDamageService', () => {
             await checkHolyAuraDamage(
                 { name: 'Goblin' },
                 'Warlock',
-                makeCombatSummary({ name: 'Warlock', type: 'Fiend', ability_score_modifiers: undefined }),
+                makeCombatSummary({ name: 'Warlock', type: 'npc', monsterType: 'Fiend', ability_score_modifiers: undefined }),
                 campaignName,
                 5,
             );
@@ -699,7 +699,7 @@ describe('holyAuraDamageService', () => {
             checkHolyAuraDamage(
                 { name: 'Goblin' },
                 'Warlock',
-                makeCombatSummary({ name: 'Warlock', type: 'Fiend' }),
+                makeCombatSummary({ name: 'Warlock', type: 'npc', monsterType: 'Fiend' }),
                 campaignName,
                 0,
             );
@@ -719,7 +719,7 @@ describe('holyAuraDamageService', () => {
             checkHolyAuraDamage(
                 { name: 'Goblin' },
                 'Warlock',
-                makeCombatSummary({ name: 'Warlock', type: 'Fiend', ability_score_modifiers: { CON: 3 } }),
+                makeCombatSummary({ name: 'Warlock', type: 'npc', monsterType: 'Fiend', ability_score_modifiers: { CON: 3 } }),
                 campaignName,
                 1,
             );

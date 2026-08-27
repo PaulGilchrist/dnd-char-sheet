@@ -226,7 +226,6 @@ export function createNpcClickHandler({
                 merged.name = runtimeCreature.name
                 merged.armor_class = runtimeCreature.ac
                 merged.hit_points = runtimeCreature.currentHp
-                merged.type = runtimeCreature.type
                 merged.size = runtimeCreature.size
                 if (runtimeCreature.speed) {
                     merged.speed = runtimeCreature.speed

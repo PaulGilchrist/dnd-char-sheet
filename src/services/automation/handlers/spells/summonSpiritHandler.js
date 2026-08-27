@@ -100,7 +100,8 @@ function buildSpiritCreature(monster, displayName, casterName, initiativeValue, 
 
     return {
         name: displayName,
-        type: monster.type || 'construct',
+        type: 'npc',
+        monsterType: monster.type,
         initiative: String(initiativeValue - 0.1),
         targetName: null,
         ac,

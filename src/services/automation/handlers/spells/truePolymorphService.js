@@ -269,7 +269,8 @@ export async function summonCreatureFromObject(monsterIndex, casterName, initiat
 
     const creature = {
         name: monster.name,
-        type: monster.type || 'monstrosity',
+        type: 'npc',
+        monsterType: monster.type,
         initiative: String(initiativeValue - 0.1),
         targetName: null,
         ac,

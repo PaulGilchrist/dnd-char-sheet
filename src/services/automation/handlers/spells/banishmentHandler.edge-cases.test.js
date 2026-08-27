@@ -293,7 +293,7 @@ describe('banishmentHandler.handle edge cases', () => {
 
     getCombatContext.mockResolvedValue({
       creatures: [
-        { name: 'FeyCreature', type: 'fey', saveBonuses: { CHA: 1 }, currentHp: 10, maxHp: 20 },
+        { name: 'FeyCreature', type: 'npc', monsterType: 'fey', saveBonuses: { CHA: 1 }, currentHp: 10, maxHp: 20 },
       ],
     });
 
@@ -334,7 +334,7 @@ describe('banishmentHandler.handle edge cases', () => {
 
     getCombatContext.mockResolvedValue({
       creatures: [
-        { name: 'Aberration', type: 'aberration', saveBonuses: { CHA: 3 }, currentHp: 25, maxHp: 50 },
+        { name: 'Aberration', type: 'npc', monsterType: 'aberration', saveBonuses: { CHA: 3 }, currentHp: 25, maxHp: 50 },
       ],
     });
 

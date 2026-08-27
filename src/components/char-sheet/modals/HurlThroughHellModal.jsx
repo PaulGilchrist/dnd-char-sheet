@@ -91,7 +91,7 @@ function HurlThroughHellModal({ action, playerStats, campaignName, targetName, s
 
                 const combatSummary = getCombatSummary(campaignName);
                 const targetCreature = combatSummary?.creatures?.find(c => c.name === targetName);
-                const isFiend = targetCreature?.type === 'fiend';
+                const isFiend = targetCreature?.monsterType === 'fiend';
 
                 let actualDamage = 0;
 

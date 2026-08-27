@@ -33,7 +33,7 @@ function isShapechanger(targetName, creature) {
     const specialAbilities = creature?.special_abilities || [];
     const allTraits = [...traits, ...specialAbilities];
     if (allTraits.some(t => String(t?.name || '').toLowerCase() === 'shapechanger')) return true;
-    const typeValue = String(creature?.type || '').toLowerCase();
+    const typeValue = String(creature?.monsterType || '').toLowerCase();
     if (typeValue === 'shapechanger') return true;
     if (typeValue.includes('shapechanger')) return true;
     const typeTags = creature?.type_tags || [];

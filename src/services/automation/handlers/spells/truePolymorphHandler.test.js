@@ -319,7 +319,7 @@ describe('truePolymorphHandler.handle', () => {
     it('returns popup when target type is shapechanger', async () => {
       getCombatContext.mockResolvedValue({
         creatures: [
-          { name: targetName, type: 'Shapechanger', currentHp: 5, maxHp: 7 },
+          { name: targetName, type: 'npc', monsterType: 'Shapechanger', currentHp: 5, maxHp: 7 },
           { name: casterName, type: 'player' },
         ],
       });
@@ -339,7 +339,7 @@ describe('truePolymorphHandler.handle', () => {
     it('returns popup when target type includes shapechanger substring', async () => {
       getCombatContext.mockResolvedValue({
         creatures: [
-          { name: targetName, type: 'Were-Shapechanger', currentHp: 5, maxHp: 7 },
+          { name: targetName, type: 'npc', monsterType: 'Were-Shapechanger', currentHp: 5, maxHp: 7 },
           { name: casterName, type: 'player' },
         ],
       });
@@ -621,7 +621,7 @@ describe('truePolymorphHandler.handle', () => {
     it('logs ability_use when target is a shapechanger', async () => {
       getCombatContext.mockResolvedValue({
         creatures: [
-          { name: targetName, type: 'Shapechanger', currentHp: 5 },
+          { name: targetName, type: 'npc', monsterType: 'Shapechanger', currentHp: 5 },
           { name: casterName, type: 'player' },
         ],
       });

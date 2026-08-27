@@ -35,7 +35,7 @@ vi.mock('../../../rules/combat/damageUtils.js', () => ({
 
 vi.mock('../../../encounters/combatData.js', () => ({
     getCombatSummary: vi.fn(() => ({
-        creatures: [{ name: 'Goblin', type: 'fiend' }],
+        creatures: [{ name: 'Goblin', type: 'npc', monsterType: 'fiend' }],
     })),
 }));
 
@@ -79,7 +79,7 @@ function mockRuntime(overrides = {}) {
 }
 
 function mockCombatContext(creatures) {
-    getCombatContext.mockResolvedValue({ creatures: creatures || [{ name: 'Goblin', type: 'fiend' }] });
+    getCombatContext.mockResolvedValue({ creatures: creatures || [{ name: 'Goblin', type: 'npc', monsterType: 'fiend' }] });
     getTargetFromAttacker.mockReturnValue({ name: 'Goblin' });
 }
 
