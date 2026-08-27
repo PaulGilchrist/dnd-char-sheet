@@ -325,3 +325,93 @@ describe('SP-042 Eyebite regression', () => {
     expect(automation.saveDc).toBe('spell_save_dc');
   });
 });
+
+// ── SP-056 Grease regression ─────────────────────────────────────
+// Bug: Grease could not be verified because no character had the spell
+// in their spell list. The automation implementation was correct but
+// the test campaign lacked a valid caster (Sorcerer/Wizard with Grease).
+// Fix: Added Grease to DivinationWizard's spell list in test-campaign.
+// Verified live via playwright-mcp: spell cast modal appeared with
+// DEX save DC 17 and prone condition description, and the action was
+// logged in the campaign log.
+
+describe('SP-056 Grease regression', () => {
+  function readGreaseAutomation(dataFile) {
+    const spells = JSON.parse(readFileSync(resolve(process.cwd(), dataFile), 'utf8'));
+    return spells.find((s) => s.index === 'grease');
+  }
+
+  it('has grease spell data in 2024 ruleset with save_only automation', () => {
+    const spell = readGreaseAutomation('public/data/2024/spells.json');
+
+    expect(spell).toBeDefined();
+    expect(spell.name).toBe('Grease');
+    expect(spell.level).toBe(1);
+    expect(spell.automation).toBeDefined();
+    expect(spell.automation.type).toBe('save_only');
+    expect(spell.automation.saveType).toBe('DEX');
+  });
+
+  it('has grease spell data in 5e ruleset with save_attack automation array', () => {
+    const spell = readGreaseAutomation('public/data/spells.json');
+
+    expect(spell).toBeDefined();
+    expect(spell.name).toBe('Grease');
+    expect(spell.level).toBe(1);
+    expect(Array.isArray(spell.automation)).toBe(true);
+    expect(spell.automation.length).toBe(2);
+    expect(spell.automation[0].type).toBe('save_attack');
+    expect(spell.automation[1].type).toBe('grease_area_save');
+  });
+
+  it('has grease automation with prone fail effect in 2024 ruleset', () => {
+    const spell = readGreaseAutomation('public/data/2024/spells.json');
+
+    expect(spell.automation.effects).toBeDefined();
+    expect(spell.automation.effects.fail).toBeDefined();
+    expect(spell.automation.effects.fail[0].condition).toBe('prone');
+  });
+
+  it('has grease area_of_effect in 2024 ruleset', () => {
+    const spell = readGreaseAutomation('public/data/2024/spells.json');
+
+    expect(spell.area_of_effect).toBeDefined();
+    expect(spell.area_of_effect.shape).toBe('square');
+    expect(spell.area_of_effect.size).toBe('10-foot');
+  });
+
+  it('has grease area_of_effect in 5e ruleset (cube, numeric size)', () => {
+    const spell = readGreaseAutomation('public/data/spells.json');
+
+    expect(spell.area_of_effect).toBeDefined();
+    expect(spell.area_of_effect.type).toBe('cube');
+    expect(spell.area_of_effect.size).toBe(10);
+  });
+
+  it('grease is available to Wizard and Sorcerer classes in 2024 ruleset', () => {
+    const spell = readGreaseAutomation('public/data/2024/spells.json');
+
+    expect(spell.classes).toContain('Wizard');
+    expect(spell.classes).toContain('Sorcerer');
+  });
+
+  it('grease is available to Wizard class in 5e ruleset', () => {
+    const spell = readGreaseAutomation('public/data/spells.json');
+
+    expect(spell.classes).toContain('Wizard');
+  });
+
+  it('grease has correct range and duration in 2024 ruleset', () => {
+    const spell = readGreaseAutomation('public/data/2024/spells.json');
+
+    expect(spell.range).toBe('60 feet');
+    expect(spell.duration).toBe('1 minute');
+  });
+
+  it('grease has correct range and duration in 5e ruleset', () => {
+    const spell = readGreaseAutomation('public/data/spells.json');
+
+    expect(spell.range).toBe('60 feet');
+    expect(spell.duration).toBe('1 minute');
+  });
+});
