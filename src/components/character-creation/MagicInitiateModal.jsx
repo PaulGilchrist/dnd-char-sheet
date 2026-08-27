@@ -303,6 +303,9 @@ function MagicInitiateModal({ formData, allSpells, onArrayFieldChange, onClose }
       <div className="mi-modal" onClick={(e) => e.stopPropagation()}>
         <div className="mi-header">
           <i className="fa-solid fa-hat-wizard"></i> Magic Initiate
+          <button type="button" className="mi-header-close" onClick={onClose} aria-label="Close" title="Close (configure later from the Spells step)">
+            <i className="fa-solid fa-xmark"></i>
+          </button>
         </div>
         <div className="mi-body">
           <p className="mi-description">
@@ -330,6 +333,14 @@ function MagicInitiateModal({ formData, allSpells, onArrayFieldChange, onClose }
             <div className="mi-save-all">
               <button type="button" className="mi-save-all-btn" onClick={saveAll}>
                 <i className="fa-solid fa-check"></i> Save All
+              </button>
+            </div>
+          )}
+
+          {editingIndex === null && (
+            <div className="mi-skip">
+              <button type="button" className="mi-skip-btn" onClick={onClose}>
+                <i className="fa-solid fa-forward-step"></i> Skip for now
               </button>
             </div>
           )}

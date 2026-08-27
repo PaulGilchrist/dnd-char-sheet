@@ -4884,6 +4884,7 @@
         "automation": {
             "type": "eyebite",
             "saveType": "WIS",
+            "saveDc": "spell_save_dc",
             "range": "60 ft",
             "duration": "1_minute"
         }

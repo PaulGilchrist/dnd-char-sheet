@@ -3,6 +3,8 @@
 // @cleaned-by-ai
 // @improved-by-ai
 // @cleaned-by-ai
+import { readFileSync } from 'node:fs';
+import { resolve } from 'node:path';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 
 import { executeHandler } from './index.js';
@@ -26,6 +28,13 @@ vi.mock('./handlers/combat/damageReductionHandler.js', () => ({
 }));
 vi.mock('./handlers/class-sorcerer/protectiveFieldHandler.js', () => ({
   handle: vi.fn().mockResolvedValue({ result: 'protective_field' }),
+}));
+vi.mock('./handlers/spells/eyebiteHandler.js', () => ({
+  handle: vi.fn().mockResolvedValue({
+    type: 'modal',
+    modalName: 'eyebiteEffect',
+    payload: { saveDc: 17 },
+  }),
 }));
 vi.mock('../../../shared/popupResponse.js', () => ({
   automationInfoPopup: vi.fn().mockReturnValue({ type: 'popup', payload: { type: 'automation_info', description: 'test' } }),
@@ -269,5 +278,50 @@ describe('executeHandler', () => {
 
       expect(result).toBeNull();
     });
+  });
+});
+
+// ── SP-042 Eyebite regression ─────────────────────────────────────
+// Reported: casting Eyebite produced no effect (handler never invoked,
+// an info popup shown instead of the effect modal). Separately, the spell
+// data was missing saveDc, so the WIS save DC fell back to the default 10.
+
+describe('SP-042 Eyebite regression', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  it('routes type:eyebite to the eyebite handler and returns the eyebiteEffect modal', async () => {
+    const { handle: handleEyebite } = await import('./handlers/spells/eyebiteHandler.js');
+
+    const action = makeAction({
+      type: 'eyebite',
+      saveType: 'WIS',
+      saveDc: 'spell_save_dc',
+      range: '60 ft',
+      duration: '1_minute',
+    });
+
+    const result = await executeHandler(action, makePlayerStats(), campaignName, mapName);
+
+    expect(handleEyebite).toHaveBeenCalledTimes(1);
+    expect(result.type).toBe('modal');
+    expect(result.modalName).toBe('eyebiteEffect');
+  });
+
+  function readEyebiteAutomation(dataFile) {
+    const spells = JSON.parse(readFileSync(resolve(process.cwd(), dataFile), 'utf8'));
+    return spells.find((s) => s.index === 'eyebite')?.automation;
+  }
+
+  it.each([
+    'public/data/spells.json',
+    'public/data/2024/spells.json',
+  ])('declares saveDc: spell_save_dc for Eyebite in %s', (dataFile) => {
+    const automation = readEyebiteAutomation(dataFile);
+
+    expect(automation).toBeDefined();
+    expect(automation.saveType).toBe('WIS');
+    expect(automation.saveDc).toBe('spell_save_dc');
   });
 });
