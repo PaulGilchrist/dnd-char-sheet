@@ -44,7 +44,7 @@ vi.mock('../../../dice/diceRoller.js', () => ({
   rollD20: vi.fn(() => 10),
 }));
 
-import { handle } from './dominatePersonHandler.js';
+import { handle } from './dominateHandler.js';
 import { buildSaveDc, createSaveListener } from '../../common/savePrompt.js';
 import { resolveTarget } from '../../common/targetResolver.js';
 import { getRuntimeValue, setRuntimeValue } from '../../../../hooks/runtime/useRuntimeState.js';
@@ -91,7 +91,7 @@ function setupBaseMocks(saveResult = { success: true }, isNpc = false) {
   });
 }
 
-describe('dominatePersonHandler.handle', () => {
+describe('dominateHandler.handle (Dominate Person)', () => {
   beforeEach(() => {
     vi.clearAllMocks();
   });

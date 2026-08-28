@@ -220,9 +220,7 @@ import { handle as handleCrownOfMadness } from './handlers/spells/crownOfMadness
 import { triggerCrownOfMadness } from '../../services/rules/features/crownOfMadnessService.js';
 import { handle as handleAnimalFriendship } from './handlers/spells/animalFriendshipHandler.js';
 import { handle as handleAnimalShapes } from './handlers/spells/animalShapesHandler.js';
-import { handle as handleDominateBeast } from './handlers/spells/dominateBeastHandler.js';
-import { handle as handleDominateMonster } from './handlers/spells/dominateMonsterHandler.js';
-import { handle as handleDominatePerson } from './handlers/spells/dominatePersonHandler.js';
+import { handle as handleDominate } from './handlers/spells/dominateHandler.js';
 import { handle as handleSleep } from './handlers/spells/sleepHandler.js';
 import { handle as handleSleepShake } from './handlers/spells/sleepShakeHandler.js';
 import { handle as handleGlobeOfInvulnerability } from './handlers/spells/globeOfInvulnerabilityHandler.js';
@@ -542,9 +540,9 @@ const HANDLER_MAP = {
         compulsion: handleCompulsion,
         crown_of_madness: handleCrownOfMadness,
         animal_friendship: handleAnimalFriendship,
-        dominate_beast: handleDominateBeast,
-        dominate_monster: handleDominateMonster,
-        dominate_person: handleDominatePerson,
+        dominate_beast: handleDominate,
+        dominate_monster: handleDominate,
+        dominate_person: handleDominate,
         globe_of_invulnerability: handleGlobeOfInvulnerability,
         antimagic_field: handleAntimagicField,
         grease_area_save: handleGreaseAreaSave,

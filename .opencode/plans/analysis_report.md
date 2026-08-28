@@ -14,9 +14,7 @@ jscpd (min-tokens 70): **16.8% of lines duplicated** project-wide; 832 clones in
 
 ### 1.1 Byte-identical files (MD5-verified — highest certainty)
 
-| Files | Evidence |
-|---|---|
-| `services/automation/handlers/spells/dominateBeastHandler.js` ≡ `dominateMonsterHandler.js` ≡ `dominatePersonHandler.js` | Identical MD5 (`f621971…`), 183 lines each. All three registered as separate spell keys in `services/automation/index.js:545-547`. Handlers are spell-data-generic; the three spell names are the only semantic difference. |
+**Resolved (2026-08-28):** `dominateBeastHandler.js` ≡ `dominateMonsterHandler.js` ≡ `dominatePersonHandler.js` (identical MD5 `f621971…`, 183 lines each) collapsed into `services/automation/handlers/spells/dominateHandler.js`; `automation/index.js` registers all three keys (`dominate_beast/monster/person`) against the single module. No byte-identical file groups remain.
 
 ### 1.2 Near-identical production file pairs (jscpd + diff)
 
@@ -25,7 +23,7 @@ jscpd (min-tokens 70): **16.8% of lines duplicated** project-wide; 832 clones in
 | `services/automation/handlers/spells/blessHandler.js` (44L) vs `baneHandler.js` (44L) | ~96% identical (sign of modifier differs) |
 | `services/automation/handlers/spells/charmPersonHandler.js` vs `charmMonsterHandler.js` (~220L each) | ~89% identical; jscpd clones at 1-57, 112-144, 150-191 |
 | `services/rules/features/massCureWoundsService.js` vs `massHealingWordService.js` (137L each) | Only 18 changed lines (whitespace-normalized); jscpd clones at 11-54 and 76-119 |
-| `services/automation/handlers/spells/compulsionHandler.js` vs `dominateBeastHandler.js` / `crownOfMadnessHandler.js` | Clones 1-42, 83-116 |
+| `services/automation/handlers/spells/compulsionHandler.js` vs `dominateHandler.js` / `crownOfMadnessHandler.js` | Clones 1-42, 83-116 |
 | `services/automation/handlers/spells/polymorphHandler.js` vs `truePolymorphHandler.js` | ~54% identical; clone 10-44 |
 | `services/automation/handlers/spells/animalFriendshipHandler.js` vs `crownOfMadnessHandler.js` | Clone 10-69 ↔ 12-63 |
 | `services/automation/handlers/class-other/giantAncestryDispatch.js` vs `giantAncestryTraits.js` | Three clones: 115L, 101L, 53L |
@@ -78,8 +76,7 @@ Spot-verified with independent ripgrep (zero external references):
 - `services/rules/core/attackCalc.js` — `isSpellAttack`, `getSpellActionType`.
 - `services/combat/conditions/savePromptService.js` — `sendPrismaticSprayIndigoPrompt`, `clearPrismaticSprayIndigoPrompt`, `sendPrismaticSprayVioletPrompt`, `clearPrismaticSprayVioletPrompt`.
 - `services/rules/core/magicSpells.js` — `addMagicInitiateSpells`, `addFeyTouchedSpell`, `addShadowTouchedSpell`.
-- `hooks/combat/useLoggedDiceRollAttack.js:17-18` — pass-through re-exports (`hasStarryDragonActive`, `getKnownManeuvers`, `getSuperiorityDice`, …); consumers import these from their origin modules (`battleMaster.js`, `starryDragon.js`), never through this file.
-- `hooks/combat/useLoggedDiceRollAttack.js` duplicate exports shadow identical names exported by `combatSuperiorityUtils.js` / `battleMaster.js`.
+- `hooks/combat/useLoggedDiceRollAttack.js:18` — pass-through re-export of `getKnownManeuvers`/`getSuperiorityDice` (unused; consumers import these from their origin modules). **Correction:** the line-17 re-export of `hasStarryDragonActive`/`starryDragonAppliesToRoll` is *not* unused — `useLoggedDiceRollAttack.blocked-attacks.test.js` imports them through this file, so it must not be dropped.
 
 Full knip list available in `/tmp/knip-report.txt`; largest cluster is `services/character/skillValidation/index.js` (14 re-exported helpers with no external consumers).
 
@@ -160,11 +157,11 @@ Ordered by clarity × safety. None of these alter runtime behavior of live code 
 
 | # | Opportunity | Risk | Why low-risk |
 |---|---|---|---|
-| 1 | Drop pass-through re-exports at `useLoggedDiceRollAttack.js:17-18` and other knip-flagged unused exports with zero importers (§3) | Low | Verified no importers; lint+tests confirm. |
-| 2 | Collapse `dominateBeastHandler.js` / `dominateMonsterHandler.js` / `dominatePersonHandler.js` to one module imported under three keys in `automation/index.js` | Low | Byte-identical; registration is a 3-line import map change; three distinct tests must keep passing. |
-| 3 | Rename the 10 kebab-case files in `components/initiative/` to PascalCase matching their exports (with import updates) | Low | Mechanical rename; lint + full suite as guard. |
-| 4 | Standardize test-helper file naming to one convention (e.g. `*.test-utils.js`) | Very low | Non-runtime import-path churn only. |
-| 5 | Add `console.error` to the ~194 silent catch blocks, at least in `services/` (per project convention) | Very low | Adds logging only; no control-flow change. |
-| 6 | Replace remaining direct `Object.keys(localStorage)` reach-through (`unbreakableMajesty.js:34-47`) with a runtime-store key listing API | Medium-low | Behavior-adjacent — needs the explicit runtime-store API; schedule with owner review. |
-| 7 | Enforce `complexity`, `max-depth`, `max-statements` as ESLint *warns* with a per-directory baseline (auto-generated from §4 numbers) to stop regression | Very low | Warn-only config; zero code changes. |
-| 8 | Track (do not rush) the top duplication clusters: giantAncestry pair, AOE/shared modals, mass-healing services, bless/bane, charm pair, `POST` boilerplate → one shared request helper | Higher | Each consolidation touches live combat/spell code — needs behavioral tests, out of scope for "no testing" constraint. |
+| 1 | Rename the 10 kebab-case files in `components/initiative/` to PascalCase matching their exports (with import updates) | Low | Mechanical rename; lint + full suite as guard. |
+| 2 | Standardize test-helper file naming to one convention (e.g. `*.test-utils.js`) | Very low | Non-runtime import-path churn only. |
+| 3 | Add `console.error` to the ~194 silent catch blocks, at least in `services/` (per project convention) | Very low | Adds logging only; no control-flow change. |
+| 4 | Replace remaining direct `Object.keys(localStorage)` reach-through (`unbreakableMajesty.js:34-47`) with a runtime-store key listing API | Medium-low | Behavior-adjacent — needs the explicit runtime-store API; schedule with owner review. |
+| 5 | Enforce `complexity`, `max-depth`, `max-statements` as ESLint *warns* with a per-directory baseline (auto-generated from §4 numbers) to stop regression | Very low | Warn-only config; zero code changes. |
+| 6 | Track (do not rush) the top duplication clusters: giantAncestry pair, AOE/shared modals, mass-healing services, bless/bane, charm pair, `POST` boilerplate → one shared request helper | Higher | Each consolidation touches live combat/spell code — needs behavioral tests, out of scope for "no testing" constraint. |
+
+**Resolved (2026-08-28):** dominate-handler collapse (former #2) — implemented via `dominateHandler.js`; `npm run lint` and `npm run test:run` pass clean. Former #1 (drop pass-through re-exports at `useLoggedDiceRollAttack.js:17-18`) removed as **incorrect**: the line-17 re-exports have a test importer (`useLoggedDiceRollAttack.blocked-attacks.test.js:156`); see §3 correction.
