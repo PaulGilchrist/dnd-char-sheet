@@ -3,7 +3,7 @@
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import CharSpells from './CharSpells.jsx';
-import { mockPlayerStats } from './CharSpells.test.helpers.js';
+import { mockPlayerStats } from './CharSpells.test-utils.js';
 
 vi.mock('../../../hooks/runtime/useRuntimeState.js', () => ({
   useRuntimeValue: vi.fn(() => []),

@@ -60,7 +60,7 @@ import { getRuntimeValue, setRuntimeValue } from '../../../../hooks/runtime/useR
 import { addEntry } from '../../../ui/logService.js';
 import { addExpiration } from '../../../rules/effects/expirations.js';
 import { rollSaveForCreature } from '../../../rules/combat/applyDamage.js';
-import { campaignName, makePlayerStats } from './banishmentHandler.test.helpers.js';
+import { campaignName, makePlayerStats } from './banishmentHandler.test-utils.js';
 
 describe('banishmentHandler.handle', () => {
   beforeEach(() => {

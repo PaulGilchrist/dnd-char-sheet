@@ -2,7 +2,7 @@
 // @cleaned-by-ai
 import { render, screen, fireEvent } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { MagicInitiateModal, createProps } from './MagicInitiateModal.fixtures.js';
+import { MagicInitiateModal, createProps } from './MagicInitiateModal.test-utils.js';
 
 describe('MagicInitiateModal - Save All Behavior', () => {
   beforeEach(() => {

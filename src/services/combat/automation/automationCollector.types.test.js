@@ -5,7 +5,7 @@
 // @cleaned-by-ai
 import { describe, it, expect } from 'vitest'
 import { collectAutomationFromFeatures } from './automationCollector.js'
-import { makePlayerStats, makeFeature } from './automationService.fixtures.js'
+import { makePlayerStats, makeFeature } from './automationService.test-utils.js'
 
 const ps = makePlayerStats()
 

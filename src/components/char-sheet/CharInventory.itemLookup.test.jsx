@@ -30,7 +30,7 @@
 //   KEEP: multiple parenthetical groups (unique edge case)
 
 import { describe, it, expect, beforeEach } from 'vitest';
-import { createRenderComponent } from './charInventoryTestHelpers.jsx';
+import { createRenderComponent } from './charInventory.test-utils.jsx';
 
 describe('CharInventory item lookup', () => {
   let helpers;

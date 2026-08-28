@@ -5,7 +5,7 @@
 // @cleaned-by-ai
 import { describe, it, expect } from 'vitest'
 import { primalHandlers } from './primal.js'
-import { BASE_STATS, makeFeature } from '../automationInfoBuilder.fixtures.js'
+import { BASE_STATS, makeFeature } from '../automationInfoBuilder.test-utils.js'
 
 // ── Helpers ──────────────────────────────────────────────────────────
 

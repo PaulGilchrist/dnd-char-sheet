@@ -27,7 +27,7 @@ import { handle, confirmBolsteringPerformance } from './tempHpBuffHandler.js';
 import * as useRuntimeState from '../../../../hooks/runtime/useRuntimeState.js';
 import * as automationService from '../../../combat/automation/automationService.js';
 import * as damageUtils from '../../../rules/combat/damageUtils.js';
-import { campaignName, makePlayerStats, makeAction } from './tempHpBuffTestHelpers.js';
+import { campaignName, makePlayerStats, makeAction } from './tempHpBuff.test-utils.js';
 
 function resetMocks() {
   useRuntimeState.getRuntimeValue.mockClear().mockReset();

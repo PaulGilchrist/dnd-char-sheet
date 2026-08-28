@@ -10,7 +10,7 @@ import {
     mockLoadCombatSummary,
     campaignName,
     basePlayerStats,
-} from './useCharActionsBaseActions.test.helpers.js';
+} from './useCharActionsBaseActions.test-utils.js';
 
 const defaultCs = {
     creatures: [

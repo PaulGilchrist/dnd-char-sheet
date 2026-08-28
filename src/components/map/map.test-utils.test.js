@@ -18,7 +18,7 @@ import {
     createSSESyncMocks,
     createMapDropsMocks,
     setupMapMocks,
-} from './mapTestUtils.js';
+} from './map.test-utils.js';
 
 describe('mapTestUtils', () => {
     describe('mockGridCenterX', () => {

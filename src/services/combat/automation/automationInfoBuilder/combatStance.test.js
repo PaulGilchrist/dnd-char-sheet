@@ -5,7 +5,7 @@
 // @cleaned-by-ai
 import { describe, it, expect } from 'vitest'
 import { combatStanceHandlers } from './combatStance.js'
-import { BASE_STATS, makeFeature } from '../automationInfoBuilder.fixtures.js'
+import { BASE_STATS, makeFeature } from '../automationInfoBuilder.test-utils.js'
 
 describe('combatStanceHandlers – combat_stance', () => {
     it('returns combat_stance info with defaults when automation is empty', () => {

@@ -1,7 +1,7 @@
 // @improved-by-ai
 // @cleaned-by-ai
 // ── automationInfoBuilder.fixtures.test.js ───────────────────────────
-// Tests for automationInfoBuilder.fixtures.js — the utility functions
+// Tests for automationInfoBuilder.test-utils.js — the utility functions
 // that support the handler tests.
 
 import { describe, it, expect } from 'vitest'
@@ -11,7 +11,7 @@ import {
     BASE_STATS,
     makeFeature,
     BASE_FEATURE,
-} from './automationInfoBuilder.fixtures.js'
+} from './automationInfoBuilder.test-utils.js'
 
 // ── normalizeAbilityName ─────────────────────────────────────────────
 

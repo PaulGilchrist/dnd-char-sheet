@@ -6,7 +6,7 @@
 import { describe, it, expect } from 'vitest'
 
 // ── Imports from the fixtures module ──────────────────────────────
-import { makePlayerStats, makeFeature } from './automationService.fixtures.js'
+import { makePlayerStats, makeFeature } from './automationService.test-utils.js'
 
 // ── makePlayerStats ───────────────────────────────────────────────
 describe('makePlayerStats', () => {

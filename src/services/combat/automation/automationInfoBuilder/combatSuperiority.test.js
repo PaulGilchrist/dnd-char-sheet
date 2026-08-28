@@ -5,7 +5,7 @@
 // @cleaned-by-ai
 import { describe, it, expect } from 'vitest'
 import { combatSuperiorityHandlers } from './combatSuperiority.js'
-import { BASE_STATS, makeFeature } from '../automationInfoBuilder.fixtures.js'
+import { BASE_STATS, makeFeature } from '../automationInfoBuilder.test-utils.js'
 
 describe('combatSuperiorityHandlers – combat_superiority', () => {
     it('returns combat_superiority info with defaults', () => {

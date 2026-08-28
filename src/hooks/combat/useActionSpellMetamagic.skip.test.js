@@ -11,7 +11,7 @@ import {
   makeSpell,
   makeAttack,
   setupBeforeEach,
-} from './useActionSpellMetamagic.test-helpers.js';
+} from './useActionSpellMetamagic.test-utils.js';
 
 vi.mock('./useMetamagic.js', () => ({
   getCurrentSorceryPoints: vi.fn(() => 5),

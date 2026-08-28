@@ -53,7 +53,7 @@ import {
     makeHitAttack,
     defaultCombatRound,
     defaultBeforeEach,
-} from './dreadAmbushTestHelpers.js';
+} from './dreadAmbush.test-utils.js';
 
 describe('dreadAmbushHandler', () => {
     beforeEach(() => {

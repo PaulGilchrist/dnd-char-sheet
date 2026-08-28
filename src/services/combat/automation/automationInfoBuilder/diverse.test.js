@@ -20,7 +20,7 @@
 
 import { describe, it, expect } from 'vitest'
 import { diverseHandlers } from './diverse.js'
-import { BASE_STATS, makeFeature } from '../automationInfoBuilder.fixtures.js'
+import { BASE_STATS, makeFeature } from '../automationInfoBuilder.test-utils.js'
 
 // ── Helpers ──────────────────────────────────────────────────────────
 

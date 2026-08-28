@@ -9,7 +9,7 @@ import {
   getEvasionEffects,
   getAllSaveProficiencies,
 } from './automationService.js'
-import { makeFeature, makePlayerStats } from './automationService.fixtures.js'
+import { makeFeature, makePlayerStats } from './automationService.test-utils.js'
 
 // ── getEvasionEffects ─────────────────────────────────────────────
 describe('getEvasionEffects', () => {

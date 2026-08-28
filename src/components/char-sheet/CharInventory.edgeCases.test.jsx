@@ -18,7 +18,7 @@
 
 import { describe, it, expect, beforeEach } from 'vitest';
 import { screen, fireEvent, waitFor } from '@testing-library/react';
-import { createRenderComponent } from './charInventoryTestHelpers.jsx';
+import { createRenderComponent } from './charInventory.test-utils.jsx';
 
 describe('CharInventory edge cases', () => {
   let helpers;

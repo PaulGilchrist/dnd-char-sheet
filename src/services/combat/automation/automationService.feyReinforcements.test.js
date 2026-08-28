@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest'
 import { isInteractiveAutomation } from './automationService.js'
-import { makeFeature } from './automationService.fixtures.js'
+import { makeFeature } from './automationService.test-utils.js'
 
 describe('isInteractiveAutomation — fey_reinforcements', () => {
   it('returns true for fey_reinforcements automation type', () => {

@@ -6,7 +6,7 @@
 // @cleaned-by-ai
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { handle, isBlockedBySpellThief, hasStolenSpell } from './spellThiefHandler.js';
-import { makeAction, makePlayerStats } from './spellThiefTestHelpers.js';
+import { makeAction, makePlayerStats } from './spellThief.test-utils.js';
 
 vi.mock('../../../../hooks/runtime/useRuntimeState.js', () => ({
     getRuntimeValue: vi.fn(),

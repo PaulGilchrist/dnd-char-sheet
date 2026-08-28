@@ -2,7 +2,7 @@
 // @cleaned-by-ai
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import useCharActionsBaseActions from './useCharActionsBaseActions.js';
-import { createHooks, mockSetPopupHtml, mockRollSkillCheck, mockAddEntry, campaignName, basePlayerStats } from './useCharActionsBaseActions.test.helpers.js';
+import { createHooks, mockSetPopupHtml, mockRollSkillCheck, mockAddEntry, campaignName, basePlayerStats } from './useCharActionsBaseActions.test-utils.js';
 
 function makeGrv(activeConditions = [], lastAttack = null, activeBuffs = []) {
     return vi.fn((_charKey, key, _cn) => {

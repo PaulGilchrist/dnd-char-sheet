@@ -61,7 +61,7 @@ import { rollSaveForCreature } from '../../../rules/combat/applyDamage.js';
 import { addTargetResult } from '../../common/damageRollback.js';
 import { addConcentration } from '../../../combat/concentration/concentrationService.js';
 import { resolveTarget } from '../../common/targetResolver.js';
-import { campaignName, makePlayerStats } from './banishmentHandler.test.helpers.js';
+import { campaignName, makePlayerStats } from './banishmentHandler.test-utils.js';
 
 describe('banishmentHandler.handle edge cases', () => {
   beforeEach(() => {

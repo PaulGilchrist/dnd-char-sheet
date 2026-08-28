@@ -10,7 +10,7 @@ import {
   getAutomationInfo,
   evaluateAutoExpression,
 } from './automationService.js'
-import { makePlayerStats, makeFeature } from './automationService.fixtures.js'
+import { makePlayerStats, makeFeature } from './automationService.test-utils.js'
 
 // ── hasAutomation ─────────────────────────────────────────────────
 

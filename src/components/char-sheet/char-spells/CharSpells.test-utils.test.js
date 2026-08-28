@@ -1,9 +1,9 @@
 // @improved-by-ai
 // @cleaned-by-ai
 import { describe, it, expect } from 'vitest';
-import * as helpers from './CharSpells.test.helpers.js';
+import * as helpers from './CharSpells.test-utils.js';
 
-describe('CharSpells.test.helpers', () => {
+describe('CharSpells.test-utils', () => {
   describe('mockPlayerStats', () => {
     it('has correct 5e ruleset metadata', () => {
       const { mockPlayerStats } = helpers;

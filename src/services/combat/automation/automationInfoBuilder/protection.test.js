@@ -5,7 +5,7 @@
 // @cleaned-by-ai
 import { describe, it, expect } from 'vitest'
 import { reactionHandlers } from './reaction.js'
-import { BASE_STATS, makeFeature } from '../automationInfoBuilder.fixtures.js'
+import { BASE_STATS, makeFeature } from '../automationInfoBuilder.test-utils.js'
 
 describe('reactionHandlers – protection', () => {
     it('returns type protection with correct defaults', () => {

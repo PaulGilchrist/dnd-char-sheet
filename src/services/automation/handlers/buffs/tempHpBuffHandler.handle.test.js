@@ -19,7 +19,7 @@ import { handle } from './tempHpBuffHandler.js';
 import * as useRuntimeState from '../../../../hooks/runtime/useRuntimeState.js';
 import * as automationService from '../../../combat/automation/automationService.js';
 import * as tempHpService from './tempHpService.js';
-import { campaignName, makePlayerStats, makeAction } from './tempHpBuffTestHelpers.js';
+import { campaignName, makePlayerStats, makeAction } from './tempHpBuff.test-utils.js';
 
 function resetMocks() {
   useRuntimeState.getRuntimeValue.mockClear();

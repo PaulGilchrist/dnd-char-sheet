@@ -10,7 +10,7 @@
 //   CharInventory.popup.test.jsx - weight:0 (falsy), cost:0 unit:'' (string interp),
 //     ability/utilize/craft: '' (falsy checks)
 import { describe, it, expect, beforeEach } from 'vitest';
-import { createRenderComponent } from './charInventoryTestHelpers.jsx';
+import { createRenderComponent } from './charInventory.test-utils.jsx';
 
 describe('CharInventory equipment data edge cases', () => {
   let helpers;

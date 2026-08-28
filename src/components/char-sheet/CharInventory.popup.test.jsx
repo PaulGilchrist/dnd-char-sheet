@@ -1,7 +1,7 @@
 // @improved-by-ai
 // @cleaned-by-ai
 import { describe, it, expect, beforeEach, vi } from 'vitest';
-import { createRenderComponent } from './charInventoryTestHelpers.jsx';
+import { createRenderComponent } from './charInventory.test-utils.jsx';
 
 describe('CharInventory item popup', () => {
   let helpers;

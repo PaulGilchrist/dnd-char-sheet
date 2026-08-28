@@ -5,7 +5,7 @@
 // @cleaned-by-ai
 import { describe, it, expect } from 'vitest'
 import { natureHandlers } from './nature.js'
-import { BASE_STATS, makeFeature } from '../automationInfoBuilder.fixtures.js'
+import { BASE_STATS, makeFeature } from '../automationInfoBuilder.test-utils.js'
 
 describe('natureHandlers – nature_sanctuary', () => {
     it('returns nature_sanctuary info with defaults when automation is empty', () => {

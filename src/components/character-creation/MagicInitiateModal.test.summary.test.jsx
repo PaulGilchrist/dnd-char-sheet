@@ -2,7 +2,7 @@
 // @cleaned-by-ai
 import { render, screen } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { MagicInitiateModal, createProps } from './MagicInitiateModal.fixtures.js';
+import { MagicInitiateModal, createProps } from './MagicInitiateModal.test-utils.js';
 import { renderMarkdown } from '../../services/ui/sanitize.js';
 
 vi.mock('../../services/ui/sanitize.js', () => ({

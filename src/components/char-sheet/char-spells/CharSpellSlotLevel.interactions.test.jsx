@@ -3,7 +3,7 @@
 import { render, screen, fireEvent } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import CharSpellSlotLevel from './CharSpellSlotLevel.jsx';
-import * as helpers from './CharSpellSlotLevel.test.helpers.js';
+import * as helpers from './CharSpellSlotLevel.test-utils.js';
 
 vi.mock('../../../hooks/runtime/useRuntimeState.js', () => ({
   useRuntimeValue: vi.fn(),

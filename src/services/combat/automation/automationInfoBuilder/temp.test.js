@@ -6,7 +6,7 @@
 
 import { describe, it, expect } from 'vitest'
 import { tempHandlers } from './temp.js'
-import { BASE_STATS, makeFeature } from '../automationInfoBuilder.fixtures.js'
+import { BASE_STATS, makeFeature } from '../automationInfoBuilder.test-utils.js'
 
 // ── temp_buff ────────────────────────────────────────────────────────
 

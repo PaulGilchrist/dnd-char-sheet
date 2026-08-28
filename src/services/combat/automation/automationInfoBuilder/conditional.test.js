@@ -6,7 +6,7 @@
 import { describe, it, expect } from 'vitest'
 
 import { conditionalHandlers } from './conditional.js'
-import { BASE_STATS } from '../automationInfoBuilder.fixtures.js'
+import { BASE_STATS } from '../automationInfoBuilder.test-utils.js'
 
 function featureWith(automation, name = 'Test Feature') {
     return { name, automation }

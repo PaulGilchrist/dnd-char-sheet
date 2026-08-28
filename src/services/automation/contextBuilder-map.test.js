@@ -26,7 +26,7 @@ import { getLionDisadvantageAgainst } from '../combat/auras/lionAuraUtils.js';
 import { getCoronaSaveDisadvantage } from '../combat/auras/coronaAuraUtils.js';
 import { hasAuraOfProtection } from '../combat/auras/auraOfProtection.js';
 import { isActive, isAuraTarget } from './handlers/class-cleric-paladin/avengingAngelHandler.js';
-import { mockStats, mockRangedAttack, makeCombatContext, makeMapData } from './contextBuilder-map.test-helpers.js';
+import { mockStats, mockRangedAttack, makeCombatContext, makeMapData } from './contextBuilder-map.test-utils.js';
 
 vi.mock('./common/damageRoll.js', () => ({ buildBaseAttackContext: vi.fn() }));
 vi.mock('../rules/combat/damageUtils.js', () => ({ getCombatContext: vi.fn(), getTargetFromAttacker: vi.fn() }));

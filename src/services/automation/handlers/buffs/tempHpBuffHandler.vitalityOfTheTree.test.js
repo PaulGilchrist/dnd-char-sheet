@@ -29,7 +29,7 @@ import * as logService from '../../../ui/logService.js';
 import * as combatData from '../../../encounters/combatData.js';
 import * as automationService from '../../../combat/automation/automationService.js';
 import * as damageUtils from '../../../rules/combat/damageUtils.js';
-import { campaignName, makePlayerStats, makeAction } from './tempHpBuffTestHelpers.js';
+import { campaignName, makePlayerStats, makeAction } from './tempHpBuff.test-utils.js';
 
 function resetMocks() {
   useRuntimeState.getRuntimeValue.mockClear().mockReset();

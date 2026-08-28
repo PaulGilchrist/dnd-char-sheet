@@ -6,7 +6,7 @@
 import { describe, it, expect, vi } from 'vitest';
 import { renderHook, act } from '@testing-library/react';
 import { useActionSpellMetamagic } from './useActionSpellMetamagic.js';
-import { makeHookProps, makePlayerStats, setupBeforeEach } from './useActionSpellMetamagic.test-helpers.js';
+import { makeHookProps, makePlayerStats, setupBeforeEach } from './useActionSpellMetamagic.test-utils.js';
 
 vi.mock('./useMetamagic.js', () => ({
   getCurrentSorceryPoints: vi.fn(() => 5),

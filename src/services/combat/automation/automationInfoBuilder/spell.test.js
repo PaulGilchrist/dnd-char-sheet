@@ -6,7 +6,7 @@
 import { describe, it, expect, vi } from 'vitest'
 import { spellHandlers } from './spell.js'
 import * as expressModule from '../automationExpressions.js'
-import { BASE_STATS, makeFeature } from '../automationInfoBuilder.fixtures.js'
+import { BASE_STATS, makeFeature } from '../automationInfoBuilder.test-utils.js'
 
 // ── Shared helpers ───────────────────────────────────────────────────
 

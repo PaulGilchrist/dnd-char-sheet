@@ -5,7 +5,7 @@
 //   CharInventory.popup.test.jsx - desc array joining with <br/><br/> (same popup flow)
 import { describe, it, expect } from 'vitest';
 import { screen } from '@testing-library/react';
-import { createRenderComponent } from './charInventoryTestHelpers.jsx';
+import { createRenderComponent } from './charInventory.test-utils.jsx';
 
 describe('CharInventory rendering', () => {
   let helpers;

@@ -19,7 +19,7 @@
 
 import { describe, it, expect } from 'vitest'
 import { initiativeHandlers } from './initiative.js'
-import { BASE_STATS, makeFeature } from '../automationInfoBuilder.fixtures.js'
+import { BASE_STATS, makeFeature } from '../automationInfoBuilder.test-utils.js'
 
 // ── Helpers ──────────────────────────────────────────────────────────
 

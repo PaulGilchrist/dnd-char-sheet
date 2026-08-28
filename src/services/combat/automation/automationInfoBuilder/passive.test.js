@@ -22,7 +22,7 @@
 
 import { describe, it, expect } from 'vitest'
 import { passiveHandlers } from './passive.js'
-import { BASE_STATS, makeFeature } from '../automationInfoBuilder.fixtures.js'
+import { BASE_STATS, makeFeature } from '../automationInfoBuilder.test-utils.js'
 
 // ── Helpers ──────────────────────────────────────────────────────────
 

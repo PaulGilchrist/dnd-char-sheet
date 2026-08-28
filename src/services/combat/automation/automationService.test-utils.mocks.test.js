@@ -6,7 +6,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 
 // Import fixtures to activate vi.mock hoisting for mocked modules
-import './automationService.fixtures.js'
+import './automationService.test-utils.js'
 
 // Import the mocked implementations to verify their actual behavior
 import { parseMagicItemName } from '../../rules/core/attackCalc.js'

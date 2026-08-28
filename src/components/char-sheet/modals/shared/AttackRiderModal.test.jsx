@@ -20,7 +20,7 @@ import {
   makeProps, makeSingleSelectAction, makeMultiSelectAction,
   cunningStrikeAction, selectSingleOption, clickApplySingle,
   clickApplyMulti, clickCheckbox, defaultResult,
-} from './AttackRiderModal.fixtures.js';
+} from './AttackRiderModal.test-utils.js';
 
 describe('AttackRiderModal', () => {
   beforeEach(() => vi.clearAllMocks());

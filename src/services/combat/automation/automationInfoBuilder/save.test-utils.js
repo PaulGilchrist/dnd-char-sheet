@@ -1,5 +1,5 @@
 import { expect } from 'vitest'
-import { makeFeature } from '../automationInfoBuilder.fixtures.js'
+import { makeFeature } from '../automationInfoBuilder.test-utils.js'
 
 // ── save.test.js helper extract ──────────────────────────────────────
 

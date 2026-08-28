@@ -17,7 +17,7 @@ import {
   baseCombatContext,
   createFailedSaveSetup,
   createSuccessfulSaveSetup,
-} from './__tests__/ottosDance-fixtures.js';
+} from './__tests__/ottosDance.test-utils.js';
 
 vi.mock('../../common/savePrompt.js', () => ({
   buildSaveDc: vi.fn(),

@@ -28,7 +28,7 @@ import * as useRuntimeState from '../../../../hooks/runtime/useRuntimeState.js';
 import * as logService from '../../../ui/logService.js';
 import * as damageUtils from '../../../rules/combat/damageUtils.js';
 import * as expirations from '../../../rules/effects/expirations.js';
-import { campaignName, makePlayerStats, makeAction } from './tempHpBuffTestHelpers.js';
+import { campaignName, makePlayerStats, makeAction } from './tempHpBuff.test-utils.js';
 
 function resetMocks() {
   useRuntimeState.getRuntimeValue.mockClear().mockReset();

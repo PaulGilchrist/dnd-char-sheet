@@ -3,7 +3,7 @@
 import { render, screen, fireEvent } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import CharSpells from './CharSpells.jsx';
-import * as helpers from './CharSpells.test.helpers.js';
+import * as helpers from './CharSpells.test-utils.js';
 
 const { useSpellMetamagicFlow } = vi.hoisted(() => ({
   useSpellMetamagicFlow: vi.fn(() => ({

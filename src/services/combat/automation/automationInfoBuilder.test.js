@@ -5,7 +5,7 @@
 // @cleaned-by-ai
 import { describe, it, expect } from 'vitest'
 import { buildAttackInfo } from './automationInfoBuilder.js'
-import { BASE_STATS, makeFeature } from './automationInfoBuilder.fixtures.js'
+import { BASE_STATS, makeFeature } from './automationInfoBuilder.test-utils.js'
 
 describe('buildAttackInfo', () => {
     describe('null/early-return paths', () => {

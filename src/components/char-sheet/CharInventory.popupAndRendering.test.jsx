@@ -10,7 +10,7 @@
 //   KEEP: magic items should not have clickable class (unique assertion — only test checking CSS class on magic items)
 import { describe, it, expect, beforeEach } from 'vitest';
 import { screen } from '@testing-library/react';
-import { createRenderComponent } from './charInventoryTestHelpers.jsx';
+import { createRenderComponent } from './charInventory.test-utils.jsx';
 
 describe('CharInventory popup content and rendering', () => {
   let helpers;

@@ -9,7 +9,7 @@ import {
   collectAutomationFromFeatures,
   processFeatureAutomation,
 } from './automationService.js'
-import { makePlayerStats, makeFeature } from './automationService.fixtures.js'
+import { makePlayerStats, makeFeature } from './automationService.test-utils.js'
 
 // ── collectAutomationFromFeatures: null/empty handling ──────────────
 describe('collectAutomationFromFeatures: null and empty handling', () => {

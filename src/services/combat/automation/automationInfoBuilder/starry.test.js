@@ -6,7 +6,7 @@
 import { describe, it, expect, vi } from 'vitest'
 
 import { starryHandlers } from './starry.js'
-import { BASE_STATS, makeFeature } from '../automationInfoBuilder.fixtures.js'
+import { BASE_STATS, makeFeature } from '../automationInfoBuilder.test-utils.js'
 
 vi.mock('./automationExpressions.js', () => ({
     evaluateAutoExpression: vi.fn((expr, _stats) => {

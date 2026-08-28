@@ -6,7 +6,7 @@
 import { describe, it, expect, vi } from 'vitest';
 import { renderHook, act } from '@testing-library/react';
 import { useActionSpellMetamagic } from './useActionSpellMetamagic.js';
-import { makeHookProps, makeSpell, makeNonSorcererStats, makePlayerStats, makeAttack, setupBeforeEach } from './useActionSpellMetamagic.test-helpers.js';
+import { makeHookProps, makeSpell, makeNonSorcererStats, makePlayerStats, makeAttack, setupBeforeEach } from './useActionSpellMetamagic.test-utils.js';
 
 const { spendSorceryPoints, logMetamagicUse } = await import('./useMetamagic.js');
 

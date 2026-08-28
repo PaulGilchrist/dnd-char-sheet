@@ -24,7 +24,7 @@ import {
   selectSingleOption,
   clickApplySingle,
   defaultResult,
-} from './AttackRiderModal.fixtures.js';
+} from './AttackRiderModal.test-utils.js';
 import { getRuntimeValue } from '../../../../hooks/runtime/useRuntimeState.js';
 
 const mockSecondaryTargets = [
