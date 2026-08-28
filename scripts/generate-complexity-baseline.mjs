@@ -18,6 +18,23 @@ const METRIC_PATTERNS = {
 const TEST_FILE = /\.test\.jsx?$/;
 const OUTPUT = path.resolve('config/complexity-baseline.js');
 
+const args = process.argv.slice(2);
+const reportOnly = args.includes('--report');
+const dropIdx = args.indexOf('--drop');
+const stepIdx = args.indexOf('--step');
+if (dropIdx >= 0 && stepIdx >= 0) {
+  console.error('Use either --drop N or --step N, not both.');
+  process.exit(1);
+}
+const indexedFlag = (idx) => {
+  if (idx < 0) return 0;
+  const next = Number(args[idx + 1]);
+  return Number.isInteger(next) && next > 0 ? next : 1;
+};
+const drop = indexedFlag(dropIdx);
+const stepAuto = stepIdx >= 0 && args[stepIdx + 1] === 'auto';
+const step = indexedFlag(stepIdx);
+
 const eslint = new ESLint({
   overrideConfig: {
     rules: Object.fromEntries(RULES.map((rule) => [rule, ['warn', DEFAULTS[rule]]])),
@@ -27,7 +44,7 @@ const eslint = new ESLint({
 const results = await eslint.lintFiles(['src', 'server']);
 
 const dirMax = new Map();
-let violations = 0;
+const violations = [];
 
 for (const result of results) {
   const rel = path.relative(process.cwd(), result.filePath);
@@ -37,19 +54,74 @@ for (const result of results) {
     const pattern = METRIC_PATTERNS[message.ruleId];
     if (!pattern) continue;
     const value = Number(message.message.match(pattern)[1]);
-    violations += 1;
     if (!dirMax.has(dir)) dirMax.set(dir, new Map());
     const metrics = dirMax.get(dir);
     metrics.set(message.ruleId, Math.max(metrics.get(message.ruleId) ?? DEFAULTS[message.ruleId], value));
+    violations.push({ rel, dir, rule: message.ruleId, value, line: message.line, text: message.message });
   }
+}
+
+let targetPair = null;
+if (stepIdx >= 0) {
+  const pairs = [];
+  for (const [dir, metrics] of dirMax) {
+    for (const [rule, max] of metrics) {
+      if (max > DEFAULTS[rule]) pairs.push({ dir, rule, max });
+    }
+  }
+  pairs.sort((a, b) => (b.max - DEFAULTS[b.rule]) - (a.max - DEFAULTS[a.rule]) || a.dir.localeCompare(b.dir) || a.rule.localeCompare(b.rule));
+  targetPair = pairs[0] ?? null;
+  if (stepAuto && targetPair) {
+    targetPair.step = Math.max(1, Math.round((targetPair.max - DEFAULTS[targetPair.rule]) * 0.25));
+  } else if (targetPair) {
+    targetPair.step = step;
+  }
+}
+
+const threshold = (dir, rule) => {
+  const max = dirMax.get(dir)?.get(rule) ?? DEFAULTS[rule];
+  const lowered = stepIdx >= 0
+    ? (targetPair && targetPair.dir === dir && targetPair.rule === rule ? max - targetPair.step : max)
+    : max - drop;
+  return Math.max(DEFAULTS[rule], lowered);
+};
+const fired = violations.filter((v) => v.value > threshold(v.dir, v.rule));
+const remaining = violations.length;
+
+const printTargets = () => {
+  const byFile = new Map();
+  for (const v of fired) {
+    if (!byFile.has(v.rel)) byFile.set(v.rel, []);
+    byFile.get(v.rel).push(v);
+  }
+  if (stepIdx >= 0 && targetPair) {
+    const headroom = targetPair.max - DEFAULTS[targetPair.rule];
+    console.log(`STEP ${targetPair.dir} :: ${targetPair.rule} ${targetPair.max} -> ${threshold(targetPair.dir, targetPair.rule)} (step ${targetPair.step}, headroom to default: ${headroom})`);
+  }
+  console.log(`FIRED ${fired.length} violations across ${byFile.size} files. REMAINING ${remaining}.`);
+  for (const [rel, list] of byFile) {
+    for (const v of list) {
+      console.log(`TARGET ${rel}:${v.line} ${v.rule}=${v.value} limit=${threshold(v.dir, v.rule)} :: ${v.text}`);
+    }
+  }
+};
+
+if (reportOnly) {
+  printTargets();
+  process.exit(0);
 }
 
 const blocks = [...dirMax.entries()]
   .map(([dir, metrics]) => ({
     dir,
     glob: /\.[cm]?jsx?$/.test(dir) ? dir : `${dir}/**`,
-    metrics: Object.fromEntries(RULES.filter((rule) => metrics.has(rule)).map((rule) => [rule, metrics.get(rule)])),
+    metrics: Object.fromEntries(
+      RULES.filter((rule) => metrics.has(rule))
+        .map((rule) => [rule, threshold(dir, rule)])
+        .filter(([rule, value]) => value > DEFAULTS[rule])
+    ),
   }))
+  .filter((block) => Object.keys(block.metrics).length > 0)
   .sort((a, b) => (b.metrics.complexity ?? 0) - (a.metrics.complexity ?? 0) || a.glob.localeCompare(b.glob));
 
 const lines = [
@@ -59,8 +131,15 @@ const lines = [
   '// Complexity ratchet: per-directory thresholds equal each directory\'s current',
   '// worst metric (non-test code). New code must not exceed its directory baseline,',
   '// since npm run lint runs with --max-warnings 0.',
-  'export default [',
 ];
+if (stepIdx >= 0 && targetPair) {
+  lines.push(`// NOTE: step mode — ${targetPair.dir} ${targetPair.rule} temporarily dropped to ${threshold(targetPair.dir, targetPair.rule)}.`);
+  lines.push('// Fix the reported violations, then run npm run lint:complexity-baseline to lock.');
+} else if (drop > 0) {
+  lines.push(`// NOTE: thresholds temporarily dropped by ${drop} this step.`);
+  lines.push('// Fix the reported violations, then run npm run lint:complexity-baseline to lock.');
+}
+lines.push('export default [');
 
 for (const block of blocks) {
   lines.push('  {');
@@ -77,4 +156,5 @@ lines.push('];');
 await mkdir(path.dirname(OUTPUT), { recursive: true });
 await writeFile(OUTPUT, `${lines.join('\n')}\n`);
 
-console.log(`Wrote ${path.relative(process.cwd(), OUTPUT)}: ${blocks.length} directory overrides covering ${violations} current violations.`);
+console.log(`Wrote ${path.relative(process.cwd(), OUTPUT)}: ${blocks.length} directory overrides covering ${remaining} current violations.`);
+printTargets();
