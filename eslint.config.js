@@ -5,6 +5,7 @@ import reactRefresh from 'eslint-plugin-react-refresh';
 import noWindowAccess from './eslint-plugin-custom/rules/no-window-access.js';
 import noLocalGameState from './eslint-plugin-custom/rules/no-local-game-state.js';
 import requireSyncedState from './eslint-plugin-custom/rules/require-synced-state.js';
+import complexityBaseline from './config/complexity-baseline.js';
 
 export default [
   { ignores: ['dist', 'coverage/', 'coverage-report/', '.eslintrc.cjs'] },
@@ -113,4 +114,17 @@ export default [
       'server-first/require-synced-state': 'warn',
     },
   },
+  // Complexity ratchet: warns on new oversize code; existing hotspots are
+  // grandfathered via the generated per-directory baseline (appended last).
+  {
+    files: ['src/**/*.js', 'src/**/*.jsx', 'server/**/*.js', 'server/**/*.jsx'],
+    ignores: ['**/*.test.js', '**/*.test.jsx'],
+    rules: {
+      complexity: ['warn', 15],
+      'max-depth': ['warn', 4],
+      'max-statements': ['warn', 60],
+      'max-params': ['warn', 5],
+    },
+  },
+  ...complexityBaseline,
 ];
