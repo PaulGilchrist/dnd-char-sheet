@@ -23,6 +23,7 @@ import rulesFactory from './services/rules/rulesFactory.js';
 import Subscriber from './components/common/Subscriber.jsx';
 import { setRuntimeObject, seedTrackedResources, getStore, notify } from './hooks/runtime/useRuntimeState.js';
 import { applyServerOverride, trackedResourcesToStoreEntries } from './services/rules/trackedResources.js';
+import { useBattleMasterSelectionVersion, battleMasterSelectionSerial } from './hooks/combat/battleMaster.js';
 import Notes from './components/notes/Notes.jsx';
 import Quests from './components/quests/Quests.jsx';
 import NPCs from './components/npcs/NPCs.jsx';
@@ -93,6 +94,7 @@ function App() {
     const [processingCharacters, setProcessingCharacters] = useState(false);
     const computedKeyRef = useRef('');
     const charactersSerialRef = useRef('');
+    const maneuverSelectionVersion = useBattleMasterSelectionVersion(characters, campaignMgmt.campaignName);
     useEffect(() => {
       if (!characters || characters.length === 0) {
         setComputedCharacters([]);
@@ -102,7 +104,7 @@ function App() {
         return;
       }
       const key = characters.map(c => c.name).join(',');
-      const serial = JSON.stringify(characters);
+      const serial = JSON.stringify(characters) + '|' + battleMasterSelectionSerial(characters, campaignMgmt.campaignName);
       if (key === computedKeyRef.current && serial === charactersSerialRef.current && computedCharacters.length > 0) return;
       computedKeyRef.current = key;
       charactersSerialRef.current = serial;
@@ -128,7 +130,7 @@ function App() {
         }
       })();
       return () => { cancelled = true; };
-    }, [characters, classes, classes2024, equipment, magicItems, magicItems2024, races, races2024, spells, spells2024]); // eslint-disable-line react-hooks/exhaustive-deps
+    }, [characters, maneuverSelectionVersion, classes, classes2024, equipment, magicItems, magicItems2024, races, races2024, spells, spells2024]); // eslint-disable-line react-hooks/exhaustive-deps
 
    // Seed runtime store with computed tracked resources, then apply server overrides
     const seededCampaignRef = useRef('');
@@ -157,11 +159,15 @@ function App() {
           // Exclude transient prompt keys that should not persist across refreshes
           if (charServerData && typeof charServerData === 'object') {
             const store = getStore(stats.name);
+            let seededAny = false;
             for (const [key, value] of Object.entries(charServerData)) {
               if (!store.has(key) && value != null && key !== 'biPrompt') {
                 store.set(key, value);
+                seededAny = true;
               }
             }
+            // Wake store listeners (e.g. maneuver recompute) for values seeded from disk
+            if (seededAny) notify(stats.name);
           }
           // Seed Magic Initiate instances from character data into runtime store
           if (char.magicInitiateInstances && Array.isArray(char.magicInitiateInstances)) {

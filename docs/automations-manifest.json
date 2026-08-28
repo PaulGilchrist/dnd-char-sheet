@@ -2258,7 +2258,7 @@
       "handler": "src/services/combat/automation/handlers/maneuverHandler.js",
       "router": "src/services/combat/automation/routers/maneuverRouter.js",
       "infoBuilder": "src/services/combat/automation/infoBuilders/maneuverInfoBuilder.js",
-      "verified": "incomplete \u2014 needs manual setup \u2014 see .opencode/plans/incomplete-mn-007-evasive-footwork-fighter.md",
+      "verified": "verified",
       "class": "Fighter",
       "triggerConditions": "Action type: bonus_action; Uses: superiority_die",
       "expectedBehavior": "As a Bonus Action, you can expend one Superiority Die and take the Disengage action. Roll the die and add the number rolled to your AC until the start of your next turn."
