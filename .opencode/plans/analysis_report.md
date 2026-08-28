@@ -17,7 +17,6 @@ jscpd (min-tokens 70): **16.8% of lines duplicated** project-wide; 832 clones in
 | Files | Evidence |
 |---|---|
 | `services/automation/handlers/spells/dominateBeastHandler.js` ≡ `dominateMonsterHandler.js` ≡ `dominatePersonHandler.js` | Identical MD5 (`f621971…`), 183 lines each. All three registered as separate spell keys in `services/automation/index.js:545-547`. Handlers are spell-data-generic; the three spell names are the only semantic difference. |
-| `services/rules/core/rules-armorClass-5e.test.js` ≡ `rules-armorClass.test.js` | Identical MD5 (`3995bc6…`), 566 lines. Both run in the vitest suite (double execution). |
 
 ### 1.2 Near-identical production file pairs (jscpd + diff)
 
@@ -57,7 +56,7 @@ jscpd (min-tokens 70): **16.8% of lines duplicated** project-wide; 832 clones in
 
 ### 1.5 Test scaffolding duplication (informational — largest clone volumes)
 
-The top clones project-wide are duplicated test harnesses: `rules-armorClass` pair (561L), `EncounterBuilder.load-encounter` ↔ `reset-encounter` (427L), `CharActionModals.choice-handlers` ↔ `healing-handlers` (408L), and ~6 more `spellCastService/execution/*.test.js` files sharing an identical 220+ line mock setup. These inflate runtime of the test suite but consolidating them is a larger, behavior-sensitive effort.
+The top clones project-wide are duplicated test harnesses: `EncounterBuilder.load-encounter` ↔ `reset-encounter` (427L), `CharActionModals.choice-handlers` ↔ `healing-handlers` (408L), and ~6 more `spellCastService/execution/*.test.js` files sharing an identical 220+ line mock setup. These inflate runtime of the test suite but consolidating them is a larger, behavior-sensitive effort.
 
 ---
 
@@ -172,12 +171,11 @@ Ordered by clarity × safety. None of these alter runtime behavior of live code 
 | # | Opportunity | Risk | Why low-risk |
 |---|---|---|---|
 | 1 | Delete the 7 confirmed dead files in §2 (`restResources`, `restConcentration`, `restRestoration`, `rules-featFeatures`, `core/fightingStyles`, `modals/helpers.js`, `test/mock-css.js`) | Very low | Zero references by 3 independent methods; git preserves history. |
-| 2 | Delete duplicate test file `services/rules/core/rules-armorClass-5e.test.js` (byte-identical to `rules-armorClass.test.js`) | Very low | Removes 566 lines of double-executed tests; suite outcome unchanged. |
-| 3 | Drop pass-through re-exports at `useLoggedDiceRollAttack.js:17-18` and other knip-flagged unused exports with zero importers (§3) | Low | Verified no importers; lint+tests confirm. |
-| 4 | Collapse `dominateBeastHandler.js` / `dominateMonsterHandler.js` / `dominatePersonHandler.js` to one module imported under three keys in `automation/index.js` | Low | Byte-identical; registration is a 3-line import map change; three distinct tests must keep passing. |
-| 5 | Rename the 10 kebab-case files in `components/initiative/` to PascalCase matching their exports (with import updates) | Low | Mechanical rename; lint + full suite as guard. |
-| 6 | Standardize test-helper file naming to one convention (e.g. `*.test-utils.js`) | Very low | Non-runtime import-path churn only. |
-| 7 | Add `console.error` to the ~194 silent catch blocks, at least in `services/` (per project convention) | Very low | Adds logging only; no control-flow change. |
-| 8 | Replace remaining direct `Object.keys(localStorage)` reach-through (`unbreakableMajesty.js:34-47`) with a runtime-store key listing API | Medium-low | Behavior-adjacent — needs the explicit runtime-store API; schedule with owner review. |
-| 9 | Enforce `complexity`, `max-depth`, `max-statements` as ESLint *warns* with a per-directory baseline (auto-generated from §4 numbers) to stop regression | Very low | Warn-only config; zero code changes. |
-| 10 | Track (do not rush) the top duplication clusters: giantAncestry pair, AOE/shared modals, mass-healing services, bless/bane, charm pair, `POST` boilerplate → one shared request helper | Higher | Each consolidation touches live combat/spell code — needs behavioral tests, out of scope for "no testing" constraint. |
+| 2 | Drop pass-through re-exports at `useLoggedDiceRollAttack.js:17-18` and other knip-flagged unused exports with zero importers (§3) | Low | Verified no importers; lint+tests confirm. |
+| 3 | Collapse `dominateBeastHandler.js` / `dominateMonsterHandler.js` / `dominatePersonHandler.js` to one module imported under three keys in `automation/index.js` | Low | Byte-identical; registration is a 3-line import map change; three distinct tests must keep passing. |
+| 4 | Rename the 10 kebab-case files in `components/initiative/` to PascalCase matching their exports (with import updates) | Low | Mechanical rename; lint + full suite as guard. |
+| 5 | Standardize test-helper file naming to one convention (e.g. `*.test-utils.js`) | Very low | Non-runtime import-path churn only. |
+| 6 | Add `console.error` to the ~194 silent catch blocks, at least in `services/` (per project convention) | Very low | Adds logging only; no control-flow change. |
+| 7 | Replace remaining direct `Object.keys(localStorage)` reach-through (`unbreakableMajesty.js:34-47`) with a runtime-store key listing API | Medium-low | Behavior-adjacent — needs the explicit runtime-store API; schedule with owner review. |
+| 8 | Enforce `complexity`, `max-depth`, `max-statements` as ESLint *warns* with a per-directory baseline (auto-generated from §4 numbers) to stop regression | Very low | Warn-only config; zero code changes. |
+| 9 | Track (do not rush) the top duplication clusters: giantAncestry pair, AOE/shared modals, mass-healing services, bless/bane, charm pair, `POST` boilerplate → one shared request helper | Higher | Each consolidation touches live combat/spell code — needs behavioral tests, out of scope for "no testing" constraint. |
