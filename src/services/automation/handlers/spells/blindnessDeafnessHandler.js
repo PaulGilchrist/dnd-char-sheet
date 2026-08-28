@@ -27,7 +27,7 @@ export async function handle(action, playerStats, campaignName, _mapName) {
             if (attackerPlayer) {
                 attackerPos = { gridX: attackerPlayer.gridX, gridY: attackerPlayer.gridY };
             }
-        } catch { /* positions unavailable */ }
+        } catch (error) { console.warn('[blindnessDeafnessHandler] Attacker position unavailable:', error); }
     }
 
     return {

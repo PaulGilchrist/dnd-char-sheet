@@ -66,9 +66,9 @@ export async function expireStaleEffects(campaignName, overrideActiveName) {
                     // Trigger recurring save
                     try {
                         await processSleetStormAreaSave(activeName, teTargetName, campaignName, sleetStormTracking.mapName);
-                    } catch (_e) { /* ignore per-creature errors */ }
+                    } catch (_e) { console.error(`[expireStaleEffects] Sleet Storm area save failed for ${teTargetName}:`, _e); }
                 }
             }
         }
-    } catch (_e) { /* ignore */ }
+    } catch (_e) { console.error('[expireStaleEffects] Sleet Storm expiration processing failed:', _e); }
 }

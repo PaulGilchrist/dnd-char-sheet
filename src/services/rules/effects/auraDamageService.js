@@ -42,7 +42,7 @@ export async function applyAuraDamage(activeName, playerStats, campaignName, cha
 
         try {
             applyDamageToTarget(combatSummary, creatureName, damageValue, [damageType], campaignName, characters, false, activeName);
-        } catch { /* ignore per-creature errors */ }
+        } catch (error) { console.error(`[auraDamage] Failed to apply damage to ${creatureName}:`, error); }
     }
 
     storage.set('combatSummary', combatSummary, campaignName);
@@ -78,7 +78,7 @@ export async function applyHolyNimbusDamage(activeName, characters, campaignName
 
         try {
             applyDamageToTarget(summary, activeName, damageValue, ['Radiant'], campaignName, characters, false, charName);
-        } catch { /* ignore per-creature errors */ }
+        } catch (error) { console.error(`[HolyNimbus] Failed to apply radiant damage to ${activeName}:`, error); }
     }
 
     storage.set('combatSummary', summary, campaignName);

@@ -144,7 +144,7 @@ export function evaluateAutoExpression(expression, playerStats, prof, level, slo
         evalExpr = evalExpr.replace(/(?<!Math\.)round\b/g, 'Math.round')
         const result = new Function(`"use strict"; return (${evalExpr})`)()
         if (typeof result === 'number' && !isNaN(result)) return result
-    } catch (_e) { /* not a simple expression, return as string */ }
+    } catch (_e) { console.warn('[automationExpressions] Not a simple expression, returning as string:', _e) }
     return expr
 }
 

@@ -718,7 +718,7 @@ function evaluateUses(expression, playerStats) {
     try {
         const result = new Function(`"use strict"; return (${expr})`)();
         if (typeof result === 'number' && !isNaN(result)) return result;
-    } catch (_e) { /* not a simple expression */ }
+    } catch (_e) { console.warn('[reactionBonus] Not a simple expression:', _e); }
     return 0;
 }
 

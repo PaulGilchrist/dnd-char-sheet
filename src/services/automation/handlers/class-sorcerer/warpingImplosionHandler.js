@@ -61,7 +61,7 @@ export async function handle(action, playerStats, campaignName, _mapName) {
     if (_mapName) {
         try {
             mapData = await mapsService.loadMapData(campaignName, _mapName);
-        } catch { /* positions unavailable */ }
+        } catch (error) { console.warn('[warpingImplosion] Map data unavailable:', error); }
     }
 
     const rangeFeet = getEmanationRange(auto, playerStats, playerName, campaignName);

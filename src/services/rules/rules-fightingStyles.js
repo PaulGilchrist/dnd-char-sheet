@@ -252,6 +252,7 @@ export async function addFightingStyleFeatFeatures(playerStats, allFeatures) {
             }
         } catch (_e) {
             // Feat data not available yet, skip
+            console.warn('[rules-fightingStyles] Feat data unavailable, skipping:', _e);
         }
     }
 }
@@ -281,6 +282,7 @@ export async function addBackgroundFeatures(playerStats, allFeatures) {
              }
          } catch (_e) {
              // Background data not available yet, skip
+             console.warn('[rules-fightingStyles] Background data unavailable, skipping:', _e);
          }
      }
 }

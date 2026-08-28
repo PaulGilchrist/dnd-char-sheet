@@ -89,6 +89,7 @@ export async function handle(action, playerStats, campaignName, _mapName) {
                 }
             } catch (_e) {
                 // Keep default 0
+                console.warn('[interceptionHandler] Damage bonus expression invalid, keeping default 0:', _e);
             }
         }
     }

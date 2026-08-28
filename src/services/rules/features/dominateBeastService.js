@@ -22,8 +22,9 @@ async function isTargetBeast(targetName, campaignName) {
         if (monsterData?.type) {
             return monsterData.type.toLowerCase() === 'beast';
         }
-    } catch {
+    } catch (error) {
         // If we can't load monster data, default to Beast
+        console.warn('[dominateBeastService] Monster data unavailable, defaulting to Beast:', error);
     }
 
     return true;

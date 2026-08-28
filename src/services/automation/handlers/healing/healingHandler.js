@@ -15,8 +15,9 @@ async function fetchTargetCharacterData(targetName, campaignName) {
         if (response.ok) {
             return await response.json();
         }
-    } catch {
+    } catch (error) {
         // Return null on failure
+        console.warn('[healingHandler] Target character data unavailable:', error);
     }
     return null;
 }

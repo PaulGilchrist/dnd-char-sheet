@@ -16,7 +16,7 @@ export function hasBardicInspirationDefense(name, campaignName, playerStats) {
     }
     const optionsRaw = getRuntimeValue(name, 'bardicInspirationCombatOptions', campaignName);
     let options = [];
-    try { options = JSON.parse(optionsRaw) || []; } catch (_e) { /* ignore */ }
+    try { options = JSON.parse(optionsRaw) || []; } catch (_e) { console.warn('[bardicInspiration] Combat options unavailable:', _e); }
     return options.includes('defense_add_to_ac');
 }
 
@@ -24,7 +24,7 @@ export function hasBardicInspirationOffense(playerStats, campaignName) {
     const runtimeDie = getRuntimeValue(playerStats.name, 'bardicInspirationDie', campaignName);
     const runtimeOptionsRaw = getRuntimeValue(playerStats.name, 'bardicInspirationCombatOptions', campaignName);
     let runtimeOptions = [];
-    try { runtimeOptions = JSON.parse(runtimeOptionsRaw) || []; } catch (_e) { /* ignore */ }
+    try { runtimeOptions = JSON.parse(runtimeOptionsRaw) || []; } catch (_e) { console.warn('[bardicInspiration] Runtime combat options unavailable:', _e); }
     const hasRuntimeOffense = !!runtimeDie && runtimeOptions.includes('offense_add_to_damage');
 
     const biUsesRaw = getRuntimeValue(playerStats.name, 'bardicInspirationUses', campaignName);

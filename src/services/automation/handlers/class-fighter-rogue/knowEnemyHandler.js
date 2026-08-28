@@ -54,7 +54,7 @@ export async function handle(action, playerStats, campaignName, _mapName) {
                 targetName = target.name;
             }
         }
-    } catch { /* no combat context */ }
+    } catch (error) { console.warn('[knowEnemyHandler] No combat context:', error); }
 
     // Look up monster data for target
     let irvInfo = null;
@@ -69,7 +69,7 @@ export async function handle(action, playerStats, campaignName, _mapName) {
                     conditionImmunities: monsterData.condition_immunities || [],
                 };
             }
-        } catch { /* monster not found */ }
+        } catch (error) { console.warn('[knowEnemyHandler] Monster data not found for target:', error); }
     }
 
     let description = `${action.name}: Expend 1 Superiority Die to discern enemy strengths and weaknesses.\n`;

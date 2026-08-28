@@ -37,7 +37,7 @@ export async function handle(action, playerStats, campaignName, _mapName) {
             if (casterPlayer) {
                 casterPos = { gridX: casterPlayer.gridX, gridY: casterPlayer.gridY };
             }
-        } catch { /* positions unavailable */ }
+        } catch (error) { console.warn('[greaseAreaSaveHandler] Caster position unavailable:', error); }
     }
 
     addEntry(campaignName, {

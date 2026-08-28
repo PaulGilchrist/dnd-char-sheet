@@ -26,8 +26,9 @@ function createSseObservers(campaignName) {
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ key: eventName, data: result || {} }),
         });
-      } catch {
+      } catch (error) {
         // Pipeline continues even if SSE broadcast fails
+        console.error('[sseObservers] SSE broadcast failed, pipeline continues:', error);
       }
     },
   });
@@ -44,8 +45,9 @@ function createSseObservers(campaignName) {
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ key: 'modal:shown', data: { step: ctx._pausedStep || result } }),
         });
-      } catch {
+      } catch (error) {
         // Pipeline continues even if SSE broadcast fails
+        console.error('[sseObservers] SSE modal:shown broadcast failed, pipeline continues:', error);
       }
     },
   });
@@ -60,8 +62,9 @@ function createSseObservers(campaignName) {
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ key: 'modal:dismissed', data: result || {} }),
         });
-      } catch {
+      } catch (error) {
         // Pipeline continues even if SSE broadcast fails
+        console.error('[sseObservers] SSE modal:dismissed broadcast failed, pipeline continues:', error);
       }
     },
   });

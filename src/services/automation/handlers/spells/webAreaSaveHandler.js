@@ -207,8 +207,9 @@ export async function processWebAreaSave(casterName, targetName, campaignName, m
         try {
             const inArea = await isWithinRange(casterName, targetName, tracking.radius);
             if (!inArea) return null;
-        } catch {
+        } catch (error) {
             // If map data unavailable, proceed with save
+            console.warn('[webAreaSaveHandler] Map data unavailable, proceeding with save:', error);
         }
     }
 

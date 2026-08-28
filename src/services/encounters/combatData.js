@@ -37,7 +37,7 @@ export async function loadCombatSummary(campaignName) {
         setCombatSummaryCache(fromApi, campaignName)
         return fromApi
       }
-    } catch { /* fall through */ }
+    } catch (error) { console.warn('[combatData] Combat context unavailable from API:', error) }
     return null
   }
   return null
@@ -59,7 +59,7 @@ export async function loadActiveCreatureName(campaignName) {
       if (topLevel) {
         return topLevel
       }
-    } catch { /* fall through */ }
+    } catch (error) { console.warn('[combatData] Active creature name unavailable from API:', error) }
   }
   return null
 }

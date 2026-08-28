@@ -171,5 +171,6 @@ export async function processManeuvers(playerStats, playerSummary, allFeatures, 
         }
     } catch (_e) {
         // Maneuver data not available, skip
+        console.warn('[maneuvers] Maneuver data unavailable, skipping:', _e);
     }
 }

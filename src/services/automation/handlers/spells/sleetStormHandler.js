@@ -298,8 +298,9 @@ export async function processSleetStormAreaSave(casterName, targetName, campaign
         try {
             const inArea = await isWithinRange(casterName, targetName, tracking.radius);
             if (!inArea) return null;
-        } catch {
+        } catch (error) {
             // If map data unavailable, proceed with save
+            console.warn('[sleetStormHandler] Map data unavailable, proceeding with save:', error);
         }
     }
 

@@ -27,8 +27,9 @@ async function isTargetHumanoid(targetName, campaignName) {
         if (monsterData?.type) {
             return monsterData.type.toLowerCase() === 'humanoid';
         }
-    } catch {
+    } catch (error) {
         // If we can't load monster data, default to Humanoid
+        console.warn('[friendsService] Monster data unavailable, defaulting to Humanoid:', error);
     }
 
     return true;

@@ -43,7 +43,7 @@ export function clearPerRoundMajestyTrackers(characterName, campaignName) {
                 setRuntimeValue(characterName, storageKey.split(':').pop(), null, campaignName);
             }
         }
-    } catch (_e) { /* ignore */ }
+    } catch (_e) { console.warn('[unbreakableMajesty] Runtime keys unavailable:', _e); }
 }
 
 export function buildMajestyPromptData(defenderName, attackerName, saveDc) {

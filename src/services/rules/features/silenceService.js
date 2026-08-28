@@ -144,7 +144,7 @@ function getCombatContextSync(_campaignName) {
     try {
         const stored = getRuntimeValue('campaign', 'combatSummary');
         if (stored) return typeof stored === 'string' ? JSON.parse(stored) : stored;
-    } catch (_e) { /* ignore */ }
+    } catch (_e) { console.warn('[silence] Stored combat summary unavailable:', _e); }
     return null;
 }
 

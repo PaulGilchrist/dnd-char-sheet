@@ -184,8 +184,9 @@ async function checkCalmEmotionsImmunity({ targetName, creature, characters, cam
             if (conditionImmunities.includes('charmed')) {
                 return true;
             }
-        } catch {
+        } catch (error) {
             // Monster data not available — proceed with save
+            console.warn('[calmEmotionsHandler] Monster data unavailable, proceeding with save:', error);
         }
     }
 

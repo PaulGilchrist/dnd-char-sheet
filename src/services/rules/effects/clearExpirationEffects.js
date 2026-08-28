@@ -14,7 +14,7 @@ function removeNpcCondition(targetName, conditionName, campaignName) {
         const conditions = getRuntimeValue(targetName, 'activeConditions') || [];
         const filtered = conditions.filter(c => String(c).toLowerCase() !== conditionName.toLowerCase());
         setRuntimeValue(targetName, 'activeConditions', filtered, campaignName);
-    } catch (_e) { /* ignore */ }
+    } catch (_e) { console.error(`[clearExpirationEffects] Failed to remove ${conditionName} from ${targetName}:`, _e); }
 }
 
 function removeActiveCondition(targetName, conditionName, campaignName) {

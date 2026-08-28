@@ -22,8 +22,9 @@ async function isTargetBeast(targetName, campaignName) {
         if (monsterData?.type) {
             return monsterData.type.toLowerCase() === 'beast';
         }
-    } catch {
+    } catch (error) {
         // If we can't load monster data, default to not a Beast
+        console.warn('[animalFriendshipService] Monster data unavailable, defaulting to not a Beast:', error);
     }
 
     return false;

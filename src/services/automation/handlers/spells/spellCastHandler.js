@@ -244,7 +244,7 @@ export async function handle(action, playerStats, campaignName, _mapName) {
             const response = await fetch(spellsUrl);
             const allSpells = await response.json();
             spellData = allSpells.find(s => s.name === spellName);
-         } catch { /* spell not found */ }
+         } catch (error) { console.warn('[spellCastHandler] Spell not found in spell data:', error); }
         }
 
     if (spellData?.damage) {

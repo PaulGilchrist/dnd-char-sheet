@@ -18,8 +18,9 @@ export async function getElderChampionSaveDisadvantage({ attackerName, attackerS
     try {
         const inRange = await isWithinRange(attackerName, targetName, range);
         if (inRange) return { disadvantage: true, source: attackerName };
-    } catch {
+    } catch (error) {
         // no-op — fallback to no disadvantage
+        console.warn('[elderChampionAuraUtils] Range check failed, falling back to no disadvantage:', error);
     }
 
     return { disadvantage: false };

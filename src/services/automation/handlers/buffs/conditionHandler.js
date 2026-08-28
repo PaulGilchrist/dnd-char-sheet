@@ -53,13 +53,13 @@ export async function handle(action, playerStats, campaignName, _mapName) {
             if (attackerPlayer) {
                 attackerPos = { gridX: attackerPlayer.gridX, gridY: attackerPlayer.gridY };
              }
-           } catch { /* positions unavailable */ }
+           } catch (error) { console.warn('[conditionHandler] Attacker position unavailable:', error); }
      }
 
     let monsters = [];
     try {
         monsters = await loadMonsters();
-    } catch { /* monsters unavailable */ }
+    } catch (error) { console.error('[conditionHandler] Monsters unavailable:', error); }
 
     addEntry(campaignName, {
         type: 'ability_use',

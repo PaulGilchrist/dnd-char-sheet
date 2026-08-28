@@ -71,6 +71,7 @@ function getProficiencies2024(playerStats, skill, pu) {
                 }
             } catch (_e) {
                 // Background data not available yet, skip
+                console.warn('[rules-proficiencies] Background data unavailable, skipping:', _e);
             }
         }
         return extra;
@@ -100,6 +101,7 @@ function getProficiencies2024(playerStats, skill, pu) {
                 }
             } catch (_e) {
                 // Background data not available yet, skip
+                console.warn('[rules-proficiencies] Background data unavailable, skipping:', _e);
             }
         }
         return choices;

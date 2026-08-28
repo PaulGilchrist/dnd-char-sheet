@@ -24,7 +24,7 @@ async function getCreatureSaveBonus(creature, abilityAbbr, characters, campaignN
         } else if (monster?.ability_score_modifiers?.[abilityAbbr]) {
             return monster.ability_score_modifiers[abilityAbbr]
         }
-    } catch { /* ignore */ }
+    } catch (error) { console.warn('[conditionSaveService] Monster save bonus unavailable:', error) }
     return 0
 }
 

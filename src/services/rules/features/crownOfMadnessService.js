@@ -13,7 +13,7 @@ async function isTargetHumanoid(targetName, campaignName) {
         if (monsterData?.type) {
             return monsterData.type.toLowerCase() === 'humanoid';
         }
-    } catch { /* default to Humanoid */ }
+    } catch (error) { console.warn('[crownOfMadnessService] Monster type unavailable, defaulting to Humanoid:', error); }
     return true;
 }
 

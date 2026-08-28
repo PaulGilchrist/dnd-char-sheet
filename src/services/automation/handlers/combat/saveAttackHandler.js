@@ -220,7 +220,7 @@ export async function handle(action, playerStats, campaignName, _mapName) {
                 if (attackerPlayer) {
                     attackerPos = { gridX: attackerPlayer.gridX, gridY: attackerPlayer.gridY };
                  }
-                } catch { /* positions unavailable */ }
+                } catch (error) { console.warn('[saveAttackHandler] Attacker position unavailable:', error); }
          }
 
          const rangeFeet = getEmanationRange({ ...auto, shape: resolvedShape }, playerStats, playerStats.name, campaignName);
@@ -263,7 +263,7 @@ export async function handle(action, playerStats, campaignName, _mapName) {
                     if (attackerPlayer) {
                         attackerPos = { gridX: attackerPlayer.gridX, gridY: attackerPlayer.gridY };
                      }
-                    } catch { /* positions unavailable */ }
+                    } catch (error) { console.warn('[saveAttackHandler] Attacker position unavailable:', error); }
              }
 
              const rangeFeet = getEmanationRange({ ...auto, shape: resolvedShape }, playerStats, playerStats.name, campaignName);

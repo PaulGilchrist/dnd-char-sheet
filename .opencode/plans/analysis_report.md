@@ -12,10 +12,6 @@
 
 jscpd (min-tokens 70): **16.8% of lines duplicated** project-wide; 832 clones in non-test code, **71 clones ≥30 lines**.
 
-### 1.1 Byte-identical files (MD5-verified — highest certainty)
-
-**Resolved (2026-08-28):** `dominateBeastHandler.js` ≡ `dominateMonsterHandler.js` ≡ `dominatePersonHandler.js` (identical MD5 `f621971…`, 183 lines each) collapsed into `services/automation/handlers/spells/dominateHandler.js`; `automation/index.js` registers all three keys (`dominate_beast/monster/person`) against the single module. No byte-identical file groups remain.
-
 ### 1.2 Near-identical production file pairs (jscpd + diff)
 
 | Pair | Similarity |
@@ -55,16 +51,6 @@ jscpd (min-tokens 70): **16.8% of lines duplicated** project-wide; 832 clones in
 ### 1.5 Test scaffolding duplication (informational — largest clone volumes)
 
 The top clones project-wide are duplicated test harnesses: `EncounterBuilder.load-encounter` ↔ `reset-encounter` (427L), `CharActionModals.choice-handlers` ↔ `healing-handlers` (408L), and ~6 more `spellCastService/execution/*.test.js` files sharing an identical 220+ line mock setup. These inflate runtime of the test suite but consolidating them is a larger, behavior-sensitive effort.
-
----
-
-## 2. Dead code (unreferenced modules)
-
-**Resolved (2026-08-28):** the 7 confirmed-unreferenced files (`restResources.js`, `restConcentration.js`, `restRestoration.js`, `rules-featFeatures.js`, `core/fightingStyles.js`, `modals/helpers.js`, `test/mock-css.js`) have been deleted after re-verification by path, barrel/dynamic-import, and export-symbol consumers. `npm run lint` and `npm run test:run` both pass clean.
-
-Adjacent (outside `src` scope, knip-reported, verify separately): root-level `compress.cjs`, `coverage-analysis.mjs`, `dungeon-generator.mjs`, `hex-terrain-generator.mjs`.
-
-`services/rules/spells/__fixtures__/spellPreparationService.js` was also flagged unused by knip, but fixture directories are commonly kept intentionally — treat as uncertain.
 
 ---
 
@@ -159,9 +145,6 @@ Ordered by clarity × safety. None of these alter runtime behavior of live code 
 |---|---|---|---|
 | 1 | Rename the 10 kebab-case files in `components/initiative/` to PascalCase matching their exports (with import updates) | Low | Mechanical rename; lint + full suite as guard. |
 | 2 | Standardize test-helper file naming to one convention (e.g. `*.test-utils.js`) | Very low | Non-runtime import-path churn only. |
-| 3 | Add `console.error` to the ~194 silent catch blocks, at least in `services/` (per project convention) | Very low | Adds logging only; no control-flow change. |
-| 4 | Replace remaining direct `Object.keys(localStorage)` reach-through (`unbreakableMajesty.js:34-47`) with a runtime-store key listing API | Medium-low | Behavior-adjacent — needs the explicit runtime-store API; schedule with owner review. |
-| 5 | Enforce `complexity`, `max-depth`, `max-statements` as ESLint *warns* with a per-directory baseline (auto-generated from §4 numbers) to stop regression | Very low | Warn-only config; zero code changes. |
-| 6 | Track (do not rush) the top duplication clusters: giantAncestry pair, AOE/shared modals, mass-healing services, bless/bane, charm pair, `POST` boilerplate → one shared request helper | Higher | Each consolidation touches live combat/spell code — needs behavioral tests, out of scope for "no testing" constraint. |
-
-**Resolved (2026-08-28):** dominate-handler collapse (former #2) — implemented via `dominateHandler.js`; `npm run lint` and `npm run test:run` pass clean. Former #1 (drop pass-through re-exports at `useLoggedDiceRollAttack.js:17-18`) removed as **incorrect**: the line-17 re-exports have a test importer (`useLoggedDiceRollAttack.blocked-attacks.test.js:156`); see §3 correction.
+| 3 | Replace remaining direct `Object.keys(localStorage)` reach-through (`unbreakableMajesty.js:34-47`) with a runtime-store key listing API | Medium-low | Behavior-adjacent — needs the explicit runtime-store API; schedule with owner review. |
+| 4 | Enforce `complexity`, `max-depth`, `max-statements` as ESLint *warns* with a per-directory baseline (auto-generated from §4 numbers) to stop regression | Very low | Warn-only config; zero code changes. |
+| 5 | Track (do not rush) the top duplication clusters: giantAncestry pair, AOE/shared modals, mass-healing services, bless/bane, charm pair, `POST` boilerplate → one shared request helper | Higher | Each consolidation touches live combat/spell code — needs behavioral tests, out of scope for "no testing" constraint. |

@@ -536,7 +536,7 @@ async function applyGrappleDamageTurnStart(activeName, playerStats, effect, camp
                 description: `Unarmed Fighting grapple damage: ${damage} ${damageType.toLowerCase()} to ${creatureName}`,
                 timestamp: Date.now(),
             }).catch((e) => { console.error("[expirations] Error:", e); });
-        } catch { /* ignore per-creature errors */ }
+        } catch (error) { console.error(`[expirations] Unarmed Fighting grapple damage failed for ${creatureName}:`, error); }
     }
 
     storage.set('combatSummary', combatSummary, campaignName);
