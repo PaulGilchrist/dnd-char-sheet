@@ -102,7 +102,9 @@ describe('CharAbilities event listener and context features', () => {
       window.dispatchEvent(
         new CustomEvent('internal-skill-check', { detail: { skillName: 'Athletics', checkType: 'skill' } })
       );
-      expect(getMocks().rollSkillCheck).toHaveBeenCalledWith('Athletics', expect.any(Number), undefined);
+      const [, bonus] = getMocks().rollSkillCheck.mock.calls[0];
+      expect(Number.isNaN(bonus)).toBe(false);
+      expect(bonus).toBe(8);
     });
 
     it('does nothing when event has no skillName', () => {
@@ -119,7 +121,7 @@ describe('CharAbilities event listener and context features', () => {
       );
       expect(getMocks().rollSkillCheck).toHaveBeenCalledWith(
         'Athletics',
-        expect.any(Number),
+        8,
         expect.objectContaining({ reliableTalent: true })
       );
     });

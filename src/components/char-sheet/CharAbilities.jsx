@@ -347,10 +347,10 @@ function CharAbilities({ allAbilityScores, playerStats, campaignName, exhaustion
                          rollAbilityCheck(skillName, ability.bonus - exhaustionPenalty, makeCheckContext(skillName));
                      }
                  } else {
-                     const skill = playerStats?.abilities?.flatMap(a => a.skills || []).find(s => s.name === skillName);
-                     if (skill) {
-                          rollSkillCheck(skillName, getSkillBonus(skillName), makeCheckContext(skillName));
-                     }
+                      const skill = playerStats?.abilities?.flatMap(a => a.skills || []).find(s => s.name === skillName);
+                      if (skill) {
+                           rollSkillCheck(skillName, getSkillBonus(skill), makeCheckContext(skillName));
+                      }
                  }
              };
              window.addEventListener(INTERNAL_SKILL_CHECK_EVENT, handler);

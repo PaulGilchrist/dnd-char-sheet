@@ -64,3 +64,21 @@ The actual paths are:
 4. Verify Fast Hands appears in Bonus Actions section
 5. Click Fast Hands bonus action, select an option (Sleight of Hand / Thieves' Tools / Use an Object)
 6. Verify the popup shows the correct description
+
+## VERIFICATION COMPLETE (2026-08-28)
+
+Character was edited (`public/campaigns/test-campaign/VenomStrike.json`): subclass `Assassin` → `Thief`. Note the character's actual ruleset is `5e` (not 2024), so the 5e Thief data path (`public/data/classes.json` subclasses[0], Fast Hands level 3) supplies the feature. No 2024 data change was required for this character.
+
+Playwright walkthrough (dev server on :5173):
+- Fast Hands appears in **Bonus Actions** section ✅
+- Clicking it opens the bonus-action choice modal with all 3 options (Sleight of Hand / Thieves' Tools / Use an Object) ✅
+- Selecting Sleight of Hand and clicking "Use Bonus Action" shows the correct description popup ✅
+- Campaign log records `ability_use` "Fast Hands — Sleight of Hand selected" + a valid skill `roll` entry ✅
+
+### Bug found & fixed during verification
+The Fast Hands → Sleight of Hand dice popup showed a **NaN** modifier (console: `Received NaN for the children attribute`).
+- **Cause**: `src/components/char-sheet/CharAbilities.jsx:352` passed `skillName` (a string) to `getSkillBonus(skill)`, which expects a skill object → `skill.bonus` was `undefined`, giving `NaN`.
+- **Fix**: pass the resolved `skill` object to `getSkillBonus(skill)`.
+- **Regression test**: tightened `CharAbilities.contextFeatures.test.jsx` assertions (old `expect.any(Number)` silently matched `NaN`) to assert the exact bonus value and non-NaN.
+
+Re-verified: popup shows correct `-1` modifier / total 19, zero console errors. `npm run lint` clean; CharAbilities + fastHands suites pass (456 tests).
