@@ -78,7 +78,7 @@ export async function rollbackDamage(attackerName, targetName, campaignName, fea
             type: 'ability_use',
             characterName: targetName,
             abilityName: featureName,
-            description: `${targetName} used ${featureName} — ${attackerName}'s attack misses due to illusory duplicate. The attack is retroactively negated and ${targetName} is healed for ${result.totalDamage} HP.`,
+            description: `${targetName} used ${featureName} — ${attackerName}'s attack misses. The attack is retroactively negated and ${targetName} is healed for ${result.totalDamage} HP.`,
             targetName: attackerName,
             timestamp: Date.now(),
         }).catch((e) => { console.error(`[${featureName}] Error:`, e); throw e; });
