@@ -2,7 +2,7 @@
 // @cleaned-by-ai
 import { renderHook, act } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { useLootHandlers } from './initiative-loot.jsx';
+import { useLootHandlers } from './useLootHandlers.js';
 
 vi.mock('../../services/ui/logService.js', () => ({
     getLog: vi.fn(async () => []),

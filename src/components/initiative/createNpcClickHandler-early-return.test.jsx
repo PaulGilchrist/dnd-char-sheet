@@ -1,7 +1,7 @@
 // @improved-by-ai
 // @cleaned-by-ai
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { createNpcClickHandler } from './initiative-npc-click-handler.jsx';
+import { createNpcClickHandler } from './createNpcClickHandler.js';
 
 describe('createNpcClickHandler - early return for non-localhost', () => {
     let setViewingMonster;

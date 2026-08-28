@@ -2,7 +2,7 @@
 // @cleaned-by-ai
 import { render, screen, fireEvent, waitFor, act } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import Initiative from './initiative.jsx';
+import Initiative from './Initiative.jsx';
 import { loadCombatSummary } from '../../services/encounters/combatData.js';
 import { getRuntimeValue, setRuntimeValue } from '../../hooks/runtime/useRuntimeState.js';
 import { clearDeathSavePrompt } from '../../services/combat/conditions/savePromptService.js';

@@ -5,7 +5,7 @@ import { peekPendingSavePrompt } from './services/combat/auras/pendingSaveRegist
 import { getRuntimeValue } from './hooks/runtime/useRuntimeState.js';
 import './App.css';
 import CharSheet from './components/char-sheet/CharSheet.jsx';
-import Initiative from './components/initiative/initiative.jsx';
+import Initiative from './components/initiative/Initiative.jsx';
 import CampaignSelection from './components/campaign-selection/CampaignSelection.jsx';
 import CharacterCreationWizard from './components/character-creation/CharacterCreationWizard.jsx';
 import Sidebar from './components/sidebar/Sidebar.jsx';

@@ -1,7 +1,7 @@
 // @improved-by-ai
 // @cleaned-by-ai
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { createNpcClickHandler } from './initiative-npc-click-handler.jsx';
+import { createNpcClickHandler } from './createNpcClickHandler.js';
 import { loadMonsters } from '../../services/ui/dataLoader.js';
 import { getCombatSummary } from '../../services/encounters/combatData.js';
 

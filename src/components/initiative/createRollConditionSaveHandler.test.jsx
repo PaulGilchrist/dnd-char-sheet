@@ -1,7 +1,7 @@
 // @improved-by-ai
 // @cleaned-by-ai
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { createRollConditionSaveHandler } from './initiative-condition-save.jsx';
+import { createRollConditionSaveHandler } from './createRollConditionSaveHandler.js';
 
 vi.mock('../../services/ui/storage.js', () => ({
     default: {
@@ -67,7 +67,7 @@ function defaultTargetEffects(target, effect, source, dc) {
     return [{ target, effect, source, dc }];
 }
 
-describe('initiative-condition-save', () => {
+describe('createRollConditionSaveHandler', () => {
     let mockCombatSummary;
     let mockCharacters;
     let mockCampaignNpcs;

@@ -5,7 +5,7 @@ import {
     createFleshToStoneHandler,
     createPrismaticSprayIndigoHandler,
     createPrismaticSprayVioletHandler,
-} from './initiative-save-result-handlers.jsx';
+} from './saveResultHandlers.js';
 import * as logService from '../../services/ui/logService.js';
 import { clearFleshToStonePrompt } from '../../services/combat/conditions/savePromptService.js';
 
@@ -34,7 +34,7 @@ vi.mock('../../hooks/runtime/useRuntimeState.js', () => {
 
 import { getRuntimeValue, setRuntimeValue } from '../../hooks/runtime/useRuntimeState.js';
 
-describe('initiative-save-result-handlers — flesh-to-stone', () => {
+describe('saveResultHandlers — flesh-to-stone', () => {
     let combatSummary;
     let setCombatSummary;
     let campaignName;
@@ -186,7 +186,7 @@ describe('initiative-save-result-handlers — flesh-to-stone', () => {
     });
 });
 
-describe('initiative-save-result-handlers — prismatic-spray-indigo', () => {
+describe('saveResultHandlers — prismatic-spray-indigo', () => {
     let combatSummary;
     let setCombatSummary;
     let campaignName;
@@ -324,7 +324,7 @@ describe('initiative-save-result-handlers — prismatic-spray-indigo', () => {
     });
 });
 
-describe('initiative-save-result-handlers — prismatic-spray-violet', () => {
+describe('saveResultHandlers — prismatic-spray-violet', () => {
     let combatSummary;
     let setCombatSummary;
     let campaignName;

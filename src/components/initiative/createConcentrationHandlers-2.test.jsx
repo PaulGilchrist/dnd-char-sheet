@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { createConcentrationHandlers } from './initiative-concentration.jsx';
+import { createConcentrationHandlers } from './createConcentrationHandlers.js';
 
 // @improved-by-ai
 // @cleaned-by-ai
@@ -36,7 +36,7 @@ import {
 } from '../../services/combat/concentration/concentrationService.js';
 import { logConditionEvent } from '../../services/encounters/combatLoggingService.js';
 
-describe('initiative-concentration', () => {
+describe('createConcentrationHandlers', () => {
     let mockCombatSummary;
     let mockCharacters;
     let mockCampaignNpcs;

@@ -1,7 +1,7 @@
 // @improved-by-ai
 // @cleaned-by-ai
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { createEffectAdderHandlers } from './initiative-effect-adder.jsx';
+import { createEffectAdderHandlers } from './createEffectAdderHandlers.js';
 import * as conditionSaveService from '../../services/combat/conditions/conditionSaveService.js';
 import * as concentrationService from '../../services/combat/concentration/concentrationService.js';
 import * as combatLoggingService from '../../services/encounters/combatLoggingService.js';

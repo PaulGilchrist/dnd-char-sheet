@@ -8,7 +8,7 @@ const cachedCombatSummaries = new Map()
 
 /**
  * Call this when combat summary is updated on the server.
- * Used by initiative.jsx to seed the cache from its SSE handler.
+ * Used by Initiative.jsx to seed the cache from its SSE handler.
  */
 export function setCombatSummaryCache(summary, campaignName) {
   if (campaignName) {

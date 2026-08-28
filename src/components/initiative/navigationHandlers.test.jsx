@@ -39,7 +39,7 @@
 //   Previous handler: 7 tests (from 12)
 //
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { createNextCreatureHandler, createPreviousCreatureHandler } from './initiative-navigation.jsx';
+import { createNextCreatureHandler, createPreviousCreatureHandler } from './navigationHandlers.js';
 import * as initiativeService from '../../services/encounters/initiativeService.js';
 import * as unbreakableMajesty from '../../services/combat/auras/unbreakableMajesty.js';
 import * as expirations from '../../services/rules/effects/expirations.js';
@@ -73,7 +73,7 @@ vi.mock('../../services/ui/storage.js', () => ({
     },
 }));
 
-describe('initiative-navigation.jsx', () => {
+describe('navigationHandlers.js', () => {
     const campaignName = 'test-campaign';
 
     const baseCombatSummary = {

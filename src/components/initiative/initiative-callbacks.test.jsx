@@ -2,7 +2,7 @@
 // @cleaned-by-ai
 import { render, screen, waitFor, act } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import Initiative from './initiative.jsx';
+import Initiative from './Initiative.jsx';
 import { loadCombatSummary } from '../../services/encounters/combatData.js';
 import { setRuntimeValue } from '../../hooks/runtime/useRuntimeState.js';
 import storage from '../../services/ui/storage.js';

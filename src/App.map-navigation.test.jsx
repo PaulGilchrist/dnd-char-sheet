@@ -75,7 +75,7 @@ vi.mock('./components/char-sheet/CharSheet.jsx', async () => {
   const { MockCharSheet } = await import('./test/mockComponents.jsx');
   return { default: MockCharSheet };
 });
-vi.mock('./components/initiative/initiative.jsx', async () => {
+vi.mock('./components/initiative/Initiative.jsx', async () => {
   const { MockInitiative } = await import('./test/mockComponents.jsx');
   return { default: MockInitiative };
 });

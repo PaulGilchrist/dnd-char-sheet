@@ -25,16 +25,16 @@ import EffectAdder from './EffectAdder.jsx'
 import './Initiative.css'
 
 // Extracted modules
-import { createOverlayHandler, createSseEventHandler } from './initiative-sse-handlers.jsx'
-import { createNpcClickHandler } from './initiative-npc-click-handler.jsx'
-import { createFleshToStoneHandler, createPrismaticSprayIndigoHandler, createPrismaticSprayVioletHandler } from './initiative-save-result-handlers.jsx'
-import { useLootHandlers } from './initiative-loot.jsx'
-import { createNextCreatureHandler, createPreviousCreatureHandler } from './initiative-navigation.jsx'
-import { createCreatureHandlers } from './initiative-creature-ops.jsx'
-import { createRollConditionSaveHandler } from './initiative-condition-save.jsx'
-import { createConcentrationHandlers } from './initiative-concentration.jsx'
-import { createEffectAdderHandlers } from './initiative-effect-adder.jsx'
-import { createAutoBreakConditionHandler } from './initiative-auto-break.jsx'
+import { createOverlayHandler, createSseEventHandler } from './sseHandlers.js'
+import { createNpcClickHandler } from './createNpcClickHandler.js'
+import { createFleshToStoneHandler, createPrismaticSprayIndigoHandler, createPrismaticSprayVioletHandler } from './saveResultHandlers.js'
+import { useLootHandlers } from './useLootHandlers.js'
+import { createNextCreatureHandler, createPreviousCreatureHandler } from './navigationHandlers.js'
+import { createCreatureHandlers } from './createCreatureHandlers.js'
+import { createRollConditionSaveHandler } from './createRollConditionSaveHandler.js'
+import { createConcentrationHandlers } from './createConcentrationHandlers.js'
+import { createEffectAdderHandlers } from './createEffectAdderHandlers.js'
+import { createAutoBreakConditionHandler } from './createAutoBreakConditionHandler.js'
 
 function Initiative({ characters, campaignName, onNpcsChange, isLocalhost, mapName, onViewCharacter }) {
     const [combatSummary, setCombatSummary] = React.useState(null)

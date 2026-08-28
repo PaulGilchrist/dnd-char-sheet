@@ -1,7 +1,7 @@
 // @improved-by-ai
 // @cleaned-by-ai
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { createOverlayHandler } from './initiative-sse-handlers.jsx';
+import { createOverlayHandler } from './sseHandlers.js';
 
 describe('createOverlayHandler', () => {
     let handler;

@@ -36,7 +36,7 @@ jscpd (min-tokens 70): **16.8% of lines duplicated** project-wide; 832 clones in
 |---|---|---|
 | `services/automation/handlers/class-other/giantAncestryDispatch.js` | 51-120 ↔ 161-230; 51-106 ↔ 509-565; 12-58 ↔ 292-357 | 70L / 56L / 47L |
 | `services/rules/spells/spellPreparationService.js` | 56-101 ↔ 105-150 ↔ 155-200 (triplicate) | 46L ×2 |
-| `components/initiative/initiative-npc-click-handler.jsx` | 119-161 ↔ 179-221 | 43L |
+| `components/initiative/createNpcClickHandler.js` | 119-161 ↔ 179-221 | 43L |
 | `services/rules/core/attackCalc2024.js` | 155-195 ↔ 191-234 (overlapping) | 41L |
 | `services/automation/contextBuilder-sync.js` | 267-301 ↔ 312-346 | 35L |
 | `components/char-sheet/useModalHandlers.js` | 244-275 ↔ 276-307 | 32L |
@@ -119,19 +119,17 @@ ESLint metrics (thresholds: complexity >15, depth >4, statements >60, params >5)
 
 ## 5. Inconsistencies / architectural drift
 
-1. **Kebab-case component files in `components/initiative/`** violate the stated PascalCase convention, and some export hooks/components: `initiative-npc-click-handler.jsx` (exports `createNpcClickHandler`), `initiative-loot.jsx` (exports hook `useLootHandlers`), plus `initiative-sse-handlers.jsx`, `initiative-effect-adder.jsx`, `initiative-save-result-handlers.jsx`, `initiative-condition-save.jsx`, `initiative-concentration.jsx`, `initiative-navigation.jsx`, `initiative-creature-ops.jsx`, `initiative-auto-break.jsx`. All other component dirs use PascalCase.
+1. **localStorage reach-through in combat code.** `services/combat/auras/unbreakableMajesty.js:34-47` iterates `Object.keys(localStorage)` and pattern-matches raw runtime-store keys (`runtime:campaign:name:prefix…`). This reads the runtime store's internal storage layout directly — a server-first / `no-local-game-state` drift the ESLint rule doesn't catch because it never writes.
 
-2. **localStorage reach-through in combat code.** `services/combat/auras/unbreakableMajesty.js:34-47` iterates `Object.keys(localStorage)` and pattern-matches raw runtime-store keys (`runtime:campaign:name:prefix…`). This reads the runtime store's internal storage layout directly — a server-first / `no-local-game-state` drift the ESLint rule doesn't catch because it never writes.
+2. **Error handling style:** project convention requires `console.error` logging, yet **~194 silent catch blocks** (`catch {}` / `catch (_e) {}`) exist in non-test code, e.g. `unbreakableMajesty.js:46` (`/* ignore */`), `App.jsx` (3), `EncounterBuilder.jsx` (3), `combatData.js` (2), `conditionHandler.js` (2).
 
-3. **Error handling style:** project convention requires `console.error` logging, yet **~194 silent catch blocks** (`catch {}` / `catch (_e) {}`) exist in non-test code, e.g. `unbreakableMajesty.js:46` (`/* ignore */`), `App.jsx` (3), `EncounterBuilder.jsx` (3), `combatData.js` (2), `conditionHandler.js` (2).
+3. **Inline styles vs convention:** 423 `style={{…}}` occurrences across 95 JSX files (top: `components/map/PlacedItems.jsx` ×28, `RecklessAttackModal.jsx` ×19) despite the "no inline styles" rule (not lint-enforced). Similarly **68 `!important`** across 11 CSS files despite the rule.
 
-4. **Inline styles vs convention:** 423 `style={{…}}` occurrences across 95 JSX files (top: `components/map/PlacedItems.jsx` ×28, `RecklessAttackModal.jsx` ×19) despite the "no inline styles" rule (not lint-enforced). Similarly **68 `!important`** across 11 CSS files despite the rule.
+4. **Fetch boilerplate duplicated instead of centralized** (§1.4): 42 hand-rolled POST blocks vs the existing `storage.js` service pattern.
 
-5. **Fetch boilerplate duplicated instead of centralized** (§1.4): 42 hand-rolled POST blocks vs the existing `storage.js` service pattern.
+5. **`rules.js` vs `rules-core.js`/`rules-helpers.js` split:** knip reports `rules-core.js` default export and `rules-helpers.js` `getRulesType` unused, and `rules.js` exports 9 API surface functions (`getActions`, `getArmorClass`, `getProficiencies`, …) with no external consumers — evidence of API drift during the dual-ruleset refactor.
 
-6. **`rules.js` vs `rules-core.js`/`rules-helpers.js` split:** knip reports `rules-core.js` default export and `rules-helpers.js` `getRulesType` unused, and `rules.js` exports 9 API surface functions (`getActions`, `getArmorClass`, `getProficiencies`, …) with no external consumers — evidence of API drift during the dual-ruleset refactor.
-
-7. **Dead-file / live-file constant duplication** (§1.2, rows 8-9): rest and feat-feature logic exists in two copies, one live, one orphaned — a future-edit hazard where someone edits the dead copy.
+6. **Dead-file / live-file constant duplication** (§1.2, rows 8-9): rest and feat-feature logic exists in two copies, one live, one orphaned — a future-edit hazard where someone edits the dead copy.
 
 ---
 
@@ -141,6 +139,7 @@ Ordered by clarity × safety. None of these alter runtime behavior of live code 
 
 | # | Opportunity | Risk | Why low-risk |
 |---|---|---|---|
-| 1 | Rename the 10 kebab-case files in `components/initiative/` to PascalCase matching their exports (with import updates) | Low | Mechanical rename; lint + full suite as guard. |
-| 2 | Replace remaining direct `Object.keys(localStorage)` reach-through (`unbreakableMajesty.js:34-47`) with a runtime-store key listing API | Medium-low | Behavior-adjacent — needs the explicit runtime-store API; schedule with owner review. |
-| 3 | Track (do not rush) the top duplication clusters: giantAncestry pair, AOE/shared modals, mass-healing services, bless/bane, charm pair, `POST` boilerplate → one shared request helper | Higher | Each consolidation touches live combat/spell code — needs behavioral tests, out of scope for "no testing" constraint. |
+| 1 | Replace remaining direct `Object.keys(localStorage)` reach-through (`unbreakableMajesty.js:34-47`) with a runtime-store key listing API | Medium-low | Behavior-adjacent — needs the explicit runtime-store API; schedule with owner review. |
+| 2 | Track (do not rush) the top duplication clusters: giantAncestry pair, AOE/shared modals, mass-healing services, bless/bane, charm pair, `POST` boilerplate → one shared request helper | Higher | Each consolidation touches live combat/spell code — needs behavioral tests, out of scope for "no testing" constraint. |
+
+**Completed:** ~~Rename the 10 kebab-case files in `components/initiative/` to PascalCase matching their exports (with import updates)~~ — resolved 2026-08-28: the 10 factory/hook files (which contain no JSX) were renamed to camelCase `.js` matching their exports (`createNpcClickHandler.js`, `useLootHandlers.js`, etc.), `initiative.jsx` → `Initiative.jsx`, all imports/mocks/test filenames updated; lint and full suite green.

@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { createConcentrationHandlers } from './initiative-concentration.jsx';
+import { createConcentrationHandlers } from './createConcentrationHandlers.js';
 import { getRuntimeValue } from '../../hooks/runtime/useRuntimeState.js';
 import storage from '../../services/ui/storage.js';
 import {
@@ -36,7 +36,7 @@ vi.mock('../../hooks/runtime/useRuntimeState.js', () => ({
     setRuntimeValue: vi.fn(),
 }));
 
-describe('initiative-concentration', () => {
+describe('createConcentrationHandlers', () => {
     let mockCombatSummary;
     let mockCharacters;
     let mockCampaignNpcs;

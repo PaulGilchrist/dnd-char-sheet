@@ -1,7 +1,7 @@
 // @improved-by-ai
 // @cleaned-by-ai
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { createSseEventHandler } from './initiative-sse-handlers.jsx';
+import { createSseEventHandler } from './sseHandlers.js';
 import * as combatData from '../../services/encounters/combatData.js';
 import * as expirations from '../../services/rules/effects/expirations.js';
 import * as runtimeState from '../../hooks/runtime/useRuntimeState.js';
