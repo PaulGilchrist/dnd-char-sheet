@@ -141,5 +141,3 @@ Ordered by clarity × safety. None of these alter runtime behavior of live code 
 |---|---|---|---|
 | 1 | Replace remaining direct `Object.keys(localStorage)` reach-through (`unbreakableMajesty.js:34-47`) with a runtime-store key listing API | Medium-low | Behavior-adjacent — needs the explicit runtime-store API; schedule with owner review. |
 | 2 | Track (do not rush) the top duplication clusters: giantAncestry pair, AOE/shared modals, mass-healing services, bless/bane, charm pair, `POST` boilerplate → one shared request helper | Higher | Each consolidation touches live combat/spell code — needs behavioral tests, out of scope for "no testing" constraint. |
-
-**Completed:** ~~Rename the 10 kebab-case files in `components/initiative/` to PascalCase matching their exports (with import updates)~~ — resolved 2026-08-28: the 10 factory/hook files (which contain no JSX) were renamed to camelCase `.js` matching their exports (`createNpcClickHandler.js`, `useLootHandlers.js`, etc.), `initiative.jsx` → `Initiative.jsx`, all imports/mocks/test filenames updated; lint and full suite green.

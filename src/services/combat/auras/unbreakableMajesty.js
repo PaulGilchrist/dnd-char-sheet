@@ -1,4 +1,4 @@
-import { getRuntimeValue, setRuntimeValue } from '../../../hooks/runtime/useRuntimeState.js';
+import { getRuntimeValue, setRuntimeValue, getRuntimeKeysByPrefix } from '../../../hooks/runtime/useRuntimeState.js';
 import { getCurrentCombatRound } from '../../encounters/combatData.js';
 
 const MAJESTY_KEY = 'unbreakableMajestyActive';
@@ -33,17 +33,13 @@ export function markAttackerTriggeredMajesty(characterName, attackerName, campai
 
 export function clearPerRoundMajestyTrackers(characterName, campaignName) {
     const round = getCurrentCombatRound();
-    const prefix = `${MAJESTY_BLOCKED_KEY_PREFIX}`;
-    try {
-        const allKeys = Object.keys(localStorage);
-        for (const storageKey of allKeys) {
-            if (!storageKey.startsWith(`runtime:${campaignName}:${characterName}:${prefix}`)) continue;
-            const stored = getRuntimeValue(characterName, storageKey.split(':').pop(), campaignName);
-            if (stored && stored.round !== round) {
-                setRuntimeValue(characterName, storageKey.split(':').pop(), null, campaignName);
-            }
+    const keys = getRuntimeKeysByPrefix(characterName, MAJESTY_BLOCKED_KEY_PREFIX);
+    for (const key of keys) {
+        const stored = getRuntimeValue(characterName, key, campaignName);
+        if (stored && stored.round !== round) {
+            setRuntimeValue(characterName, key, null, campaignName);
         }
-    } catch (_e) { console.warn('[unbreakableMajesty] Runtime keys unavailable:', _e); }
+    }
 }
 
 export function buildMajestyPromptData(defenderName, attackerName, saveDc) {

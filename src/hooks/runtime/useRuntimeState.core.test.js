@@ -14,6 +14,7 @@ import {
   setRuntimeBatch,
   notify,
   listeners,
+  getRuntimeKeysByPrefix,
 } from './useRuntimeState.js';
 
 function clearAll() {
@@ -539,5 +540,53 @@ describe('useRuntimeState — getStore', () => {
     expect(storeA).not.toBe(storeB);
     storeA.set('hp', 10);
     expect(storeB.get('hp')).toBeUndefined();
+  });
+});
+
+describe('useRuntimeState — getRuntimeKeysByPrefix', () => {
+  beforeEach(() => {
+    clearAll();
+  });
+
+  it('returns empty array for a character with no store', () => {
+    expect(getRuntimeKeysByPrefix('missing-char', 'majesty')).toEqual([]);
+  });
+
+  it('returns only property names matching the prefix', () => {
+    seedTrackedResources('test-char', {
+      unbreakableMajestyBlocked_Goblin: { round: 1 },
+      unbreakableMajestyBlocked_Orc: { round: 2 },
+      unbreakableMajestyActive: true,
+      hp: 10,
+    });
+
+    const keys = getRuntimeKeysByPrefix('test-char', 'unbreakableMajestyBlocked_');
+    expect(keys).toEqual(['unbreakableMajestyBlocked_Goblin', 'unbreakableMajestyBlocked_Orc']);
+  });
+
+  it('sees keys hydrated via setRuntimeObject', () => {
+    setRuntimeObject('test-char', {
+      unbreakableMajestyBlocked_Ogre: { round: 5 },
+      hp: 20,
+    }, 'test-campaign', true);
+
+    expect(getRuntimeKeysByPrefix('test-char', 'unbreakableMajestyBlocked_')).toEqual([
+      'unbreakableMajestyBlocked_Ogre',
+    ]);
+  });
+
+  it('includes keys explicitly set to null', () => {
+    seedTrackedResources('test-char', { unbreakableMajestyBlocked_Goblin: null });
+
+    expect(getRuntimeKeysByPrefix('test-char', 'unbreakableMajestyBlocked_')).toEqual([
+      'unbreakableMajestyBlocked_Goblin',
+    ]);
+  });
+
+  it('does not leak keys from other character stores', () => {
+    seedTrackedResources('char-a', { unbreakableMajestyBlocked_Goblin: { round: 1 } });
+    seedTrackedResources('char-b', { hp: 5 });
+
+    expect(getRuntimeKeysByPrefix('char-b', 'unbreakableMajestyBlocked_')).toEqual([]);
   });
 });

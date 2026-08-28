@@ -7,6 +7,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 vi.mock('../../../hooks/runtime/useRuntimeState.js', () => ({
   getRuntimeValue: vi.fn(),
   setRuntimeValue: vi.fn(),
+  getRuntimeKeysByPrefix: vi.fn(() => []),
 }));
 
 vi.mock('../../encounters/combatData.js', () => ({
@@ -25,7 +26,7 @@ import {
   buildMajestyPromptData,
 } from './unbreakableMajesty.js';
 
-import { getRuntimeValue, setRuntimeValue } from '../../../hooks/runtime/useRuntimeState.js';
+import { getRuntimeValue, setRuntimeValue, getRuntimeKeysByPrefix } from '../../../hooks/runtime/useRuntimeState.js';
 import { getCurrentCombatRound } from '../../encounters/combatData.js';
 
 // ── Tests ───────────────────────────────────────────────────────
@@ -186,33 +187,25 @@ describe('markAttackerTriggeredMajesty', () => {
 describe('clearPerRoundMajestyTrackers', () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    window.localStorage.clear();
+    getRuntimeKeysByPrefix.mockReturnValue([]);
   });
 
   it('clears outdated trackers and keeps current ones', () => {
     getCurrentCombatRound.mockReturnValue(3);
-
-    const keyFn = vi.fn((i) => (i === 0 ? '0' : '1'));
-    Object.defineProperty(window.localStorage, 'length', { value: 2, writable: true, configurable: true });
-    Object.defineProperty(window.localStorage, 'key', { value: keyFn, writable: true, configurable: true });
-    localStorage.__store = {
-      'runtime:Campaign:Paladin:unbreakableMajestyBlocked_Goblin': JSON.stringify({ round: 1 }),
-      'runtime:Campaign:Paladin:unbreakableMajestyBlocked_Orc': JSON.stringify({ round: 3 }),
-    };
-
-    const originalKeys = Object.keys;
-    Object.keys = (obj) => {
-      if (obj === localStorage) return Object.keys(localStorage.__store);
-      return originalKeys(obj);
-    };
+    getRuntimeKeysByPrefix.mockReturnValue([
+      'unbreakableMajestyBlocked_Goblin',
+      'unbreakableMajestyBlocked_Orc',
+    ]);
 
     getRuntimeValue.mockImplementation((_, key) => {
-      const raw = localStorage.__store[`runtime:Campaign:Paladin:${key}`];
-      return raw ? JSON.parse(raw) : null;
+      if (key === 'unbreakableMajestyBlocked_Goblin') return { round: 1 };
+      if (key === 'unbreakableMajestyBlocked_Orc') return { round: 3 };
+      return null;
     });
 
     clearPerRoundMajestyTrackers('Paladin', 'Campaign');
 
+    expect(getRuntimeKeysByPrefix).toHaveBeenCalledWith('Paladin', 'unbreakableMajestyBlocked_');
     expect(setRuntimeValue).toHaveBeenCalledWith(
       'Paladin',
       'unbreakableMajestyBlocked_Goblin',
@@ -225,85 +218,51 @@ describe('clearPerRoundMajestyTrackers', () => {
       null,
       'Campaign',
     );
-
-    Object.keys = originalKeys;
   });
 
-  it('skips localStorage keys that do not match the expected prefix', () => {
+  it('does not touch keys without the majesty-block prefix', () => {
     getCurrentCombatRound.mockReturnValue(1);
-
-    Object.defineProperty(window.localStorage, 'length', { value: 3, writable: true, configurable: true });
-    const keyFn2 = vi.fn((i) => (i < 3 ? String(i) : ''));
-    Object.defineProperty(window.localStorage, 'key', { value: keyFn2, writable: true, configurable: true });
-    localStorage.__store = {
-      'someOtherKey': 'value',
-      'runtime:Campaign:Paladin:someFeature': JSON.stringify({ round: 1 }),
-      'runtime:OtherCampaign:Paladin:unbreakableMajestyBlocked_Goblin': JSON.stringify({ round: 1 }),
-    };
-
-    const originalKeys = Object.keys;
-    Object.keys = (obj) => {
-      if (obj === localStorage) return Object.keys(localStorage.__store);
-      return originalKeys(obj);
-    };
+    getRuntimeKeysByPrefix.mockReturnValue([]);
 
     clearPerRoundMajestyTrackers('Paladin', 'Campaign');
+
+    expect(getRuntimeKeysByPrefix).toHaveBeenCalledWith('Paladin', 'unbreakableMajestyBlocked_');
     expect(getRuntimeValue).not.toHaveBeenCalled();
     expect(setRuntimeValue).not.toHaveBeenCalled();
-
-    Object.keys = originalKeys;
   });
 
-  it('handles errors gracefully without throwing', () => {
+  it('handles no tracked keys without error', () => {
     getCurrentCombatRound.mockReturnValue(1);
-
-    const originalKeys = Object.keys;
-    Object.keys = () => {
-      throw new Error('storage crash');
-    };
+    getRuntimeKeysByPrefix.mockReturnValue([]);
 
     expect(() => clearPerRoundMajestyTrackers('Paladin', 'Campaign')).not.toThrow();
-
-    Object.keys = originalKeys;
-  });
-
-  it('handles empty localStorage without error', () => {
-    getCurrentCombatRound.mockReturnValue(1);
-
-    const originalKeys = Object.keys;
-    Object.keys = (obj) => {
-      if (obj === localStorage) return [];
-      return originalKeys(obj);
-    };
-
-    clearPerRoundMajestyTrackers('Paladin', 'Campaign');
     expect(getRuntimeValue).not.toHaveBeenCalled();
     expect(setRuntimeValue).not.toHaveBeenCalled();
+  });
 
-    Object.keys = originalKeys;
+  it('skips keys whose stored value is null', () => {
+    getCurrentCombatRound.mockReturnValue(2);
+    getRuntimeKeysByPrefix.mockReturnValue(['unbreakableMajestyBlocked_Goblin']);
+    getRuntimeValue.mockReturnValue(null);
+
+    clearPerRoundMajestyTrackers('Paladin', 'Campaign');
+
+    expect(setRuntimeValue).not.toHaveBeenCalled();
   });
 
   it('clears only outdated trackers among many', () => {
     getCurrentCombatRound.mockReturnValue(4);
-
-    Object.defineProperty(window.localStorage, 'length', { value: 3, writable: true, configurable: true });
-    const keyFn3 = vi.fn((i) => String(i));
-    Object.defineProperty(window.localStorage, 'key', { value: keyFn3, writable: true, configurable: true });
-    localStorage.__store = {
-      'runtime:Campaign:Paladin:unbreakableMajestyBlocked_A': JSON.stringify({ round: 3 }),
-      'runtime:Campaign:Paladin:unbreakableMajestyBlocked_B': JSON.stringify({ round: 4 }),
-      'runtime:Campaign:Paladin:unbreakableMajestyBlocked_C': JSON.stringify({ round: 2 }),
-    };
-
-    const originalKeys = Object.keys;
-    Object.keys = (obj) => {
-      if (obj === localStorage) return Object.keys(localStorage.__store);
-      return originalKeys(obj);
-    };
+    getRuntimeKeysByPrefix.mockReturnValue([
+      'unbreakableMajestyBlocked_A',
+      'unbreakableMajestyBlocked_B',
+      'unbreakableMajestyBlocked_C',
+    ]);
 
     getRuntimeValue.mockImplementation((_, key) => {
-      const raw = localStorage.__store[`runtime:Campaign:Paladin:${key}`];
-      return raw ? JSON.parse(raw) : null;
+      if (key === 'unbreakableMajestyBlocked_A') return { round: 3 };
+      if (key === 'unbreakableMajestyBlocked_B') return { round: 4 };
+      if (key === 'unbreakableMajestyBlocked_C') return { round: 2 };
+      return null;
     });
 
     clearPerRoundMajestyTrackers('Paladin', 'Campaign');
@@ -321,8 +280,6 @@ describe('clearPerRoundMajestyTrackers', () => {
       null,
       'Campaign',
     );
-
-    Object.keys = originalKeys;
   });
 });
 

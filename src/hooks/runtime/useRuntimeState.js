@@ -241,3 +241,12 @@ export function hasRuntimeValue(characterKey, propertyName) {
 export function getAllStoreKeys() {
     return Array.from(stores.keys());
 }
+
+/**
+ * List property names in a character's runtime store matching a prefix.
+ * Use instead of scanning localStorage, which never contains runtime-store keys.
+ */
+export function getRuntimeKeysByPrefix(characterKey, prefix) {
+    const store = getStore(characterKey);
+    return Array.from(store.keys()).filter(key => key.startsWith(prefix));
+}
