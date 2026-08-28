@@ -62,17 +62,7 @@ The top clones project-wide are duplicated test harnesses: `EncounterBuilder.loa
 
 ## 2. Dead code (unreferenced modules)
 
-All of the following have **zero import references** (absolute path, relative path, and dynamic-import checked; knip corroborated). Deletion only recommended if the team confirms no intentional "parked" status.
-
-| File | Size | Evidence of non-use |
-|---|---|---|
-| `src/services/rules/effects/restResources.js` | 156L | `rg "restResources" src server` → 0 content hits. Its content is a 156-line clone of live `restRules-constants.js:59-214`. |
-| `src/services/rules/effects/restConcentration.js` | ~30L | Zero path references anywhere in `src`/`server`. |
-| `src/services/rules/effects/restRestoration.js` | ~20L | Zero path references anywhere. |
-| `src/services/rules/rules-featFeatures.js` | ~280L | `rg "rules-featFeatures" src server` → exit 1. Its content duplicates live `rules.js:276-340` / `magicSpells.js:40-73`. |
-| `src/services/rules/core/fightingStyles.js` | ~330L | Zero references; live equivalent is `services/rules/rules-fightingStyles.js` (differently named file). |
-| `src/components/char-sheet/modals/helpers.js` | ~120L | Zero references, including relative `./helpers` imports within `modals/`. |
-| `src/test/mock-css.js` | — | Not referenced in `vite.config.js`, `vitest.config.js`, or anywhere in `src`. |
+**Resolved (2026-08-28):** the 7 confirmed-unreferenced files (`restResources.js`, `restConcentration.js`, `restRestoration.js`, `rules-featFeatures.js`, `core/fightingStyles.js`, `modals/helpers.js`, `test/mock-css.js`) have been deleted after re-verification by path, barrel/dynamic-import, and export-symbol consumers. `npm run lint` and `npm run test:run` both pass clean.
 
 Adjacent (outside `src` scope, knip-reported, verify separately): root-level `compress.cjs`, `coverage-analysis.mjs`, `dungeon-generator.mjs`, `hex-terrain-generator.mjs`.
 
@@ -170,12 +160,11 @@ Ordered by clarity × safety. None of these alter runtime behavior of live code 
 
 | # | Opportunity | Risk | Why low-risk |
 |---|---|---|---|
-| 1 | Delete the 7 confirmed dead files in §2 (`restResources`, `restConcentration`, `restRestoration`, `rules-featFeatures`, `core/fightingStyles`, `modals/helpers.js`, `test/mock-css.js`) | Very low | Zero references by 3 independent methods; git preserves history. |
-| 2 | Drop pass-through re-exports at `useLoggedDiceRollAttack.js:17-18` and other knip-flagged unused exports with zero importers (§3) | Low | Verified no importers; lint+tests confirm. |
-| 3 | Collapse `dominateBeastHandler.js` / `dominateMonsterHandler.js` / `dominatePersonHandler.js` to one module imported under three keys in `automation/index.js` | Low | Byte-identical; registration is a 3-line import map change; three distinct tests must keep passing. |
-| 4 | Rename the 10 kebab-case files in `components/initiative/` to PascalCase matching their exports (with import updates) | Low | Mechanical rename; lint + full suite as guard. |
-| 5 | Standardize test-helper file naming to one convention (e.g. `*.test-utils.js`) | Very low | Non-runtime import-path churn only. |
-| 6 | Add `console.error` to the ~194 silent catch blocks, at least in `services/` (per project convention) | Very low | Adds logging only; no control-flow change. |
-| 7 | Replace remaining direct `Object.keys(localStorage)` reach-through (`unbreakableMajesty.js:34-47`) with a runtime-store key listing API | Medium-low | Behavior-adjacent — needs the explicit runtime-store API; schedule with owner review. |
-| 8 | Enforce `complexity`, `max-depth`, `max-statements` as ESLint *warns* with a per-directory baseline (auto-generated from §4 numbers) to stop regression | Very low | Warn-only config; zero code changes. |
-| 9 | Track (do not rush) the top duplication clusters: giantAncestry pair, AOE/shared modals, mass-healing services, bless/bane, charm pair, `POST` boilerplate → one shared request helper | Higher | Each consolidation touches live combat/spell code — needs behavioral tests, out of scope for "no testing" constraint. |
+| 1 | Drop pass-through re-exports at `useLoggedDiceRollAttack.js:17-18` and other knip-flagged unused exports with zero importers (§3) | Low | Verified no importers; lint+tests confirm. |
+| 2 | Collapse `dominateBeastHandler.js` / `dominateMonsterHandler.js` / `dominatePersonHandler.js` to one module imported under three keys in `automation/index.js` | Low | Byte-identical; registration is a 3-line import map change; three distinct tests must keep passing. |
+| 3 | Rename the 10 kebab-case files in `components/initiative/` to PascalCase matching their exports (with import updates) | Low | Mechanical rename; lint + full suite as guard. |
+| 4 | Standardize test-helper file naming to one convention (e.g. `*.test-utils.js`) | Very low | Non-runtime import-path churn only. |
+| 5 | Add `console.error` to the ~194 silent catch blocks, at least in `services/` (per project convention) | Very low | Adds logging only; no control-flow change. |
+| 6 | Replace remaining direct `Object.keys(localStorage)` reach-through (`unbreakableMajesty.js:34-47`) with a runtime-store key listing API | Medium-low | Behavior-adjacent — needs the explicit runtime-store API; schedule with owner review. |
+| 7 | Enforce `complexity`, `max-depth`, `max-statements` as ESLint *warns* with a per-directory baseline (auto-generated from §4 numbers) to stop regression | Very low | Warn-only config; zero code changes. |
+| 8 | Track (do not rush) the top duplication clusters: giantAncestry pair, AOE/shared modals, mass-healing services, bless/bane, charm pair, `POST` boilerplate → one shared request helper | Higher | Each consolidation touches live combat/spell code — needs behavioral tests, out of scope for "no testing" constraint. |
