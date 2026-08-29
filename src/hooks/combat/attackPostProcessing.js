@@ -157,10 +157,16 @@ export async function processAttackAfterResult(hit, isAutoMiss, targetName, char
                 const clearedEffects = allEffects.filter(te => !(te.effect === 'distracting_strike_advantage' && te.target === targetName && te.source !== characterName));
                 setRuntimeValue('campaign', 'targetEffects', clearedEffects, campaignName);
             }
-            // Sap clearing
-            const sapEffects = allEffects.filter(te => te.effect === 'disadvantage_next_attack' && te.target === characterName);
+        }
+
+        // Sap / Hand of Harm clearing: disadvantage_next_attack is consumed by the
+        // attacker's next attack roll regardless of hit or miss — re-read the freshest
+        // value so it composes with the hit-only clears above
+        if (targetName) {
+            const freshestEffects = getRuntimeValue('campaign', 'targetEffects') || [];
+            const sapEffects = freshestEffects.filter(te => te.effect === 'disadvantage_next_attack' && te.target === characterName);
             if (sapEffects.length > 0) {
-                const clearedEffects = allEffects.filter(te => !(te.effect === 'disadvantage_next_attack' && te.target === characterName));
+                const clearedEffects = freshestEffects.filter(te => !(te.effect === 'disadvantage_next_attack' && te.target === characterName));
                 setRuntimeValue('campaign', 'targetEffects', clearedEffects, campaignName);
             }
         }

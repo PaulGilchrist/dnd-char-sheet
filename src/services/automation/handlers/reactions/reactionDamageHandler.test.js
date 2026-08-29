@@ -551,6 +551,8 @@ describe('reactionDamageHandler', () => {
         it('applies damage on save failure', async () => {
             const action = makeAction({ automation: { saveType: 'CON', damageExpression: '2d6', damageType: 'Necrotic' } });
             resolveTarget.mockResolvedValue({ target: { name: 'Enemy' } });
+            const cs = { creatures: [{ name: 'Enemy', type: 'monster', currentHp: 27, maxHp: 27 }] };
+            getCombatContext.mockResolvedValue(cs);
 
             await handle(action, makePlayerStats(), 'test-campaign', null);
 
@@ -559,6 +561,7 @@ describe('reactionDamageHandler', () => {
             }));
 
             await Promise.resolve();
+            await Promise.resolve();
 
             expect(addEntry).toHaveBeenCalledWith('test-campaign', expect.objectContaining({
                 type: 'roll',
@@ -566,11 +569,39 @@ describe('reactionDamageHandler', () => {
                 targetName: 'Enemy',
                 damageType: 'Necrotic',
             }));
+            expect(applyDamageToTarget).toHaveBeenCalledWith(cs, 'Enemy', 5, ['Necrotic'], 'test-campaign', [], false, 'TestHero');
+        });
+
+        it('logs hp_change via applyDamageToTarget after the damage roll (Hand of Harm CLA-158)', async () => {
+            getRuntimeValue.mockImplementation((name, key) => {
+                if (name === 'campaign' && key === 'targetEffects') return [];
+                if (key === 'focusPoints') return 1;
+                return null;
+            });
+            const action = makeAction({
+                name: 'Hand of Harm',
+                automation: { saveType: 'CON', damageExpression: '1d6', damageType: 'Necrotic', alsoInflicts: 'disadvantage_next_attack' },
+            });
+            resolveTarget.mockResolvedValue({ target: { name: 'Animated Rug of Smothering 1' } });
+            const cs = { creatures: [{ name: 'Animated Rug of Smothering 1', type: 'monster', currentHp: 27, maxHp: 27 }] };
+            getCombatContext.mockResolvedValue(cs);
+
+            await handle(action, makePlayerStats(), 'test-campaign', null, []);
+
+            window.dispatchEvent(new CustomEvent('save-result', {
+                detail: { promptId: 'test-prompt-id', success: false },
+            }));
+
+            await Promise.resolve();
+            await Promise.resolve();
+
+            expect(applyDamageToTarget).toHaveBeenCalledWith(cs, 'Animated Rug of Smothering 1', 5, ['Necrotic'], 'test-campaign', [], false, 'TestHero');
         });
 
         it('does not apply damage when save succeeds', async () => {
             const action = makeAction({ automation: { saveType: 'CON', damageExpression: '2d6' } });
             resolveTarget.mockResolvedValue({ target: { name: 'Enemy' } });
+            getCombatContext.mockResolvedValue({ creatures: [] });
 
             await handle(action, makePlayerStats(), 'test-campaign', null);
 
@@ -579,11 +610,13 @@ describe('reactionDamageHandler', () => {
             }));
 
             await Promise.resolve();
+            await Promise.resolve();
 
             expect(addEntry).not.toHaveBeenCalledWith('test-campaign', expect.objectContaining({
                 type: 'roll',
                 rollType: 'damage',
             }));
+            expect(applyDamageToTarget).not.toHaveBeenCalled();
         });
 
         it('does not apply damage when damageExpression is missing', async () => {

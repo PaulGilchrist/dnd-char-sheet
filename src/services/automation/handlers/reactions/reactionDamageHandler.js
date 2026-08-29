@@ -54,7 +54,7 @@ async function consumeResourceCost(auto, playerStats, campaignName, actionName) 
     return { ok: true };
 }
 
-export async function handle(action, playerStats, campaignName, _mapName, _allEquipment) {
+export async function handle(action, playerStats, campaignName, _mapName, characters = []) {
     const auto = action.automation;
 
     if (auto?.trigger === 'psychic_damage_received') {
@@ -174,6 +174,13 @@ export async function handle(action, playerStats, campaignName, _mapName, _allEq
                     rolls: damageResult.rolls,
                     description: `${action.name} dealt ${damageResult.total} ${auto.damageType || 'Necrotic'} damage to ${targetName}.`,
                 }).catch((e) => { console.error("[reactionDamage] Error:", e); });
+
+                const cs = await getCombatContext(campaignName);
+                if (cs) {
+                    await applyDamageToTarget(cs, targetName, damageResult.total, [auto.damageType || 'Necrotic'], campaignName, characters, false, playerStats.name);
+                } else {
+                    console.error('[reactionDamage] No combat context — damage not applied:', { actionName: action.name, targetName });
+                }
             }
         }
 

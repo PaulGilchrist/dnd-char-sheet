@@ -1,6 +1,7 @@
 import { computeConditionEffects } from '../../services/combat/conditions/conditionEffects.js'
 import { getRuntimeValue, setRuntimeValue } from '../../hooks/runtime/useRuntimeState.js'
 import { EFFECT_DESCRIPTIONS } from '../../services/combat/conditions/effectDescriptions.js'
+import { getEffectDefinition } from '../../services/combat/conditions/targetEffectDefinitions.js'
 import CreatureBadge from '../common/CreatureBadge.jsx'
 
 function getEffectDescription(label) {
@@ -49,6 +50,22 @@ const EFFECT_TO_SEMANTIC = {
 
 function resolveCls(cls) {
     return EFFECT_TO_SEMANTIC[cls] || cls
+}
+
+function pushStealthAttackBadge(badges, creatureName, campaignName) {
+    if (creatureName && campaignName && (getRuntimeValue(creatureName, 'stealthAttackCost', campaignName) ?? 0) > 0) {
+        badges.push({ label: 'Stealth Attack', cls: 'effect-neutral', icon: 'fa-eye-slash', removable: true, removeAction: 'stealth_attack' })
+    }
+}
+
+function pushDisadvNextAttackBadge(badges, targetEffects, creatureName) {
+    const effect = (targetEffects || []).find(te => {
+        const teTarget = Array.isArray(te.target) ? te.target[0] : te.target
+        return te.effect === 'disadvantage_next_attack' && teTarget === creatureName
+    })
+    if (!effect) return
+    const def = getEffectDefinition('disadvantage_next_attack')
+    badges.push({ label: def.label, cls: 'effect-debuff', icon: def.icon, removable: true, removeAction: 'target_effect', effectType: 'disadvantage_next_attack', tooltip: `Disadvantage on its next attack roll (from ${effect.source || 'unknown'})` })
 }
 
 function ConditionEffectBadges({ conditions, targetEffects = [], creatureName, campaignName, allCreatures, hasTacticalShift, hasSpeedyOpportunityDisadvantage, hasSpeedyDifficultTerrainIgnore, isLocalhost, coronaDisadvantage, playerStats: _playerStats, characters: _characters, activeMapName: _activeMapName, onRollConditionSave }) {
@@ -101,10 +118,7 @@ function ConditionEffectBadges({ conditions, targetEffects = [], creatureName, c
     const hasVowBuff = safeBuffs.some(b => b.effect === 'vow_of_enmity')
     const hasAdvAndSavesBuff = safeBuffs.some(b => b.effect === 'advantage_attacks_and_saves')
 
-    const stealthAttackCost = creatureName && campaignName ? (getRuntimeValue(creatureName, 'stealthAttackCost', campaignName) ?? 0) : 0
-    if (stealthAttackCost > 0) {
-        badges.push({ label: 'Stealth Attack', cls: 'effect-neutral', icon: 'fa-eye-slash', removable: true, removeAction: 'stealth_attack' })
-    }
+    pushStealthAttackBadge(badges, creatureName, campaignName)
     if (effects.speedReduction) {
         const label = effects.speedReduction >= 1000 ? 'Speed 0' : `Speed -${effects.speedReduction}`
         badges.push({ label, cls: 'effect-debuff', icon: 'fa-minus', removable: true, removeAction: 'target_effect', effectType: 'speed_reduction' })
@@ -181,6 +195,7 @@ function ConditionEffectBadges({ conditions, targetEffects = [], creatureName, c
     if (coronaDisadvantage) {
         badges.push({ label: 'Disadv Fire/Radiant', cls: 'effect-debuff', icon: 'fa-sun', removable: true, removeAction: 'corona_disadvantage' })
     }
+    pushDisadvNextAttackBadge(badges, targetEffects, creatureName)
     const tauntingStepEffect = targetEffects?.find(te => te.effect === 'taunting_step' && te.target === creatureName)
     if (tauntingStepEffect) {
         badges.push({ label: 'Taunted', cls: 'effect-debuff', icon: 'fa-wand-sparkles', removable: true, removeAction: 'taunting_step', effectType: 'taunting_step', tooltip: `Disadvantage on attack rolls vs creatures other than ${tauntingStepEffect.source || 'you'}` })

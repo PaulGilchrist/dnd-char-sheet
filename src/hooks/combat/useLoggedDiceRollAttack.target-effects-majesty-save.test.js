@@ -157,6 +157,24 @@ describe('createLogAndShow - Target Effects Clearing', () => {
             expect(finalEffects).toContainEqual(expect.objectContaining({ effect: 'other_effect' }));
         });
 
+        it('consumes sap effects (disadvantage_next_attack) from the attacking character even on a miss (CLA-158)', async () => {
+            mockTargetEffects([
+                { effect: 'disadvantage_next_attack', target: 'TestWizard', source: 'Hand of Harm', duration: 'until_used' },
+                { effect: 'other_effect', target: 'TestWizard' },
+            ]);
+            rollD20.mockReturnValue(2);
+            const fn = createFn();
+            await fn('Fire Bolt', 3, 'attack', {
+                targetName: 'Goblin',
+                autoDamageFormula: '1d10',
+                damageType: 'fire',
+            });
+            const finalEffects = getLastTargetEffectsCall();
+            expect(finalEffects).not.toBeNull();
+            expect(finalEffects).not.toContainEqual(expect.objectContaining({ effect: 'disadvantage_next_attack' }));
+            expect(finalEffects).toContainEqual(expect.objectContaining({ effect: 'other_effect' }));
+        });
+
         it('removes vex effects (next_attack_advantage) targeting the attacker against the hit target', async () => {
             mockTargetEffects([
                 { effect: 'next_attack_advantage', target: 'TestWizard', vexTarget: 'Goblin' },
