@@ -1,6 +1,5 @@
 import { rollExpression, rollExpressionMaximized } from '../../../dice/diceRoller.js';
 import { getRuntimeValue, setRuntimeValue } from '../../../../hooks/runtime/useRuntimeState.js';
-import { getCombatContext } from '../../../rules/combat/damageUtils.js';
 import { addEntry } from '../../../ui/logService.js';
 
 import storage from '../../../ui/storage.js';
@@ -94,9 +93,8 @@ export async function handle(action, playerStats, campaignName, _mapName) {
         await setRuntimeValue(targetName, 'currentHitPoints', healAmount, campaignName);
     } else {
         targetInfo.target.currentHp = healAmount;
-        const cs = await getCombatContext(campaignName);
-        if (cs) {
-            storage.set('combatSummary', cs, campaignName);
+        if (targetInfo.cs) {
+            storage.set('combatSummary', targetInfo.cs, campaignName);
         }
     }
 

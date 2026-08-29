@@ -2975,7 +2975,7 @@
       "handler": "src/services/combat/automation/handlers/classFeatureHandler.js",
       "router": "src/services/combat/automation/routers/classFeatureRouter.js",
       "infoBuilder": "src/services/combat/automation/infoBuilders/classFeatureInfoBuilder.js",
-      "verified": "broken \u2014 see .opencode/plans/bug-cla-160-hand-of-ultimate-mercy.md",
+      "verified": "verified",
       "class": "Monk",
       "triggerConditions": "Action: 1 action",
       "expectedBehavior": "Action, touch corpse of creature that died within 24 hours, expend 5 Focus Points. Creature returns to life with 4d10 + Wisdom modifier Hit Points. Conditions removed: Blinded, Deafened, Paralyzed, Poisoned, Stunned."

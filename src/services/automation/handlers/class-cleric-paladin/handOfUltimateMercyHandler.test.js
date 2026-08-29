@@ -16,10 +16,6 @@ vi.mock('../../../dice/diceRoller.js', () => ({
   rollExpression: vi.fn(),
 }));
 
-vi.mock('../../../rules/combat/damageUtils.js', () => ({
-  getCombatContext: vi.fn(),
-}));
-
 vi.mock('../../../ui/logService.js', () => ({
   addEntry: vi.fn(() => Promise.resolve()),
 }));
@@ -45,7 +41,6 @@ vi.mock('../../../combat/automation/automationService.js', () => ({
 import { handle } from './handOfUltimateMercyHandler.js';
 import * as useRuntimeState from '../../../../hooks/runtime/useRuntimeState.js';
 import * as diceRoller from '../../../dice/diceRoller.js';
-import * as damageUtils from '../../../rules/combat/damageUtils.js';
 import * as logPoster from '../../../ui/logService.js';
 import storage from '../../../ui/storage.js';
 import { resolveTarget } from '../../common/targetResolver.js';
@@ -198,8 +193,7 @@ describe('handOfUltimateMercyHandler.handle', () => {
         return null;
       });
       diceRoller.rollExpression.mockReturnValue({ total: 10, rolls: [10] });
-      resolveTarget.mockResolvedValue({ target: { name: 'Goblin', type: 'npc', currentHp: null } });
-      damageUtils.getCombatContext.mockResolvedValue({ creatures: [] });
+      resolveTarget.mockResolvedValue({ target: { name: 'Goblin', type: 'npc', currentHp: null }, cs: { creatures: [] } });
 
       const result = await handle(makeAction(), makePlayerStats(), campaignName, null);
 
@@ -217,6 +211,7 @@ describe('handOfUltimateMercyHandler.handle', () => {
       });
       resolveTarget.mockResolvedValue({ target: { name: 'DownedAlly', type: 'player' } });
       diceRoller.rollExpression.mockReturnValue(null);
+
 
       const result = await handle(makeAction(), makePlayerStats(), campaignName, null);
 
@@ -300,13 +295,31 @@ describe('handOfUltimateMercyHandler.handle', () => {
         return null;
       });
       diceRoller.rollExpression.mockReturnValue({ total: 8, rolls: [2, 2, 2, 2] });
-      const target = { name: 'Goblin', type: 'npc', currentHp: 0 };
-      resolveTarget.mockResolvedValue({ target });
-      damageUtils.getCombatContext.mockResolvedValue({ creatures: [target] });
+      const cs = { creatures: [{ name: 'Goblin', type: 'npc', currentHp: 0 }] };
+      resolveTarget.mockResolvedValue({ target: cs.creatures[0], cs });
 
       await handle(makeAction(), makePlayerStats(), campaignName, null);
 
-      expect(storage.set).toHaveBeenCalledWith('combatSummary', { creatures: [target] }, campaignName);
+      expect(storage.set).toHaveBeenCalledWith('combatSummary', cs, campaignName);
+    });
+
+    it('should persist resurrected HP in the mutated combatSummary (CLA-160 regression)', async () => {
+      useRuntimeState.getRuntimeValue.mockImplementation((_name, key) => {
+        if (key === 'focusPoints') return 5;
+        if (key === 'activeConditions') return [];
+        return null;
+      });
+      diceRoller.rollExpression.mockReturnValue({ total: 24, rolls: [6, 6, 6, 6] });
+      const cs = { creatures: [{ name: 'Animated Rug of Smothering 1', type: 'npc', currentHp: 0 }] };
+      resolveTarget.mockResolvedValue({ target: cs.creatures[0], cs });
+
+      const result = await handle(makeAction(), makePlayerStats(), campaignName, null);
+
+      expect(result.payload.description).toContain('Returns to life with 24 HP');
+      expect(storage.set).toHaveBeenCalledTimes(1);
+      const [key, savedCs] = storage.set.mock.calls[0];
+      expect(key).toBe('combatSummary');
+      expect(savedCs.creatures.find(c => c.name === 'Animated Rug of Smothering 1').currentHp).toBe(24);
     });
 
     it('should deduct focus points for NPC healing', async () => {
@@ -316,9 +329,8 @@ describe('handOfUltimateMercyHandler.handle', () => {
         return null;
       });
       diceRoller.rollExpression.mockReturnValue({ total: 8, rolls: [2, 2, 2, 2] });
-      const target = { name: 'Goblin', type: 'npc', currentHp: 0 };
-      resolveTarget.mockResolvedValue({ target });
-      damageUtils.getCombatContext.mockResolvedValue({ creatures: [target] });
+      const cs = { creatures: [{ name: 'Goblin', type: 'npc', currentHp: 0 }] };
+      resolveTarget.mockResolvedValue({ target: cs.creatures[0], cs });
 
       await handle(makeAction(), makePlayerStats(), campaignName, null);
 
@@ -411,8 +423,7 @@ describe('handOfUltimateMercyHandler.handle', () => {
         return null;
       });
       diceRoller.rollExpression.mockReturnValue({ total: 5, rolls: [5] });
-      resolveTarget.mockResolvedValue({ target: { name: 'Goblin', type: 'npc', currentHp: 0 } });
-      damageUtils.getCombatContext.mockResolvedValue({ creatures: [] });
+      resolveTarget.mockResolvedValue({ target: { name: 'Goblin', type: 'npc', currentHp: 0 }, cs: { creatures: [] } });
 
       await handle(makeAction(), makePlayerStats(), campaignName, null);
 
