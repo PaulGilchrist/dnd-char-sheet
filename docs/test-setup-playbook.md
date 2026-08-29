@@ -118,3 +118,153 @@ Guided Strike (+10 on a miss, 30 ft, Channel Divinity, reaction) is a **War Doma
 ### Weapon attacks auto-roll; attack-rider modal comes AFTER the roll
 
 Clicking a weapon attack row on the sheet **auto-rolls the attack immediately** and shows a dismissable result popup — there is no pre-rider choice. The attack-rider modal appears only *after* clicking Done, and (as of 2026-08-28) `currentRolls` is not carried into it, so attack-rider maneuvers crash with `TypeError: currentRolls is not iterable` (`useAttackDamageResolution.js:282` via `AttackRiderManeuverPrompt.jsx:12`) — see bug-mn-009. Rider use still consumes the die and shows the WIS save prompt; the save and targetEffect badges (e.g. Taunted/`taunting_step`) render fine. Secondary noise: `[buildSaveDc] Spell "unknown" has no saveDc defined` (`savePrompt.js:26`) is unrelated console noise — don't file it as a bug.
+
+### Reaction + monster-hit recipes (CLA-158, 2026-08-28)
+
+- **Monster attacks:** initiative cards have NO attack buttons. Clicking the monster AVATAR silently opens the `.mc-overlay` stat modal (you only see "intercepts pointer events" on the next failed click) — it contains the monster's attack roll buttons (e.g. Smother "+5"). Use this to make a monster HIT a PC and trigger PC reactions.
+- **Monk self-target reactions (Hand of Harm etc.):** use the MONK's OWN initiative-card Target dropdown, not lastAttack's attacker — first click without it gives "requires a target".
+- **Wizard level field:** native-setter evaluate does NOT persist the level input (saves lv1); use trusted `locator.fill()`.
+- **Native dialogs:** `run_code_unsafe` `page.once('dialog')` races native confirm() — handle with browser_handle_dialog instead.
+
+### Hand of Healing self-heal (CLA-159 recipe, 2026-08-28)
+
+Monk self-targeting Hand of Healing: the initiative card Target dropdown EXCLUDES the caster, but the handler defaults to self when no target is set (`healingHandler.js:150` fallback) — just leave dropdown empty and click the sheet's Bonus-Actions "Hand of Healing:" header text; result modal shows "1d8 + 3: 4 +3 = 7 HP restored" and sheet HP/focus update live (focus 5→4 via `useCharActionsAutomation.js:167-182`). No per-turn "bonus action used" tracker marker exists — focus decrement + log entry (`+7 HP … (1d8=4 (4))`) is the consumption evidence. Admin "Clear Change Data" and "Clear Campaign Log" fire WITHOUT confirm dialogs; "Remove NPC" confirm also auto-resolved here — try handle_dialog only if a modal state is reported. Turn walk: loop `Next →` clicks in run_code_unsafe checking `.creature-card.active` text; identify a PC card by exact `.creature-name` span text, not card.textContent (target selects list all PC names).
+
+### Verified misc (CLA-159, 2026-08-28)
+
+- Admin "Clear Change Data"/"Clear Campaign Log" fire with NO confirm dialog; Remove NPC confirm may auto-resolve (browser_handle_dialog then errors "no modal state" — harmless).
+- Turn-walk to a card: loop `Next →`, match `.creature-card.active` by exact `.creature-name` span text (textContent matches all cards via Target selects).
+- Initiative Target dropdown excludes self; self-targeting bonus actions (Hand of Healing) work via handler no-target fallback.
+
+### Verified misc (CLA-160, 2026-08-28)
+
+- `getCombatContext()` returns a FRESH fetch copy every call — mutating a target from a prior `resolveTarget()` then re-fetching+`storage.set('combatSummary')` silently discards the mutation (cause of bug-cla-160).
+- Initiative-card "Add" effect modal keeps only ONE condition selected — Apply per condition, one Add→select→Apply cycle each.
+- Monk weapon-hit flow inserts an "Empowered Strikes — Damage Type" modal (Force/Bludgeoning/Skip) AFTER the roll popup; damage popup "N damage applied — HP: X → Y" follows.
+- Monster initiative cards use a name TEXTBOX + spinbutton, not `.creature-name` — locate via `card:has(getByRole('spinbutton', { name: '<name> current HP' }))`.
+- `allInnerText()` doesn't exist — use `allInnerTexts()`.
+
+### Verified misc (SP-060, 2026-08-29)
+
+- **Server-persisted `combatSummary` PLAYER entries are stubs with `maxHp: 1, currentHp: 1`** (confirmed via in-browser fetch of `/api/campaigns/test-campaign/change-data` for characters never HP-edited). `healService.js:87` prefers `creature.maxHp` (truthy 1) over runtime `hitPoints`, so Heal computes `min(70, 1−runtimeCurrent)` = negative → heal silently blocked (bug-sp-060-heal.md). Canonical player HP lives in runtime `hitPoints`/`currentHitPoints` (`hpModifier.js:16-19`) — any new feature touching player HP must read runtime, not combatSummary.
+- **Milestone level-up via Edit wizard does NOT refresh spell slots** — popup shows "No spell slots available for this level" until first Long Rest. New spells also don't auto-populate: re-open Edit → Spells step → tick spell via `.list-item-checkbox-trigger` → Save Changes → wait 15s → verify `spells[]` in `public/campaigns/test-campaign/<Name>.json` (sheet table lags; the JSON is ground truth).
+- Heal target modal is a **radio list** (`.secondary-target-row > input[type=radio]` + "Cast Heal" button), NOT `.list-item-checkbox-trigger`.
+- Spell details `.popup-overlay` stays open and intercepts sheet clicks after first open — must click its Close button before touching rows underneath; `.ea-overlay` (Add condition) same.
+- Initiative PC cards have TWO number inputs: `aria-label="<name> current HP"` + unnamed = **Initiative**, not max HP. PC max HP is text-only (`CreatureHp.jsx:114`) on localhost — corrupt combatSummary maxHp is NOT repairable via UI.
+- Heal condition removal works fully even when the HP restore is blocked: badges cleared + 3× "Condition Broken" log + slot consumed.
+
+### Healing pools / patron switch (CLA-163, 2026-08-28)
+
+- Healing Light = Warlock → **Celestial Patron** only (2024 classes.json). Edit wizard Subclass combobox switch works; verify JSON after 15s.
+- Tracked pool initializes to **0/max** when runtime key was written 0 under a different patron; Long Rest refills (`hasKey` short-circuits max-default in useTrackedResource).
+- Celestial Long Rest auto-opens "Celestial Resilience" `.sp-overlay` ally-picker — **click Skip** or it silently intercepts all sheet clicks.
+- Healing Pool modal: per-die "Roll a d6" buttons (pool decrements live), **Done** applies total + logs; target-select modal → **Skip** = self (players show cosmetic 1/1 stub HP there).
+- Editing a subclass = step-7 combobox, then Next ×~9 to final Save (`.mi-skip` guard each step).
+
+### High-level casters + aura/spell-advantage gotchas (SP-067, 2026-08-29)
+
+- Casting ANY Concentration spell silently EVICTS existing concentration auras' targetEffects/activeBuffs (e.g. Hold Person kills Holy Aura state) — never cast another conc spell mid-aura test.
+- Wight (Undead, AC 14, +4 melee) = proven fiend/undead-type trigger monster. Flow: card Target select → avatar opens `.mc-overlay` → attack-row `.mc-dice-link` "+4". Save-forcing monster links need Target set FIRST else "DC Unknown" cosmetic roll.
+- Area-spell cast = checkbox popup "Fireball (N)"; aura target popup = `.sp-overlay` checkboxes + `.sp-roll-btn` "Cast <Spell> (N)".
+- `.command-overlay` (palette) can pop over forced sidebar clicks — close via **Escape**; force-removing it from DOM crashes React removeChild.
+- Admin Clear Change Data/Clear Campaign Log **confirm dialogs are session-dependent** (seen with and without) — always arm browser_handle_dialog.
+- If accidentally ticked a spell in a wizard, untick and Save; JSON ground truth confirms restore.
+
+### Turn-start aura damage (CLA-170, 2026-08-29)
+
+- auraDamageService `applyHolyNimbusDamage` mutates a fetched combatSummary copy WITHOUT `setCombatSummaryCache` → card HP reverts on next round POST; `lastAppliedTurnStartCreatureRef` gating makes turn-start effects fire once per creature only. (bug-cla-170)
+- Monster Remove-NPC confirm text includes live HP — use it as HP ground-truth probe.
+- Full PC round walk = exactly 16 `Next →` clicks in current test-campaign lineup; active card via `.creature-card.active input[aria-label="<name> current HP"]`.
+
+### Passive knowledge features / monster IRV (CLA-173, 2026-08-29)
+
+- Joined-encounter combatSummary monsters have EMPTY resistances/immunities, no vulnerabilities (`encounterToInitiative.js:184` reads `damage_resistances`/`damage_immunities` keys that don't exist in monsters.json). monsters.json = only IRV ground truth; anything reading combatSummary IRV sees nothing (bug-cla-173).
+- Hunter's Lore = Ranger lv3; surfaces only as `.dice-roll-hunter-lore` on an attack result popup + log entry (`contextBuilder-sync.js:35`, `DiceRollResult.jsx:320`, `LogRollEntry.jsx:177`).
+- Hunter's Mark detail popup closes on Cast and consumes the initiative-card Target dropdown set beforehand — set Target FIRST.
+- Wizard step headings lag sidebar numbering by ~5 after Spells step ("Step 10: Magic Items" = sidebar 15).
+
+### Hunter's Prey + initiative turn-state (CLA-174, 2026-08-29)
+
+- Hunter's Prey = Ranger → Hunter subclass lv3, `automation.type:'hunter_prey'`; NO app default — modal picker; switch option via Short Rest re-pick.
+- `.creature-card.active` highlight resets cosmetically to the first card after attack-Done/view navigation — do NOT trust `.active` for turn state; verify round/keys via change-data JSON.
+- Short Rest can drift monster HP (e.g. Zombie 1→3, re-render from statblock-derived state) — re-read monster HP after rests.
+- Encounter Builder monster search fuzzy-matches (Zombie → Beholder Zombie/Ogre Zombie rows too); tick the exact "Select Zombie" checkbox row, Qty stepper appears only after ticking.
+
+### EB / popup-dismiss / expiration (CLA-175, 2026-08-29)
+
+- EB at lv14: popup shows ONE beam but resolve applies 3 beams (3d10) — read damage popup/log, not roll display.
+- After EB Done a second button-less `.popup-overlay` (damage) appears — dismiss via backdrop corner click.
+- `Next →` turn-walk only in Initiative view; re-click Initiative before walking (times out from Log view).
+- Modal-bypass lesson: features writing conditions/targetEffects directly (not via expirationQueue) leave stale Incapacitated flags (bug-cla-175) — when a duration "should have ended", check `pendingExpirations` + activeConditions in change-data.
+
+### Area charm / creature-select (SP-069, 2026-08-29)
+
+- NPC saves AUTO-ROLL from combatSummary `saveBonuses.wis` (no prompt); PC saves get `.sp-overlay` prompts — for save-forcing area spells tick NPCs only to keep flow deterministic.
+- Sorcerer casts intercept Metamagic panel first → "Cast Without Metamagic".
+- CreatureSelectionModal: after all-NPC confirm it may NOT auto-close and backdrop is a no-op — click **Skip** to dismiss.
+- Known residual-flag family (bug-cla-175, seen again SP-069): on break, only `charmed` clears; `incapacitated`+`speed_zero` linger cosmetically. Log reason strings can be mislabeled ("Animal Friendship") — cosmetic.
+
+### ResourcePoolModal conversions (CLA-176, 2026-08-29)
+
+- Nature Magician = Druid lv20 class feature (data dup note at lv18 Archdruid text). Wild_Sage_Druid now lv20 Circle of the Stars.
+- Clicking spell-slot level header `.char-spell-slot-level.level` EXPENDS one slot of that level — expend first so "+1 converted slot" is observable (slots clamp at max).
+- Feature-row getByText may match lv18 description text first — actionable Special Actions row is `.nth(1)`; stale refs after re-render ⇒ browser_find + click by ref.
+
+### Passive-with-no-impl pattern + remote MCP (CLA-177, 2026-08-29)
+
+- Passive traits plumb through `passive.js → automationRouter passives → turnStartEffects collection` with ZERO consumer branches = no observable automation; runtime CONTROL test (non-holder gets identical behavior) is the decisive proof — mark INCOMPLETE (needs design), don't burn retries.
+- `.playwright-mcp/*.yml` saved files may be unreadable from workspace (remote MCP) — keep verification inline (run_code_unsafe returns / browser_find).
+- Initiative monster Remove button = `.npc-remove-btn` (icon, title "Remove NPC"; has-text doesn't match).
+- 2024 Halfling has no subrace step; Naturally Stealthy row sits in sheet Actions, click = no-op popup.
+- Wizard bulk click-through: loop Next + auto-selectOption(1) where disabled (Background/Class/Subclass); Save enables after Subclass.
+
+### Wizard school savants (CLA-178, 2026-08-29)
+
+- Savant features are at **level 3** in 2024 classes.json — lv2 sheet shows NO row; test wizard must be lv3+.
+- New-slot-level-up grants are MANUAL re-open (`onSavantLevelUp` dead code); picker prefilled with current selection, append retains old.
+- `.char-special-actions .clickable` row click opens picker with `<select>`s + Confirm; popup persists as `[data-testid="popup-overlay"]` intercepting clicks — click-to-dismiss before touching sheet again.
+- `✓Save` sidebar button: getByRole('Save',exact) never matches — click via evaluate textContent regex `/✓\s*Save/`.
+- Clear-verification: trust ground-truth file absence, not dialog telemetry (admin confirms unreliable in remote MCP).
+
+### Inert feature rows / spell grants (CLA-179, 2026-08-29)
+
+- Feature rows gated by `INTERACTIVE_HANDLER_TYPES` (automationService.js): missing type ⇒ silent INERT text row, no console error. Verify onclick/className on the `<b>`, not just row presence (bug-cla-179).
+- `casting_time: '1 bonus_action'` (underscore) never matches space-format categorizers (rules.js/attackCalc.js) ⇒ no Bonus Actions row — check string format when a BA feature "disappears".
+- Edit-wizard spell step: tick `.list-item-checkbox-trigger` inside `.list-item-body` (row body click only opens details); dismiss lingering `.mi-skip` "Skip for now" BEFORE row clicks.
+- Edit wizard step chips ("14 Spells") jump directly between steps — no Next×17 needed.
+
+### Rests / .mc-overlay dice links (CLA-180, 2026-08-29)
+
+- Short/Long Rest need TWO clicks: "Short Rest" then separate **"Complete Short Rest"** (no overlay wrapper — invisible to overlay detection; rest silently idles otherwise).
+- `.mc-dice-link[0]` "+4 (14)" is the INITIATIVE die — weapon attack links come AFTER ability/skill links (later indices); count carefully before clicking.
+- `.mc-overlay` survives view navigation and intercepts avatar/remove-btn clicks — click its `×` before touching cards.
+- Multi-part monster damage rollback is under-negated (lastAttack stores only primary; e.g. Wight 4+8 recorded 4/4/4) — rollback features inherit this (known).
+
+### Passive proficiency grants (CLA-181, 2026-08-29)
+
+- 2024 subclass proficiencies flow ONLY via major.bonus_skill_proficiencies (count), major.bonus_proficiencies (tools/weapons), or stored skillProficiencies. Free-text "Gain proficiency in…" in major feature descriptions is NEVER parsed (race traits have a parser, majors don't) ⇒ silent no-op grants (bug-cla-181).
+- Recompute expected proficiency totals from JSON ability scores before judging PASS/FAIL — registry ability values can be stale (MercyMonk WIS 16 +3, not +5).
+
+### 9th-level / imprisonment (SP-070, 2026-08-29)
+
+- Imprisonment = Wizard/Warlock lv9 only (2024 spells.json) — Cleric cannot prepare. DivinationWizard lv20 exists for lv9 needs.
+- Imprisonment automation: NO mode picker — prisonType fixed "Burial"; marker effect only (no Restrained/Unconscious applied); save DC = target-side `auto.saveAbility||'WIS'` (not caster INT); success immunity unimplemented (narrative gaps, accepted as PASS-subset).
+- NPC auto-roll saves can leave the `.sp-overlay` up — dismiss via `.sp-dismiss-btn`. Spell-step checkboxes need trusted clicks (evaluate clicks double-toggle); verify `checked` class.
+
+### Brutal Strike ladder (CLA-182, 2026-08-29)
+
+- This dataset: Brutal Strike lv9, **Improved lv13** (lv17 2d10) — verify classes.json before leveling.
+- lv9+lv13 riders both 1d10: dice-count stable-sort keeps lv9 → Improved options unreachable in picker (bug-cla-182). `next_attack_bonus` consumed only by owner, not allies (Sundering never spends).
+- Reckless+Brutal modal without initiative Target set burns once-per-turn mark silently; radios render only after ticking "Use Brutal Strike".
+
+### Wild Shape damage types (CLA-184, 2026-08-29)
+
+- Improved Circle Forms = Circle of the **Moon** lv6 (Wild_Sage_Druid subclass edited Moon lv20 kept if next rows need Moon).
+- damageTypeChoice picker only fires when data damageType contains " or " — "Radiant" alone hard-swaps ALL Wild Shape attacks to Radiant, no per-hit modal (bug-cla-184); +bonus dice declared in data never applied by that path.
+- Wild Shape flow gotchas documented in bug-cla-184 file: animated overlays need timeout overrides; popup-overlay pointer interception; shape_shift toggle-before-form ghost rows.
+
+### Battle Master riders vs Cleave mastery modal (CLA-186, 2026-08-29)
+
+- Heavy mastery (Cleave) post-hit picker has a NO-OP Skip (`onSkip: () {}`) — it occupies the post-Done modal slot and suppresses the attack-rider modal. Workaround: resolve Cleave against a PC (clean via Admin clear) or navigate away to unmount CharActions.
+- Attack-rider modal appears only when runtime `BattleMasterManeuvers_selection` non-empty — pick maneuvers first via "Combat Superiority" feature-row picker. Miss roll popups have no Done button (click popup body).
+- MN-009 currentRolls crash did NOT reproduce in this run (rider modal + damage + logs worked) — bug may be intermittent/manifests only with specific maneuver (Goading) + flow; keep both records.

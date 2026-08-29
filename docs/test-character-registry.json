@@ -2,6 +2,19 @@
   "description": "Existing test characters in 'test-campaign' keyed by class/subclass/race/subrace/feat/background, for reuse during automation verification.",
   "characters": [
     {
+      "name": "AasimarTest",
+      "file": "public/campaigns/test-campaign/AasimarTest.json",
+      "ruleset": "2024",
+      "class": "Rogue",
+      "subclass": "Assassin",
+      "level": 14,
+      "race": "Aasimar",
+      "subrace": "Aasimar",
+      "feats": [],
+      "background": "(none stored)",
+      "note": "CLA-162 Healing Hands VERIFIED 2026-08-29: Healing Hands is the Aasimar RACIAL TRAIT (2024 races.json traits[2], automation type healing / proficiency_bonus_d4 / 1 long rest), NOT a Cleric subclass feature. lv14 PB+5 -> 5d4 popup 'Healing Hands on AasimarTest: 5d4=9 (\u2026) \u2014 Regained 9 HP (no uses remaining)', HP 91->100 then 90->101 (clamped, roll 15 restores 11). Re-use blocked popup 'cannot be used again until you finish a Long Rest'. Long Rest reset (healinghandsUses in LONG_REST_RESOURCES) proven by second heal succeeding. Self-target works with empty Target dropdown (handler defaults self). Keep for Aasimar tests."
+    },
+    {
       "name": "Disciplined_Monk",
       "file": "public/campaigns/test-campaign/Disciplined_Monk.json",
       "ruleset": "2024",
@@ -19,28 +32,29 @@
       "ruleset": "2024",
       "class": "Cleric",
       "subclass": "Life Domain",
-      "level": 3,
+      "level": 17,
       "race": "Human",
       "subrace": "Human",
       "feats": [
         "Magic Initiate"
       ],
       "background": "Acolyte",
-      "note": "Life Domain \u2014 does NOT have Guided Strike (2024 data: War Domain only). Reusable for Preserve Life/life-domain tests."
+      "note": "Life Domain \u2014 does NOT have Guided Strike (2024 data: War Domain only). Leveled 3\u219213 2026-08-29 for SP-060 Heal: Heal prepared via wizard Spells-step checkbox (.list-item-checkbox-trigger), max HP 94, 6th-level slot 1. Long Rest required after milestone level-up to refresh spell slots. SP-060 FAIL: Heal popup 'Regained -49 HP', heal never applies to PCs (bug-sp-060-heal.md). | Now lv17 Life, DC 17, Holy Aura prepared, slots full post Long Rest (CLA-067 run 2026-08-29)."
     },
     {
       "name": "Wild_Sage_Druid",
       "file": "public/campaigns/test-campaign/Wild_Sage_Druid.json",
       "ruleset": "2024",
       "class": "Druid",
-      "subclass": "Circle of the Land",
-      "level": 9,
+      "subclass": "Circle of the Stars",
+      "level": 20,
       "race": "Human",
       "subrace": "Human",
       "feats": [
         "Magic Initiate"
       ],
-      "background": "Acolyte"
+      "background": "Acolyte",
+      "note": "Registered subclass stale: file actual is circle of the stars. Leveled 9\u219220 2026-08-29 for CLA-176 Nature Magician (data lv20, class-level feature). App data: WS uses 4 at lv17+ (not 2 per printed rules); slots lv20 table 4/3/3/3/3/2/2/1/1. ResourcePoolModal opened via clickable 'Nature Magician:' Special Actions row. All slots full + WS 4/4 post final Long Rest. | CLA-184 run: Circle of the Moon lv6 grants Improved Circle Forms; whether subclass was left as Moon or Stars VERIFY via JSON before next Druid row."
     },
     {
       "name": "Bard_Spellcaster",
@@ -60,11 +74,18 @@
       "ruleset": "2024",
       "class": "Barbarian",
       "subclass": "Path of the Berserker",
-      "level": 5,
+      "level": 13,
       "race": "Dragonborn",
       "subrace": "Red",
-      "feats": [],
-      "background": "Acolyte"
+      "feats": [
+        "Magic Initiate",
+        "Healer"
+      ],
+      "background": "Acolyte",
+      "note": "Level 13 since 2026-08-29 (CLA-182 test): 2024 classes.json has Brutal Strike at lv9, Improved Brutal Strike at lv13 \u2014 NOT lv11. CLA-182 FAIL: picker still lists only lv9 2 options (bug-cla-182-improved-brutal-strike.md). CLA-161 verified 2026-08-29: Healer feat (Origin) added via Edit wizard Feats step (.list-item-checkbox-trigger click works on feat rows), Healer's Kit added via Inventory step backpack textarea. Max HP 35, PB +3, d12. Self-target Battle Medic works with empty Target dropdown (handler self-fallback healingHandler.js:51-52). Keep feat+kit for reuse.",
+      "hasKits": [
+        "Healer's Kit"
+      ]
     },
     {
       "name": "DraconicSorcerer",
@@ -99,26 +120,26 @@
       "file": "public/campaigns/test-campaign/ElderPaladin.json",
       "ruleset": "2024",
       "class": "Paladin",
-      "subclass": "Aura Guardian",
-      "level": 14,
+      "subclass": "Oath of Devotion",
+      "level": 20,
       "race": "Human",
       "subrace": "Human",
       "feats": [],
       "background": "Acolyte",
-      "note": "Created for CLA-104 Elder Champion testing. Keep for future Paladin tests."
+      "note": "lv20 Oath of Devotion (was Aura Guardian lv14; retargeted CLA-170 2026-08-29). CHA +5, PB +6, CD 3/3. Used for Holy Nimbus bug repro."
     },
     {
       "name": "HexWarlock",
       "file": "public/campaigns/test-campaign/HexWarlock.json",
       "ruleset": "2024",
       "class": "Warlock",
-      "subclass": "Great Old One",
-      "level": 10,
+      "subclass": "Fiend Patron",
+      "level": 14,
       "race": "Human",
       "subrace": "Human",
       "feats": [],
       "background": "Acolyte",
-      "note": "Attack-roll spellcaster: Eldritch Blast +7 (added 2026-08-28 via edit wizard Spells step). Set initiative card Target dropdown before casting or campaign.lastAttack is never written."
+      "note": "Attack-roll spellcaster: Eldritch Blast +8 (lv14). SUBCLASS CHANGED 2026-08-29: Celestial Patron \u2192 Fiend Patron + level 10\u219214 (Edit wizard step-7 combobox + level fill; JSON ground truth). CLA-175 Hurl Through Hell FAIL (bug-cla-175-hurl-through-hell.md): full fail-branch works \u2014 after EB hit, sheet 'Hurl Through Hell:' \u2192 modal (CHA DC 16, 8d10, Uses 1/1) \u2192 .sp-overlay save prompt \u2192 fail \u2192 8d10=31 psychic, Ogre 55\u219224 exact, Incapacitated badge + te, uses 1\u21920, once-per-turn popup, 4 log entries. BUT duration never expires: round 4 (past caster's next turn) Ogre still incapacitated, pendingExpirations [], returnToSpace flag inert \u2014 modal bypasses expirationQueue; no cleanup consumer in src. Long Rest resets hurlThroughHellUses/turnUsed to null + slots 3/3 (verified). Keep Fiend lv14 for Fiend/hurl tests. Runtime change-data + log cleared after run."
     },
     {
       "name": "VenomStrike",
@@ -140,9 +161,10 @@
       "ruleset": "2024",
       "class": "Fighter",
       "subclass": "Battle Master",
-      "level": 5,
+      "level": 10,
       "race": "Human",
-      "note": "Created for MN-007 testing. Has 4/4 Superiority Dice (d8)."
+      "note": "lv10 BM (CLA-186 verified 2026-08-29: Superiority d10 label + ladder). 5 dice post long rest. Re-pick maneuvers via Combat Superiority feature-row picker before rider modal appears.",
+      "file": "public/campaigns/test-campaign/EvasiveFighter.json"
     },
     {
       "name": "GoliathFireGiant",
@@ -169,6 +191,71 @@
       "feats": [],
       "background": "Acolyte",
       "note": "Created 2026-08-28 for CLA-156 Guided Strike. Channel Divinity 2/2. No weapons; spell attack +1. Guided Strike verified working via ally-miss path."
+    },
+    {
+      "name": "MercyMonk",
+      "file": "public/campaigns/test-campaign/MercyMonk.json",
+      "ruleset": "2024",
+      "class": "Monk",
+      "subclass": "Warrior of Mercy",
+      "level": 17,
+      "race": "Human",
+      "subrace": "Human",
+      "feats": [],
+      "background": "Acolyte",
+      "note": "Leveled 5\u219217 2026-08-28 for CLA-160 (Focus max 17, Focus Save DC 17, martial arts d12, HP 122, Unarmed Strike +7 1d12+1 STR-based; attack rows auto-roll, Empowered Strikes damage-type modal appears after Done). CLA-158/159 notes: no Target dropdown option for self; handler self-fallback at healingHandler.js:150; no per-turn bonus-action UI marker. CLA-160 FAIL: monster-corpse revive HP never persists (bug-cla-160-hand-of-ultimate-mercy.md)."
+    },
+    {
+      "name": "HunterRanger",
+      "file": "public/campaigns/test-campaign/HunterRanger.json",
+      "ruleset": "2024",
+      "class": "Ranger",
+      "subclass": "Hunter",
+      "level": 6,
+      "race": "Human",
+      "subrace": "Human",
+      "feats": [],
+      "background": "Soldier",
+      "note": "Created 2026-08-29 for CLA-173 Hunter's Lore (FAIL: bug-cla-173-hunters-lore.md - combatSummary monster IRV empty because encounterToInitiative.js:184-185 reads non-existent damage_resistances/damage_immunities keys and never copies vulnerabilities; hunterLoreNotice can never render for encounter-joined monsters). Hunter's Mark itself works: free cast via Favored Enemy (2/long rest), concentration {spell, dc, target} stored on combatSummary creature. Attack +2 (ability scores null, PB+2). Shortsword+Shortbow equipped. Keep for Ranger tests; ability scores unassigned."
+    },
+    {
+      "name": "LightfootHalfling",
+      "file": "public/campaigns/test-campaign/LightfootHalfling.json",
+      "ruleset": "2024",
+      "class": "Fighter",
+      "subclass": "",
+      "level": 1,
+      "race": "Halfling",
+      "subrace": "",
+      "feats": [],
+      "background": "Soldier",
+      "note": "Created CLA-177 (row left incomplete \u2014 trait has no consumer code). Small; reusable for size/stealth trait tests."
+    },
+    {
+      "name": "IllusionWizard",
+      "file": "public/campaigns/test-campaign/IllusionWizard.json",
+      "ruleset": "2024",
+      "class": "Wizard",
+      "subclass": "Illusionist",
+      "level": 14,
+      "race": "Human",
+      "subrace": "Human",
+      "feats": [],
+      "background": "Acolyte",
+      "note": "CLA-178 Illusion Savant VERIFIED 2026-08-29. CLA-180 Illusory Self FAIL 2026-08-29 (bug-cla-180-illusory-self.md): auto-miss popup, rollback, uses 0\u21921, lv2-slot restore all work; illusorySelfUses NEVER resets on Short/Long Rest (missing from restRules-constants SHORT/LONG_REST_RESOURCES). lv14 (registry was stale lv5); AC 9 unarmored \u2014 easy target for +4 monsters. Wight 1 (AC14, HP 82, Necrotic Sword +4 = .mc-dice-link idx 9 in .mc-overlay) proven attacker. Post-run change data cleared (runtime state back to defaults, slots full)."
+    },
+    {
+      "name": "DivinationWizard",
+      "file": "public/campaigns/test-campaign/DivinationWizard.json",
+      "ruleset": "2024",
+      "class": "Wizard",
+      "subclass": "Divination",
+      "level": 20,
+      "race": "Human",
+      "subrace": "Human",
+      "feats": [],
+      "background": "Sage",
+      "note": "Created SP-070 (lv20, lv9 slots, INT-based spell DC 14 observed). Keep for lv9 spell tests."
     }
   ],
   "monsters": [
@@ -203,6 +290,62 @@
       "hp": 27,
       "wisMod": -4,
       "note": "Confirmed-good easy-to-hit melee target with WIS mod -4 (fails DC ~10 saves often). Joined via Encounter Builder as 'Animated Rug of Smothering 1'."
+    },
+    {
+      "name": "Wight",
+      "index": "wight",
+      "source": "public/data/monsters.json",
+      "ac": 14,
+      "monsterType": "Undead",
+      "meleeBonus": "+4",
+      "note": "Proven undead melee attacker \u2014 triggers fiend/undead-targeted effects (e.g. Holy Aura CON blinds). Card Target select first, then .mc-overlay .mc-dice-link '+4'. Hit/miss OK at AC14."
+    },
+    {
+      "name": "Shadow",
+      "index": "shadow",
+      "source": "public/data/monsters.json",
+      "ac": 12,
+      "hp": 27,
+      "vulnerabilities": [
+        "Radiant"
+      ],
+      "resistances": [
+        "Acid",
+        "Cold",
+        "Fire",
+        "Lightning",
+        "Thunder"
+      ],
+      "immunities": [
+        "Necrotic",
+        "Poison",
+        "Exhaustion",
+        "Frightened",
+        "Grappled",
+        "Paralyzed",
+        "Petrified",
+        "Poisoned",
+        "Prone",
+        "Restrained",
+        "Unconscious"
+      ],
+      "note": "Richest IRV monster for IRV-reveal tests (CLA-173). CAVEAT: combatSummary copy arrives with EMPTY resistances/immunities and no vulnerabilities (encounterToInitiative.js:184-185 wrong keys) - JSON is ground truth, runtime is not. Joined as 'Shadow 1'."
+    },
+    {
+      "name": "Skeleton",
+      "index": "skeleton",
+      "source": "public/data/monsters.json",
+      "ac": 14,
+      "hp": 13,
+      "vulnerabilities": [
+        "Bludgeoning"
+      ],
+      "immunities": [
+        "Poison",
+        "Exhaustion",
+        "Poisoned"
+      ],
+      "note": "IRV spot-check unmarked target for CLA-173. Same empty-IRV combatSummary caveat as Shadow. Joined as 'Skeleton 1'."
     }
   ]
 }

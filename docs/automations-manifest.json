@@ -2951,7 +2951,7 @@
       "handler": "src/services/combat/automation/handlers/classFeatureHandler.js",
       "router": "src/services/combat/automation/routers/classFeatureRouter.js",
       "infoBuilder": "src/services/combat/automation/infoBuilders/classFeatureInfoBuilder.js",
-      "verified": "not verified",
+      "verified": "broken \u2014 see .opencode/plans/bug-cla-158-hand-of-harm.md",
       "class": "Monk",
       "triggerConditions": "Trigger: creature_within_5ft_hits_on_attack_roll; Action: 1 reaction",
       "expectedBehavior": "When a creature you can see within 5 feet of you hits on an attack roll, you can take a Reaction to channel supernatural poison through that creature. The creature must succeed on a Constitution saving throw against your spell save DC or take 1d6 Necrotic damage and have Disadvantage on the next attack roll it makes. This Necrotic damage increases to 2d6 at level 11 and 3d6 at level 17."
@@ -2963,7 +2963,7 @@
       "handler": "src/services/combat/automation/handlers/classFeatureHandler.js",
       "router": "src/services/combat/automation/routers/classFeatureRouter.js",
       "infoBuilder": "src/services/combat/automation/infoBuilders/classFeatureInfoBuilder.js",
-      "verified": "not verified",
+      "verified": "verified",
       "class": "Monk",
       "triggerConditions": "Action: 1 bonus action; Uses: undefined, Recharge: undefined",
       "expectedBehavior": "As a Bonus Action, or when you use Flurry of Healing and Harm, you can touch a creature and expend one use of your Focus Points. Roll a Martial Arts die, and the creature regains a number of Hit Points equal to that roll plus your Wisdom modifier."
@@ -2975,7 +2975,7 @@
       "handler": "src/services/combat/automation/handlers/classFeatureHandler.js",
       "router": "src/services/combat/automation/routers/classFeatureRouter.js",
       "infoBuilder": "src/services/combat/automation/infoBuilders/classFeatureInfoBuilder.js",
-      "verified": "not verified",
+      "verified": "broken \u2014 see .opencode/plans/bug-cla-160-hand-of-ultimate-mercy.md",
       "class": "Monk",
       "triggerConditions": "Action: 1 action",
       "expectedBehavior": "Action, touch corpse of creature that died within 24 hours, expend 5 Focus Points. Creature returns to life with 4d10 + Wisdom modifier Hit Points. Conditions removed: Blinded, Deafened, Paralyzed, Poisoned, Stunned."
@@ -2999,7 +2999,7 @@
       "handler": "src/services/combat/automation/handlers/spellHandler.js",
       "router": "src/services/combat/automation/routers/spellRouter.js",
       "infoBuilder": "src/services/combat/automation/infoBuilders/spellInfoBuilder.js",
-      "verified": "not verified",
+      "verified": "broken \u2014 see .opencode/plans/bug-sp-060-heal.md",
       "class": "Spell",
       "triggerConditions": "",
       "expectedBehavior": "Choose a creature that you can see within range. Positive energy washes through the target, restoring 70 Hit Points. This spell also ends the Blinded, Deafened, and Poisoned conditions on the target."
@@ -3011,7 +3011,7 @@
       "handler": "src/services/combat/automation/handlers/classFeatureHandler.js",
       "router": "src/services/combat/automation/routers/classFeatureRouter.js",
       "infoBuilder": "src/services/combat/automation/infoBuilders/classFeatureInfoBuilder.js",
-      "verified": "not verified",
+      "verified": "verified",
       "triggerConditions": "Action; Uses healer's kit",
       "expectedBehavior": "Battle Medic: Expend one use of healer's kit to tend a creature within 5ft. That creature expends one Hit Point Die, you roll it. Creature regains HP equal to roll + your Proficiency Bonus. Healing Rerolls: Reroll healing dice that roll 1. (Healer Feat)"
     },
@@ -3033,7 +3033,7 @@
       "handler": "src/services/combat/automation/handlers/classFeatureHandler.js",
       "router": "src/services/combat/automation/routers/classFeatureRouter.js",
       "infoBuilder": "src/services/combat/automation/infoBuilders/classFeatureInfoBuilder.js",
-      "verified": "not verified",
+      "verified": "verified",
       "class": "Cleric",
       "triggerConditions": "Action: 1 action; Uses: 1, Recharge: long_rest",
       "expectedBehavior": "As a Action, you touch a creature and roll a number of d4s equal to your Proficiency Bonus. The creature regains a number of Hit Points equal to the total rolled. Once you use this trait, you can't use it again until you finish a Long Rest."
@@ -3045,7 +3045,7 @@
       "handler": "src/services/combat/automation/handlers/classFeatureHandler.js",
       "router": "src/services/combat/automation/routers/classFeatureRouter.js",
       "infoBuilder": "src/services/combat/automation/infoBuilders/classFeatureInfoBuilder.js",
-      "verified": "not verified",
+      "verified": "verified",
       "class": "Warlock",
       "triggerConditions": "Action: bonus_action; Pool: 1 + warlock level; Range: 60_ft",
       "expectedBehavior": "Pool of d6s (number = 1 + Warlock level). Bonus Action to heal yourself or creature within 60 feet, expending dice (max = Charisma modifier). Roll dice, restore HP equal to total. Regain all on Long Rest."
@@ -3250,7 +3250,7 @@
       "handler": "src/services/combat/automation/handlers/spellHandler.js",
       "router": "src/services/combat/automation/routers/spellRouter.js",
       "infoBuilder": "src/services/combat/automation/infoBuilders/spellInfoBuilder.js",
-      "verified": "not verified",
+      "verified": "broken \u2014 see .opencode/plans/bug-sp-067-holy-aura.md",
       "class": "Spell",
       "triggerConditions": "Duration: Concentration, up to 1 minute",
       "expectedBehavior": "For the duration, you emit an aura in a 30-foot Emanation. While in the aura, creatures of your choice have Advantage on all saving throws, and other creatures have Disadvantage on attack rolls against them. In addition, when a Fiend or an Undead hits an affected creature with a melee attack roll, the attacker must succeed on a Constitution saving throw or have the Blinded condition until the end of its next turn."
@@ -3262,7 +3262,7 @@
       "handler": "src/services/combat/automation/handlers/classFeatureHandler.js",
       "router": "src/services/combat/automation/routers/classFeatureRouter.js",
       "infoBuilder": "src/services/combat/automation/infoBuilders/classFeatureInfoBuilder.js",
-      "verified": "not verified",
+      "verified": "broken \u2014 see .opencode/plans/bug-cla-170-holy-nimbus.md",
       "class": "Paladin",
       "triggerConditions": "Automation type: undefined",
       "expectedBehavior": "As a Bonus Action, you can imbue your Aura of Protection with holy power, granting the benefits below for 10 minutes or until you end them (no action required). Once you use this feature, you can't use it again until you finish a Long Rest. You can also restore your use of it by expending a level 5 spell slot (no action required). Holy Ward: You have Advantage on any saving throw you are forced to make by a Fiend or an Undead. Radiant Damage: Whenever an enemy starts its turn in the aura, that creature takes Radiant damage equal to your Charisma modifier plus your Proficiency Bonus"
@@ -3274,7 +3274,7 @@
       "handler": "src/services/combat/automation/handlers/classFeatureHandler.js",
       "router": "src/services/combat/automation/routers/classFeatureRouter.js",
       "infoBuilder": "src/services/combat/automation/infoBuilders/classFeatureInfoBuilder.js",
-      "verified": "not verified",
+      "verified": "broken \u2014 see .opencode/plans/bug-cla-173-hunters-lore.md",
       "class": "Ranger",
       "triggerConditions": "Passive: Always active",
       "expectedBehavior": "While a creature is marked by Hunter's Mark, know whether it has Immunities, Resistances, or Vulnerabilities."
@@ -3298,7 +3298,7 @@
       "handler": "src/services/combat/automation/handlers/classFeatureHandler.js",
       "router": "src/services/combat/automation/routers/classFeatureRouter.js",
       "infoBuilder": "src/services/combat/automation/infoBuilders/classFeatureInfoBuilder.js",
-      "verified": "not verified",
+      "verified": "broken \u2014 see .opencode/plans/bug-cla-174-hunters-prey.md",
       "class": "Ranger",
       "triggerConditions": "Action: passive",
       "expectedBehavior": "Choose one, can replace on Short/Long Rest: Colossus Slayer: Extra 1d8 damage to creature missing HP, once per turn Horde Breaker: Once per turn, make another attack with same weapon against different creature within 5 feet of original target and within weapon's range)"
@@ -3310,7 +3310,7 @@
       "handler": "src/services/combat/automation/handlers/classFeatureHandler.js",
       "router": "src/services/combat/automation/routers/classFeatureRouter.js",
       "infoBuilder": "src/services/combat/automation/infoBuilders/classFeatureInfoBuilder.js",
-      "verified": "not verified",
+      "verified": "broken \u2014 see .opencode/plans/bug-cla-175-hurl-through-hell.md",
       "class": "Warlock",
       "triggerConditions": "Action: passive",
       "expectedBehavior": "Once per turn when you hit with an attack roll, target makes Charisma save or disappears and takes 8d10 Psychic damage (if not a Fiend), has Incapacitated condition until end of next turn, then returns to space it previously occupied. Once per Long Rest (or expend Pact Magic spell slot to restore)."
@@ -3322,7 +3322,7 @@
       "handler": "src/services/combat/automation/handlers/spellHandler.js",
       "router": "src/services/combat/automation/routers/spellRouter.js",
       "infoBuilder": "src/services/combat/automation/infoBuilders/spellInfoBuilder.js",
-      "verified": "not verified",
+      "verified": "verified",
       "class": "Spell",
       "triggerConditions": "Range: 120 feet; Duration: Concentration, up to 1 minute",
       "expectedBehavior": "You create a twisting pattern of colors in a 30-foot Cube within range. The pattern appears for a moment and vanishes. Each creature in the area who can see the pattern must succeed on a Wisdom saving throw or have the Charmed condition for the duration. While Charmed, the creature has the Incapacitated condition and a Speed of 0. The spell ends for an affected creature if it takes any damage or if someone else uses an action to shake the creature out of its stupor."
@@ -3334,7 +3334,7 @@
       "handler": "src/services/combat/automation/handlers/classFeatureHandler.js",
       "router": "src/services/combat/automation/routers/classFeatureRouter.js",
       "infoBuilder": "src/services/combat/automation/infoBuilders/classFeatureInfoBuilder.js",
-      "verified": "not verified",
+      "verified": "verified",
       "class": "Druid",
       "triggerConditions": "Resource: Wild Shape; Uses: undefined; Recharge:  ",
       "expectedBehavior": "You can convert uses of Wild Shape into a spell slot (no action required). Choose a number of your unexpended uses of Wild Shape and convert them into a single spell slot, with each use contributing 2 spell levels."
@@ -3346,7 +3346,7 @@
       "handler": "src/services/combat/automation/handlers/classFeatureHandler.js",
       "router": "src/services/combat/automation/routers/classFeatureRouter.js",
       "infoBuilder": "src/services/combat/automation/infoBuilders/classFeatureInfoBuilder.js",
-      "verified": "not verified",
+      "verified": "incomplete \u2014 needs manual setup \u2014 see .opencode/plans/incomplete-cla-177-naturally-stealthy.md",
       "race": "Halfling",
       "triggerConditions": "Passive: Always active",
       "expectedBehavior": "You can take the Hide action even when you are obscured only by a creature that is at least one size larger than you."
@@ -3358,7 +3358,7 @@
       "handler": "src/services/combat/automation/handlers/classFeatureHandler.js",
       "router": "src/services/combat/automation/routers/classFeatureRouter.js",
       "infoBuilder": "src/services/combat/automation/infoBuilders/classFeatureInfoBuilder.js",
-      "verified": "not verified",
+      "verified": "verified",
       "class": "Wizard",
       "triggerConditions": "Passive: Always active",
       "expectedBehavior": "Choose two Wizard spells from Illusion school (no higher than level 2), add to spellbook for free. Whenever you gain access to a new level of spell slots, add one Illusion school spell to spellbook for free."
@@ -3370,7 +3370,7 @@
       "handler": "src/services/combat/automation/handlers/classFeatureHandler.js",
       "router": "src/services/combat/automation/routers/classFeatureRouter.js",
       "infoBuilder": "src/services/combat/automation/infoBuilders/classFeatureInfoBuilder.js",
-      "verified": "not verified",
+      "verified": "broken \u2014 see .opencode/plans/bug-cla-179-illusory-reality.md",
       "class": "Wizard",
       "triggerConditions": "Action: 1 bonus_action",
       "expectedBehavior": "When you cast an Illusion spell with a spell slot, choose one inanimate, nonmagical object that is part of the illusion and make it real. Bonus Action while spell is ongoing. Object remains real for 1 minute, can't deal damage or give any conditions."
@@ -3382,7 +3382,7 @@
       "handler": "src/services/combat/automation/handlers/classFeatureHandler.js",
       "router": "src/services/combat/automation/routers/classFeatureRouter.js",
       "infoBuilder": "src/services/combat/automation/infoBuilders/classFeatureInfoBuilder.js",
-      "verified": "not verified",
+      "verified": "broken \u2014 see .opencode/plans/bug-cla-180-illusory-self.md",
       "class": "Wizard",
       "triggerConditions": "Trigger: attack_hit; Action: 1 reaction",
       "expectedBehavior": "When a creature hits you with an attack roll, take Reaction to interpose an illusory duplicate between attacker and yourself. Attack automatically misses, then illusion dissipates. Once per Short or Long Rest (or expend level 2+ spell slot to restore)."
@@ -3394,7 +3394,7 @@
       "handler": "src/services/combat/automation/handlers/classFeatureHandler.js",
       "router": "src/services/combat/automation/routers/classFeatureRouter.js",
       "infoBuilder": "src/services/combat/automation/infoBuilders/classFeatureInfoBuilder.js",
-      "verified": "not verified",
+      "verified": "broken \u2014 see .opencode/plans/bug-cla-181-implements-of-mercy.md",
       "class": "Monk",
       "triggerConditions": "",
       "expectedBehavior": "Gain proficiency in Insight and Medicine skills and Herbalism Kit."
@@ -3406,7 +3406,7 @@
       "handler": "src/services/combat/automation/handlers/spellHandler.js",
       "router": "src/services/combat/automation/routers/spellRouter.js",
       "infoBuilder": "src/services/combat/automation/infoBuilders/spellInfoBuilder.js",
-      "verified": "not verified",
+      "verified": "verified",
       "class": "Spell",
       "triggerConditions": "Duration: Until dispelled",
       "expectedBehavior": "You create a magical restraint to hold a creature that you can see within range. The target must make a Wisdom saving throw. On a successful save, the target is unaffected, and it is immune to this spell for the next 24 hours. On a failed save, the target is imprisoned. While imprisoned, the target doesn't need to breathe, eat, or drink, and it doesn't age. Divination spells can't locate or perceive the imprisoned target, and the target can't teleport. Until the spell ends, the target is also affected by one of the following effects of your choice: Burial. The target is entombed beneath the earth in a hollow globe of magical force that is just large enough to contain the target. Nothing can pass into or out of the globe. Chaining. Chains firmly rooted in the ground hold the target in place. The target has the Restrained condition and can't be moved by any means. Hedged Prison. The target is trapped in a demiplane that is warded against teleportation and planar travel. The demiplane is your choice of a labyrinth, a cage, a tower, or the like. Minimus Containment. The target becomes 1 inch tall and is trapped inside an indestructible gemstone or a similar object. Light can pass through the gemstone (allowing the target to see out and other creatures to see in), but nothing else can pass through by any means. Slumber. The target has the Unconscious condition and can't be awakened. Ending the Spell. When you cast the spell, specify a trigger that will end it. The trigger can be as simple or as elaborate as you choose, but the DM must agree that it has a high likelihood of happening within the next decade. The trigger must be an observable action, such as someone making a particular offering at the temple of your god, saving your true love, or defeating a specific monster. A Dispel Magic spell can end the spell only if it is cast with a level 9 spell slot, targeting either the prison or the component used to create it."
@@ -3418,7 +3418,7 @@
       "handler": "src/services/combat/automation/handlers/classFeatureHandler.js",
       "router": "src/services/combat/automation/routers/classFeatureRouter.js",
       "infoBuilder": "src/services/combat/automation/infoBuilders/classFeatureInfoBuilder.js",
-      "verified": "not verified",
+      "verified": "broken \u2014 see .opencode/plans/bug-cla-182-improved-brutal-strike.md",
       "class": "Barbarian",
       "triggerConditions": "Trigger: strength_attack_hit_after_reckless; Once per turn: yes",
       "expectedBehavior": "You have honed new ways to attack furiously. Also, since these 2 have combat effect we can automate, The following effects are now among your Brutal Strike options. Staggering Blow: The target has Disadvantage on the next saving throw it makes, and it can't make Opportunity Attacks until the start of your next turn. Sundering Blow: Before the start of your next turn, the next attack roll made by another creature against the target gains a +5 bonus to the roll. An attack roll can gain only one Sundering Blow bonus."
@@ -3430,7 +3430,7 @@
       "handler": "src/services/combat/automation/handlers/classFeatureHandler.js",
       "router": "src/services/combat/automation/routers/classFeatureRouter.js",
       "infoBuilder": "src/services/combat/automation/infoBuilders/classFeatureInfoBuilder.js",
-      "verified": "not verified",
+      "verified": "broken \u2014 see .opencode/plans/bug-cla-184-improved-circle-forms.md",
       "class": "Druid",
       "triggerConditions": "Automation type: undefined",
       "expectedBehavior": "While in a Wild Shape form, you gain the following benefits. Lunar Radiance: Each of your attacks in a Wild Shape form can deal its normal damage type or Radiant damage. You make this choice each time you hit with those attacks. Increased Toughness: You can add your Wisdom modifier to your Constitution saving throws."
@@ -3442,7 +3442,7 @@
       "handler": "src/services/combat/automation/handlers/classFeatureHandler.js",
       "router": "src/services/combat/automation/routers/classFeatureRouter.js",
       "infoBuilder": "src/services/combat/automation/infoBuilders/classFeatureInfoBuilder.js",
-      "verified": "not verified",
+      "verified": "verified",
       "class": "Fighter",
       "triggerConditions": "Passive: Always active",
       "expectedBehavior": "Superiority Die becomes d10."

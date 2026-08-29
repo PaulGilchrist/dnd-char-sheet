@@ -1,0 +1,11 @@
+Total messages: 129 (Errors: 4, Warnings: 122)
+Returning 4 messages for level "error"
+
+[ERROR] [setRuntimeValue] characterKey === campaignName. A campaign name was used as a creature/character key. characterKey: "test-campaign", propertyName: "pipeline-pause". {characterKey: test-campaign, propertyName: pipeline-pause, value: Object, campaignName: test-campaign, stack: Error
+    at setRuntimeValue (http://localhost:517…3/src/components/char-sheet/CharActions.jsx:96:4)} @ http://localhost:5173/src/hooks/runtime/useRuntimeState.js:79
+[ERROR] [setRuntimeObject] characterKey === campaignName. A campaign name was used as a creature/character key. {characterKey: test-campaign, keys: Array(1), campaignName: test-campaign, stack: Error
+    at setRuntimeObject (http://localhost:51…ocalhost:5173/src/services/ui/sseClient.js:32:19)} @ http://localhost:5173/src/hooks/runtime/useRuntimeState.js:134
+[ERROR] [setRuntimeValue] characterKey === campaignName. A campaign name was used as a creature/character key. characterKey: "test-campaign", propertyName: "pipeline-pause". {characterKey: test-campaign, propertyName: pipeline-pause, value: null, campaignName: test-campaign, stack: Error
+    at setRuntimeValue (http://localhost:517….vite/deps/react-dom_client.js?v=bf033599:9240:4)} @ http://localhost:5173/src/hooks/runtime/useRuntimeState.js:79
+[ERROR] [setRuntimeObject] characterKey === campaignName. A campaign name was used as a creature/character key. {characterKey: test-campaign, keys: Array(1), campaignName: test-campaign, stack: Error
+    at setRuntimeObject (http://localhost:51…ocalhost:5173/src/services/ui/sseClient.js:32:19)} @ http://localhost:5173/src/hooks/runtime/useRuntimeState.js:134
