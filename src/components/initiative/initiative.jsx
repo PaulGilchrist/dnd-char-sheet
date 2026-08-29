@@ -439,13 +439,16 @@ function Initiative({ characters, campaignName, onNpcsChange, isLocalhost, mapNa
     React.useEffect(() => {
         const handler = () => {
             const summary = getCombatSummary(campaignName)
-            if (summary && JSON.stringify(summary) !== JSON.stringify(combatSummary)) {
-                setCombatSummary(summary)
+            if (!summary) return
+            // Compare against the live ref (not a stale closure) and adopt a clone:
+            // the cache may alias the current state object, and React bails out on
+            // setState with an identical reference even after in-place mutation.
+            if (JSON.stringify(summary) !== JSON.stringify(combatSummaryRef.current)) {
+                setCombatSummary(cloneDeep(summary))
             }
         }
         window.addEventListener('combat-summary-updated', handler)
         return () => window.removeEventListener('combat-summary-updated', handler)
-        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [campaignName])
 
     React.useEffect(() => {

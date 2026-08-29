@@ -58,7 +58,7 @@ export function createSseEventHandler({
     setRuntimeStateTick,
     handleOverlayEvent,
 }) {
-    return function handleEvent(event) {
+    return async function handleEvent(event) {
         if (event.key == null || event.data == null) return
 
         if (event.key.startsWith('spell-overlay-')) {
@@ -102,19 +102,30 @@ export function createSseEventHandler({
             setActiveCreatureNameG(newActive)
             expireStaleEffects(campaignName, newActive)
 
-            // Only apply turn-start effects when the active creature actually changes
+            // Only apply turn-start effects when the active creature actually changes.
+            // The dedupe key is round-scoped so effects re-apply each new round.
+            const gateRound = (combatSummaryRef.current || getCombatSummary(campaignName))?.round ?? 1
+            const gateKey = `${gateRound}:${event.data}`
             const lastApplied = lastAppliedTurnStartCreatureRef.current
-            const shouldApply = prevActive !== event.data && lastApplied !== event.data
+            const shouldApply = prevActive !== event.data && lastApplied !== gateKey
             if (shouldApply) {
-                lastAppliedTurnStartCreatureRef.current = event.data
-                setRuntimeValue('__initiative__', 'lastAppliedTurnStartCreature', event.data, campaignName)
+                lastAppliedTurnStartCreatureRef.current = gateKey
+                setRuntimeValue('__initiative__', 'lastAppliedTurnStartCreature', gateKey, campaignName)
                 const cs = combatSummaryRef.current
-                if (cs && cs.lastAppliedTurnStartCreature !== event.data) {
-                    cs.lastAppliedTurnStartCreature = event.data
+                if (cs) {
+                    cs.lastAppliedTurnStartCreature = gateKey
+                    setCombatSummaryCache(cs, campaignName)
                     setCombatSummary(cloneDeep(cs))
                 }
                 const newActiveChar = characters.find(ch => ch.name === event.data || ch.name.startsWith(event.data + ' '))
-                applyTurnStartEffects(event.data, newActiveChar?.computedStats || newActiveChar, campaignName, characters)
+                await applyTurnStartEffects(event.data, newActiveChar?.computedStats || newActiveChar, campaignName, characters)
+                // Effects may have persisted damaged copies (e.g. aura damage) —
+                // adopt the cache so the UI and any follow-up writes carry the damage.
+                const afterEffects = getCombatSummary(campaignName)
+                if (afterEffects && afterEffects !== combatSummaryRef.current) {
+                    combatSummaryRef.current = afterEffects
+                    setCombatSummary(cloneDeep(afterEffects))
+                }
                 setRuntimeStateTick(t => t + 1)
             }
         } else if (!['log', 'spell-overlay'].includes(dataKey)) {

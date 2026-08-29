@@ -156,7 +156,7 @@ describe('navigationHandlers.js', () => {
             expect(unbreakableMajesty.clearPerRoundMajestyTrackers).not.toHaveBeenCalled();
         });
 
-        it('should increment round when moving from last creature to first', () => {
+        it('should increment round when moving from last creature to first', async () => {
             initiativeService.getNextCreatureName.mockReturnValue({
                 newActiveName: 'Alice',
                 roundIncrement: true,
@@ -174,7 +174,7 @@ describe('navigationHandlers.js', () => {
                 setRuntimeStateTick,
             });
 
-            handler();
+            await handler();
 
             expect(storage.set).toHaveBeenCalledWith('combatSummary', expect.objectContaining({ round: 2 }), campaignName);
             expect(setCombatSummary).toHaveBeenCalledWith(expect.objectContaining({ round: 2 }));
@@ -188,13 +188,13 @@ describe('navigationHandlers.js', () => {
             expect(expirations.expireStaleEffects).toHaveBeenCalledWith(campaignName, 'Alice');
         });
 
-        it('should apply turn start effects and skip when lastApplied already matches new active', () => {
-            // Positive case: lastApplied differs
+        it('should apply turn start effects and skip when round-scoped lastApplied already matches new active', async () => {
+            // Positive case: gate key differs
             initiativeService.getNextCreatureName.mockReturnValue({
                 newActiveName: 'Bob',
                 roundIncrement: true,
             });
-            lastAppliedTurnStartCreatureRef.current = 'Alice';
+            lastAppliedTurnStartCreatureRef.current = '1:Alice';
 
             const handler = createNextCreatureHandler({
                 combatSummaryRef,
@@ -208,19 +208,19 @@ describe('navigationHandlers.js', () => {
                 setRuntimeStateTick,
             });
 
-            handler();
+            await handler();
 
             expect(expirations.expireStaleEffects).toHaveBeenCalledWith(campaignName, 'Bob');
-            expect(lastAppliedTurnStartCreatureRef.current).toBe('Bob');
-            expect(runtimeState.setRuntimeValue).toHaveBeenCalledWith('__initiative__', 'lastAppliedTurnStartCreature', 'Bob', campaignName);
-            expect(storage.set).toHaveBeenCalledWith('lastAppliedTurnStartCreature', 'Bob', campaignName);
+            expect(lastAppliedTurnStartCreatureRef.current).toBe('2:Bob');
+            expect(runtimeState.setRuntimeValue).toHaveBeenCalledWith('__initiative__', 'lastAppliedTurnStartCreature', '2:Bob', campaignName);
+            expect(storage.set).toHaveBeenCalledWith('lastAppliedTurnStartCreature', '2:Bob', campaignName);
             expect(expirations.applyTurnStartEffects).toHaveBeenCalledWith('Bob', expect.any(Object), campaignName, baseCharacters);
             expect(setRuntimeStateTick).toHaveBeenCalled();
 
-            // Negative case: lastApplied matches new active (reset refs for second assertion)
+            // Negative case: gate key matches round:name of new active (reset refs for second assertion)
             vi.clearAllMocks();
             combatSummaryRef.current = { ...baseCombatSummary };
-            lastAppliedTurnStartCreatureRef.current = 'Alice';
+            lastAppliedTurnStartCreatureRef.current = '2:Alice';
             roundRef.current = 1;
             setCombatSummary.mockReset();
 
@@ -241,13 +241,48 @@ describe('navigationHandlers.js', () => {
                 setRuntimeStateTick,
             });
 
-            handler2();
+            await handler2();
 
             expect(expirations.expireStaleEffects).toHaveBeenCalledWith(campaignName, 'Alice');
-            expect(lastAppliedTurnStartCreatureRef.current).toBe('Alice');
+            expect(lastAppliedTurnStartCreatureRef.current).toBe('2:Alice');
             expect(runtimeState.setRuntimeValue).not.toHaveBeenCalledWith('__initiative__', 'lastAppliedTurnStartCreature', 'Alice', campaignName);
             expect(expirations.applyTurnStartEffects).not.toHaveBeenCalled();
             expect(setRuntimeStateTick).not.toHaveBeenCalled();
+        });
+
+        it('BUG CLA-170: should re-apply turn start effects to the same creature in a new round', async () => {
+            // Creature 'Alice' starts round 2, then round 3 — turn-start effects (e.g. Holy
+            // Nimbus radiant damage) must fire on BOTH rounds, not just once per combat.
+            initiativeService.getNextCreatureName.mockReturnValue({
+                newActiveName: 'Alice',
+                roundIncrement: true,
+            });
+
+            const handler = createNextCreatureHandler({
+                combatSummaryRef,
+                activeCreatureName: 'Charlie',
+                campaignName,
+                characters: baseCharacters,
+                roundRef,
+                lastAppliedTurnStartCreatureRef,
+                setCombatSummary,
+                setActiveCreatureName,
+                setRuntimeStateTick,
+            });
+
+            roundRef.current = 1;
+            await handler();
+            expect(expirations.applyTurnStartEffects).toHaveBeenCalledTimes(1);
+            expect(lastAppliedTurnStartCreatureRef.current).toBe('2:Alice');
+
+            // Round 2 → round 3, same round-boundary creature
+            combatSummaryRef.current = { ...baseCombatSummary, round: 2 };
+            roundRef.current = 2;
+            await handler();
+
+            expect(expirations.applyTurnStartEffects).toHaveBeenCalledTimes(2);
+            expect(lastAppliedTurnStartCreatureRef.current).toBe('3:Alice');
+            expect(storage.set).toHaveBeenLastCalledWith('combatSummary', expect.objectContaining({ round: 3 }), campaignName);
         });
 
         it('should handle empty characters array during round increment', () => {
@@ -348,7 +383,7 @@ describe('navigationHandlers.js', () => {
             expect(expirations.expireStaleEffects).not.toHaveBeenCalled();
         });
 
-        it('should decrement round when moving from first to last creature', () => {
+        it('should decrement round when moving from first to last creature', async () => {
             roundRef.current = 3;
             initiativeService.getPreviousCreatureName.mockReturnValue({
                 newActiveName: 'Charlie',
@@ -368,7 +403,7 @@ describe('navigationHandlers.js', () => {
                 isPreviousDisabled: false,
             });
 
-            handler();
+            await handler();
 
             expect(storage.set).toHaveBeenCalledWith('combatSummary', expect.objectContaining({ round: 2 }), campaignName);
             expect(setCombatSummary).toHaveBeenCalledWith(expect.objectContaining({ round: 2 }));
@@ -380,14 +415,14 @@ describe('navigationHandlers.js', () => {
             expect(unbreakableMajesty.clearPerRoundMajestyTrackers).toHaveBeenCalledWith('Charlie', campaignName);
         });
 
-        it('should apply turn start effects and skip when lastApplied already matches on previous', () => {
-            // Positive case: lastApplied differs
+        it('should apply turn start effects and skip when round-scoped lastApplied already matches on previous', async () => {
+            // Positive case: gate key differs
             roundRef.current = 2;
             initiativeService.getPreviousCreatureName.mockReturnValue({
                 newActiveName: 'Bob',
                 roundDecrement: true,
             });
-            lastAppliedTurnStartCreatureRef.current = 'Alice';
+            lastAppliedTurnStartCreatureRef.current = '2:Alice';
 
             const handler = createPreviousCreatureHandler({
                 combatSummaryRef,
@@ -402,18 +437,18 @@ describe('navigationHandlers.js', () => {
                 isPreviousDisabled: false,
             });
 
-            handler();
+            await handler();
 
-            expect(lastAppliedTurnStartCreatureRef.current).toBe('Bob');
-            expect(runtimeState.setRuntimeValue).toHaveBeenCalledWith('__initiative__', 'lastAppliedTurnStartCreature', 'Bob', campaignName);
-            expect(storage.set).toHaveBeenCalledWith('lastAppliedTurnStartCreature', 'Bob', campaignName);
+            expect(lastAppliedTurnStartCreatureRef.current).toBe('1:Bob');
+            expect(runtimeState.setRuntimeValue).toHaveBeenCalledWith('__initiative__', 'lastAppliedTurnStartCreature', '1:Bob', campaignName);
+            expect(storage.set).toHaveBeenCalledWith('lastAppliedTurnStartCreature', '1:Bob', campaignName);
             expect(expirations.applyTurnStartEffects).toHaveBeenCalledWith('Bob', expect.any(Object), campaignName, baseCharacters);
             expect(setRuntimeStateTick).toHaveBeenCalled();
 
-            // Negative case: lastApplied matches new active
+            // Negative case: gate key matches round:name of new active
             vi.clearAllMocks();
             combatSummaryRef.current = { ...baseCombatSummary };
-            lastAppliedTurnStartCreatureRef.current = 'Bob';
+            lastAppliedTurnStartCreatureRef.current = '1:Bob';
             roundRef.current = 2;
             setCombatSummary.mockReset();
 
@@ -435,9 +470,9 @@ describe('navigationHandlers.js', () => {
                 isPreviousDisabled: false,
             });
 
-            handler2();
+            await handler2();
 
-            expect(lastAppliedTurnStartCreatureRef.current).toBe('Bob');
+            expect(lastAppliedTurnStartCreatureRef.current).toBe('1:Bob');
             expect(runtimeState.setRuntimeValue).not.toHaveBeenCalledWith('__initiative__', 'lastAppliedTurnStartCreature', 'Bob', campaignName);
             expect(expirations.applyTurnStartEffects).not.toHaveBeenCalled();
             expect(setRuntimeStateTick).not.toHaveBeenCalled();

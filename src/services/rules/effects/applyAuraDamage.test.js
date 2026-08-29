@@ -28,6 +28,7 @@ vi.mock('../../encounters/combatData.js', () => ({
   getActiveCreatureName: vi.fn(() => 'TestCharacter'),
   getCombatSummary: vi.fn(),
   loadCombatSummary: vi.fn().mockResolvedValue(null),
+  setCombatSummaryCache: vi.fn(),
 }));
 
 vi.mock('../../ui/logService.js', () => ({

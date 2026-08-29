@@ -1,9 +1,10 @@
+import { cloneDeep } from 'lodash';
 import { getRuntimeValue } from '../../../hooks/runtime/useRuntimeState.js';
 import utils from '../../ui/utils.js';
 import storage from '../../ui/storage.js';
 import { isWithinRange } from '../combat/rangeCheck.js';
 import { applyDamageToTarget } from '../combat/applyDamage.js';
-import { getCombatSummary, loadCombatSummary } from '../../encounters/combatData.js';
+import { getCombatSummary, loadCombatSummary, setCombatSummaryCache } from '../../encounters/combatData.js';
 import { getAllyList } from '../../../hooks/useAllySelection.js';
 
 export async function applyAuraDamage(activeName, playerStats, campaignName, characters = [], options = {}) {
@@ -12,11 +13,14 @@ export async function applyAuraDamage(activeName, playerStats, campaignName, cha
     const isActive = getRuntimeValue(activeName, activeKey, campaignName);
     if (!isActive) return;
 
-    let combatSummary = getCombatSummary(campaignName);
-    if (!combatSummary) {
-        combatSummary = await loadCombatSummary(campaignName);
+    let cachedSummary = getCombatSummary(campaignName);
+    if (!cachedSummary) {
+        cachedSummary = await loadCombatSummary(campaignName);
     }
-    if (!combatSummary) return;
+    if (!cachedSummary) return;
+
+    // Work on a detached copy so mutations never alias the live React state object
+    const combatSummary = cloneDeep(cachedSummary);
 
     const creatures = combatSummary.creatures;
     if (!Array.isArray(creatures)) {
@@ -45,18 +49,21 @@ export async function applyAuraDamage(activeName, playerStats, campaignName, cha
         } catch (error) { console.error(`[auraDamage] Failed to apply damage to ${creatureName}:`, error); }
     }
 
+    setCombatSummaryCache(combatSummary, campaignName);
     storage.set('combatSummary', combatSummary, campaignName);
     window.dispatchEvent(new CustomEvent('combat-summary-updated'));
 }
 
 export async function applyHolyNimbusDamage(activeName, characters, campaignName) {
-    const combatSummary = getCombatSummary(campaignName);
-    if (!combatSummary) {
-        const loaded = await loadCombatSummary(campaignName);
-        if (!loaded) return;
+    let cachedSummary = getCombatSummary(campaignName);
+    if (!cachedSummary) {
+        cachedSummary = await loadCombatSummary(campaignName);
     }
-    const summary = getCombatSummary(campaignName) || await loadCombatSummary(campaignName);
-    if (!summary) return;
+    if (!cachedSummary) return;
+
+    // Work on a detached copy so mutations never alias the live React state object
+    const summary = cloneDeep(cachedSummary);
+    let damageApplied = false;
 
     for (const character of characters) {
         const charName = utils.getName(character.name);
@@ -78,15 +85,15 @@ export async function applyHolyNimbusDamage(activeName, characters, campaignName
 
         try {
             applyDamageToTarget(summary, activeName, damageValue, ['Radiant'], campaignName, characters, false, charName);
+            damageApplied = true;
         } catch (error) { console.error(`[HolyNimbus] Failed to apply radiant damage to ${activeName}:`, error); }
     }
 
+    if (!damageApplied) return;
+
+    // Update the client cache first so React re-renders off the damaged copy,
+    // then persist once through the serialized combatSummary write queue.
+    setCombatSummaryCache(summary, campaignName);
     storage.set('combatSummary', summary, campaignName);
-    fetch(`/api/campaigns/${encodeURIComponent(campaignName)}/combatSummary`, {
-        method: 'POST',
-        mode: 'cors',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(summary)
-    }).catch((e) => { console.error('[HolyNimbus] Failed to sync combatSummary to server:', e); });
     window.dispatchEvent(new CustomEvent('combat-summary-updated'));
 }

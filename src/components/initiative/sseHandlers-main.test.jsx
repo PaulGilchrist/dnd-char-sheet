@@ -177,9 +177,9 @@ describe('createSseEventHandler', () => {
             expect(combatData.setCombatSummaryCache).toHaveBeenCalled();
         });
 
-        it('should apply turn-start effects when creature actually changes', () => {
+        it('should apply turn-start effects when creature actually changes', async () => {
             refs.lastAppliedTurnStartCreatureRef.current = null;
-            handler({ key: 'change-test-campaign-activeCreatureName', data: 'Bob' });
+            await handler({ key: 'change-test-campaign-activeCreatureName', data: 'Bob' });
             expect(expirations.applyTurnStartEffects).toHaveBeenCalled();
             expect(mocks.setRuntimeStateTick).toHaveBeenCalled();
         });
@@ -189,17 +189,26 @@ describe('createSseEventHandler', () => {
             expect(expirations.applyTurnStartEffects).not.toHaveBeenCalled();
         });
 
-        it('should NOT apply turn-start effects when lastApplied === event.data', () => {
-            refs.lastAppliedTurnStartCreatureRef.current = 'Bob';
+        it('should NOT apply turn-start effects when round-scoped lastApplied matches', () => {
+            refs.lastAppliedTurnStartCreatureRef.current = '1:Bob';
             handler({ key: 'change-test-campaign-activeCreatureName', data: 'Bob' });
             expect(expirations.applyTurnStartEffects).not.toHaveBeenCalled();
         });
 
-        it('should update lastAppliedTurnStartCreature in runtime store when applying', () => {
+        it('BUG CLA-170: should re-apply turn-start effects to the same creature in a new round', async () => {
+            refs.lastAppliedTurnStartCreatureRef.current = '1:Bob';
+            refs.activeCreatureNameRef.current = 'Alice';
+            refs.combatSummaryRef.current = { round: 2, creatures: [{ name: 'Bob', type: 'npc' }] };
+            await handler({ key: 'change-test-campaign-activeCreatureName', data: 'Bob' });
+            expect(expirations.applyTurnStartEffects).toHaveBeenCalledWith('Bob', expect.any(Object), campaignName, characters);
+            expect(refs.lastAppliedTurnStartCreatureRef.current).toBe('2:Bob');
+        });
+
+        it('should update lastAppliedTurnStartCreature in runtime store with round-scoped key when applying', () => {
             refs.lastAppliedTurnStartCreatureRef.current = null;
             handler({ key: 'change-test-campaign-activeCreatureName', data: 'Bob' });
             expect(runtimeState.setRuntimeValue).toHaveBeenCalledWith(
-                '__initiative__', 'lastAppliedTurnStartCreature', 'Bob', campaignName,
+                '__initiative__', 'lastAppliedTurnStartCreature', '1:Bob', campaignName,
             );
         });
 
@@ -210,8 +219,9 @@ describe('createSseEventHandler', () => {
             expect(mocks.setCombatSummary).toHaveBeenCalled();
         });
 
-        it('should NOT update combatSummary when lastApplied already equals event.data', () => {
-            refs.combatSummaryRef.current = { round: 1, creatures: [], lastAppliedTurnStartCreature: 'Bob' };
+        it('should NOT update combatSummary when lastApplied already equals round-scoped key', () => {
+            refs.lastAppliedTurnStartCreatureRef.current = '1:Bob';
+            refs.combatSummaryRef.current = { round: 1, creatures: [], lastAppliedTurnStartCreature: '1:Bob' };
             handler({ key: 'change-test-campaign-activeCreatureName', data: 'Bob' });
             expect(mocks.setCombatSummary).not.toHaveBeenCalled();
         });
