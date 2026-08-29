@@ -25,7 +25,8 @@
       "feats": [
         "Magic Initiate"
       ],
-      "background": "Acolyte"
+      "background": "Acolyte",
+      "note": "Life Domain \u2014 does NOT have Guided Strike (2024 data: War Domain only). Reusable for Preserve Life/life-domain tests."
     },
     {
       "name": "Wild_Sage_Druid",
@@ -71,13 +72,27 @@
       "ruleset": "2024",
       "class": "Sorcerer",
       "subclass": "Draconic Sorcery",
-      "level": 5,
+      "level": 6,
       "race": "Human",
       "subrace": "Human",
       "feats": [
         "Magic Initiate"
       ],
-      "background": "Acolyte"
+      "background": "Acolyte",
+      "note": "Actually level 6 (not 5). Has Chromatic Orb (1st, +6, 90 ft) and Fireball (3rd, DC 14 DEX) \u2014 good outside-globe / generic spell attacker."
+    },
+    {
+      "name": "GlobeWizard",
+      "file": "public/campaigns/test-campaign/GlobeWizard.json",
+      "ruleset": "2024",
+      "class": "Wizard",
+      "subclass": "Abjurer",
+      "level": 13,
+      "race": "Human",
+      "subrace": "Human",
+      "feats": [],
+      "background": "Acolyte",
+      "note": "Created for SP-055 Globe of Invulnerability testing. Globe prepared. Reusable for abjuration/anti-magic tests."
     },
     {
       "name": "ElderPaladin",
@@ -103,7 +118,7 @@
       "subrace": "Human",
       "feats": [],
       "background": "Acolyte",
-      "note": "Created for CLA-107 Eldritch Hex testing. Keep for future Warlock tests."
+      "note": "Attack-roll spellcaster: Eldritch Blast +7 (added 2026-08-28 via edit wizard Spells step). Set initiative card Target dropdown before casting or campaign.lastAttack is never written."
     },
     {
       "name": "VenomStrike",
@@ -141,6 +156,19 @@
       "feats": [],
       "background": "Soldier",
       "note": "Created for CLA-141 Fire's Burn testing. STR 20 (+8 to hit), Fire's Burn 3/3 (firesBurnUses). Keep for future Goliath ancestry tests."
+    },
+    {
+      "name": "War_Cleric",
+      "file": "public/campaigns/test-campaign/War_Cleric.json",
+      "ruleset": "2024",
+      "class": "Cleric",
+      "subclass": "War Domain",
+      "level": 3,
+      "race": "Human",
+      "subrace": "Human",
+      "feats": [],
+      "background": "Acolyte",
+      "note": "Created 2026-08-28 for CLA-156 Guided Strike. Channel Divinity 2/2. No weapons; spell attack +1. Guided Strike verified working via ally-miss path."
     }
   ],
   "monsters": [
@@ -166,6 +194,15 @@
         }
       ],
       "note": "Spellcasting is a proper action with save_dc/save_type fields. Known-good for failed-save scenarios."
+    },
+    {
+      "name": "Animated Rug of Smothering",
+      "index": "animated-rug-of-smothering",
+      "source": "public/data/monsters.json",
+      "ac": 12,
+      "hp": 27,
+      "wisMod": -4,
+      "note": "Confirmed-good easy-to-hit melee target with WIS mod -4 (fails DC ~10 saves often). Joined via Encounter Builder as 'Animated Rug of Smothering 1'."
     }
   ]
 }

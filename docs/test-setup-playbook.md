@@ -90,3 +90,31 @@ Grease (SP-056) is only available to Sorcerer and Wizard in 2024 — NOT Druid o
 ### Hold Monster/Person target selection issue
 
 When casting Hold Monster or Hold Person, the target selection modal only shows characters from the combat summary, not encounter creatures. The `resolveHumanoids()` function calls `getCombatSummary()` which returns null if no combat session is active. To fix: start combat (Join Encounter should work) before casting these spells, or add the target as a character instead of an encounter creature.
+
+### Mid-combat character creation (new PCs missing from target popups)
+
+Creating a character *after* combat is staged leaves them absent from `combatSummary` and therefore from Globe/area spell target popups (`getCsAndTargets` / `gateGlobe` read the cached summary; gateGlobe lives in `src/hooks/combat/spellGates.js:447`). Fix: visit the **Initiative view once** — `mergeCombatSummaryWithCharacters` on mount adds missing PCs and persists via `storage.set('combatSummary', merged)` — then reopen the cast popup; the new PC is listed.
+
+### Globe of Invulnerability spell flow (SP-055 recipe)
+
+Spell row → details popup "Cast Spell" → "Choose creatures within 10 feet" popup → check creatures → "Activate Globe (N)". `globe_barrier` badge appears on caster sheet + initiative card (tooltip "spells of 5th level or lower blocked"). Outside attacker casting a ≤5 spell at the globed target gets a block popup **before any attack roll** and no log damage entry (wording from `src/services/rules/spells/spellCastService/execution/blockChecks.js`). Sorcerer casters show a Metamagic panel — click "Cast Without Metamagic" to resolve the cast. NOTE: manifest source paths for Globe are stale — real impl: `src/services/automation/handlers/spells/globeOfInvulnerabilityHandler.js` + `src/services/rules/features/globeOfInvulnerabilityService.js`.
+
+### Spell-row selection checkbox
+
+In character-wizard spell steps and creature-select popups, clicking the spell/creature ROW only expands details — selection requires clicking the `.list-item-checkbox` inside the row. Clicking the row does NOT toggle selection.
+
+### Targeted spell attacks need the initiative card Target dropdown (CLA-156 recipe, 2026-08-28)
+
+Casting a single-target attack spell (e.g. Eldritch Blast) auto-rolls IMMEDIATELY with **no target** unless the caster's initiative creature-card **Target dropdown** is set to the monster first. With no target: the roll popup shows no "vs AC"/HIT/MISS line, `campaign.lastAttack` is NEVER written (`attackPostProcessing.js:31` gates on `combatSummary && targetName`), and any reaction reading `getRuntimeValue('campaign','lastAttack')` (Guided Strike etc.) can never see the miss. Recipe: Initiative view → caster card → Target select = monster → sheet → spell row → Cast Spell → popup now shows "✗ MISS (15 vs AC 18)".
+- **Card locator pitfall:** `/HexWarlock/.test(card.textContent)` matches EVERY creature card because each card's Target `<select>` lists all PC names. Match instead on the exact-text of a name span/div, or `card.textContent.slice(0,20)`.
+- Wizard spell-step checkbox is `.list-item-checkbox-trigger` inside `.list-item-header` (NOT `.list-item-checkbox`; clicking the row body does not toggle). The `.mi-overlay` Magic Initiate can reappear mid-edit — dismiss via `.mi-overlay .mi-skip`.
+- `campaign.lastAttack` writes are debounced ~10s; wait ≥11s before fetching change-data to inspect it.
+- Known soft bug seen while verifying CLA-156: on ally-miss conversion the damage application throws `Error: characters must be an array` (`applyDamage.js:149` via `autoRerollHandler.js:388`) — popup/+10/log/CD-consume still work, monster HP unchanged.
+
+### Guided Strike (CLA-156) — 2024 data lives under Cleric → War Domain
+
+Guided Strike (+10 on a miss, 30 ft, Channel Divinity, reaction) is a **War Domain** subclass feature in `public/data/2024/classes.json` — NOT Life Domain. Divine_Cleric (Life) cannot use it. Need a War Domain Cleric lv3+ (War_Cleric now exists in test-campaign). Real impl: `src/services/automation/handlers/combat/autoRerollHandler.js` (dispatched as `auto_reroll` via `src/services/automation/index.js`); manifest paths are stale. Ally-miss path works without a map (range check skipped when `_mapName` falsy). Verified 2026-08-28: HexWarlock miss d20(8)+7=15 vs AC 18 → click Guided Strike → popup "d20(18)+7=25 vs AC 18 → HIT, Miss turned into a hit!", CD 2→1, log `War_Cleric used Guided Strike: +10 to HexWarlock's failed attack roll.`
+
+### Weapon attacks auto-roll; attack-rider modal comes AFTER the roll
+
+Clicking a weapon attack row on the sheet **auto-rolls the attack immediately** and shows a dismissable result popup — there is no pre-rider choice. The attack-rider modal appears only *after* clicking Done, and (as of 2026-08-28) `currentRolls` is not carried into it, so attack-rider maneuvers crash with `TypeError: currentRolls is not iterable` (`useAttackDamageResolution.js:282` via `AttackRiderManeuverPrompt.jsx:12`) — see bug-mn-009. Rider use still consumes the die and shows the WIS save prompt; the save and targetEffect badges (e.g. Taunted/`taunting_step`) render fine. Secondary noise: `[buildSaveDc] Spell "unknown" has no saveDc defined` (`savePrompt.js:26`) is unrelated console noise — don't file it as a bug.

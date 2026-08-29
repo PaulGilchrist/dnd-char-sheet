@@ -2727,7 +2727,7 @@
       "handler": "src/services/combat/automation/handlers/spellHandler.js",
       "router": "src/services/combat/automation/routers/spellRouter.js",
       "infoBuilder": "src/services/combat/automation/infoBuilders/spellInfoBuilder.js",
-      "verified": "not verified",
+      "verified": "verified",
       "class": "Spell",
       "triggerConditions": "Duration: Concentration, up to 1 minute",
       "expectedBehavior": "An immobile, shimmering barrier appears in a 10-foot Emanation around you and remains for the duration. Any spell of level 5 or lower cast from outside the barrier can't affect anything within it. Such a spell can target creatures and objects within the barrier, but the spell has no effect on them. Similarly, the area within the barrier is excluded from areas of effect created by such spells."
@@ -2771,7 +2771,7 @@
       "handler": "src/services/combat/automation/handlers/maneuverHandler.js",
       "router": "src/services/combat/automation/routers/maneuverRouter.js",
       "infoBuilder": "src/services/combat/automation/infoBuilders/maneuverInfoBuilder.js",
-      "verified": "not verified",
+      "verified": "broken \u2014 see .opencode/plans/bug-mn-009-goading-attack.md",
       "class": "Fighter",
       "triggerConditions": "Action type: attack_rider; Trigger: weapon_attack_hit; Uses: superiority_die",
       "expectedBehavior": "When you hit a creature with an attack roll, you can expend one Superiority Die to attempt to goad the target into attacking you. Add the Superiority Die to the attack's damage roll. The target must succeed on a Wisdom saving throw or have Disadvantage on attack rolls against targets other than you until the end of your next turn."
@@ -2939,7 +2939,7 @@
       "handler": "src/services/combat/automation/handlers/classFeatureHandler.js",
       "router": "src/services/combat/automation/routers/classFeatureRouter.js",
       "infoBuilder": "src/services/combat/automation/infoBuilders/classFeatureInfoBuilder.js",
-      "verified": "not verified",
+      "verified": "verified",
       "class": "Cleric",
       "triggerConditions": "Trigger: missed_attack_roll_within_30ft",
       "expectedBehavior": "When you or a creature within 30 feet of you misses with an attack roll, you can expend one use of your Channel Divinity and give that roll a +10 bonus, potentially causing it to hit."
