@@ -3358,7 +3358,7 @@
       "handler": "src/services/combat/automation/handlers/classFeatureHandler.js",
       "router": "src/services/combat/automation/routers/classFeatureRouter.js",
       "infoBuilder": "src/services/combat/automation/infoBuilders/classFeatureInfoBuilder.js",
-      "verified": "broken — see .opencode/plans/bug-cla-179-illusory-reality.md",
+      "verified": "verified",
       "class": "Wizard",
       "triggerConditions": "Action: 1 bonus_action",
       "expectedBehavior": "When you cast an Illusion spell with a spell slot, choose one inanimate, nonmagical object that is part of the illusion and make it real. Bonus Action while spell is ongoing. Object remains real for 1 minute, can't deal damage or give any conditions."

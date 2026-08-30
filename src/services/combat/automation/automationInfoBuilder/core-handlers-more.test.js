@@ -423,7 +423,7 @@ describe('coreHandlers – lesser_restoration', () => {
             type: 'lesser_restoration',
             range: 'Touch',
             conditions: ['blinded', 'deafened', 'paralyzed', 'poisoned'],
-            casting_time: 'bonus_action',
+            casting_time: '1 bonus action',
             hasAutomation: true,
             name: 'Test Feature'
         })

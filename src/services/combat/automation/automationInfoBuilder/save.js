@@ -1,4 +1,5 @@
 import { getSaveDc, resolveUses, resolveDiceExpression, resolveScaling } from '../automationExpressions.js'
+import { normalizeCastingTime } from '../../../shared/castingTimeUtils.js'
 
 export const saveHandlers = {
     'save_attack': (feature, playerStats) => {
@@ -27,11 +28,12 @@ export const saveHandlers = {
         const castingTime = auto.casting_time || ''
         let action = auto.action
         if (!action && castingTime) {
-            if (castingTime === '1 bonus action' || castingTime === 'bonus_action') {
+            const ct = normalizeCastingTime(castingTime)
+            if (ct === '1 bonus action') {
                 action = 'bonus_action'
-            } else if (castingTime === '1 action' || castingTime === 'action') {
+            } else if (ct === '1 action') {
                 action = 'action'
-            } else if (castingTime === '1 reaction' || castingTime === 'reaction') {
+            } else if (ct === '1 reaction') {
                 action = 'reaction'
             }
         }
@@ -74,11 +76,12 @@ export const saveHandlers = {
         const castingTime = auto.casting_time || ''
         let action = auto.action
         if (!action && castingTime) {
-            if (castingTime === '1 bonus action' || castingTime === 'bonus_action') {
+            const ct = normalizeCastingTime(castingTime)
+            if (ct === '1 bonus action') {
                 action = 'bonus_action'
-            } else if (castingTime === '1 action' || castingTime === 'action') {
+            } else if (ct === '1 action') {
                 action = 'action'
-            } else if (castingTime === '1 reaction' || castingTime === 'reaction') {
+            } else if (ct === '1 reaction') {
                 action = 'reaction'
             }
         }

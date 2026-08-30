@@ -11155,7 +11155,7 @@
                             "type": "trance_of_order",
                             "action": "bonus_action",
                             "duration": "1_minute",
-                            "casting_time": "bonus action"
+                            "casting_time": "1 bonus action"
                         }
                     },
                     {
@@ -11164,7 +11164,7 @@
                         "level": 18,
                         "automation": {
                             "type": "clockwork_cavalcade",
-                            "casting_time": "action",
+                            "casting_time": "1 action",
                             "range": "30_ft_cube",
                             "maxHeal": 100,
                             "restoreCost": 7
@@ -11269,7 +11269,7 @@
                         "level": 14,
                         "automation": {
                             "type": "dragon_wings",
-                            "casting_time": "bonus action",
+                            "casting_time": "1 bonus action",
                             "duration": "1_hour",
                             "flySpeed": 60,
                             "hover": true,
@@ -13540,7 +13540,7 @@
                         "automation": {
                             "type": "illusory_reality",
                             "effect": "illusory_reality",
-                            "casting_time": "1 bonus_action",
+                            "casting_time": "1 bonus action",
                             "objectDuration": "1 minute"
                         }
                     }

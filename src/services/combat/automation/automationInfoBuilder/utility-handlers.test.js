@@ -37,7 +37,7 @@ describe('utilityHandlers – apply_poison', () => {
         expect(result.damageType).toBe('Poison')
         expect(result.condition).toBe('poisoned')
         expect(result.saveType).toBe('CON')
-        expect(result.casting_time).toBe('bonus_action')
+        expect(result.casting_time).toBe('1 bonus action')
         expect(result.hasAutomation).toBe(true)
     })
 

@@ -1,4 +1,5 @@
 import { getAbilityModifier } from '../../../shared/abilityLookup.js'
+import { normalizeCastingTime } from '../../../shared/castingTimeUtils.js'
 
 // ── Class Feature Handlers ───────────────────────────────────────────
 
@@ -11,9 +12,10 @@ export const classFeatureHandlers = {
             : auto.saveDc || 10
         let action = auto.action
         if (!action && auto.casting_time) {
-            if (auto.casting_time === '1 bonus action' || auto.casting_time === 'bonus_action') {
+            const ct = normalizeCastingTime(auto.casting_time)
+            if (ct === '1 bonus action') {
                 action = 'bonus_action'
-            } else if (auto.casting_time === '1 action' || auto.casting_time === 'action') {
+            } else if (ct === '1 action') {
                 action = 'action'
             }
         }

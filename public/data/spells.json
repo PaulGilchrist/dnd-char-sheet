@@ -6102,7 +6102,7 @@
         "automation": {
             "type": "lesser_restoration",
             "range": "Touch",
-            "casting_time": "bonus_action",
+            "casting_time": "1 bonus action",
             "conditions": [
                 "blinded",
                 "deafened",
@@ -8766,7 +8766,7 @@
             "type": "shield_of_faith",
             "target": "willing_creature",
             "duration": "Concentration, up to 10 minutes",
-            "casting_time": "Bonus Action",
+            "casting_time": "1 bonus action",
             "range": "60 feet"
         }
     },

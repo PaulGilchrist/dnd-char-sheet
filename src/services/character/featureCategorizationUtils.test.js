@@ -126,6 +126,18 @@ describe('featureCategorizationUtils', () => {
       expect(result.reactions[0].name).toBe('Reaction Feature');
     });
 
+    it('should categorize Illusory Reality (CLA-179) into bonusActions, not specialActions', () => {
+      const items = [
+        makeFeature('Illusory Reality', {
+          automation: { type: 'illusory_reality', effect: 'illusory_reality', casting_time: '1 bonus action' }
+        })
+      ];
+      const result = categorizeFeatures(items, mockCategories);
+      expect(result.bonusActions).toHaveLength(1);
+      expect(result.bonusActions[0].name).toBe('Illusory Reality');
+      expect(result.specialActions).toHaveLength(0);
+    });
+
     it('should treat unknown casting_time values as specialActions', () => {
       const items = [
         makeFeature('Ritual Feature', {

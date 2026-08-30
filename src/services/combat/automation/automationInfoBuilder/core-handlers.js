@@ -620,7 +620,7 @@ export const coreHandlers = {
             type: 'illusory_reality',
             name: feature.name,
             effect: 'illusory_reality',
-            casting_time: auto.casting_time || '1 bonus_action',
+            casting_time: auto.casting_time || '1 bonus action',
             objectDuration: auto.objectDuration || '1 minute',
             hasAutomation: true,
         }
@@ -682,7 +682,7 @@ export const coreHandlers = {
             name: feature.name,
             range: auto.range || 'Touch',
             conditions: auto.conditions || ['blinded', 'deafened', 'paralyzed', 'poisoned'],
-            casting_time: auto.casting_time || 'bonus_action',
+            casting_time: auto.casting_time || '1 bonus action',
             hasAutomation: true
         }
     },

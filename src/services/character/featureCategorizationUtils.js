@@ -1,3 +1,5 @@
+import { normalizeCastingTime } from '../shared/castingTimeUtils.js';
+
 /**
  * Shared utility for categorizing features/traits into their respective categories.
  * This logic is common across both 5e and 2024 rule sets.
@@ -63,18 +65,15 @@ export const categorizeFeatures = (items, categories, options = {}) => {
         }
       }
       // Check if any automation entry is a reaction (takes priority over passive)
-      hasReaction = item.automation.some(a => {
-        const ct = (a?.casting_time || '').toLowerCase().trim();
-        return ct === '1 reaction' || ct === 'reaction';
-      });
+      hasReaction = item.automation.some(a => normalizeCastingTime(a?.casting_time || '') === '1 reaction');
     }
     if (castingTime) {
-      const ct = castingTime.toLowerCase().trim();
-      if ((ct === '1 action' || ct === 'action') && !categorized.actions.some(f => f.name === item.name)) {
+      const ct = normalizeCastingTime(castingTime);
+      if (ct === '1 action' && !categorized.actions.some(f => f.name === item.name)) {
         categorized.actions.push(itemSummary);
-      } else if ((ct === '1 bonus action' || ct === 'bonus action') && !categorized.bonusActions.some(f => f.name === item.name)) {
+      } else if (ct === '1 bonus action' && !categorized.bonusActions.some(f => f.name === item.name)) {
         categorized.bonusActions.push(itemSummary);
-      } else if ((ct === '1 reaction' || ct === 'reaction') && !categorized.reactions.some(f => f.name === item.name)) {
+      } else if (ct === '1 reaction' && !categorized.reactions.some(f => f.name === item.name)) {
         categorized.reactions.push(itemSummary);
       } else if (hasReaction && !categorized.reactions.some(f => f.name === item.name)) {
         categorized.reactions.push(itemSummary);

@@ -1,4 +1,7 @@
+import { normalizeCastingTime } from '../../shared/castingTimeUtils.js'
+
 export function routeAutomation(info, auto, result) {
+    const ct = normalizeCastingTime(info.casting_time)
     switch (info.type) {
     case 'save_attack':
     case 'save_only':
@@ -46,7 +49,7 @@ export function routeAutomation(info, auto, result) {
     case 'free_spell':
     case 'fey_reinforcements':
     case 'divine_intervention':
-        if (info.casting_time === 'passive') {
+        if (ct === 'passive') {
             result.specialActions.push(info)
         } else if (info.action === 'bonus_action') {
             result.bonusActions.push(info)
@@ -68,7 +71,7 @@ export function routeAutomation(info, auto, result) {
         break
     case 'clouds_jaunt':
     case 'sanctuary':
-        if (info.casting_time === '1 bonus action' || info.casting_time === 'bonus_action' || info.casting_time === 'bonus action') {
+        if (ct === '1 bonus action') {
             result.bonusActions.push(info)
         } else {
             result.actions.push(info)
@@ -77,7 +80,7 @@ export function routeAutomation(info, auto, result) {
     case 'fire_burn':
     case 'frosts_chill':
     case 'hills_tumble':
-        if (info.casting_time === '1 action') {
+        if (ct === '1 action') {
             result.actions.push(info)
         } else {
             result.passives.push(info)
@@ -85,7 +88,7 @@ export function routeAutomation(info, auto, result) {
         break
     case 'stones_endurance':
     case 'storms_thunder':
-        if (info.casting_time === '1 reaction') {
+        if (ct === '1 reaction') {
             result.reactions.push(info)
         } else {
             result.reactions.push(info)
@@ -105,7 +108,7 @@ export function routeAutomation(info, auto, result) {
     case 'bardic_inspiration_defense':
     case 'reaction_save_heal':
     case 'animal_aspect':
-        if (info.casting_time === 'passive') {
+        if (ct === 'passive') {
             result.specialActions.push(info)
         } else {
             result.reactions.push(info)
@@ -120,9 +123,9 @@ export function routeAutomation(info, auto, result) {
         result.bonusActions.push(info)
         break
     case 'auto_reroll':
-        if (info.casting_time === '1 action') {
+        if (ct === '1 action') {
             result.actions.push(info)
-        } else if (info.casting_time === 'passive') {
+        } else if (ct === 'passive') {
             result.specialActions.push(info)
         } else {
             result.reactions.push(info)
@@ -136,7 +139,7 @@ export function routeAutomation(info, auto, result) {
         result.specialActions.push(info)
         break
     case 'attack_rider':
-        if (info.chooseOne || info.maxEffects > 1 || (info.oncePerTurn && info.casting_time === 'passive') || info.trigger) {
+        if (info.chooseOne || info.maxEffects > 1 || (info.oncePerTurn && ct === 'passive') || info.trigger) {
             result.passives.push(info)
         } else {
             result.actions.push(info)
@@ -218,9 +221,9 @@ export function routeAutomation(info, auto, result) {
         result.actions.push(info)
         break
     case 'cosmic_omen':
-        if (info.casting_time === '1 bonus_action' || info.casting_time === 'bonus_action') {
+        if (ct === '1 bonus action') {
             result.bonusActions.push(info)
-        } else if (info.casting_time === '1 reaction' || info.casting_time === 'reaction') {
+        } else if (ct === '1 reaction') {
             result.reactions.push(info)
         } else {
             result.actions.push(info)
@@ -382,9 +385,9 @@ export function routeAutomation(info, auto, result) {
         result.reactions.push(info)
         break
     case 'misty_wanderer':
-        if (info.casting_time === 'passive') {
+        if (ct === 'passive') {
             result.specialActions.push(info)
-        } else if (info.casting_time === '1 bonus action' || info.casting_time === 'bonus_action') {
+        } else if (ct === '1 bonus action') {
             result.bonusActions.push(info)
         } else {
             result.actions.push(info)
@@ -418,7 +421,7 @@ export function routeAutomation(info, auto, result) {
         result.reactions.push(info)
         break
     case 'illusory_reality':
-        if (info.casting_time === '1 bonus_action' || info.casting_time === 'bonus_action' || info.casting_time === '1 bonus action') {
+        if (ct === '1 bonus action') {
             result.bonusActions.push(info)
         } else {
             result.actions.push(info)
@@ -452,7 +455,7 @@ export function routeAutomation(info, auto, result) {
         result.bonusActions.push(info)
         break
     case 'lesser_restoration':
-        if (info.casting_time === '1 bonus_action' || info.casting_time === 'bonus_action' || info.casting_time === '1 bonus action') {
+        if (ct === '1 bonus action') {
             result.bonusActions.push(info)
         } else {
             result.actions.push(info)
@@ -465,7 +468,7 @@ export function routeAutomation(info, auto, result) {
         result.actions.push(info)
         break
     case 'protection_from_poison':
-        if (info.casting_time === '1 bonus_action' || info.casting_time === 'bonus_action' || info.casting_time === '1 bonus action') {
+        if (ct === '1 bonus action') {
             result.bonusActions.push(info)
         } else {
             result.actions.push(info)
@@ -484,9 +487,9 @@ export function routeAutomation(info, auto, result) {
         result.reactions.push(info)
         break
     case 'modify_d20_roll':
-        if (info.casting_time === '1 reaction' || info.casting_time === 'reaction') {
+        if (ct === '1 reaction') {
             result.reactions.push(info)
-        } else if (info.casting_time === '1 bonus action' || info.casting_time === 'bonus action') {
+        } else if (ct === '1 bonus action') {
             result.bonusActions.push(info)
         } else {
             result.passives.push(info)

@@ -25,7 +25,7 @@ export const utilityHandlers = {
             type: 'apply_poison',
             name: feature.name,
             description: feature.description || '',
-            casting_time: auto.casting_time || 'bonus_action',
+            casting_time: auto.casting_time || '1 bonus action',
             damageExpression: auto.damageExpression || '2d8',
             damageType: auto.damageType || 'Poison',
             condition: auto.condition || 'poisoned',

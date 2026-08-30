@@ -74,7 +74,7 @@ describe('coreHandlers – illusory_reality', () => {
         expect(result).toMatchObject({
             type: 'illusory_reality',
             effect: 'illusory_reality',
-            casting_time: '1 bonus_action',
+            casting_time: '1 bonus action',
             objectDuration: '1 minute',
             hasAutomation: true,
             name: 'Test Feature'

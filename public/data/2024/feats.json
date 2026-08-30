@@ -1308,7 +1308,7 @@
         "description": "When you hit a creature with an Unarmed Strike as part of the Attack action on your turn, you can use both the Damage and the Grapple option. You can use this benefit only once per turn.",
         "type": "action",
         "automation": {
-          "casting_time": "action"
+          "casting_time": "1 action"
         }
       },
       {
@@ -1747,7 +1747,7 @@
           "effect": "advantage",
           "target": "d20",
           "cost": 1,
-          "casting_time": "reaction"
+          "casting_time": "1 reaction"
         }
       },
       {
@@ -1759,7 +1759,7 @@
           "effect": "disadvantage",
           "target": "attack_roll",
           "cost": 1,
-          "casting_time": "reaction"
+          "casting_time": "1 reaction"
         }
       }
     ],
@@ -2165,7 +2165,7 @@
           "rerollCount": 1,
           "oncePerTurn": true,
           "mustUseNew": true,
-          "casting_time": "reaction"
+          "casting_time": "1 reaction"
         }
       },
       {
@@ -2238,7 +2238,7 @@
         "type": "bonus_action",
         "automation": {
           "type": "apply_poison",
-          "casting_time": "bonus_action",
+          "casting_time": "1 bonus action",
           "damageExpression": "2d8",
           "damageType": "Poison",
           "condition": "poisoned",
