@@ -3454,7 +3454,7 @@
       "handler": "src/services/combat/automation/handlers/classFeatureHandler.js",
       "router": "src/services/combat/automation/routers/classFeatureRouter.js",
       "infoBuilder": "src/services/combat/automation/infoBuilders/classFeatureInfoBuilder.js",
-      "verified": "not verified",
+      "verified": "verified",
       "class": "Fighter",
       "triggerConditions": "Passive: Always active",
       "expectedBehavior": "Critical Hit on 19-20."
@@ -3466,7 +3466,7 @@
       "handler": "src/services/combat/automation/handlers/classFeatureHandler.js",
       "router": "src/services/combat/automation/routers/classFeatureRouter.js",
       "infoBuilder": "src/services/combat/automation/infoBuilders/classFeatureInfoBuilder.js",
-      "verified": "not verified",
+      "verified": "broken \u2014 see .opencode/plans/bug-cla-188-improved-cunning-strike.md",
       "class": "Rogue",
       "triggerConditions": "Trigger: on hit; Once per turn: yes",
       "expectedBehavior": "You can use up to two Cunning Strike effects when you deal Sneak Attack damage, paying the die cost for each effect."
@@ -3478,7 +3478,7 @@
       "handler": "src/services/combat/automation/handlers/classFeatureHandler.js",
       "router": "src/services/combat/automation/routers/classFeatureRouter.js",
       "infoBuilder": "src/services/combat/automation/infoBuilders/classFeatureInfoBuilder.js",
-      "verified": "not verified",
+      "verified": "broken \u2014 see .opencode/plans/bug-cla-189-improved-duplicity.md",
       "class": "Cleric",
       "triggerConditions": "Passive: Always active",
       "expectedBehavior": "The illusion has grown more powerful: Enhanced Distraction - when you and your allies make attack rolls against a creature within 5 feet of the illusion, the attacks have Advantage. Healing Illusion - when the illusion ends, you or a creature of your choice within 5 feet of it regains a number of Hit Points equal to your Cleric level."
@@ -3490,7 +3490,7 @@
       "handler": "src/services/combat/automation/handlers/classFeatureHandler.js",
       "router": "src/services/combat/automation/routers/classFeatureRouter.js",
       "infoBuilder": "src/services/combat/automation/infoBuilders/classFeatureInfoBuilder.js",
-      "verified": "not verified",
+      "verified": "verified",
       "class": "Druid",
       "triggerConditions": "Trigger: weapon_or_beast_form_attack_hit; Once per turn: yes",
       "expectedBehavior": "Potent Spellcasting. When you cast a Druid cantrip with a range of 10 feet or greater, the spell's range increases by 300 feet. Primal Strike. The extra damage of your Primal Strike increases to 2d8."
@@ -3502,7 +3502,7 @@
       "handler": "src/services/combat/automation/handlers/classFeatureHandler.js",
       "router": "src/services/combat/automation/routers/classFeatureRouter.js",
       "infoBuilder": "src/services/combat/automation/infoBuilders/classFeatureInfoBuilder.js",
-      "verified": "not verified",
+      "verified": "broken \u2014 see .opencode/plans/bug-cla-191-improved-shadow-step.md",
       "class": "Monk",
       "triggerConditions": "Action: passive",
       "expectedBehavior": "Your Shadow Step generates a burst of shadows. Teleporting with your Shadow Step leaves behind a cloud of shadows in the space you left. Creatures in that space have Disadvantage on Wisdom (Perception) checks and must make a Wisdom saving throw or have the Blinded condition until the start of your next turn."
@@ -3514,7 +3514,7 @@
       "handler": "src/services/combat/automation/handlers/classFeatureHandler.js",
       "router": "src/services/combat/automation/routers/classFeatureRouter.js",
       "infoBuilder": "src/services/combat/automation/infoBuilders/classFeatureInfoBuilder.js",
-      "verified": "not verified",
+      "verified": "broken \u2014 see .opencode/plans/bug-cla-192-improved-war-magic.md",
       "class": "Fighter",
       "triggerConditions": "Automation type: undefined",
       "expectedBehavior": "Replace two attacks with level 1 or 2 Wizard spells (casting time: action)."
@@ -3526,7 +3526,7 @@
       "handler": "src/services/combat/automation/handlers/classFeatureHandler.js",
       "router": "src/services/combat/automation/routers/classFeatureRouter.js",
       "infoBuilder": "src/services/combat/automation/infoBuilders/classFeatureInfoBuilder.js",
-      "verified": "not verified",
+      "verified": "verified",
       "class": "Cleric",
       "triggerConditions": "Passive: Always active",
       "expectedBehavior": "You gain all expended uses of your Warding Flare when you finish a Short or Long Rest. In addition, whenever you use Warding Flare, you can give the target of the triggering attack a number of Temporary Hit Points equal to 2d6 plus your Wisdom modifier."
@@ -3538,7 +3538,7 @@
       "handler": "src/services/combat/automation/handlers/classFeatureHandler.js",
       "router": "src/services/combat/automation/routers/classFeatureRouter.js",
       "infoBuilder": "src/services/combat/automation/infoBuilders/classFeatureInfoBuilder.js",
-      "verified": "not verified",
+      "verified": "verified",
       "class": "Sorcerer",
       "triggerConditions": "Action: 1 bonus action",
       "expectedBehavior": "An event in your past left an indelible mark on you, infusing you with simmering magic. As a Bonus Action, you can unleash that magic for 1 minute, during which you gain the following benefits: The spell save DC of your Sorcerer spells increases by 1. You have Advantage on the attack rolls of Sorcerer spells you cast. You can use this feature twice, and you regain all expended uses of it when you finish a Long Rest."
@@ -3550,7 +3550,7 @@
       "handler": "src/services/combat/automation/handlers/classFeatureHandler.js",
       "router": "src/services/combat/automation/routers/classFeatureRouter.js",
       "infoBuilder": "src/services/combat/automation/infoBuilders/classFeatureInfoBuilder.js",
-      "verified": "not verified",
+      "verified": "broken \u2014 see .opencode/plans/bug-cla-195-indomitable.md",
       "class": "Fighter",
       "triggerConditions": "Trigger: failed_saving_throw",
       "expectedBehavior": "If you fail a saving throw, you can reroll it with a bonus equal to your Fighter level. You must use the new roll, and you can't use this feature again until you finish a Long Rest."
@@ -3562,7 +3562,7 @@
       "handler": "src/services/combat/automation/handlers/classFeatureHandler.js",
       "router": "src/services/combat/automation/routers/classFeatureRouter.js",
       "infoBuilder": "src/services/combat/automation/infoBuilders/classFeatureInfoBuilder.js",
-      "verified": "not verified",
+      "verified": "verified",
       "class": "Barbarian",
       "triggerConditions": "Action: passive",
       "expectedBehavior": "If your total for a Strength check or Strength saving throw is less than your Strength score, you can use that score in place of the total."
@@ -3574,7 +3574,7 @@
       "handler": "src/services/combat/automation/handlers/classFeatureHandler.js",
       "router": "src/services/combat/automation/routers/classFeatureRouter.js",
       "infoBuilder": "src/services/combat/automation/infoBuilders/classFeatureInfoBuilder.js",
-      "verified": "not verified",
+      "verified": "verified",
       "class": "Rogue",
       "triggerConditions": "Passive: Always active",
       "expectedBehavior": "Masterful Mimicry: unerringly mimic another person's speech, handwriting, or both if studied for 1 hour. Roving Aim: Speed not reduced to 0 by Steady Aim."
@@ -3586,7 +3586,7 @@
       "handler": "src/services/combat/automation/handlers/classFeatureHandler.js",
       "router": "src/services/combat/automation/routers/classFeatureRouter.js",
       "infoBuilder": "src/services/combat/automation/infoBuilders/classFeatureInfoBuilder.js",
-      "verified": "not verified",
+      "verified": "broken \u2014 see .opencode/plans/bug-cla-198-inner-radiance.md",
       "race": "Aasimar",
       "triggerConditions": "Action: 1 bonus action; Duration: 1_minute; Range: 10_ft",
       "expectedBehavior": "Searing light temporarily radiates from your eyes and mouth. For the duration, you shed Bright Light in a 10-foot radius and Dim Light for an additional 10 feet, and at the end of each of your turns, each creature within 10 feet of you takes Radiant damage equal to your Proficiency Bonus."
@@ -3598,7 +3598,7 @@
       "handler": "src/services/combat/automation/handlers/featHandler.js",
       "router": "src/services/combat/automation/routers/featRouter.js",
       "infoBuilder": "src/services/combat/automation/infoBuilders/featInfoBuilder.js",
-      "verified": "not verified",
+      "verified": "verified",
       "triggerConditions": "Action: passive; Range: 30 ft",
       "expectedBehavior": "When you finish a Short or Long Rest, you can give an inspiring performance: a speech, song, or dance. When you do so, choose up to six allies (which can include yourself) within 30 feet of yourself who witness the performance. The chosen creatures each gain Temporary Hit Points equal to your character level plus the modifier of the ability you increased with this feat."
     },
@@ -3609,7 +3609,7 @@
       "handler": "src/services/combat/automation/handlers/classFeatureHandler.js",
       "router": "src/services/combat/automation/routers/classFeatureRouter.js",
       "infoBuilder": "src/services/combat/automation/infoBuilders/classFeatureInfoBuilder.js",
-      "verified": "not verified",
+      "verified": "broken \u2014 see .opencode/plans/bug-cla-199-inspiring-movement.md",
       "class": "Bard",
       "triggerConditions": "Trigger: enemy_turn_ends_within_5ft; Action: 1 reaction",
       "expectedBehavior": "When an enemy you can see ends its turn within 5 feet of you, you can take a Reaction and expend one use of your Bardic Inspiration to move up to half your Speed. Then one ally of your choice within 30 feet of you can also move up to half their Speed using their Reaction. None of this feature's movement provokes Opportunity Attacks."
@@ -3621,7 +3621,7 @@
       "handler": "src/services/combat/automation/handlers/classFeatureHandler.js",
       "router": "src/services/combat/automation/routers/classFeatureRouter.js",
       "infoBuilder": "src/services/combat/automation/infoBuilders/classFeatureInfoBuilder.js",
-      "verified": "not verified",
+      "verified": "broken \u2014 see .opencode/plans/bug-cla-200-inspiring-smite.md",
       "class": "Paladin",
       "triggerConditions": "Action: passive; Range: 30 ft",
       "expectedBehavior": "Immediately after you cast Divine Smite, you can expend one use of your Channel Divinity and distribute Temporary Hit Points to creatures of your choice within 30 feet of yourself, which can include you. The total number of Temporary Hit Points equals 2d8 plus your Paladin level, divided among the chosen creatures however you like."
@@ -3633,7 +3633,7 @@
       "handler": "src/services/combat/automation/handlers/classFeatureHandler.js",
       "router": "src/services/combat/automation/routers/classFeatureRouter.js",
       "infoBuilder": "src/services/combat/automation/infoBuilders/classFeatureInfoBuilder.js",
-      "verified": "not verified",
+      "verified": "verified",
       "class": "Barbarian",
       "triggerConditions": "Action: 1 bonus action; Range: self",
       "expectedBehavior": "As part of the Bonus Action you take to enter your Rage, you can move up to half your Speed."
@@ -3645,7 +3645,7 @@
       "handler": "src/services/combat/automation/handlers/classFeatureHandler.js",
       "router": "src/services/combat/automation/routers/classFeatureRouter.js",
       "infoBuilder": "src/services/combat/automation/infoBuilders/classFeatureInfoBuilder.js",
-      "verified": "not verified",
+      "verified": "verified",
       "class": "Barbarian",
       "triggerConditions": "Action: 1 bonus action; Target: creatures in emanation_30ft; Save: WIS DC",
       "expectedBehavior": "As a Bonus Action, you can strike terror into others with your menacing presence and primal power. When you do so, each creature of your choice in a 30-foot Emanation originating from you must make a Wisdom saving throw (DC 8 plus your Strength modifier and Proficiency Bonus). On a failed save, a creature has the Frightened condition for 1 minute. At the end of each of the Frightened creature's turns, the creature repeats the save, ending the effect on itself on a success. Once you use this feature, you can't use it again until you finish a Long Rest unless you expend a use of your Rage (no action required) to restore your use of it."
@@ -3657,7 +3657,7 @@
       "handler": "src/services/combat/automation/handlers/fightingStyleHandler.js",
       "router": "src/services/combat/automation/routers/fightingStyleRouter.js",
       "infoBuilder": "src/services/combat/automation/infoBuilders/fightingStyleInfoBuilder.js",
-      "verified": "not verified",
+      "verified": "broken \u2014 see .opencode/plans/bug-fs-008-interception.md",
       "class": "Fighting Style",
       "triggerConditions": "",
       "expectedBehavior": "When a creature you can see attacks a target other than you that is within 5 feet of you, you can use your reaction to impose disadvantage on the attack roll. You can then reduce the damage the target takes by 1d10 + your proficiency bonus. You must be holding a shield to use this feature."
@@ -3669,7 +3669,7 @@
       "handler": "src/services/combat/automation/handlers/spellHandler.js",
       "router": "src/services/combat/automation/routers/spellRouter.js",
       "infoBuilder": "src/services/combat/automation/infoBuilders/spellInfoBuilder.js",
-      "verified": "not verified",
+      "verified": "verified",
       "class": "Spell",
       "triggerConditions": "Action: action; Range: self",
       "expectedBehavior": "A creature you touch has the Invisible condition until the spell ends. The spell ends early immediately after the target makes an attack roll, deals damage, or casts a spell."
@@ -3681,7 +3681,7 @@
       "handler": "src/services/combat/automation/handlers/classFeatureHandler.js",
       "router": "src/services/combat/automation/routers/classFeatureRouter.js",
       "infoBuilder": "src/services/combat/automation/infoBuilders/classFeatureInfoBuilder.js",
-      "verified": "not verified",
+      "verified": "verified",
       "class": "Cleric",
       "triggerConditions": "Action: bonus_action; Duration: 1_minute",
       "expectedBehavior": "As a Bonus Action, you can expend one use of your Channel Divinity to create a perfect visual illusion of yourself in an unoccupied space you can see within 30 feet of yourself. The illusion lasts for 1 minute. While it persists: Cast Spells - you can cast spells as though you were in the illusion's space. Distract - when both you and your illusion are within 5 feet of a creature that can see the illusion, you have Advantage on attack rolls against that creature. Move - as a Bonus Action, you can move the illusion up to 30 feet."
@@ -3693,7 +3693,7 @@
       "handler": "src/services/combat/automation/handlers/classFeatureHandler.js",
       "router": "src/services/combat/automation/routers/classFeatureRouter.js",
       "infoBuilder": "src/services/combat/automation/infoBuilders/classFeatureInfoBuilder.js",
-      "verified": "not verified",
+      "verified": "verified",
       "class": "Ranger",
       "triggerConditions": "Action: passive",
       "expectedBehavior": "You have honed your ability to resist mind-altering powers. You gain proficiency in Wisdom saving throws. If you already have this proficiency, you instead gain proficiency in Intelligence or Charisma saving throws (your choice)."
@@ -3705,7 +3705,7 @@
       "handler": "src/services/combat/automation/handlers/classFeatureHandler.js",
       "router": "src/services/combat/automation/routers/classFeatureRouter.js",
       "infoBuilder": "src/services/combat/automation/infoBuilders/classFeatureInfoBuilder.js",
-      "verified": "not verified",
+      "verified": "verified",
       "class": "Bard",
       "triggerConditions": "Action: passive",
       "expectedBehavior": "You can add half your Proficiency Bonus (round down) to any ability check you make that uses a skill proficiency you lack and that doesn't otherwise use your Proficiency Bonus."
@@ -3717,7 +3717,7 @@
       "handler": "src/services/combat/automation/handlers/featHandler.js",
       "router": "src/services/combat/automation/routers/featRouter.js",
       "infoBuilder": "src/services/combat/automation/infoBuilders/featInfoBuilder.js",
-      "verified": "not verified",
+      "verified": "broken \u2014 see .opencode/plans/bug-ft-047-keen-mind.md",
       "triggerConditions": "",
       "expectedBehavior": "Ability Score Increase. Increase your Intelligence score by 1, to a maximum of 20. Lore Knowledge. Choose one of the following skills: Arcana, History, Investigation, Nature, or Religion. If you lack proficiency in the chosen skill, you gain proficiency in it, and if you already have proficiency in it, you gain Expertise in it. Quiet Study. You can take the Study action as a Bonus Action."
     },
@@ -3728,7 +3728,7 @@
       "handler": "src/services/combat/automation/handlers/classFeatureHandler.js",
       "router": "src/services/combat/automation/routers/classFeatureRouter.js",
       "infoBuilder": "src/services/combat/automation/infoBuilders/classFeatureInfoBuilder.js",
-      "verified": "not verified",
+      "verified": "verified",
       "race": "Elf",
       "triggerConditions": "",
       "expectedBehavior": "You have proficiency in the Insight, Perception, or Survival skill."
@@ -3740,7 +3740,7 @@
       "handler": "src/services/combat/automation/handlers/classFeatureHandler.js",
       "router": "src/services/combat/automation/routers/classFeatureRouter.js",
       "infoBuilder": "src/services/combat/automation/infoBuilders/classFeatureInfoBuilder.js",
-      "verified": "not verified",
+      "verified": "broken \u2014 see .opencode/plans/bug-cla-207-know-your-enemy.md",
       "class": "Fighter",
       "triggerConditions": "Action: 1 bonus action; Range: 30_ft",
       "expectedBehavior": "As a Bonus Action, discern strengths and weaknesses of a creature within 30 feet (know Immunities, Resistances, Vulnerabilities). Restore use by expending one Superiority Die."
@@ -3752,7 +3752,7 @@
       "handler": "src/services/combat/automation/handlers/classFeatureHandler.js",
       "router": "src/services/combat/automation/routers/classFeatureRouter.js",
       "infoBuilder": "src/services/combat/automation/infoBuilders/classFeatureInfoBuilder.js",
-      "verified": "not verified",
+      "verified": "broken \u2014 see .opencode/plans/bug-cla-208-lands-aid.md",
       "class": "Druid",
       "triggerConditions": "Action: action; Target: creatures in sphere; Save: CON DC",
       "expectedBehavior": "As a Action, expend a use of Wild Shape and choose a point within 60 feet. Creatures in a 10-foot-radius Sphere make a Constitution saving throw, taking 2d6 Necrotic damage on a failed save or half on success. One creature regains 2d6 Hit Points. Damage and healing increase by 1d6 at Druid levels 10 (3d6) and 14 (4d6)."
@@ -3764,7 +3764,7 @@
       "handler": "src/services/combat/automation/handlers/classFeatureHandler.js",
       "router": "src/services/combat/automation/routers/classFeatureRouter.js",
       "infoBuilder": "src/services/combat/automation/infoBuilders/classFeatureInfoBuilder.js",
-      "verified": "not verified",
+      "verified": "broken \u2014 see .opencode/plans/bug-cla-209-large-form-goliath.md",
       "triggerConditions": "Passive",
       "expectedBehavior": "You have Advantage on any ability check you make to end the Grappled condition. You also count as one size larger when determining your carrying capacity. (Goliath trait)"
     },
@@ -3775,7 +3775,7 @@
       "handler": "src/services/combat/automation/handlers/classFeatureHandler.js",
       "router": "src/services/combat/automation/routers/classFeatureRouter.js",
       "infoBuilder": "src/services/combat/automation/infoBuilders/classFeatureInfoBuilder.js",
-      "verified": "not verified",
+      "verified": "verified",
       "class": "Paladin",
       "triggerConditions": "Action: bonus_action; Pool: 5 * paladin level; Range: undefined",
       "expectedBehavior": "Your blessed touch can heal wounds. You have a pool of healing power that replenishes when you finish a Long Rest. With that pool, you can restore a total number of Hit Points equal to five times your Paladin level. As a Bonus Action, you can touch a creature and draw power from the pool to restore Hit Points up to the maximum remaining. You can also expend 5 Hit Points from the pool to remove the Poisoned condition from the creature."
@@ -3787,7 +3787,7 @@
       "handler": "src/services/combat/automation/handlers/classFeatureHandler.js",
       "router": "src/services/combat/automation/routers/classFeatureRouter.js",
       "infoBuilder": "src/services/combat/automation/infoBuilders/classFeatureInfoBuilder.js",
-      "verified": "not verified",
+      "verified": "verified",
       "class": "Bard",
       "triggerConditions": "Action: passive",
       "expectedBehavior": "When you are subjected to an effect that allows you to make a Dexterity saving throw to take only half damage, you instead take no damage if you succeed on the saving throw and only half damage if you fail. If any creatures within 5 feet of you are making the same Dexterity saving throw, you can share this benefit with them for that save."
@@ -3799,7 +3799,7 @@
       "handler": "src/services/combat/automation/handlers/spellHandler.js",
       "router": "src/services/combat/automation/routers/spellRouter.js",
       "infoBuilder": "src/services/combat/automation/infoBuilders/spellInfoBuilder.js",
-      "verified": "not verified",
+      "verified": "broken \u2014 see .opencode/plans/bug-sp-072-lesser-restoration.md",
       "class": "Spell",
       "triggerConditions": "Action: bonus_action; Range: Touch",
       "expectedBehavior": "You touch a creature and end one condition on it: Blinded, Deafened, Paralyzed, or Poisoned."
@@ -3811,7 +3811,7 @@
       "handler": "src/services/combat/automation/handlers/classFeatureHandler.js",
       "router": "src/services/combat/automation/routers/classFeatureRouter.js",
       "infoBuilder": "src/services/combat/automation/infoBuilders/classFeatureInfoBuilder.js",
-      "verified": "not verified",
+      "verified": "broken \u2014 see .opencode/plans/bug-cla-212-lightbearer.md",
       "class": "Cleric",
       "triggerConditions": "Passive: Always active",
       "expectedBehavior": "You know the Light cantrip. Charisma is your spellcasting ability for it."
@@ -3823,7 +3823,7 @@
       "handler": "src/services/combat/automation/handlers/featHandler.js",
       "router": "src/services/combat/automation/routers/featRouter.js",
       "infoBuilder": "src/services/combat/automation/infoBuilders/featInfoBuilder.js",
-      "verified": "not verified",
+      "verified": "verified",
       "class": "Feat",
       "triggerConditions": "",
       "expectedBehavior": "Ability Score Increase. Increase your Strength or Dexterity score by 1, to a maximum of 20. Armor Training. You gain training with Light armor and Shields."
@@ -3835,7 +3835,7 @@
       "handler": "src/services/combat/automation/handlers/classFeatureHandler.js",
       "router": "src/services/combat/automation/routers/classFeatureRouter.js",
       "infoBuilder": "src/services/combat/automation/infoBuilders/classFeatureInfoBuilder.js",
-      "verified": "not verified",
+      "verified": "verified",
       "class": "Paladin",
       "triggerConditions": "Action: 1 bonus action; Duration: 10_minutes",
       "expectedBehavior": "Bonus Action for 10 minutes. Charismatic: Advantage on all Charisma checks. Saving Throw Reroll: Reaction to reroll failed save. Unerring Strike: once per turn, cause missed weapon attack to hit."
@@ -3847,7 +3847,7 @@
       "handler": "src/services/combat/automation/handlers/spellHandler.js",
       "router": "src/services/combat/automation/routers/spellRouter.js",
       "infoBuilder": "src/services/combat/automation/infoBuilders/spellInfoBuilder.js",
-      "verified": "not verified",
+      "verified": "verified",
       "class": "Spell",
       "triggerConditions": "",
       "expectedBehavior": "You touch a creature. The target's Speed increases by 10 feet until the spell ends."
