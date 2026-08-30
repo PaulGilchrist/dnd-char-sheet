@@ -5,6 +5,7 @@ import { getRuntimeValue, setRuntimeValue } from '../../../hooks/runtime/useRunt
 import { applyDamageToTarget } from '../../../services/rules/combat/applyDamage.js';
 import { getCombatSummary } from '../../../services/encounters/combatData.js';
 import { rollExpression } from '../../../services/dice/diceRoller.js';
+import { addExpiration } from '../../../services/rules/effects/expirations.js';
 
 function HurlThroughHellModal({ action, playerStats, campaignName, targetName, saveType, saveDc, damageType, damageExpression, damageTotal, _dieRoll, currentUses, maxUses, pactSlotLevel, pactSlotsAvailable, pactMagicRecharge, onClose }) {
     const [step, setStep] = useState('info'); // 'info' | 'result'
@@ -88,6 +89,12 @@ function HurlThroughHellModal({ action, playerStats, campaignName, targetName, s
                     returnToSpace: true,
                 }];
                 setRuntimeValue('campaign', 'targetEffects', newEffects, campaignName);
+
+                // Incapacitated + the return-to-space teleport resolve at the
+                // end of the caster's next turn (2 rounds, codebase convention)
+                addExpiration(playerName, targetName, [
+                    { type: 'hurl_through_hell_return', target: targetName, source: featureName },
+                ], campaignName, 2);
 
                 const combatSummary = getCombatSummary(campaignName);
                 const targetCreature = combatSummary?.creatures?.find(c => c.name === targetName);

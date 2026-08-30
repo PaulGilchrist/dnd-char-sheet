@@ -3298,7 +3298,7 @@
       "handler": "src/services/combat/automation/handlers/classFeatureHandler.js",
       "router": "src/services/combat/automation/routers/classFeatureRouter.js",
       "infoBuilder": "src/services/combat/automation/infoBuilders/classFeatureInfoBuilder.js",
-      "verified": "broken — see .opencode/plans/bug-cla-175-hurl-through-hell.md",
+      "verified": "verified",
       "class": "Warlock",
       "triggerConditions": "Action: passive",
       "expectedBehavior": "Once per turn when you hit with an attack roll, target makes Charisma save or disappears and takes 8d10 Psychic damage (if not a Fiend), has Incapacitated condition until end of next turn, then returns to space it previously occupied. Once per Long Rest (or expend Pact Magic spell slot to restore)."

@@ -382,6 +382,26 @@ export function clearExpirationEffects(effects, targetName, attackerName, campai
                 break;
             }
 
+            case 'hurl_through_hell_return': {
+                removeActiveCondition(targetName, 'incapacitated', campaignName);
+                removeNpcCondition(targetName, 'incapacitated', campaignName);
+                const storedEffects = getRuntimeValue('campaign', 'targetEffects') || [];
+                const cleaned = storedEffects.filter(te => !(te.effect === 'incapacitated' && te.source === effect.source && te.target === targetName));
+                if (cleaned.length !== storedEffects.length) {
+                    setRuntimeValue('campaign', 'targetEffects', cleaned, campaignName);
+                }
+                addEntry(campaignName, {
+                    type: 'condition',
+                    action: 'ended',
+                    characterName: targetName,
+                    condition: 'Incapacitated',
+                    source: effect.source,
+                    description: `${targetName} returns to the space it previously occupied — the ${effect.source} effect ends.`,
+                    timestamp: Date.now(),
+                }).catch((e) => { console.error("[expirations] Error:", e); });
+                break;
+            }
+
             case 'break_concentration': {
                 const cs = getCombatSummary(campaignName);
                 if (cs) {

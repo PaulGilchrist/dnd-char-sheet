@@ -37,6 +37,10 @@ vi.mock('../../../services/dice/diceRoller.js', () => ({
   rollExpression: vi.fn(() => ({ total: 22, rolls: [15, 7] })),
 }));
 
+vi.mock('../../../services/rules/effects/expirations.js', () => ({
+  addExpiration: vi.fn(),
+}));
+
 // ── Re-import mocked modules ──
 
 import * as runtimeState from '../../../hooks/runtime/useRuntimeState.js';

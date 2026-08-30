@@ -37,6 +37,10 @@ vi.mock('../../../services/dice/diceRoller.js', () => ({
   rollExpression: vi.fn(() => ({ total: 22, rolls: [15, 7] })),
 }));
 
+vi.mock('../../../services/rules/effects/expirations.js', () => ({
+  addExpiration: vi.fn(),
+}));
+
 // ── Test fixtures ──
 
 const mockPlayerStats = { name: 'Throg', level: 15 };

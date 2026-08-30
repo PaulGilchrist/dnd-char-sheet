@@ -37,6 +37,10 @@ vi.mock('../../../services/dice/diceRoller.js', () => ({
   rollExpression: vi.fn(() => ({ total: 22, rolls: [15, 7] })),
 }));
 
+vi.mock('../../../services/rules/effects/expirations.js', () => ({
+  addExpiration: vi.fn(),
+}));
+
 // ── Re-import mocked modules ──
 
 import * as savePrompt from '../../../services/automation/common/savePrompt.js';
@@ -45,6 +49,7 @@ import * as runtimeState from '../../../hooks/runtime/useRuntimeState.js';
 import * as applyDamage from '../../../services/rules/combat/applyDamage.js';
 import * as combatData from '../../../services/encounters/combatData.js';
 import * as diceRoller from '../../../services/dice/diceRoller.js';
+import * as expirations from '../../../services/rules/effects/expirations.js';
 
 // ── Test fixtures ──
 
@@ -214,6 +219,16 @@ describe('HurlThroughHellModal', () => {
       });
 
       await waitFor(() => {
+        expect(expirations.addExpiration).toHaveBeenCalledWith(
+          'Throg',
+          'Goblin1',
+          [{ type: 'hurl_through_hell_return', target: 'Goblin1', source: 'Hurl Through Hell' }],
+          'test-campaign',
+          2
+        );
+      });
+
+      await waitFor(() => {
         expect(handler).toHaveBeenCalledTimes(1);
         const detail = handler.mock.calls[0][0].detail;
         expect(detail.targetName).toBe('Goblin1');
@@ -358,6 +373,10 @@ describe('HurlThroughHellModal', () => {
 
       await waitFor(() => {
         expect(applyDamage.applyDamageToTarget).not.toHaveBeenCalled();
+      });
+
+      await waitFor(() => {
+        expect(expirations.addExpiration).not.toHaveBeenCalled();
       });
 
       await waitFor(() => {
