@@ -138,6 +138,7 @@ describe('useCharActionsAttackHandlers', () => {
                     hasBrutalStrike: false,
                     brutalStrikeOptions: [],
                     maxEffects: 1,
+                    riderName: 'Brutal Strike',
                 },
             });
             expect(deps.buildCtx).not.toHaveBeenCalled();
@@ -175,6 +176,7 @@ describe('useCharActionsAttackHandlers', () => {
                     hasBrutalStrike: true,
                     brutalStrikeOptions: ['option1'],
                     maxEffects: 2,
+                    riderName: 'Brutal Strike',
                 },
             });
             expect(deps.buildCtx).not.toHaveBeenCalled();
@@ -308,6 +310,7 @@ describe('useCharActionsAttackHandlers', () => {
                     hasBrutalStrike: false,
                     brutalStrikeOptions: [],
                     maxEffects: 1,
+                    riderName: 'Brutal Strike',
                 },
             });
             expect(deps.buildCtx).not.toHaveBeenCalled();
@@ -344,6 +347,7 @@ describe('useCharActionsAttackHandlers', () => {
                     hasBrutalStrike: true,
                     brutalStrikeOptions: ['option1'],
                     maxEffects: 2,
+                    riderName: 'Brutal Strike',
                 },
             });
             expect(deps.buildCtx).not.toHaveBeenCalled();

@@ -13,6 +13,7 @@ import { isActive as isAvengingAngelActive, isAuraTarget } from '../automation/h
 import { isProtectionFromEvilAndGoodActive, isCreatureWarded } from '../automation/handlers/buffs/protectionFromEvilAndGoodHandler.js';
 import { isDeathWardActive } from '../automation/handlers/buffs/deathWardHandler.js';
 import { collectWeaponMastery } from '../combat/automation/automationService.js';
+import { selectBrutalStrikeRiders } from '../combat/brutalStrikeSelection.js';
 import { resolveDiceExpression } from '../combat/automation/automationExpressions.js';
 import { isResilientSphereActive } from '../combat/automation/automationPassives.js';
 
@@ -373,16 +374,7 @@ export async function buildAttackContextSync(attack, playerStats, campaignName, 
         const brutalStrikeActive = getRuntimeValue(playerName, '_brutalStrikeActive', campaignName);
         if (brutalStrikeActive) {
             const allAutomation = [...(playerStats.automation?.actions || []), ...(playerStats.automation?.passives || [])];
-            const matchingRiders = allAutomation.filter(
-                x => x.type === 'attack_rider' && x.damageExpression && x.trigger === 'strength_attack_hit_after_reckless'
-            ).sort((a, b) => {
-                const exprA = a.damageExpression || '';
-                const exprB = b.damageExpression || '';
-                const countA = parseInt(exprA.match(/^(\d+)/)?.[1] || '0', 10);
-                const countB = parseInt(exprB.match(/^(\d+)/)?.[1] || '0', 10);
-                return countB - countA;
-            });
-            brutalStrikeRider = matchingRiders[0];
+            brutalStrikeRider = selectBrutalStrikeRiders(allAutomation)[0];
             if (brutalStrikeRider) {
                 const diceMatch = brutalStrikeRider.damageExpression.match(/^(\d+)d(\d+)/);
                 if (diceMatch) {

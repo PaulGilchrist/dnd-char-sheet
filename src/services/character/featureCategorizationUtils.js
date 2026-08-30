@@ -49,6 +49,7 @@ export const categorizeFeatures = (items, categories, options = {}) => {
 
     const itemSummary = {
       name: item.name,
+      level: item.level ?? null,
       description: item[descriptionField],
       details: item.details,
       automation: item.automation

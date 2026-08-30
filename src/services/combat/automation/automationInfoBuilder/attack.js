@@ -93,6 +93,7 @@ export const attackHandlers = {
         return {
             type: 'attack_rider',
             name: feature.name,
+            featureLevel: feature.level ?? null,
             effect: auto.effect || null,
             options,
             cost: auto.cost || null,

@@ -5,6 +5,7 @@ import { addEntry } from '../../services/ui/logService.js'
 import { markOncePerTurn } from '../../services/automation/common/oncePerTurn.js'
 import { endFriendsOnHostileAction } from '../../services/rules/features/friendsService.js'
 import { endInvisibilityOnHostileAction } from '../../services/rules/features/invisibilityService.js'
+import { selectBrutalStrikeRiders } from '../../services/combat/brutalStrikeSelection.js'
 
 export default function useCharActionsAttackHandlers({
     cannotAct,
@@ -35,15 +36,7 @@ export default function useCharActionsAttackHandlers({
         const currentCreature = getActiveCreatureName(campaignName);
         const isOfferedThisTurn = offeredValue && offeredValue.activeCreature === currentCreature;
 
-        const brutalStrikePassives = (passives || []).filter(
-            p => p.type === 'attack_rider' && p.trigger === 'strength_attack_hit_after_reckless'
-        ).sort((a, b) => {
-            const exprA = a.damageExpression || '';
-            const exprB = b.damageExpression || '';
-            const countA = parseInt(exprA.match(/^(\d+)/)?.[1] || '0', 10);
-            const countB = parseInt(exprB.match(/^(\d+)/)?.[1] || '0', 10);
-            return countB - countA;
-        });
+        const brutalStrikePassives = selectBrutalStrikeRiders(passives);
         const brutalStrikePassive = brutalStrikePassives[0];
         const hasBrutalStrike = !!brutalStrikePassive;
         const brutalStrikeOptions = brutalStrikePassive?.options || [];
@@ -53,13 +46,15 @@ export default function useCharActionsAttackHandlers({
         const brutalStrikeUsedValue = getRuntimeValue(playerName, brutalStrikeUsedKey, campaignName);
         const brutalStrikeUsedThisTurn = brutalStrikeUsedValue && brutalStrikeUsedValue.activeCreature === currentCreature;
 
+        const riderName = brutalStrikePassive?.name || 'Brutal Strike';
+
         if (hasRecklessFeature && !isRecklessActive && !isOfferedThisTurn) {
-            setModalState({ recklessAttackModal: { attack, mode: 'full', hasBrutalStrike, brutalStrikeOptions, maxEffects } });
+            setModalState({ recklessAttackModal: { attack, mode: 'full', hasBrutalStrike, brutalStrikeOptions, maxEffects, riderName } });
             return;
         }
 
         if (hasRecklessFeature && isRecklessActive && hasBrutalStrike && !brutalStrikeUsedThisTurn) {
-            setModalState({ recklessAttackModal: { attack, mode: 'brutalOnly', hasBrutalStrike: true, brutalStrikeOptions, maxEffects } });
+            setModalState({ recklessAttackModal: { attack, mode: 'brutalOnly', hasBrutalStrike: true, brutalStrikeOptions, maxEffects, riderName } });
             return;
         }
 
@@ -101,11 +96,12 @@ export default function useCharActionsAttackHandlers({
             markOncePerTurn('Brutal Strike', '_BrutalStrike_usedRound', playerStats, campaignName).catch((e) => { console.error("[CharActions] Error:", e); });
             setRuntimeValue(playerName, '_brutalStrikeNoAdvantage', true, campaignName);
             const effectNames = brutalStrikeChoice.effectChoices.join(' + ') || 'no effect';
+            const riderName = brutalStrikeChoice.riderName || 'Brutal Strike';
             addEntry(campaignName, {
                 type: 'ability_use',
                 characterName: playerName,
-                abilityName: 'Brutal Strike',
-                description: `${playerName} uses Brutal Strike on ${attack.name} — ${effectNames}`,
+                abilityName: riderName,
+                description: `${playerName} uses ${riderName} on ${attack.name} — ${effectNames}`,
             }).catch((e) => { console.error("[useCharActionsAttackHandlers:log-error]", e); });
         }
 
@@ -136,11 +132,12 @@ export default function useCharActionsAttackHandlers({
             setRuntimeValue(playerName, '_brutalStrikeEffects', brutalStrikeChoice.effectChoices, campaignName);
             markOncePerTurn('Brutal Strike', '_BrutalStrike_usedRound', playerStats, campaignName).catch((e) => { console.error("[CharActions] Error:", e); });
             const effectNames = brutalStrikeChoice.effectChoices.join(' + ') || 'no effect';
+            const riderName = brutalStrikeChoice.riderName || 'Brutal Strike';
             addEntry(campaignName, {
                 type: 'ability_use',
                 characterName: playerName,
-                abilityName: 'Brutal Strike',
-                description: `${playerName} uses Brutal Strike on ${attack?.name || 'attack'} — ${effectNames}`,
+                abilityName: riderName,
+                description: `${playerName} uses ${riderName} on ${attack?.name || 'attack'} — ${effectNames}`,
             }).catch((e) => { console.error("[useCharActionsAttackHandlers:log-error]", e); });
         }
         setModalState({ recklessAttackModal: null });

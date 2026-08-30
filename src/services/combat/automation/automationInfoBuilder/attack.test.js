@@ -14,6 +14,7 @@ describe('attackHandlers – attack_rider', () => {
         expect(result).toEqual({
             type: 'attack_rider',
             name: 'Test Feature',
+            featureLevel: null,
             effect: null,
             options: [],
             cost: null,

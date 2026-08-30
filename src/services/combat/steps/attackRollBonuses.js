@@ -5,6 +5,7 @@ import { evaluateAutoExpression } from '../../combat/automation/automationServic
 import { getActiveBuffs } from '../../automation/common/buffToggle.js';
 import { resolveDiceExpression } from '../automation/automationExpressions.js';
 import { addEntry } from '../../ui/logService.js';
+import { selectBrutalStrikeRiders } from '../brutalStrikeSelection.js';
 
 export function buildAutomationBonusesStep() {
   return {
@@ -110,16 +111,7 @@ export function buildAutomationBonusesStep() {
       const brutalStrikeActive = getRuntimeValue(ctx.playerStats.name, '_brutalStrikeActive', ctx.campaignName);
       if (brutalStrikeActive) {
           const allAutomation = [...(ctx.playerStats.automation.actions || []), ...(ctx.playerStats.automation.passives || [])];
-          const matchingRiders = allAutomation.filter(
-              x => x.type === 'attack_rider' && x.damageExpression && x.trigger === 'strength_attack_hit_after_reckless'
-          ).sort((a, b) => {
-              const exprA = a.damageExpression || '';
-              const exprB = b.damageExpression || '';
-              const countA = parseInt(exprA.match(/^(\d+)/)?.[1] || '0', 10);
-              const countB = parseInt(exprB.match(/^(\d+)/)?.[1] || '0', 10);
-              return countB - countA;
-          });
-          const rider = matchingRiders[0];
+          const rider = selectBrutalStrikeRiders(allAutomation)[0];
         if (rider) {
           const r = rollExpression(rider.damageExpression);
           if (r) {

@@ -559,8 +559,8 @@ function SecondaryModals({
                     brutalStrikeOptions={mergedModalState.recklessAttackModal.brutalStrikeOptions || []}
                     maxEffects={mergedModalState.recklessAttackModal.maxEffects || 1}
                     onConfirm={mergedModalState.recklessAttackModal.mode === 'brutalOnly'
-                        ? (choice) => handleBrutalStrikeConfirm(choice)
-                        : (attack, choice) => handleRecklessAttackConfirm(attack, choice)}
+                        ? (choice) => handleBrutalStrikeConfirm({ ...choice, riderName: mergedModalState.recklessAttackModal.riderName })
+                        : (attack, choice) => handleRecklessAttackConfirm(attack, { ...choice, riderName: mergedModalState.recklessAttackModal.riderName })}
                     onCancel={mergedModalState.recklessAttackModal.mode === 'brutalOnly'
                         ? (choice) => handleBrutalStrikeCancel(choice)
                         : () => handleRecklessAttackCancel(mergedModalState.recklessAttackModal.attack)}

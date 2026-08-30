@@ -409,7 +409,7 @@ vi.mock('./modals/shared/RecklessAttackModal.jsx', () => ({
   default: function TestModal({ onConfirm, onCancel }) {
     return (
       <div data-testid="reckless-attack-modal">
-        <button data-testid="reckless-confirm" onClick={() => onConfirm('attack', 'reckless')}>Confirm</button>
+        <button data-testid="reckless-confirm" onClick={() => onConfirm('attack', { useBrutalStrike: true, effectChoices: ['Forceful Blow'] })}>Confirm</button>
         <button data-testid="reckless-cancel" onClick={onCancel}>Cancel</button>
       </div>
     );
@@ -558,11 +558,11 @@ describe('CharActionModals — choice modal handler callbacks', () => {
       const attack = { name: 'Longsword' };
       render(<CharActionModals
         {...createBaseProps({ handleRecklessAttackConfirm: handler })}
-        modalState={{ recklessAttackModal: { attack, mode: 'full', hasBrutalStrike: false } }}
+        modalState={{ recklessAttackModal: { attack, mode: 'full', hasBrutalStrike: false, riderName: 'Improved Brutal Strike' } }}
         setModalState={vi.fn()}
       />);
       fireEvent.click(screen.getByTestId('reckless-confirm'));
-      expect(handler).toHaveBeenCalledWith('attack', 'reckless');
+      expect(handler).toHaveBeenCalledWith('attack', { useBrutalStrike: true, effectChoices: ['Forceful Blow'], riderName: 'Improved Brutal Strike' });
     });
 
     it('calls handleRecklessAttackCancel with the attack object in full mode', () => {
