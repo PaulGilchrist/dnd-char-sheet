@@ -122,6 +122,7 @@ describe('applyLongRest', () => {
       expect(data.focusPoints).toBeNull()
       expect(data.ragePoints).toBeNull()
       expect(data.sorceryPoints).toBeNull()
+      expect(data.illusorySelfUses).toBeNull()
       expect(data.activeBuffs).toEqual([])
       expect(data.activeConditions).toEqual([])
     })

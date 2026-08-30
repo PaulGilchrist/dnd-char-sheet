@@ -3370,7 +3370,7 @@
       "handler": "src/services/combat/automation/handlers/classFeatureHandler.js",
       "router": "src/services/combat/automation/routers/classFeatureRouter.js",
       "infoBuilder": "src/services/combat/automation/infoBuilders/classFeatureInfoBuilder.js",
-      "verified": "broken — see .opencode/plans/bug-cla-180-illusory-self.md",
+      "verified": "verified",
       "class": "Wizard",
       "triggerConditions": "Trigger: attack_hit; Action: 1 reaction",
       "expectedBehavior": "When a creature hits you with an attack roll, take Reaction to interpose an illusory duplicate between attacker and yourself. Attack automatically misses, then illusion dissipates. Once per Short or Long Rest (or expend level 2+ spell slot to restore)."

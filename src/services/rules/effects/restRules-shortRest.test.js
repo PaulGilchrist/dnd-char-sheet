@@ -107,6 +107,7 @@ describe('applyShortRest', () => {
       expect(updates.actionsurgeUses).toBeNull()
       expect(updates.actionSurgeUses).toBeNull()
       expect(updates.actionSurgeUsedThisRound).toBeNull()
+      expect(updates.illusorySelfUses).toBeNull()
       expect(updates.activeBuffs).toEqual([])
       expect(updates.activeConditions).toEqual([])
     })

@@ -77,9 +77,10 @@ export const SHORT_REST_RESOURCES = [
      'poisonedWeaponsActive',
        '_Savage_Attacker_usedRound',
        '_Shield_Bash_usedRound',
-       '_Hamstring_usedRound',
-       '_friendsCastTargets'
-]
+        '_Hamstring_usedRound',
+        '_friendsCastTargets',
+   'illusorySelfUses'
+ ]
 
 export function getShortRestResources() {
   return [...SHORT_REST_RESOURCES]
@@ -192,9 +193,10 @@ export const LONG_REST_RESOURCES = [
     'magicalCunningUsed',
      '_Steps_of_the_Fey_freeCastCount',
      '_Detect_Thoughts_freeCastCount',
-    'beguilingDefensesUses',
-    'healinglightPool',
-    'searingvengeanceUses',
+     'beguilingDefensesUses',
+     'illusorySelfUses',
+     'healinglightPool',
+     'searingvengeanceUses',
     'darkOnesLuckUses',
     '_fiendishResilienceUsed',
     'boonOfCombatProwessUsed',
