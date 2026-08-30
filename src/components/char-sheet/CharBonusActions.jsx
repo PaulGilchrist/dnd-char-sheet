@@ -13,6 +13,8 @@ import { hasAutomation } from '../../services/combat/automation/automationServic
 import { addEntry } from '../../services/ui/logService.js'
 
 import { getRuntimeValue, setRuntimeValue, useRuntimeValue } from '../../hooks/runtime/useRuntimeState.js'
+import { getCombatContext } from '../../services/rules/combat/damageUtils.js'
+import { isWithinRange } from '../../services/rules/combat/rangeCheck.js'
 import { setTempHp } from '../../services/automation/handlers/buffs/tempHpService.js'
 import { useSpellMetamagicFlow } from '../../hooks/combat/useSpellMetamagicFlow.js'
 import { useSpellUpcastFlow } from '../../hooks/combat/useSpellUpcastFlow.js'
@@ -38,6 +40,11 @@ function CharBonusActions({ playerStats, campaignName, exhaustionPenalty, condit
 
     const { saveDcBonus: displaySaveDcBonus } = getInnateSorceryBonus(playerStats.name, campaignName);
     const activeBuffs = useRuntimeValue(playerStats.name, 'activeBuffs', campaignName);
+
+    const [hordeBreakerTargets, setHordeBreakerTargets] = useState(null);
+    const huntersPreyChoice = useRuntimeValue(playerStats.name, "_Hunter's_Prey_choice", campaignName);
+    const hordeBreakerReady = useRuntimeValue(playerStats.name, '_Hunters_Prey_HordeBreaker_Ready', campaignName);
+    const hordeBreakerUsedRound = useRuntimeValue(playerStats.name, '_Hunters_Prey_HordeBreaker_UsedRound', campaignName);
 
     const is2024Rules = playerStats.rules === '2024';
     const hasWeaponMastery = (playerStats.automation?.passives || []).some(p => p.type === 'weapon_kind_mastery');
@@ -156,7 +163,7 @@ function CharBonusActions({ playerStats, campaignName, exhaustionPenalty, condit
 
     const bonusActionAttacks = playerStats.attacks.filter((attack) => {
         if (attack.type !== 'Bonus Action') return false;
-        // Filter out Horde Breaker placeholder — UI will show it conditionally
+        // Horde Breaker placeholder is rendered conditionally below (after a melee weapon hit)
         if (attack.isHordeBreaker) return false;
         // Filter out Light weapon bonus action attack when Nick mastery has been used this turn
         if (attack.properties?.includes('Light') && is2024Rules) {
@@ -172,7 +179,77 @@ function CharBonusActions({ playerStats, campaignName, exhaustionPenalty, condit
     const bonusSpellNameSet = getBonusActionSpellNames(playerStats, campaignName);
     const bonusActionSpells = (playerStats.spellAbilities?.spells || []).filter(spell => bonusSpellNameSet.has(spell.name));
     const hasBonusActions = playerStats.bonusActions.length > 0;
-    const hasBonusContent = bonusActionSpells.length > 0 || bonusActionAttacks.length > 0 || hasBonusActions;
+
+    const hordeBreakerMarker = (playerStats.attacks || []).find(a => a.isHordeBreaker);
+    const hordeBreakerWeapon = React.useMemo(() => {
+        if (!hordeBreakerReady || !hordeBreakerReady.attackName) return null;
+        return (playerStats.attacks || []).find(a => !a.isHordeBreaker && a.name === hordeBreakerReady.attackName) || null;
+    }, [hordeBreakerReady, playerStats.attacks]);
+    const showHordeBreakerRow = !!hordeBreakerMarker
+        && huntersPreyChoice === 'Horde Breaker'
+        && !!hordeBreakerReady
+        && hordeBreakerReady.round === getCurrentCombatRound()
+        && hordeBreakerUsedRound !== getCurrentCombatRound()
+        && !cannotAct;
+    if (showHordeBreakerRow && !hordeBreakerWeapon) {
+        console.error('Horde Breaker: no attack entry found for weapon', hordeBreakerReady.attackName);
+    }
+    const hordeBreakerAttackItem = React.useMemo(() => {
+        if (!hordeBreakerMarker || !hordeBreakerWeapon) return null;
+        return {
+            ...hordeBreakerMarker,
+            damage: hordeBreakerWeapon.damage,
+            damageType: hordeBreakerWeapon.damageType,
+            hitBonus: hordeBreakerWeapon.hitBonus,
+            hitBonusFormula: hordeBreakerWeapon.hitBonusFormula,
+            range: hordeBreakerWeapon.range,
+            weaponName: hordeBreakerWeapon.name,
+        };
+    }, [hordeBreakerMarker, hordeBreakerWeapon]);
+    const visibleHordeBreakerItem = showHordeBreakerRow ? hordeBreakerAttackItem : null;
+    const displayedBonusAttacks = visibleHordeBreakerItem ? [...bonusActionAttacks, visibleHordeBreakerItem] : bonusActionAttacks;
+
+    const handleHordeBreakerClick = React.useCallback(async () => {
+        if (cannotAct || !hordeBreakerAttackItem || !hordeBreakerReady) return;
+        const cs = await getCombatContext(campaignName);
+        const creatures = cs?.creatures || [];
+        const validTargets = [];
+        for (const c of creatures) {
+            if (c.name === hordeBreakerReady.targetName) continue;
+            if ((c.currentHp ?? 1) <= 0) continue;
+            const nearOriginal = await isWithinRange(hordeBreakerReady.targetName, c.name, 5);
+            if (!nearOriginal) continue;
+            const inWeaponRange = await isWithinRange(playerStats.name, c.name, hordeBreakerAttackItem.range || 5);
+            if (!inWeaponRange) continue;
+            validTargets.push({ name: c.name, type: 'creature' });
+        }
+        if (validTargets.length === 0) {
+            setPopupHtml(`<b>Horde Breaker</b><br/>No valid target — no other creature within 5 feet of ${hordeBreakerReady.targetName} and within weapon range.<br/><span class="dice-roll-hint">click to dismiss</span>`);
+            return;
+        }
+        setHordeBreakerTargets(validTargets);
+    }, [cannotAct, hordeBreakerAttackItem, hordeBreakerReady, campaignName, setPopupHtml, playerStats.name]);
+
+    const handleHordeBreakerTargetSelected = React.useCallback(async (selectedName) => {
+        setHordeBreakerTargets(null);
+        if (!hordeBreakerAttackItem || !hordeBreakerReady) return;
+        rollAttack('Horde Breaker', (hordeBreakerAttackItem.hitBonus || 0) - (exhaustionPenalty || 0), {
+            targetName: selectedName,
+            damageType: hordeBreakerAttackItem.damageType,
+            autoDamageFormula: hordeBreakerAttackItem.damage,
+            autoDamageName: 'Horde Breaker',
+        });
+        addEntry(campaignName, {
+            type: 'ability_use',
+            characterName: playerStats.name,
+            abilityName: 'Horde Breaker',
+            description: `${playerStats.name} used Horde Breaker: extra attack with ${hordeBreakerAttackItem.weaponName} against ${selectedName} (within 5 ft of ${hordeBreakerReady.targetName}).`,
+            targetName: selectedName,
+            timestamp: Date.now(),
+        }).catch((e) => { console.error("[charBonusActions:log-error]", e); });
+    }, [hordeBreakerAttackItem, hordeBreakerReady, campaignName, exhaustionPenalty, playerStats.name, rollAttack]);
+
+    const hasBonusContent = bonusActionSpells.length > 0 || bonusActionAttacks.length > 0 || hasBonusActions || !!visibleHordeBreakerItem;
 
     if (!hasBonusContent) return null;
 
@@ -192,7 +269,7 @@ function CharBonusActions({ playerStats, campaignName, exhaustionPenalty, condit
              * DO NOT put action or reaction spell handlers here.
              */}
               <div className='sectionHeader'>Bonus Actions</div>
-                {(bonusActionAttacks.length > 0 || bonusActionSpells.length > 0) ? (
+                {(displayedBonusAttacks.length > 0 || bonusActionSpells.length > 0) ? (
                   <div className={`attacks ${is2024Rules && hasWeaponMastery ? 'mastery-enabled' : ''}`}>
                     <div className='left'><b>Name</b></div>
                         <div><b>Level</b></div>
@@ -201,9 +278,11 @@ function CharBonusActions({ playerStats, campaignName, exhaustionPenalty, condit
                         <div><b>Damage</b></div>
                         <div className='left'><b>Type</b></div>
                         {is2024Rules && hasWeaponMastery && <div><b>Mastery</b></div>}
-                        {bonusActionAttacks.map((attack) => {
+                        {displayedBonusAttacks.map((attack) => {
                             const attackLevel = getAttackSpellLevel(playerStats.spellAbilities, attack.name);
                             const attackItem = { ...attack };
+                            const isHbRow = !!attack.isHordeBreaker;
+                            const hbClick = () => handleHordeBreakerClick();
                             const sacredWeaponBonus = (() => {
                                 const buffs = getRuntimeValue(playerStats.name, 'activeBuffs', campaignName) || [];
                                 if (!Array.isArray(buffs) || !buffs.some(b => b.effect === 'sacred_weapon')) return 0;
@@ -216,14 +295,17 @@ function CharBonusActions({ playerStats, campaignName, exhaustionPenalty, condit
                                 ? `Base: +${attack.hitBonus}, Sacred Weapon: +${sacredWeaponBonus}`
                                 : undefined;
                             return <React.Fragment key={attack.name}>
-                                <div className='left'>{attack.name}</div>
+                                <div className={isHbRow ? 'left clickable' : 'left'} onClick={isHbRow ? hbClick : undefined}>{attack.name}</div>
                                 <div>{attackLevel != null ? (attackLevel === 0 ? 'Cantrip' : attackLevel) : ''}</div>
                                 <div>{formatRange(attack.range)}</div>
                                 {attack.saveDc
                                    ? <div className="save-dc-display">DC {attack.saveDc + displaySaveDcBonus} {attack.saveType}</div>
-                                 : <div className={"clickable" + (exhaustionPenalty > 0 || conditionAttackMode === 'disadvantage' || cannotAct ? " stat--penalized" : "") + (cannotAct ? " disabled-attack" : "")} title={hitTitle} onClick={() => onAttackClick(attackItem)}>{signFormatter.format(effectiveHit - exhaustionPenalty)}</div>}
+                                 : isHbRow
+                                     ? <div className={"clickable" + (exhaustionPenalty > 0 || conditionAttackMode === 'disadvantage' || cannotAct ? " stat--penalized" : "") + (cannotAct ? " disabled-attack" : "")} title={`Attack a different creature within 5 feet of ${hordeBreakerReady?.targetName || 'the original target'} with your ${attack.weaponName || attack.name}`} onClick={hbClick}>{signFormatter.format(effectiveHit - exhaustionPenalty)}</div>
+                                     : <div className={"clickable" + (exhaustionPenalty > 0 || conditionAttackMode === 'disadvantage' || cannotAct ? " stat--penalized" : "") + (cannotAct ? " disabled-attack" : "")} title={hitTitle} onClick={() => onAttackClick(attackItem)}>{signFormatter.format(effectiveHit - exhaustionPenalty)}</div>}
                                <div className={attack.damage ? "clickable" : ""} onClick={() => {
                                    if (cannotAct) return;
+                                   if (isHbRow) { hbClick(); return; }
                                    if (attack.saveDc) { onResolveSpellDamage(attackItem); return; }
                                    handleSimpleDamageRoll(attackItem);
                                }}>{attack.damage}</div>
@@ -372,6 +454,19 @@ function CharBonusActions({ playerStats, campaignName, exhaustionPenalty, condit
                     <div>
                         <b className="clickable" onClick={handleApplyPoison}>Apply Poison:</b> <span>Apply a poison dose to a weapon. Target must succeed on a CON save (DC {8 + Math.max(playerStats.abilities?.find(a => a.name === 'Dexterity')?.bonus ?? 0, playerStats.abilities?.find(a => a.name === 'Intelligence')?.bonus ?? 0) + (playerStats.proficiency || 0)}) or take 2d8 Poison damage and have the Poisoned condition until the end of your next turn.</span>
                     </div>
+                )}
+
+                {hordeBreakerTargets && (
+                    <SecondaryTargetModal
+                        title="Horde Breaker"
+                        targets={hordeBreakerTargets}
+                        description={`Choose a different creature within 5 feet of <b>${hordeBreakerReady?.targetName || 'the original target'}</b> to attack with your ${hordeBreakerAttackItem?.weaponName || 'weapon'}:`}
+                        onTargetSelected={handleHordeBreakerTargetSelected}
+                        onSkip={() => setHordeBreakerTargets(null)}
+                        confirmLabel="Attack Target"
+                        confirmIcon="fa-bolt"
+                        showSize={true}
+                    />
                 )}
 
                 {pendingHexSpell && (

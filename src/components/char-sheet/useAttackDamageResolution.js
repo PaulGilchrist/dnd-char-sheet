@@ -95,6 +95,8 @@ export function normalizeAutoDamage(autoDamage, isCrit, playerStats) {
     damageType: autoDamage.damageType,
     weaponType: isUnarmed ? 'unarmed' : (weaponAttack?.weaponType || 'weapon'),
     properties: weaponAttack?.properties || [],
+    type: autoDamage.attackType || weaponAttack?.type,
+    isHordeBreaker: weaponAttack?.isHordeBreaker || false,
   };
 
   // Compute Empowered Evocation modifier

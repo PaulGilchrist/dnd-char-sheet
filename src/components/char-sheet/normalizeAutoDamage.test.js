@@ -370,4 +370,25 @@ describe('normalizeAutoDamage', () => {
       expect(result.ctx.autoDamageSource).toBe(true);
     });
   });
+
+  describe('Horde Breaker auto damage', () => {
+    it('carries the bonus action attack type so housekeeping can mark it used', () => {
+      const playerStats = makePlayerStats({
+        attacks: [
+          { name: 'Horde Breaker', weaponType: 'melee', properties: [], type: 'Bonus Action', isHordeBreaker: true },
+        ],
+      });
+      const autoDamage = {
+        name: 'Horde Breaker',
+        formula: '1d6-1',
+        damageType: 'Piercing',
+        targetName: 'Zombie 2',
+        attackerName: 'TestWizard',
+      };
+      const { attack } = normalizeAutoDamage(autoDamage, false, playerStats);
+      expect(attack.type).toBe('Bonus Action');
+      expect(attack.isHordeBreaker).toBe(true);
+      expect(attack.weaponType).toBe('melee');
+    });
+  });
 });

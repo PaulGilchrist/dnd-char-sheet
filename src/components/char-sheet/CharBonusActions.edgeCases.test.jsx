@@ -1,6 +1,6 @@
 // @improved-by-ai
 // @cleaned-by-ai
-import { render, screen } from '@testing-library/react';
+import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import CharBonusActions from './CharBonusActions.jsx';
 
@@ -118,7 +118,19 @@ vi.mock('./HexAbilityModal.jsx', () => ({
 }));
 
 vi.mock('./modals/shared/SecondaryTargetModal.jsx', () => ({
-  default: vi.fn((props) => <div data-testid="secondary-target-modal">{props.title}</div>),
+  default: vi.fn((props) => (
+    <div data-testid="secondary-target-modal">
+      {props.title}
+      {(props.targets || []).map((t) => (
+        <button key={t.name} onClick={() => props.onTargetSelected(t.name)}>{t.name}</button>
+      ))}
+      <button onClick={props.onSkip}>SkipTarget</button>
+    </div>
+  )),
+}));
+
+vi.mock('../../services/rules/combat/rangeCheck.js', () => ({
+  isWithinRange: vi.fn(() => Promise.resolve(true)),
 }));
 
 vi.mock('./ArcaneVigorModal.jsx', () => ({
@@ -159,6 +171,9 @@ vi.mock('../../services/ui/formatUtils.js', () => ({
 
 import { getRuntimeValue, useRuntimeValue } from '../../hooks/runtime/useRuntimeState.js';
 import { getBonusActionSpellNames } from '../../services/ui/spellSectionUtils.js';
+import { getCombatContext } from '../../services/rules/combat/damageUtils.js';
+import { isWithinRange } from '../../services/rules/combat/rangeCheck.js';
+import { useDiceRollPopup } from '../../hooks/combat/DiceRollContext.js';
 
 const basePlayerStats = {
   name: 'TestCharacter',
@@ -285,21 +300,124 @@ describe('CharBonusActions - Edge Cases', () => {
     });
   });
 
-  describe('isHordeBreaker always filtered', () => {
+  describe('Horde Breaker conditional rendering', () => {
+    const shortswordAttack = {
+      name: 'Shortsword',
+      range: 5,
+      hitBonus: 5,
+      damage: '1d6-1',
+      damageType: 'Piercing',
+      type: 'Action',
+      weaponType: 'melee',
+    };
     const hordeBreakerAttack = {
       name: 'Horde Breaker',
-      range: 30,
+      range: 5,
       hitBonus: 5,
-      damage: '1d8+3',
-      damageType: 'Piercing',
+      damage: '1d4',
+      damageType: 'Slashing',
       type: 'Bonus Action',
+      weaponType: 'melee',
       isHordeBreaker: true,
     };
 
-    it('filters out Horde Breaker regardless of campaignName or other props', () => {
-      const stats = createStats({ attacks: [hordeBreakerAttack] });
-      render(<CharBonusActions playerStats={stats} campaignName="any-campaign" getWeaponMastery={() => null} />);
+    function mockHbRuntime({ choice = 'Horde Breaker', ready = { round: 1, targetName: 'Zombie 1', attackName: 'Shortsword' }, usedRound = null } = {}) {
+      vi.mocked(useRuntimeValue).mockImplementation((name, key) => {
+        if (key === "_Hunter's_Prey_choice") return choice;
+        if (key === '_Hunters_Prey_HordeBreaker_Ready') return ready;
+        if (key === '_Hunters_Prey_HordeBreaker_UsedRound') return usedRound;
+        return null;
+      });
+    }
+
+    it('hides the placeholder until a melee weapon hit readies it', () => {
+      mockHbRuntime({ ready: null });
+      const stats = createStats({ attacks: [shortswordAttack, hordeBreakerAttack] });
+      render(<CharBonusActions playerStats={stats} campaignName="any-campaign" getWeaponMastery={() => null} exhaustionPenalty={0} />);
       expect(screen.queryByText('Horde Breaker')).not.toBeInTheDocument();
+    });
+
+    it('shows the row after a ready hit, using the actual weapon damage', () => {
+      mockHbRuntime();
+      const stats = createStats({ attacks: [shortswordAttack, hordeBreakerAttack] });
+      render(<CharBonusActions playerStats={stats} campaignName="any-campaign" getWeaponMastery={() => null} exhaustionPenalty={0} />);
+      expect(screen.getByText('Horde Breaker')).toBeInTheDocument();
+      expect(screen.getByText('1d6-1')).toBeInTheDocument();
+      expect(screen.queryByText('1d4')).not.toBeInTheDocument();
+    });
+
+    it('hides the row once used this round', () => {
+      mockHbRuntime({ usedRound: 1 });
+      const stats = createStats({ attacks: [shortswordAttack, hordeBreakerAttack] });
+      render(<CharBonusActions playerStats={stats} campaignName="any-campaign" getWeaponMastery={() => null} exhaustionPenalty={0} />);
+      expect(screen.queryByText('Horde Breaker')).not.toBeInTheDocument();
+    });
+
+    it('hides the row when the ready state is from a previous round', () => {
+      mockHbRuntime({ ready: { round: 99, targetName: 'Zombie 1', attackName: 'Shortsword' } });
+      const stats = createStats({ attacks: [shortswordAttack, hordeBreakerAttack] });
+      render(<CharBonusActions playerStats={stats} campaignName="any-campaign" getWeaponMastery={() => null} exhaustionPenalty={0} />);
+      expect(screen.queryByText('Horde Breaker')).not.toBeInTheDocument();
+    });
+
+    it('hides the row when the Hunter\'s Prey choice is Colossus Slayer', () => {
+      mockHbRuntime({ choice: 'Colossus Slayer' });
+      const stats = createStats({ attacks: [shortswordAttack, hordeBreakerAttack] });
+      render(<CharBonusActions playerStats={stats} campaignName="any-campaign" getWeaponMastery={() => null} exhaustionPenalty={0} />);
+      expect(screen.queryByText('Horde Breaker')).not.toBeInTheDocument();
+    });
+
+    it('opens a secondary target modal of valid creatures and rolls the attack against the selected one', async () => {
+      mockHbRuntime();
+      vi.mocked(getCombatContext).mockResolvedValue({
+        creatures: [
+          { name: 'Zombie 1', currentHp: 10 },
+          { name: 'Zombie 2', currentHp: 10 },
+          { name: 'Zombie 3', currentHp: 10 },
+        ],
+      });
+      vi.mocked(isWithinRange).mockImplementation(async (a, b) => b === 'Zombie 2');
+      const rollAttack = vi.fn();
+      const stats = createStats({ attacks: [shortswordAttack, hordeBreakerAttack] });
+      render(<CharBonusActions playerStats={stats} campaignName="any-campaign" getWeaponMastery={() => null} exhaustionPenalty={0} rollAttack={rollAttack} />);
+
+      fireEvent.click(screen.getByText('Horde Breaker'));
+      await waitFor(() => expect(screen.getByTestId('secondary-target-modal')).toBeInTheDocument());
+      expect(screen.getByText('Zombie 2')).toBeInTheDocument();
+      expect(screen.queryByText('Zombie 3')).not.toBeInTheDocument();
+
+      fireEvent.click(screen.getByRole('button', { name: 'Zombie 2' }));
+      expect(rollAttack).toHaveBeenCalledWith(
+        'Horde Breaker',
+        5,
+        expect.objectContaining({
+          targetName: 'Zombie 2',
+          damageType: 'Piercing',
+          autoDamageFormula: '1d6-1',
+          autoDamageName: 'Horde Breaker',
+        }),
+      );
+      expect(screen.queryByTestId('secondary-target-modal')).not.toBeInTheDocument();
+    });
+
+    it('shows an info popup instead of a modal when no valid secondary target exists', async () => {
+      mockHbRuntime();
+      vi.mocked(getCombatContext).mockResolvedValue({
+        creatures: [
+          { name: 'Zombie 1', currentHp: 10 },
+          { name: 'Zombie 3', currentHp: 10 },
+        ],
+      });
+      vi.mocked(isWithinRange).mockResolvedValue(false);
+      const setPopupHtml = vi.fn();
+      vi.mocked(useDiceRollPopup).mockReturnValue({ popupHtml: null, setPopupHtml });
+      const stats = createStats({ attacks: [shortswordAttack, hordeBreakerAttack] });
+      render(<CharBonusActions playerStats={stats} campaignName="any-campaign" getWeaponMastery={() => null} exhaustionPenalty={0} setPopupHtml={setPopupHtml} />);
+
+      fireEvent.click(screen.getByText('Horde Breaker'));
+      await waitFor(() => expect(setPopupHtml).toHaveBeenCalled());
+      expect(setPopupHtml.mock.calls[0][0]).toContain('No valid target');
+      expect(screen.queryByTestId('secondary-target-modal')).not.toBeInTheDocument();
     });
   });
 });

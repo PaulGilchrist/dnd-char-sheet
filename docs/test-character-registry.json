@@ -47,7 +47,7 @@
       "file": "public/campaigns/test-campaign/Wild_Sage_Druid.json",
       "ruleset": "2024",
       "class": "Druid",
-      "subclass": "Circle of the Land",
+      "subclass": "Circle of the Moon",
       "level": 20,
       "race": "Human",
       "subrace": "Human",
@@ -55,7 +55,7 @@
         "Magic Initiate"
       ],
       "background": "Acolyte",
-      "note": "SP-073 Longstrider VERIFIED PASS 2026-08-30: Longstrider now PREPARED (permanent, spells[] ground truth) — reusable touch lv1 Action caster (no concentration). Self-cast: sheet spell row → Cast Spell → radio self → Cast Longstrider → sheet Speed 30→40 ft + activeBuffs {name:'Longstrider',effect:'speed_boost',speedBonus:10,duration:'1 hour'} + lv1 slot 4→3 + pendingExpirations remove_active_buff + ability_use log. Cosmetic: generic 'spell' log targetName = targets[0] (AasimarTest), not the selected self target. Runtime+log cleared after run. | SUBCLASS CHANGED Moon->CIRCLE OF THE LAND lv20 2026-08-29 for CLA-208 Land's Aid FAIL (bug-cla-208-lands-aid.md): Land's Aid = Circle of the Land lv3 in 2024 classes.json (manifest lv6 stale), save_attack+healExpression -> SaveAttackHealModal. DC 17 CON exact (8+WIS3+PB6), WS 4->3 spent, damage lands (Rug 27->20), BUT rolls 2d6/2d6 not lv20 4d6/4d6 (resolveScaling array-only vs object-map data), and NPC heal no-op ('actual: 0' - reads per-name currentHitPoints vs NPC HP in combatSummary currentHp). Moon features gone after swap. Keep Land lv20 for retry. | Prior: leveled 9->20 for CLA-176 Nature Magician (ResourcePoolModal, WS 4/4). CLA-190 Improved Elemental Fury VERIFIED (base-Druid lv15 subclass-irrelevant, 'Elemental Fury:' row +2d8 once/turn; range+300 no UI readout). Runtime cleared after each run."
+      "note": "SP-073 Longstrider VERIFIED PASS 2026-08-30: Longstrider now PREPARED (permanent, spells[] ground truth) — reusable touch lv1 Action caster (no concentration). Self-cast: sheet spell row → Cast Spell → radio self → Cast Longstrider → sheet Speed 30→40 ft + activeBuffs {name:'Longstrider',effect:'speed_boost',speedBonus:10,duration:'1 hour'} + lv1 slot 4→3 + pendingExpirations remove_active_buff + ability_use log. Cosmetic: generic 'spell' log targetName = targets[0] (AasimarTest), not the selected self target. Runtime+log cleared after run. | SUBCLASS CHANGED Moon->CIRCLE OF THE LAND lv20 2026-08-29 for CLA-208 Land's Aid FAIL (bug-cla-208-lands-aid.md): Land's Aid = Circle of the Land lv3 in 2024 classes.json (manifest lv6 stale), save_attack+healExpression -> SaveAttackHealModal. DC 17 CON exact (8+WIS3+PB6), WS 4->3 spent, damage lands (Rug 27->20), BUT rolls 2d6/2d6 not lv20 4d6/4d6 (resolveScaling array-only vs object-map data), and NPC heal no-op ('actual: 0' - reads per-name currentHitPoints vs NPC HP in combatSummary currentHp). Moon features gone after swap. Keep Land lv20 for retry. | Prior: leveled 9->20 for CLA-176 Nature Magician (ResourcePoolModal, WS 4/4). CLA-190 Improved Elemental Fury VERIFIED (base-Druid lv15 subclass-irrelevant, 'Elemental Fury:' row +2d8 once/turn; range+300 no UI readout). Runtime cleared after each run. | SUBCLASS SWAPPED BACK Land->Moon lv20 2026-08-30 for CLA-217 FAIL (bug-cla-217-lunar-form.md): first-turn +2d10 radiant exact (HIT 21 vs AC12, 18 dmg, once-per-turn gate + miss exclusion OK) but never re-arms round 2+ — attackRollBonuses.js:196/219 no-arg getCurrentCombatRound() stuck at 1; fix=pass ctx.campaignName. Moonlight Step pool zero-init (CLA-163 family). Keep Moon lv20 for post-fix retest."
     },
     {
       "name": "Bard_Spellcaster",
@@ -248,7 +248,7 @@
       "subrace": "",
       "feats": [],
       "background": "Soldier",
-      "note": "CLA-177 left incomplete (trait has no consumer). Now lv3 2024 Champion Fighter (CLA-187 VERIFIED 2026-08-29): Improved Critical = Champion-major-only, crit on 19-20 confirmed via Shortsword nat-19 popup 'CRITICAL HIT! DAMAGE DOUBLED' + log isCrit=true. Shortsword equipped, abilities all 8 (+1 mental), to-hit +1. Keep for crit-range and halfling Lucky tests."
+      "note": "CLA-177 left incomplete (trait has no consumer). Now lv3 2024 Champion Fighter (CLA-187 VERIFIED 2026-08-29): Improved Critical = Champion-major-only, crit on 19-20 confirmed via Shortsword nat-19 popup 'CRITICAL HIT! DAMAGE DOUBLED' + log isCrit=true. Shortsword equipped, abilities all 8 (+1 mental), to-hit +1. Keep for crit-range and halfling Lucky tests. | CLA-216 FAIL 2026-08-30: 2024 Halfling Lucky auto-reroll dead (d20RollComputation.js:21 uninitialized effectiveD20Roll compare); keep lv3 fighter for post-fix retest."
     },
     {
       "name": "IllusionWizard",
@@ -285,9 +285,12 @@
       "level": 1,
       "race": "Elf",
       "subrace": "Wood Elf",
-      "feats": [],
+      "feats": [
+        "Magic Initiate",
+        "Lucky"
+      ],
       "background": "Acolyte",
-      "note": "CLA-206 Keen Senses VERIFIED PASS 2026-08-29: racial proficiency_choices grant works — JSON skillProficiencies [Insight,Religion,Perception]; sheet Perception +5 = WIS 16/+3 + PB +2, Survival +3 unproficient (exact 1-of-3). Wood Elf ancestral +2 NOT applied to ability totals (data gap, out of scope). All abilities base 8 except WIS 15(+Acolyte=16). Keep for Elf/racial-skill tests."
+      "note": "CLA-206 Keen Senses VERIFIED PASS 2026-08-29: racial proficiency_choices grant works — JSON skillProficiencies [Insight,Religion,Perception]; sheet Perception +5 = WIS 16/+3 + PB +2, Survival +3 unproficient (exact 1-of-3). Wood Elf ancestral +2 NOT applied to ability totals (data gap, out of scope). All abilities base 8 except WIS 15(+Acolyte=16). | FT-049 Lucky feat VERIFIED PASS 2026-08-30: Lucky added via Edit-wizard Feats step (.list-item-checkbox-trigger tick + ✓Save). 2024 feats.json models Lucky as Advantage/Disadvantage reaction benefits (NOT 5e reroll). Sheet shows 'Luck Points 0/2' (PB max) + Reactions rows 'Advantage:'/'Disadvantage:'. LP runtime inits to 0 after grant — bump to max via Luck Points inline tracker (click → fill 2 → Enter) before spending. Reaction click: LP 2->1 + popup + log; next WIS save cell 'd20 10, 7 → 10' forced advantage, control roll single d20 (flag clears); Unarmed Strike 'd20 16, 4 → 16 +1 ✓ HIT 17 vs AC 14' (Wight 82→80); LP 0 → block popup 'Requires at least 1 Luck Point'; Long Rest → 2/2. Disadvantage: LP 2->1, Wight Necrotic Sword vs KeenElf 'd20 20, 7 → 7' forced low; control attack normal single d20. Runtime+log cleared after run. Keep lv1 Lucky fighter for LP tests."
     }
   ],
   "monsters": [

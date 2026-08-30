@@ -94,6 +94,18 @@ export function buildHousekeepingStep() {
           setRuntimeValue(ctx.playerStats.name, '_Hunters_Prey_HordeBreaker_UsedRound', getCurrentCombatRound(), ctx.campaignName);
         }
       }
+
+      if (!isBonus && ctx.attack?.weaponType === 'melee' && !ctx.attack?.saveDc && ctx.attack?.name !== 'Horde Breaker' && ctx.targetName) {
+        const hbChoice = getRuntimeValue(ctx.playerStats.name, "_Hunter's_Prey_choice", ctx.campaignName);
+        const lastAttack = getRuntimeValue('campaign', 'lastAttack', ctx.campaignName);
+        if (hbChoice === 'Horde Breaker' && lastAttack?.hit && lastAttack.attackerName === ctx.playerStats.name && lastAttack.weaponType === 'melee') {
+          setRuntimeValue(ctx.playerStats.name, '_Hunters_Prey_HordeBreaker_Ready', {
+            round: getCurrentCombatRound(),
+            targetName: lastAttack.targetName,
+            attackName: lastAttack.attackName,
+          }, ctx.campaignName);
+        }
+      }
       return { data: { isBonusActionAttack: isBonus } };
     },
   };

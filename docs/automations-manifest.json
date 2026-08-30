@@ -119,7 +119,7 @@
       "class": "Background",
       "triggerConditions": "",
       "expectedBehavior": "You devoted yourself to service in a temple, either nestled in a town or secluded in a sacred grove. There you performed rites in honor of a god or pantheos. You served under a priest and studied religion. Thanks to your priest's instruction and your own devotion, you also learned how to channel a modicu1n of divine poweer, in service to your place of worship and the people who prayed there.",
-      "notes": "data-granting only: ability_scores, feat, skill_proficiencies, tool_proficiencies \u2014 no combat automation"
+      "notes": "data-granting only: ability_scores, feat, skill_proficiencies, tool_proficiencies — no combat automation"
     },
     {
       "id": "CLA-003",
@@ -260,7 +260,7 @@
       "handler": "src/services/combat/automation/handlers/classFeatureHandler.js",
       "router": "src/services/combat/automation/routers/classFeatureRouter.js",
       "infoBuilder": "src/services/combat/automation/infoBuilders/classFeatureInfoBuilder.js",
-      "verified": "broken \u2014 see .opencode/plans/bug-cla-008-aquatic-affinity-missing.md",
+      "verified": "broken — see .opencode/plans/bug-cla-008-aquatic-affinity-missing.md",
       "class": "Druid",
       "triggerConditions": "verified",
       "expectedBehavior": "The size of the Emanation created by your Wrath of the Sea increases to 10 feet. In addition, you gain a Swim Speed equal to your Speed."
@@ -360,7 +360,7 @@
       "class": "Background",
       "triggerConditions": "",
       "expectedBehavior": "You began mopping floors and scrubbi11g counters in an artisan's worl<shop for a few coppers per day as soon as you were strong enough to carry a bucket. When you were old enough to apprentice, you learned to create basic crafts of your own, as well as how to sweet-talk the occasional demanding customer. Your trade has also given you a keen eye for detail.",
-      "notes": "data-granting only: ability_scores, feat, skill_proficiencies, tool_proficiencies \u2014 no combat automation"
+      "notes": "data-granting only: ability_scores, feat, skill_proficiencies, tool_proficiencies — no combat automation"
     },
     {
       "id": "CLA-015",
@@ -803,7 +803,7 @@
       "verified": "verified",
       "class": "Monk",
       "triggerConditions": "",
-      "expectedBehavior": "Ability score increase is applied at the rules engine level (+4 Dex, +4 Wis for level 20+ Monk, max 25). The feature is intentionally hidden from character sheet UI via featuresToIgnore \u2014 it does not display as a visible feature but the ASI is correctly applied to ability scores."
+      "expectedBehavior": "Ability score increase is applied at the rules engine level (+4 Dex, +4 Wis for level 20+ Monk, max 25). The feature is intentionally hidden from character sheet UI via featuresToIgnore — it does not display as a visible feature but the ASI is correctly applied to ability scores."
     },
     {
       "id": "FT-007",
@@ -991,7 +991,7 @@
     },
     {
       "id": "CLA-047",
-      "name": "Celestial Resistance \u2013 Aasimar",
+      "name": "Celestial Resistance – Aasimar",
       "type": "classFeature",
       "handler": "src/services/combat/automation/handlers/classFeatureHandler.js",
       "router": "src/services/combat/automation/routers/classFeatureRouter.js",
@@ -1023,7 +1023,7 @@
       "class": "Background",
       "triggerConditions": "",
       "expectedBehavior": "Once you were old enough to order an ale, you soon had a favorite stool in every tavern within ten miles of where you were born. As you traveled the circuit from pt1blic house to watering hole, you learned to prey on unfortunates who were in the market for a comforting lie or two-perhaps a sham potion or forged ancestry records.",
-      "notes": "data-granting only: ability_scores, feat, skill_proficiencies, tool_proficiencies \u2014 no combat automation"
+      "notes": "data-granting only: ability_scores, feat, skill_proficiencies, tool_proficiencies — no combat automation"
     },
     {
       "id": "SP-021",
@@ -1070,7 +1070,7 @@
       "verified": "verified",
       "class": "Druid",
       "triggerConditions": "Passive: Always active",
-      "expectedBehavior": "Circle Forms effects (CR limit, AC override, temp HP) are applied via the hardcoded Wild Shape activation flow in wildShapeCreatureBuilder.js:activateWildShape() when a Moon Druid transforms. NOT via the circle_forms_active automation type (dead code \u2014 passive_buff handler does not process requiresActive or bonusExpression). CR limit: Druid level / 3 (round down). AC: 13 + WIS mod if higher than Beast AC. Temp HP: 3 \u00d7 Druid level."
+      "expectedBehavior": "Circle Forms effects (CR limit, AC override, temp HP) are applied via the hardcoded Wild Shape activation flow in wildShapeCreatureBuilder.js:activateWildShape() when a Moon Druid transforms. NOT via the circle_forms_active automation type (dead code — passive_buff handler does not process requiresActive or bonusExpression). CR limit: Druid level / 3 (round down). AC: 13 + WIS mod if higher than Beast AC. Temp HP: 3 × Druid level."
     },
     {
       "id": "SP-023",
@@ -1182,7 +1182,7 @@
     },
     {
       "id": "CLA-057",
-      "name": "Cloud's Jaunt \u2013 Goliath",
+      "name": "Cloud's Jaunt – Goliath",
       "type": "classFeature",
       "handler": "src/services/combat/automation/handlers/classFeatureHandler.js",
       "router": "src/services/combat/automation/routers/classFeatureRouter.js",
@@ -1214,13 +1214,13 @@
       "verified": "verified",
       "class": "Bard",
       "triggerConditions": "Passive: Always active",
-      "expectedBehavior": "A creature that has a Bardic Inspiration die from you can use it for two effects:\n\nDefense (reaction, when hit by an attack): hitResolution.js:88 sets context.bardicInspirationDefense and related flags (bardicInspirationDefenseDieSize, bardicInspirationDefenseEffectiveAc, etc.) when an attack hits and the target has defense enabled. The UI reads these flags and presents the Bardic Inspiration reaction as an option for the player to actively select. No auto-prompt is sent \u2014 sendBardicInspirationDefensePrompt exists in bardicInspirationPromptUtils.js but is intentionally never called from production code.\n\nOffense (bonus action, after hitting): Triggers via buildBardicInspirationOffenseStep in the attackRollRiders module. Sends sendBardicInspirationOffensePrompt which the UI handles.",
+      "expectedBehavior": "A creature that has a Bardic Inspiration die from you can use it for two effects:\n\nDefense (reaction, when hit by an attack): hitResolution.js:88 sets context.bardicInspirationDefense and related flags (bardicInspirationDefenseDieSize, bardicInspirationDefenseEffectiveAc, etc.) when an attack hits and the target has defense enabled. The UI reads these flags and presents the Bardic Inspiration reaction as an option for the player to actively select. No auto-prompt is sent — sendBardicInspirationDefensePrompt exists in bardicInspirationPromptUtils.js but is intentionally never called from production code.\n\nOffense (bonus action, after hitting): Triggers via buildBardicInspirationOffenseStep in the attackRollRiders module. Sends sendBardicInspirationOffensePrompt which the UI handles.",
       "implementation": {
         "defenseCheck": "src/hooks/combat/hitResolution.js:88",
         "defenseContextPropagation": "src/hooks/combat/useLoggedDiceRollAttack.js:121-126,267-269",
         "offenseStep": "src/services/combat/automation/steps/attackRollRiders.js:109",
         "offensePrompt": "src/services/combat/prompts/bardicInspirationPromptUtils.js:21",
-        "defensePromptExists": "src/services/combat/prompts/bardicInspirationPromptUtils.js:6 (intentionally never called \u2014 player actively selects reaction)"
+        "defensePromptExists": "src/services/combat/prompts/bardicInspirationPromptUtils.js:6 (intentionally never called — player actively selects reaction)"
       }
     },
     {
@@ -1438,7 +1438,7 @@
       "class": "Background",
       "triggerConditions": "",
       "expectedBehavior": "You eked out a living in dark alleyways, cutting purses or burgling shops. Perhaps you were part of a small gang of like-minded wrongdoers who looked out for each other. Or maybe you were a lone wolf, fending for yourself against the local thieves' guild and more fearsom lawbreakers.",
-      "notes": "data-granting only: ability_scores, feat, skill_proficiencies, tool_proficiencies \u2014 no combat automation"
+      "notes": "data-granting only: ability_scores, feat, skill_proficiencies, tool_proficiencies — no combat automation"
     },
     {
       "id": "FT-027",
@@ -1513,7 +1513,7 @@
     },
     {
       "id": "CLA-072",
-      "name": "Damage Resistance \u2013 Dragonborn",
+      "name": "Damage Resistance – Dragonborn",
       "type": "classFeature",
       "handler": "src/services/combat/automation/handlers/classFeatureHandler.js",
       "router": "src/services/combat/automation/routers/classFeatureRouter.js",
@@ -1840,7 +1840,7 @@
       "handler": "src/services/combat/automation/handlers/spellHandler.js",
       "router": "src/services/combat/automation/routers/spellRouter.js",
       "infoBuilder": "src/services/combat/automation/infoBuilders/spellInfoBuilder.js",
-      "verified": "incomplete \u2014 subagent memory guard rejection",
+      "verified": "incomplete — subagent memory guard rejection",
       "class": "Spell",
       "triggerConditions": "",
       "expectedBehavior": "One Humanoid you can see within range must succeed on a Wisdom saving throw or have the Charmed condition for the duration. The target has Advantage on the save if you or your allies are fighting it. Whenever the target takes damage, it repeats the save, ending the spell on itself on a success. You have a telepathic link with the Charmed target while the two of you are on the same plane of existence. On your turn, you can use this link to issue commands to the target (no action required), such as \"Attack that creature,\" \"Move over there,\" or \"Fetch that object.\" The target does its best to obey on its turn. If it completes an order and doesn't receive further direction from you, it acts and moves as it likes, focusing on protecting itself. You can command the target to take a Reaction but must take your own Reaction to do so."
@@ -2043,7 +2043,7 @@
       "handler": "src/services/combat/automation/handlers/classFeatureHandler.js",
       "router": "src/services/combat/automation/routers/classFeatureRouter.js",
       "infoBuilder": "src/services/combat/automation/infoBuilders/classFeatureInfoBuilder.js",
-      "verified": "broken \u2014 see .opencode/plans/bug-cla-109-eldritch-strike-disadvantage-not-applied.md",
+      "verified": "broken — see .opencode/plans/bug-cla-109-eldritch-strike-disadvantage-not-applied.md",
       "class": "Fighter",
       "triggerConditions": "Trigger: weapon_attack_hit; Once per turn: yes",
       "expectedBehavior": "When you hit with a weapon attack, target has Disadvantage on next saving throw against your spell."
@@ -2121,7 +2121,7 @@
     },
     {
       "id": "CLA-118",
-      "name": "Elfish Lineage \u2013 Elf",
+      "name": "Elfish Lineage – Elf",
       "type": "classFeature",
       "handler": "src/services/combat/automation/handlers/classFeatureHandler.js",
       "router": "src/services/combat/automation/routers/classFeatureRouter.js",
@@ -2212,8 +2212,8 @@
       "verified": "verified",
       "class": "Background",
       "triggerConditions": "",
-      "expectedBehavior": "You spent much of your youth following roving fairs and carnivals, performing odd jobs for musicians and acrobats in exchange for\u00b7 lessons. You may have learned how to walk a tightrope, how to play a lute in a distinct style, or how to recite poetry with impeccable diction. To this day, you thrive on applause and long for the stage.",
-      "notes": "data-granting only: ability_scores, feat, skill_proficiencies, tool_proficiencies \u2014 no combat automation"
+      "expectedBehavior": "You spent much of your youth following roving fairs and carnivals, performing odd jobs for musicians and acrobats in exchange for· lessons. You may have learned how to walk a tightrope, how to play a lute in a distinct style, or how to recite poetry with impeccable diction. To this day, you thrive on applause and long for the stage.",
+      "notes": "data-granting only: ability_scores, feat, skill_proficiencies, tool_proficiencies — no combat automation"
     },
     {
       "id": "CLA-123",
@@ -2294,7 +2294,7 @@
       "handler": "src/services/combat/automation/handlers/classFeatureHandler.js",
       "router": "src/services/combat/automation/routers/classFeatureRouter.js",
       "infoBuilder": "src/services/combat/automation/infoBuilders/classFeatureInfoBuilder.js",
-      "verified": "incomplete \u2014 subagent memory guard rejection",
+      "verified": "incomplete — subagent memory guard rejection",
       "class": "Wizard",
       "triggerConditions": "Action: passive",
       "expectedBehavior": "When you cast a Divination spell using a level 2+ spell slot, you regain one expended spell slot. The slot must be lower than the slot you expended and can't be higher than level 5."
@@ -2370,7 +2370,7 @@
       "class": "Background",
       "triggerConditions": "",
       "expectedBehavior": "You grew up close to the land. Years tending animals and ct1ltivating the earth rewarded you with patience and good health. You have a lceen appreciation for nature's bounty alongside a healthy respect for nature's wrath.",
-      "notes": "data-granting only: ability_scores, feat, skill_proficiencies, tool_proficiencies \u2014 no combat automation"
+      "notes": "data-granting only: ability_scores, feat, skill_proficiencies, tool_proficiencies — no combat automation"
     },
     {
       "id": "CLA-132",
@@ -2403,7 +2403,7 @@
       "handler": "src/services/combat/automation/handlers/spellHandler.js",
       "router": "src/services/combat/automation/routers/spellRouter.js",
       "infoBuilder": "src/services/combat/automation/infoBuilders/spellInfoBuilder.js",
-      "verified": "incomplete \u2014 subagent memory guard rejection",
+      "verified": "incomplete — subagent memory guard rejection",
       "class": "Spell",
       "triggerConditions": "Range: Self (30-foot Cone); Duration: Concentration, up to 1 minute",
       "expectedBehavior": "Each creature in a 30-foot Cone must succeed on a Wisdom saving throw or drop whatever it is holding and have the Frightened condition for the duration. A Frightened creature takes the Dash action and moves away from you by the safest route on each of its turns unless there is nowhere to move. If the creature ends its turn in a space where it doesn't have line of sight to you, the creature makes a Wisdom saving throw. On a successful save, the spell ends on that creature."
@@ -2419,7 +2419,7 @@
       "class": "Sorcerer",
       "triggerConditions": "Action: passive",
       "expectedBehavior": "Manipulate chaos to give yourself Advantage on one D20 Test before rolling. Must cast Sorcerer spell with spell slot or finish Long Rest before using again. If you cast Sorcerer spell with spell slot before Long Rest, automatically roll on Wild Magic Surge table.",
-      "notes": "Test character DraconicSorcerer is Draconic Sorcery \u2014 must change class.subclass.name and class.major.name to 'Wild Magic Sorcery' and replace class.major.features with Wild Magic Sorcery features (Wild Magic Surge, Feats of Chaos, Bend Luck) before testing, then revert after."
+      "notes": "Test character DraconicSorcerer is Draconic Sorcery — must change class.subclass.name and class.major.name to 'Wild Magic Sorcery' and replace class.major.features with Wild Magic Sorcery features (Wild Magic Surge, Feats of Chaos, Bend Luck) before testing, then revert after."
     },
     {
       "id": "SP-046",
@@ -2566,7 +2566,7 @@
     },
     {
       "id": "CLA-141",
-      "name": "Fire's Burn \u2013 Goliath",
+      "name": "Fire's Burn – Goliath",
       "type": "classFeature",
       "handler": "src/services/combat/automation/handlers/classFeatureHandler.js",
       "router": "src/services/combat/automation/routers/classFeatureRouter.js",
@@ -2686,7 +2686,7 @@
     },
     {
       "id": "CLA-148",
-      "name": "Frost's Chill \u2013 Goliath",
+      "name": "Frost's Chill – Goliath",
       "type": "classFeature",
       "handler": "src/services/combat/automation/handlers/classFeatureHandler.js",
       "router": "src/services/combat/automation/routers/classFeatureRouter.js",
@@ -2746,7 +2746,7 @@
     },
     {
       "id": "CLA-151",
-      "name": "Gnomish Cunning \u2013 Gnome",
+      "name": "Gnomish Cunning – Gnome",
       "type": "classFeature",
       "handler": "src/services/combat/automation/handlers/classFeatureHandler.js",
       "router": "src/services/combat/automation/routers/classFeatureRouter.js",
@@ -2757,7 +2757,7 @@
     },
     {
       "id": "CLA-152",
-      "name": "Gnomish Lineage \u2013 Gnome",
+      "name": "Gnomish Lineage – Gnome",
       "type": "classFeature",
       "handler": "src/services/automation/handlers/class-other/gnomishLineageHandler.js",
       "verified": "verified",
@@ -2771,7 +2771,7 @@
       "handler": "src/services/combat/automation/handlers/maneuverHandler.js",
       "router": "src/services/combat/automation/routers/maneuverRouter.js",
       "infoBuilder": "src/services/combat/automation/infoBuilders/maneuverInfoBuilder.js",
-      "verified": "broken \u2014 see .opencode/plans/bug-mn-009-goading-attack.md",
+      "verified": "broken — see .opencode/plans/bug-mn-009-goading-attack.md",
       "class": "Fighter",
       "triggerConditions": "Action type: attack_rider; Trigger: weapon_attack_hit; Uses: superiority_die",
       "expectedBehavior": "When you hit a creature with an attack roll, you can expend one Superiority Die to attempt to goad the target into attacking you. Add the Superiority Die to the attack's damage roll. The target must succeed on a Wisdom saving throw or have Disadvantage on attack rolls against targets other than you until the end of your next turn."
@@ -2797,7 +2797,7 @@
       "infoBuilder": "src/services/combat/automation/infoBuilders/featInfoBuilder.js",
       "verified": "verified",
       "triggerConditions": "Action: action",
-      "expectedBehavior": "When you hit a creature with an Unarmed Strike as part of the Attack action on your turn, you can use both the Damage and the Grapple option. You can use this benefit only once per turn. (No dedicated automation: the app does not enforce single-action-per-turn, so the player achieves this by making the Unarmed Strike attack then using the Grapple action \u2014 a contested STR check that applies the Grappled condition, same as the standalone Grapple action.)"
+      "expectedBehavior": "When you hit a creature with an Unarmed Strike as part of the Attack action on your turn, you can use both the Damage and the Grapple option. You can use this benefit only once per turn. (No dedicated automation: the app does not enforce single-action-per-turn, so the player achieves this by making the Unarmed Strike attack then using the Grapple action — a contested STR check that applies the Grappled condition, same as the standalone Grapple action.)"
     },
     {
       "id": "WM-002",
@@ -2905,7 +2905,7 @@
       "class": "Background",
       "triggerConditions": "",
       "expectedBehavior": "Your feet ache when you remember the countless hours you spent at your post in the tower. You were trained to l<eep one eye looking outside the wall, watching for marauders sweeping from the nearby forest, and your other eye looking inside the wall, searching for cutpurses and troublemakers.",
-      "notes": "data-granting only: ability_scores, feat, skill_proficiencies, tool_proficiencies \u2014 no combat automation"
+      "notes": "data-granting only: ability_scores, feat, skill_proficiencies, tool_proficiencies — no combat automation"
     },
     {
       "id": "CLA-155",
@@ -2930,7 +2930,7 @@
       "class": "Background",
       "triggerConditions": "",
       "expectedBehavior": "You came of age outdoors, far from settled lands. Your home was anywhere you chose to spread your bedroll. There are wonders in the wilderness-strange monsters, pristine forests and streams, overgrown ruins of great halls once trod by giants and you learned to fend for yourself as you explored them. From time to time, you guided friendly nature priests who instructed you in the fundamentals of channeling the magic of the wild.",
-      "notes": "data-granting only: ability_scores, feat, skill_proficiencies, tool_proficiencies \u2014 no combat automation"
+      "notes": "data-granting only: ability_scores, feat, skill_proficiencies, tool_proficiencies — no combat automation"
     },
     {
       "id": "CLA-156",
@@ -2999,7 +2999,7 @@
       "handler": "src/services/combat/automation/handlers/spellHandler.js",
       "router": "src/services/combat/automation/routers/spellRouter.js",
       "infoBuilder": "src/services/combat/automation/infoBuilders/spellInfoBuilder.js",
-      "verified": "broken \u2014 see .opencode/plans/bug-sp-060-heal.md",
+      "verified": "broken — see .opencode/plans/bug-sp-060-heal.md",
       "class": "Spell",
       "triggerConditions": "",
       "expectedBehavior": "Choose a creature that you can see within range. Positive energy washes through the target, restoring 70 Hit Points. This spell also ends the Blinded, Deafened, and Poisoned conditions on the target."
@@ -3209,7 +3209,7 @@
     },
     {
       "id": "CLA-169",
-      "name": "Hill's Tumble \u2013 Goliath",
+      "name": "Hill's Tumble – Goliath",
       "type": "classFeature",
       "handler": "src/services/combat/automation/handlers/classFeatureHandler.js",
       "router": "src/services/combat/automation/routers/classFeatureRouter.js",
@@ -3238,7 +3238,7 @@
       "handler": "src/services/combat/automation/handlers/spellHandler.js",
       "router": "src/services/combat/automation/routers/spellRouter.js",
       "infoBuilder": "src/services/combat/automation/infoBuilders/spellInfoBuilder.js",
-      "verified": "incomplete \u2014 needs manual setup \u2014 see .opencode/plans/incomplete-sp-066-hold-person.md",
+      "verified": "incomplete — needs manual setup — see .opencode/plans/incomplete-sp-066-hold-person.md",
       "class": "Spell",
       "triggerConditions": "Duration: Concentration, up to 1 minute",
       "expectedBehavior": "Choose a Humanoid that you can see within range. The target must succeed on a Wisdom saving throw or have the Paralyzed condition for the duration. At the end of each of its turns, the target repeats the save, ending the spell on itself on a success."
@@ -3250,7 +3250,7 @@
       "handler": "src/services/combat/automation/handlers/spellHandler.js",
       "router": "src/services/combat/automation/routers/spellRouter.js",
       "infoBuilder": "src/services/combat/automation/infoBuilders/spellInfoBuilder.js",
-      "verified": "broken \u2014 see .opencode/plans/bug-sp-067-holy-aura.md",
+      "verified": "broken — see .opencode/plans/bug-sp-067-holy-aura.md",
       "class": "Spell",
       "triggerConditions": "Duration: Concentration, up to 1 minute",
       "expectedBehavior": "For the duration, you emit an aura in a 30-foot Emanation. While in the aura, creatures of your choice have Advantage on all saving throws, and other creatures have Disadvantage on attack rolls against them. In addition, when a Fiend or an Undead hits an affected creature with a melee attack roll, the attacker must succeed on a Constitution saving throw or have the Blinded condition until the end of its next turn."
@@ -3266,18 +3266,6 @@
       "class": "Paladin",
       "triggerConditions": "Automation type: undefined",
       "expectedBehavior": "As a Bonus Action, you can imbue your Aura of Protection with holy power, granting the benefits below for 10 minutes or until you end them (no action required). Once you use this feature, you can't use it again until you finish a Long Rest. You can also restore your use of it by expending a level 5 spell slot (no action required). Holy Ward: You have Advantage on any saving throw you are forced to make by a Fiend or an Undead. Radiant Damage: Whenever an enemy starts its turn in the aura, that creature takes Radiant damage equal to your Charisma modifier plus your Proficiency Bonus"
-    },
-    {
-      "id": "CLA-173",
-      "name": "Hunter's Lore",
-      "type": "classFeature",
-      "handler": "src/services/combat/automation/handlers/classFeatureHandler.js",
-      "router": "src/services/combat/automation/routers/classFeatureRouter.js",
-      "infoBuilder": "src/services/combat/automation/infoBuilders/classFeatureInfoBuilder.js",
-      "verified": "broken \u2014 see .opencode/plans/bug-cla-173-hunters-lore.md",
-      "class": "Ranger",
-      "triggerConditions": "Passive: Always active",
-      "expectedBehavior": "While a creature is marked by Hunter's Mark, know whether it has Immunities, Resistances, or Vulnerabilities."
     },
     {
       "id": "SP-068",
@@ -3298,7 +3286,7 @@
       "handler": "src/services/combat/automation/handlers/classFeatureHandler.js",
       "router": "src/services/combat/automation/routers/classFeatureRouter.js",
       "infoBuilder": "src/services/combat/automation/infoBuilders/classFeatureInfoBuilder.js",
-      "verified": "broken \u2014 see .opencode/plans/bug-cla-174-hunters-prey.md",
+      "verified": "verified",
       "class": "Ranger",
       "triggerConditions": "Action: passive",
       "expectedBehavior": "Choose one, can replace on Short/Long Rest: Colossus Slayer: Extra 1d8 damage to creature missing HP, once per turn Horde Breaker: Once per turn, make another attack with same weapon against different creature within 5 feet of original target and within weapon's range)"
@@ -3310,7 +3298,7 @@
       "handler": "src/services/combat/automation/handlers/classFeatureHandler.js",
       "router": "src/services/combat/automation/routers/classFeatureRouter.js",
       "infoBuilder": "src/services/combat/automation/infoBuilders/classFeatureInfoBuilder.js",
-      "verified": "broken \u2014 see .opencode/plans/bug-cla-175-hurl-through-hell.md",
+      "verified": "broken — see .opencode/plans/bug-cla-175-hurl-through-hell.md",
       "class": "Warlock",
       "triggerConditions": "Action: passive",
       "expectedBehavior": "Once per turn when you hit with an attack roll, target makes Charisma save or disappears and takes 8d10 Psychic damage (if not a Fiend), has Incapacitated condition until end of next turn, then returns to space it previously occupied. Once per Long Rest (or expend Pact Magic spell slot to restore)."
@@ -3346,7 +3334,7 @@
       "handler": "src/services/combat/automation/handlers/classFeatureHandler.js",
       "router": "src/services/combat/automation/routers/classFeatureRouter.js",
       "infoBuilder": "src/services/combat/automation/infoBuilders/classFeatureInfoBuilder.js",
-      "verified": "incomplete \u2014 needs manual setup \u2014 see .opencode/plans/incomplete-cla-177-naturally-stealthy.md",
+      "verified": "incomplete — needs manual setup — see .opencode/plans/incomplete-cla-177-naturally-stealthy.md",
       "race": "Halfling",
       "triggerConditions": "Passive: Always active",
       "expectedBehavior": "You can take the Hide action even when you are obscured only by a creature that is at least one size larger than you."
@@ -3370,7 +3358,7 @@
       "handler": "src/services/combat/automation/handlers/classFeatureHandler.js",
       "router": "src/services/combat/automation/routers/classFeatureRouter.js",
       "infoBuilder": "src/services/combat/automation/infoBuilders/classFeatureInfoBuilder.js",
-      "verified": "broken \u2014 see .opencode/plans/bug-cla-179-illusory-reality.md",
+      "verified": "broken — see .opencode/plans/bug-cla-179-illusory-reality.md",
       "class": "Wizard",
       "triggerConditions": "Action: 1 bonus_action",
       "expectedBehavior": "When you cast an Illusion spell with a spell slot, choose one inanimate, nonmagical object that is part of the illusion and make it real. Bonus Action while spell is ongoing. Object remains real for 1 minute, can't deal damage or give any conditions."
@@ -3382,7 +3370,7 @@
       "handler": "src/services/combat/automation/handlers/classFeatureHandler.js",
       "router": "src/services/combat/automation/routers/classFeatureRouter.js",
       "infoBuilder": "src/services/combat/automation/infoBuilders/classFeatureInfoBuilder.js",
-      "verified": "broken \u2014 see .opencode/plans/bug-cla-180-illusory-self.md",
+      "verified": "broken — see .opencode/plans/bug-cla-180-illusory-self.md",
       "class": "Wizard",
       "triggerConditions": "Trigger: attack_hit; Action: 1 reaction",
       "expectedBehavior": "When a creature hits you with an attack roll, take Reaction to interpose an illusory duplicate between attacker and yourself. Attack automatically misses, then illusion dissipates. Once per Short or Long Rest (or expend level 2+ spell slot to restore)."
@@ -3394,7 +3382,7 @@
       "handler": "src/services/combat/automation/handlers/classFeatureHandler.js",
       "router": "src/services/combat/automation/routers/classFeatureRouter.js",
       "infoBuilder": "src/services/combat/automation/infoBuilders/classFeatureInfoBuilder.js",
-      "verified": "broken \u2014 see .opencode/plans/bug-cla-181-implements-of-mercy.md",
+      "verified": "broken — see .opencode/plans/bug-cla-181-implements-of-mercy.md",
       "class": "Monk",
       "triggerConditions": "",
       "expectedBehavior": "Gain proficiency in Insight and Medicine skills and Herbalism Kit."
@@ -3418,7 +3406,7 @@
       "handler": "src/services/combat/automation/handlers/classFeatureHandler.js",
       "router": "src/services/combat/automation/routers/classFeatureRouter.js",
       "infoBuilder": "src/services/combat/automation/infoBuilders/classFeatureInfoBuilder.js",
-      "verified": "broken \u2014 see .opencode/plans/bug-cla-182-improved-brutal-strike.md",
+      "verified": "broken — see .opencode/plans/bug-cla-182-improved-brutal-strike.md",
       "class": "Barbarian",
       "triggerConditions": "Trigger: strength_attack_hit_after_reckless; Once per turn: yes",
       "expectedBehavior": "You have honed new ways to attack furiously. Also, since these 2 have combat effect we can automate, The following effects are now among your Brutal Strike options. Staggering Blow: The target has Disadvantage on the next saving throw it makes, and it can't make Opportunity Attacks until the start of your next turn. Sundering Blow: Before the start of your next turn, the next attack roll made by another creature against the target gains a +5 bonus to the roll. An attack roll can gain only one Sundering Blow bonus."
@@ -3430,7 +3418,7 @@
       "handler": "src/services/combat/automation/handlers/classFeatureHandler.js",
       "router": "src/services/combat/automation/routers/classFeatureRouter.js",
       "infoBuilder": "src/services/combat/automation/infoBuilders/classFeatureInfoBuilder.js",
-      "verified": "broken \u2014 see .opencode/plans/bug-cla-184-improved-circle-forms.md",
+      "verified": "broken — see .opencode/plans/bug-cla-184-improved-circle-forms.md",
       "class": "Druid",
       "triggerConditions": "Automation type: undefined",
       "expectedBehavior": "While in a Wild Shape form, you gain the following benefits. Lunar Radiance: Each of your attacks in a Wild Shape form can deal its normal damage type or Radiant damage. You make this choice each time you hit with those attacks. Increased Toughness: You can add your Wisdom modifier to your Constitution saving throws."
@@ -3466,7 +3454,7 @@
       "handler": "src/services/combat/automation/handlers/classFeatureHandler.js",
       "router": "src/services/combat/automation/routers/classFeatureRouter.js",
       "infoBuilder": "src/services/combat/automation/infoBuilders/classFeatureInfoBuilder.js",
-      "verified": "broken \u2014 see .opencode/plans/bug-cla-188-improved-cunning-strike.md",
+      "verified": "broken — see .opencode/plans/bug-cla-188-improved-cunning-strike.md",
       "class": "Rogue",
       "triggerConditions": "Trigger: on hit; Once per turn: yes",
       "expectedBehavior": "You can use up to two Cunning Strike effects when you deal Sneak Attack damage, paying the die cost for each effect."
@@ -3478,7 +3466,7 @@
       "handler": "src/services/combat/automation/handlers/classFeatureHandler.js",
       "router": "src/services/combat/automation/routers/classFeatureRouter.js",
       "infoBuilder": "src/services/combat/automation/infoBuilders/classFeatureInfoBuilder.js",
-      "verified": "broken \u2014 see .opencode/plans/bug-cla-189-improved-duplicity.md",
+      "verified": "broken — see .opencode/plans/bug-cla-189-improved-duplicity.md",
       "class": "Cleric",
       "triggerConditions": "Passive: Always active",
       "expectedBehavior": "The illusion has grown more powerful: Enhanced Distraction - when you and your allies make attack rolls against a creature within 5 feet of the illusion, the attacks have Advantage. Healing Illusion - when the illusion ends, you or a creature of your choice within 5 feet of it regains a number of Hit Points equal to your Cleric level."
@@ -3502,7 +3490,7 @@
       "handler": "src/services/combat/automation/handlers/classFeatureHandler.js",
       "router": "src/services/combat/automation/routers/classFeatureRouter.js",
       "infoBuilder": "src/services/combat/automation/infoBuilders/classFeatureInfoBuilder.js",
-      "verified": "broken \u2014 see .opencode/plans/bug-cla-191-improved-shadow-step.md",
+      "verified": "broken — see .opencode/plans/bug-cla-191-improved-shadow-step.md",
       "class": "Monk",
       "triggerConditions": "Action: passive",
       "expectedBehavior": "Your Shadow Step generates a burst of shadows. Teleporting with your Shadow Step leaves behind a cloud of shadows in the space you left. Creatures in that space have Disadvantage on Wisdom (Perception) checks and must make a Wisdom saving throw or have the Blinded condition until the start of your next turn."
@@ -3514,7 +3502,7 @@
       "handler": "src/services/combat/automation/handlers/classFeatureHandler.js",
       "router": "src/services/combat/automation/routers/classFeatureRouter.js",
       "infoBuilder": "src/services/combat/automation/infoBuilders/classFeatureInfoBuilder.js",
-      "verified": "broken \u2014 see .opencode/plans/bug-cla-192-improved-war-magic.md",
+      "verified": "broken — see .opencode/plans/bug-cla-192-improved-war-magic.md",
       "class": "Fighter",
       "triggerConditions": "Automation type: undefined",
       "expectedBehavior": "Replace two attacks with level 1 or 2 Wizard spells (casting time: action)."
@@ -3550,7 +3538,7 @@
       "handler": "src/services/combat/automation/handlers/classFeatureHandler.js",
       "router": "src/services/combat/automation/routers/classFeatureRouter.js",
       "infoBuilder": "src/services/combat/automation/infoBuilders/classFeatureInfoBuilder.js",
-      "verified": "broken \u2014 see .opencode/plans/bug-cla-195-indomitable.md",
+      "verified": "broken — see .opencode/plans/bug-cla-195-indomitable.md",
       "class": "Fighter",
       "triggerConditions": "Trigger: failed_saving_throw",
       "expectedBehavior": "If you fail a saving throw, you can reroll it with a bonus equal to your Fighter level. You must use the new roll, and you can't use this feature again until you finish a Long Rest."
@@ -3586,7 +3574,7 @@
       "handler": "src/services/combat/automation/handlers/classFeatureHandler.js",
       "router": "src/services/combat/automation/routers/classFeatureRouter.js",
       "infoBuilder": "src/services/combat/automation/infoBuilders/classFeatureInfoBuilder.js",
-      "verified": "broken \u2014 see .opencode/plans/bug-cla-198-inner-radiance.md",
+      "verified": "broken — see .opencode/plans/bug-cla-198-inner-radiance.md",
       "race": "Aasimar",
       "triggerConditions": "Action: 1 bonus action; Duration: 1_minute; Range: 10_ft",
       "expectedBehavior": "Searing light temporarily radiates from your eyes and mouth. For the duration, you shed Bright Light in a 10-foot radius and Dim Light for an additional 10 feet, and at the end of each of your turns, each creature within 10 feet of you takes Radiant damage equal to your Proficiency Bonus."
@@ -3609,7 +3597,7 @@
       "handler": "src/services/combat/automation/handlers/classFeatureHandler.js",
       "router": "src/services/combat/automation/routers/classFeatureRouter.js",
       "infoBuilder": "src/services/combat/automation/infoBuilders/classFeatureInfoBuilder.js",
-      "verified": "broken \u2014 see .opencode/plans/bug-cla-199-inspiring-movement.md",
+      "verified": "broken — see .opencode/plans/bug-cla-199-inspiring-movement.md",
       "class": "Bard",
       "triggerConditions": "Trigger: enemy_turn_ends_within_5ft; Action: 1 reaction",
       "expectedBehavior": "When an enemy you can see ends its turn within 5 feet of you, you can take a Reaction and expend one use of your Bardic Inspiration to move up to half your Speed. Then one ally of your choice within 30 feet of you can also move up to half their Speed using their Reaction. None of this feature's movement provokes Opportunity Attacks."
@@ -3621,7 +3609,7 @@
       "handler": "src/services/combat/automation/handlers/classFeatureHandler.js",
       "router": "src/services/combat/automation/routers/classFeatureRouter.js",
       "infoBuilder": "src/services/combat/automation/infoBuilders/classFeatureInfoBuilder.js",
-      "verified": "broken \u2014 see .opencode/plans/bug-cla-200-inspiring-smite.md",
+      "verified": "broken — see .opencode/plans/bug-cla-200-inspiring-smite.md",
       "class": "Paladin",
       "triggerConditions": "Action: passive; Range: 30 ft",
       "expectedBehavior": "Immediately after you cast Divine Smite, you can expend one use of your Channel Divinity and distribute Temporary Hit Points to creatures of your choice within 30 feet of yourself, which can include you. The total number of Temporary Hit Points equals 2d8 plus your Paladin level, divided among the chosen creatures however you like."
@@ -3657,7 +3645,7 @@
       "handler": "src/services/combat/automation/handlers/fightingStyleHandler.js",
       "router": "src/services/combat/automation/routers/fightingStyleRouter.js",
       "infoBuilder": "src/services/combat/automation/infoBuilders/fightingStyleInfoBuilder.js",
-      "verified": "broken \u2014 see .opencode/plans/bug-fs-008-interception.md",
+      "verified": "broken — see .opencode/plans/bug-fs-008-interception.md",
       "class": "Fighting Style",
       "triggerConditions": "",
       "expectedBehavior": "When a creature you can see attacks a target other than you that is within 5 feet of you, you can use your reaction to impose disadvantage on the attack roll. You can then reduce the damage the target takes by 1d10 + your proficiency bonus. You must be holding a shield to use this feature."
@@ -3717,7 +3705,7 @@
       "handler": "src/services/combat/automation/handlers/featHandler.js",
       "router": "src/services/combat/automation/routers/featRouter.js",
       "infoBuilder": "src/services/combat/automation/infoBuilders/featInfoBuilder.js",
-      "verified": "broken \u2014 see .opencode/plans/bug-ft-047-keen-mind.md",
+      "verified": "broken — see .opencode/plans/bug-ft-047-keen-mind.md",
       "triggerConditions": "",
       "expectedBehavior": "Ability Score Increase. Increase your Intelligence score by 1, to a maximum of 20. Lore Knowledge. Choose one of the following skills: Arcana, History, Investigation, Nature, or Religion. If you lack proficiency in the chosen skill, you gain proficiency in it, and if you already have proficiency in it, you gain Expertise in it. Quiet Study. You can take the Study action as a Bonus Action."
     },
@@ -3740,7 +3728,7 @@
       "handler": "src/services/combat/automation/handlers/classFeatureHandler.js",
       "router": "src/services/combat/automation/routers/classFeatureRouter.js",
       "infoBuilder": "src/services/combat/automation/infoBuilders/classFeatureInfoBuilder.js",
-      "verified": "broken \u2014 see .opencode/plans/bug-cla-207-know-your-enemy.md",
+      "verified": "broken — see .opencode/plans/bug-cla-207-know-your-enemy.md",
       "class": "Fighter",
       "triggerConditions": "Action: 1 bonus action; Range: 30_ft",
       "expectedBehavior": "As a Bonus Action, discern strengths and weaknesses of a creature within 30 feet (know Immunities, Resistances, Vulnerabilities). Restore use by expending one Superiority Die."
@@ -3752,19 +3740,19 @@
       "handler": "src/services/combat/automation/handlers/classFeatureHandler.js",
       "router": "src/services/combat/automation/routers/classFeatureRouter.js",
       "infoBuilder": "src/services/combat/automation/infoBuilders/classFeatureInfoBuilder.js",
-      "verified": "broken \u2014 see .opencode/plans/bug-cla-208-lands-aid.md",
+      "verified": "broken — see .opencode/plans/bug-cla-208-lands-aid.md",
       "class": "Druid",
       "triggerConditions": "Action: action; Target: creatures in sphere; Save: CON DC",
       "expectedBehavior": "As a Action, expend a use of Wild Shape and choose a point within 60 feet. Creatures in a 10-foot-radius Sphere make a Constitution saving throw, taking 2d6 Necrotic damage on a failed save or half on success. One creature regains 2d6 Hit Points. Damage and healing increase by 1d6 at Druid levels 10 (3d6) and 14 (4d6)."
     },
     {
       "id": "CLA-209",
-      "name": "Large Form \u2013 Goliath",
+      "name": "Large Form – Goliath",
       "type": "classFeature",
       "handler": "src/services/combat/automation/handlers/classFeatureHandler.js",
       "router": "src/services/combat/automation/routers/classFeatureRouter.js",
       "infoBuilder": "src/services/combat/automation/infoBuilders/classFeatureInfoBuilder.js",
-      "verified": "broken \u2014 see .opencode/plans/bug-cla-209-large-form-goliath.md",
+      "verified": "broken — see .opencode/plans/bug-cla-209-large-form-goliath.md",
       "triggerConditions": "Passive",
       "expectedBehavior": "You have Advantage on any ability check you make to end the Grappled condition. You also count as one size larger when determining your carrying capacity. (Goliath trait)"
     },
@@ -3799,7 +3787,7 @@
       "handler": "src/services/combat/automation/handlers/spellHandler.js",
       "router": "src/services/combat/automation/routers/spellRouter.js",
       "infoBuilder": "src/services/combat/automation/infoBuilders/spellInfoBuilder.js",
-      "verified": "broken \u2014 see .opencode/plans/bug-sp-072-lesser-restoration.md",
+      "verified": "broken — see .opencode/plans/bug-sp-072-lesser-restoration.md",
       "class": "Spell",
       "triggerConditions": "Action: bonus_action; Range: Touch",
       "expectedBehavior": "You touch a creature and end one condition on it: Blinded, Deafened, Paralyzed, or Poisoned."
@@ -3811,7 +3799,7 @@
       "handler": "src/services/combat/automation/handlers/classFeatureHandler.js",
       "router": "src/services/combat/automation/routers/classFeatureRouter.js",
       "infoBuilder": "src/services/combat/automation/infoBuilders/classFeatureInfoBuilder.js",
-      "verified": "broken \u2014 see .opencode/plans/bug-cla-212-lightbearer.md",
+      "verified": "broken — see .opencode/plans/bug-cla-212-lightbearer.md",
       "class": "Cleric",
       "triggerConditions": "Passive: Always active",
       "expectedBehavior": "You know the Light cantrip. Charisma is your spellcasting ability for it."
@@ -3859,7 +3847,7 @@
       "handler": "src/services/combat/automation/handlers/featHandler.js",
       "router": "src/services/combat/automation/routers/featRouter.js",
       "infoBuilder": "src/services/combat/automation/infoBuilders/featInfoBuilder.js",
-      "verified": "not verified",
+      "verified": "verified",
       "triggerConditions": "Action: reaction",
       "expectedBehavior": "When you roll a d20 for a D20 Test, you can spend 1 Luck Point to give yourself Advantage on the roll."
     },
@@ -3870,7 +3858,7 @@
       "handler": "src/services/combat/automation/handlers/classFeatureHandler.js",
       "router": "src/services/combat/automation/routers/classFeatureRouter.js",
       "infoBuilder": "src/services/combat/automation/infoBuilders/classFeatureInfoBuilder.js",
-      "verified": "not verified",
+      "verified": "broken — see .opencode/plans/bug-cla-216-lucky.md",
       "race": "Halfling",
       "triggerConditions": "Trigger: failed roll",
       "expectedBehavior": "When you roll a 1 on the d20 of a D20 Test, you can reroll the die, and you must use the new roll."
@@ -3882,7 +3870,7 @@
       "handler": "src/services/combat/automation/handlers/classFeatureHandler.js",
       "router": "src/services/combat/automation/routers/classFeatureRouter.js",
       "infoBuilder": "src/services/combat/automation/infoBuilders/classFeatureInfoBuilder.js",
-      "verified": "not verified",
+      "verified": "broken — see .opencode/plans/bug-cla-217-lunar-form.md",
       "class": "Druid",
       "triggerConditions": "Automation type: undefined",
       "expectedBehavior": "The power of the moon suffuses you, granting you the following benefits. Improved Lunar Radiance: Once per turn, you can deal an extra 2d10 Radiant damage to a target you hit with a Wild Shape form's attack. Shared Moonlight: Whenever you use Moonlight Step, you can also teleport one willing creature. That creature must be within 10 feet of you, and you teleport it to an unoccupied space you can see within 10 feet of your destination space."
@@ -3960,7 +3948,7 @@
     },
     {
       "id": "CLA-219",
-      "name": "Magical Ambush \u2013 Rogue \u2013 Arcane Trickster",
+      "name": "Magical Ambush – Rogue – Arcane Trickster",
       "type": "classFeature",
       "handler": "src/services/combat/automation/handlers/classFeatureHandler.js",
       "router": "src/services/combat/automation/routers/classFeatureRouter.js",
@@ -4111,7 +4099,7 @@
       "verified": "verified",
       "class": "Spell",
       "triggerConditions": "Range: 60 feet; Duration: 24 hours",
-      "expectedBehavior": "You suggest a course of activity\u2014described in no more than 25 words\u2014to twelve or fewer creatures you can see within range that can hear and understand you. The suggestion must sound achievable and not involve anything that would obviously deal damage to any of the targets or their allies. Each target must succeed on a Wisdom saving throw or have the Charmed condition for the duration or until you or your allies deal damage to the target. Each Charmed target pursues the suggestion to the best of its ability. The suggested activity can continue for the entire duration, but if the suggested activity can be completed in a shorter time, the spell ends for a target upon completing it."
+      "expectedBehavior": "You suggest a course of activity—described in no more than 25 words—to twelve or fewer creatures you can see within range that can hear and understand you. The suggestion must sound achievable and not involve anything that would obviously deal damage to any of the targets or their allies. Each target must succeed on a Wisdom saving throw or have the Charmed condition for the duration or until you or your allies deal damage to the target. Each Charmed target pursues the suggestion to the best of its ability. The suggested activity can continue for the entire duration, but if the suggested activity can be completed in a shorter time, the spell ends for a target upon completing it."
     },
     {
       "id": "SP-080",
@@ -4171,7 +4159,7 @@
       "class": "Background",
       "triggerConditions": "",
       "expectedBehavior": "You were apprenticed to a trader, caravan master, or shopkeeper, learning the fundamentals of commerce. You traveled broadly, and you earned a living by buying and selling the raw materials artisans need to practice their craft or finished works from such crafters. You might have transported goods from one place to another (by ship, wagon, or caravan) or bought them from traveling traders and sold them in your own shop.",
-      "notes": "data-granting only: ability_scores, feat, skill_proficiencies, tool_proficiencies \u2014 no combat automation"
+      "notes": "data-granting only: ability_scores, feat, skill_proficiencies, tool_proficiencies — no combat automation"
     },
     {
       "id": "MM-001",
@@ -4294,7 +4282,7 @@
     },
     {
       "id": "CLA-233",
-      "name": "Naturally Stealthy \u2013 Halfling",
+      "name": "Naturally Stealthy – Halfling",
       "type": "classFeature",
       "handler": "src/services/combat/automation/handlers/classFeatureHandler.js",
       "router": "src/services/combat/automation/routers/classFeatureRouter.js",
@@ -4399,7 +4387,7 @@
       "class": "Background",
       "triggerConditions": "",
       "expectedBehavior": "You were raised in a castle, surrounded by wealth, power, and privilege. Your family of minor aristocrats ensured that you received a first-class education, some of which you appreciated and some of which you resented. Your time in the castle, especially the many hours you spent observing your family at court, also taught you a great deal about leadership.",
-      "notes": "data-granting only: ability_scores, feat, skill_proficiencies, tool_proficiencies \u2014 no combat automation"
+      "notes": "data-granting only: ability_scores, feat, skill_proficiencies, tool_proficiencies — no combat automation"
     },
     {
       "id": "CLA-240",
@@ -4471,7 +4459,7 @@
       "verified": "not verified",
       "class": "Spell",
       "triggerConditions": "Duration: Concentration, up to 1 minute",
-      "expectedBehavior": "A shimmering sphere encloses a Large or smaller creature or object within range. An unwilling creature must succeed on a Dexterity saving throw or be enclosed for the duration. Nothing\u2014not physical objects, energy, or other spell effects\u2014can pass through the barrier, in or out, though a creature in the sphere can breathe there. The sphere is immune to all damage, and a creature or object inside can't be damaged by attacks or effects originating from outside, nor can a creature inside the sphere damage anything outside it. The sphere is weightless and just large enough to contain the creature or object inside. An enclosed creature can take an action to push against the sphere's walls and thus roll the sphere at up to half the creature's Speed. Similarly, the globe can be picked up and moved by other creatures. A Disintegrate spell targeting the globe destroys it without harming anything inside."
+      "expectedBehavior": "A shimmering sphere encloses a Large or smaller creature or object within range. An unwilling creature must succeed on a Dexterity saving throw or be enclosed for the duration. Nothing—not physical objects, energy, or other spell effects—can pass through the barrier, in or out, though a creature in the sphere can breathe there. The sphere is immune to all damage, and a creature or object inside can't be damaged by attacks or effects originating from outside, nor can a creature inside the sphere damage anything outside it. The sphere is weightless and just large enough to contain the creature or object inside. An enclosed creature can take an action to push against the sphere's walls and thus roll the sphere at up to half the creature's Speed. Similarly, the globe can be picked up and moved by other creatures. A Disintegrate spell targeting the globe destroys it without harming anything inside."
     },
     {
       "id": "SP-084",
@@ -4665,7 +4653,7 @@
     },
     {
       "id": "CLA-254",
-      "name": "Powerful Build \u2013 Goliath",
+      "name": "Powerful Build – Goliath",
       "type": "classFeature",
       "handler": "src/services/combat/automation/handlers/classFeatureHandler.js",
       "router": "src/services/combat/automation/routers/classFeatureRouter.js",
@@ -5476,7 +5464,7 @@
       "class": "Background",
       "triggerConditions": "",
       "expectedBehavior": "You spent your for1native yeaI'S traveling between manors and monasteries, performing various odd jobs and services in exchange for access to their libraries. You whiled away many a long evening studying books and scrolls, learning the lore of the multiverse-even the rudiments of magic-and your mind yearns for more.",
-      "notes": "data-granting only: ability_scores, feat, skill_proficiencies, tool_proficiencies \u2014 no combat automation"
+      "notes": "data-granting only: ability_scores, feat, skill_proficiencies, tool_proficiencies — no combat automation"
     },
     {
       "id": "BG-013",
@@ -5489,7 +5477,7 @@
       "class": "Background",
       "triggerConditions": "",
       "expectedBehavior": "You lived as a seafarer, wind at your back and decks swaying beneath your feet. You've perched on barstools in more ports of call than you can remember, faced mighty storms, and swapped stories with folk who live beneath the waves.",
-      "notes": "data-granting only: ability_scores, feat, skill_proficiencies, tool_proficiencies \u2014 no combat automation"
+      "notes": "data-granting only: ability_scores, feat, skill_proficiencies, tool_proficiencies — no combat automation"
     },
     {
       "id": "SP-101",
@@ -5549,8 +5537,8 @@
       "verified": "verified",
       "class": "Background",
       "triggerConditions": "",
-      "expectedBehavior": "You spent formative years in a scriptorium, a monastery dedicated to the preservation of knowledge, o\u00b7 a government agency, where you learned to write with a clear hand and produce finely written texts. Perhaps you scribed government documents or copied tomes of literature. You might have some skill as a writer of poetry, narrative, or scholarly research. Above all, you have a careful attention to detail, helping you avoid introducing mistakes to the documents you copy and create.",
-      "notes": "data-granting only: ability_scores, feat, skill_proficiencies, tool_proficiencies \u2014 no combat automation"
+      "expectedBehavior": "You spent formative years in a scriptorium, a monastery dedicated to the preservation of knowledge, o· a government agency, where you learned to write with a clear hand and produce finely written texts. Perhaps you scribed government documents or copied tomes of literature. You might have some skill as a writer of poetry, narrative, or scholarly research. Above all, you have a careful attention to detail, helping you avoid introducing mistakes to the documents you copy and create.",
+      "notes": "data-granting only: ability_scores, feat, skill_proficiencies, tool_proficiencies — no combat automation"
     },
     {
       "id": "CLA-303",
@@ -5790,7 +5778,7 @@
     },
     {
       "id": "CLA-313",
-      "name": "Skillful \u2013 Human",
+      "name": "Skillful – Human",
       "type": "classFeature",
       "handler": "src/services/combat/automation/handlers/classFeatureHandler.js",
       "router": "src/services/combat/automation/routers/classFeatureRouter.js",
@@ -5928,7 +5916,7 @@
       "class": "Background",
       "triggerConditions": "",
       "expectedBehavior": "You began training for war as soon as you reached adulthood and carry precious few me1nories of life before you took up arms. Battle is in your blood. Sometimes you catch yourself reflexively performing the basic fighting exercises you learned first. Eventually, you put that training to use on the battlefield, protecting the realm by waging war.",
-      "notes": "data-granting only: ability_scores, feat, skill_proficiencies, tool_proficiencies \u2014 no combat automation"
+      "notes": "data-granting only: ability_scores, feat, skill_proficiencies, tool_proficiencies — no combat automation"
     },
     {
       "id": "CLA-318",
@@ -6170,7 +6158,7 @@
     },
     {
       "id": "CLA-335",
-      "name": "Stone's Endurance \u2013 Goliath",
+      "name": "Stone's Endurance – Goliath",
       "type": "classFeature",
       "handler": "src/services/combat/automation/handlers/classFeatureHandler.js",
       "router": "src/services/combat/automation/routers/classFeatureRouter.js",
@@ -6194,7 +6182,7 @@
     },
     {
       "id": "CLA-337",
-      "name": "Storm's Thunder \u2013 Goliath",
+      "name": "Storm's Thunder – Goliath",
       "type": "classFeature",
       "handler": "src/services/combat/automation/handlers/classFeatureHandler.js",
       "router": "src/services/combat/automation/routers/classFeatureRouter.js",
@@ -6887,7 +6875,7 @@
     },
     {
       "id": "CLA-375",
-      "name": "Versatile \u2013 Human",
+      "name": "Versatile – Human",
       "type": "classFeature",
       "handler": "src/services/combat/automation/handlers/classFeatureHandler.js",
       "router": "src/services/combat/automation/routers/classFeatureRouter.js",
@@ -7062,7 +7050,7 @@
       "class": "Background",
       "triggerConditions": "",
       "expectedBehavior": "You grew up on the streets surrounded by similarly ill-fated castoffs, a few of them friends and a few of them rivals. You slept where you could and did odd jobs for food. At times, when the hunger became unbearable, you resorted to theft. Still, you never lost your pride and never abandoned hope. Fate is not yet finished with you.",
-      "notes": "data-granting only: ability_scores, feat, skill_proficiencies, tool_proficiencies \u2014 no combat automation"
+      "notes": "data-granting only: ability_scores, feat, skill_proficiencies, tool_proficiencies — no combat automation"
     },
     {
       "id": "CLA-386",
@@ -7170,7 +7158,7 @@
       "verified": "not verified",
       "class": "Druid",
       "triggerConditions": "Action: 1 bonus action; Action: bonus_action; Range: 5_ft; Duration: 1_minute",
-      "expectedBehavior": "As a Bonus Action, you can expend a use of your Wild Shape to manifest a 5-foot Emanation that takes the form of ocean spray that surrounds you for 10 minutes. It ends early if you dismiss it (no action required), manifest it again, or have the Incapacitated condition. When you manifest the Emanation and as a Bonus Action on your subsequent turns, you can choose another creature you can see in the Emanation. The target must succeed on a Constitution saving throw against your spell save DC or take Cold damage and, if the creature is Large or smaller, be pushed up to 15 feet away fr\u00b7o1n you. To determine this damage, roll a number of d6s equal to your Wisdom modifier (minimum of one die)."
+      "expectedBehavior": "As a Bonus Action, you can expend a use of your Wild Shape to manifest a 5-foot Emanation that takes the form of ocean spray that surrounds you for 10 minutes. It ends early if you dismiss it (no action required), manifest it again, or have the Incapacitated condition. When you manifest the Emanation and as a Bonus Action on your subsequent turns, you can choose another creature you can see in the Emanation. The target must succeed on a Constitution saving throw against your spell save DC or take Cold damage and, if the creature is Large or smaller, be pushed up to 15 feet away fr·o1n you. To determine this damage, roll a number of d6s equal to your Wisdom modifier (minimum of one die)."
     },
     {
       "id": "CLA-394",

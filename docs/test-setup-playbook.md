@@ -543,3 +543,19 @@ Monk self-targeting Hand of Healing: the initiative card Target dropdown EXCLUDE
 - **PITFALL (high-level paladin save tests):** Aura of Protection adds CHA (+5) to ALL saves — WIS 9/−1 paladin totals +10 vs DC 13, so a monster-forced FAILURE needs d20 ≤2 (~10% per roll). Loop re-trigger the .mc-overlay dice link + Roll Save until "SAVE FAILURE" appears; don't conclude the reroll button is missing just because early saves all succeed.
 - **PITFALL:** after clearing `livingLegendActive` via setRuntimeValue, the sheet's reroll button lags one roll (stale until sheet remount) — remount/navigate before asserting absence; controls on OTHER characters are reliable.
 - Reroll log entry is `type:"roll" rollType:"save-damage"` with `saveRawRolls:[old,new]` and **name:"Unknown"** (feature name not threaded into the reroll log — cosmetic gap, CLA-195 same).
+
+### Lucky feat LP reactions / FT-049 (2026-08-30)
+
+- **FT-049 Lucky = advantage/disadvantage model in 2024** (`public/data/2024/feats.json` benefits type 'utility', automation `lucky_point`/`advantage|disadvantage`, casting_time reaction) — manifest's 5e "reroll, must use new roll" wording is stale; consumption = forced adv/dis on the NEXT d20 test, decided before rolling. Real chain: `featBuffService.js` default branch → `rules.js` reaction row → `CharReactions.jsx` → `automation/index.js` → `handlers/reactions/luckyPointHandler.js`; flags consumed in `useLoggedDiceRollAttack.js` / `d20RollComputation.js`.
+- **PITFALL:** after granting Lucky, runtime `luckyPoints` initializes to 0 (sheet "0/2") — first reaction click gives "Requires at least 1 Luck Point"; bump LP to max via the "Luck Points:" inline tracker (click → input fill → Enter). CharFeatFeatures TrackedResourceInput defaults 0 while handler treats null as max — display/runtime mismatch family.
+- Save-cell "(Adv)"/"(Disadv)" labels render live when flag armed; roll popups carry forced badge "Adv/Disadv (conditions)". LP tracker renders in `[data-testid="char-feat-features"]`.
+- Wight monster card is NOT matched by `.creature-name` filters — use `filter({ has: spinbutton 'Wight 1 current HP' })`; `.dsp-overlay` (death-save prompt) silently intercepts remove-btn clicks — dispatch click to dismiss. Second monster attack after LP spent can KO a lv1 char (incidental).
+
+### Racial Lucky / auto_reroll pitfalls / CLA-216 (2026-08-30)
+- 2024 Halfling Lucky = `auto_reroll`/`roll_equals_1` in races.json (NOT the FT-049 adv/dis feat model). Ability-table cell auto-rolls on click — no monster needed to produce nat-1 d20 Tests; roll repeatedly.
+- **PITFALL (bug-cla-216):** auto-reroll never fires: `d20RollComputation.js:21` compares `effectiveD20Roll === 1` before assignment (:124-129); manual reroll button hidden for `roll_equals_1` (`DiceRollResult.jsx:376`). Isolation probe: 200× `computeD20Roll` with Lucky ctx → 0 rerolls = dead trait, safe to file without more UI grinding.
+- **PITFALL:** `auto_reroll target:'d20'` only sets `autoRerollForChecks` (`conditionEffectsInternal.js:234`) — saves/attacks excluded even post-fix.
+
+### Wild Shape / once-per-turn round gates / CLA-217 (2026-08-30)
+- Wild Shape picker commit: `.wild-shape-beast-name` row click → modal "Wild Shape" button; beast attacks roll via druid sheet dice links (PC pipeline is only damage_bonus consumer).
+- **PITFALL (bug-cla-217):** any `_X_usedRound` once-per-turn gate written via no-arg `getCurrentCombatRound()` sticks at round 1 all session (campaignName missing → null→1). Probe no-arg vs campaign-keyed round before trusting cross-round re-arm. Turn-walk: poll change-data `activeCreatureName` each iteration.

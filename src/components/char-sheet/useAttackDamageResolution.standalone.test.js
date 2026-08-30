@@ -321,6 +321,8 @@ describe('normalizeAutoDamage', () => {
             damageType: 'slashing',
             weaponType: 'weapon',
             properties: [],
+            type: undefined,
+            isHordeBreaker: false,
         });
 
         expect(ctx.hit).toBe(true);

@@ -358,6 +358,75 @@ describe('buildAttackRollDamageSteps', () => {
           'test-campaign',
         );
       });
+
+      it('writes Horde Breaker ready state after a hitting melee weapon attack', async () => {
+        getRuntimeValue.mockImplementation((key, prop, _campaign) => {
+          if (prop === "_Hunter's_Prey_choice") return 'Horde Breaker';
+          if (key === 'campaign' && prop === 'lastAttack') {
+            return { hit: true, attackerName: 'TestChar', targetName: 'Zombie 1', attackName: 'Shortsword', weaponType: 'melee' };
+          }
+          return null;
+        });
+
+        const ctx = makeCtx({
+          attack: { name: 'Shortsword', type: 'Action', weaponType: 'melee' },
+          targetName: 'Zombie 1',
+        });
+        await steps[0].handler(ctx);
+
+        expect(setRuntimeValue).toHaveBeenCalledWith(
+          'TestChar',
+          '_Hunters_Prey_HordeBreaker_Ready',
+          { round: 1, targetName: 'Zombie 1', attackName: 'Shortsword' },
+          'test-campaign',
+        );
+      });
+
+      it('does not write Horde Breaker ready state when last attack missed', async () => {
+        getRuntimeValue.mockImplementation((key, prop, _campaign) => {
+          if (prop === "_Hunter's_Prey_choice") return 'Horde Breaker';
+          if (key === 'campaign' && prop === 'lastAttack') {
+            return { hit: false, attackerName: 'TestChar', targetName: 'Zombie 1', attackName: 'Shortsword', weaponType: 'melee' };
+          }
+          return null;
+        });
+
+        const ctx = makeCtx({
+          attack: { name: 'Shortsword', type: 'Action', weaponType: 'melee' },
+          targetName: 'Zombie 1',
+        });
+        await steps[0].handler(ctx);
+
+        expect(setRuntimeValue).not.toHaveBeenCalledWith(
+          'TestChar',
+          '_Hunters_Prey_HordeBreaker_Ready',
+          expect.any(Object),
+          'test-campaign',
+        );
+      });
+
+      it('does not write Horde Breaker ready state for bonus action attacks', async () => {
+        getRuntimeValue.mockImplementation((key, prop, _campaign) => {
+          if (prop === "_Hunter's_Prey_choice") return 'Horde Breaker';
+          if (key === 'campaign' && prop === 'lastAttack') {
+            return { hit: true, attackerName: 'TestChar', targetName: 'Zombie 2', attackName: 'Horde Breaker', weaponType: 'melee' };
+          }
+          return null;
+        });
+
+        const ctx = makeCtx({
+          attack: { name: 'Horde Breaker', type: 'Bonus Action', weaponType: 'melee' },
+          targetName: 'Zombie 2',
+        });
+        await steps[0].handler(ctx);
+
+        expect(setRuntimeValue).not.toHaveBeenCalledWith(
+          'TestChar',
+          '_Hunters_Prey_HordeBreaker_Ready',
+          expect.any(Object),
+          'test-campaign',
+        );
+      });
     });
   });
 
