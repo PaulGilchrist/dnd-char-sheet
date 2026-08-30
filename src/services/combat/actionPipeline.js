@@ -66,6 +66,8 @@ export function createPipeline() {
 
         eventType = result.nextEvent || step.emit;
       }
+
+      resumeRef.current = null;
     },
 
     async resume(ctx, resumeRef) {

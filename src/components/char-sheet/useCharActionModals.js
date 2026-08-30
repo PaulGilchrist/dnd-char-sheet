@@ -1,4 +1,4 @@
-import { useCallback, useState } from 'react';
+import { useCallback, useRef, useState } from 'react';
 import { useSyncedState } from '../../hooks/runtime/useSyncedState.js';
 import useAttackDamageResolution from './useAttackDamageResolution.js';
 import useModalHandlers from './useModalHandlers.js';
@@ -18,12 +18,14 @@ export default function useCharActionModals({
     }, [_setModalState]);
 
     const [pendingDamage, setPendingDamage] = useSyncedState(campaignName, 'pipeline-pause', null, campaignName);
+    const pipelineRef = useRef(null);
 
-    const { resolveAttackDamage, proceedWithDamage, handleAttackRiderManeuverUse, handleAttackRiderManeuverSkip, handleAttackRiderOptionSelect } = useAttackDamageResolution({
+    const { resolveAttackDamage, resumeAttackPipeline, proceedWithDamage, handleAttackRiderManeuverUse, handleAttackRiderManeuverSkip, handleAttackRiderOptionSelect } = useAttackDamageResolution({
         playerStats, campaignName, mapName,
         popupHtml, setPopupHtml, rollDamage, buildCtx, buildCtxSync,
         setModalState, modalState,
         setPendingDamage,
+        resumeRef: pipelineRef,
     });
 
     const {
@@ -71,6 +73,7 @@ export default function useCharActionModals({
         handleCombatSuperiorityConfirm,
         handleCombatSuperiorityReopenSelection,
         resolveAttackDamage,
+        resumeAttackPipeline,
         handleAttackRiderManeuverUse,
         handleAttackRiderManeuverSkip,
         handleAttackRiderOptionSelect,

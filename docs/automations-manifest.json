@@ -3454,7 +3454,7 @@
       "handler": "src/services/combat/automation/handlers/classFeatureHandler.js",
       "router": "src/services/combat/automation/routers/classFeatureRouter.js",
       "infoBuilder": "src/services/combat/automation/infoBuilders/classFeatureInfoBuilder.js",
-      "verified": "broken — see .opencode/plans/bug-cla-188-improved-cunning-strike.md",
+      "verified": "verified",
       "class": "Rogue",
       "triggerConditions": "Trigger: on hit; Once per turn: yes",
       "expectedBehavior": "You can use up to two Cunning Strike effects when you deal Sneak Attack damage, paying the die cost for each effect."

@@ -6,7 +6,6 @@ export default function InlineChoiceModals({
     mergedModalState,
     setModalState,
     setPopupHtml,
-    _autoDamageContext,
     pendingDamage,
     _mapName,
     _buildCtx,

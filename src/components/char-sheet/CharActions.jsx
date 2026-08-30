@@ -50,7 +50,6 @@ const CharActions = function CharActions({ playerStats, campaignName, exhaustion
     const [actions, setActions] = useState([]);
     const [selectedActionSpell, setSelectedActionSpell] = useState(null);
     const [featRangeEffects, setFeatRangeEffects] = useState(null);
-    const [autoDamageRollContext] = useSyncedState(campaignName, 'autoDamageContext', null, campaignName);
     const { saveDcBonus: displaySaveDcBonus } = getInnateSorceryBonus(playerStats.name, campaignName);
     const _activeBuffs = useRuntimeValue(playerStats.name, 'activeBuffs', campaignName); (void _activeBuffs);
     const { popupHtml, setPopupHtml } = useDiceRollPopup();
@@ -109,6 +108,7 @@ const CharActions = function CharActions({ playerStats, campaignName, exhaustion
         modalState,
         setModalState: setModalStateInternal,
         resolveAttackDamage,
+        resumeAttackPipeline,
         handleMasteryClose,
         handleWeaponMasteryChoice,
         handleWeaponKindMasteryClose,
@@ -482,9 +482,9 @@ const CharActions = function CharActions({ playerStats, campaignName, exhaustion
                     handleOceanicGiftConfirm={handleOceanicGiftConfirm}
                     handleDivineInterventionCast={handleDivineInterventionCast}
                     pendingDamage={pendingDamage}
+                    resumeAttackPipeline={resumeAttackPipeline}
                     buildCtx={buildCtx}
                     buildCtxSync={buildCtxSync}
-                    autoDamageContext={autoDamageRollContext}
                     rollDamage={rollDamage}
                     setPopupHtml={setPopupHtml}
                     mapName={mapName}

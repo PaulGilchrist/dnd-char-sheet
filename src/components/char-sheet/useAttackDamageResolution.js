@@ -230,10 +230,19 @@ export default function useAttackDamageResolution({
         ctx.resolveAttackDamage = resolveAttackDamage;
 
         const pipeline = buildPipelineForAction(attack, playerStats);
+        resumeRef.current = { pipelineStash: { pipeline, ctx } };
         await pipeline.run('housekeeping:do', ctx, resumeRef);
         if (resumeRef.current?._pausedStep) {
-            const paused = resumeRef.current;
-            if (paused._modalType === 'damageTypeChoice') {
+            applyPauseState(resumeRef.current);
+        }
+    };
+
+    const applyPauseState = (paused) => {
+            if (paused._modalType === 'cunningStrike') {
+                // Modal already opened by the step via setAttackRiderModal.
+                // Pipeline + ctx stay stashed until the modal closes and
+                // resumeAttackPipeline() continues from 'cunning:checked'.
+            } else if (paused._modalType === 'damageTypeChoice') {
                 setModalState({ damageTypeChoice: paused._modalProps });
                 setPendingDamage({
                     attack: paused.attack,
@@ -266,7 +275,20 @@ export default function useAttackDamageResolution({
             } else if (paused._modalType === 'shieldBash') {
                 setModalState({ shieldBashModal: paused._modalProps });
             }
-        }
+    };
+
+    /**
+     * Resume a paused attack damage pipeline after a modal has resolved.
+     * Continues from the event emitted by the paused step, so downstream
+     * steps (sneak attack, damage application, etc.) execute normally.
+     */
+    const resumeAttackPipeline = async () => {
+        if (resumeRef.current?._pausedStep !== 'cunningStrike') return;
+        const stash = resumeRef.current?.pipelineStash;
+        if (!stash) return;
+        await stash.pipeline.resume(stash.ctx, resumeRef);
+        if (!resumeRef.current?._pausedStep) return;
+        applyPauseState(resumeRef.current);
     };
 
     const handleAttackRiderManeuverUse = async (maneuver, attack, popupHtmlData, currentFormula, currentTotal, currentRolls) => {
@@ -396,5 +418,5 @@ export default function useAttackDamageResolution({
         setPopupHtml({ type: 'automation_info', name: maneuver.name, description: `${logDescription} Selected: ${optionName}.` });
     };
 
-    return { resolveAttackDamage, proceedWithDamage, handleAttackRiderManeuverUse, handleAttackRiderManeuverSkip, handleAttackRiderOptionSelect };
+    return { resolveAttackDamage, resumeAttackPipeline, proceedWithDamage, handleAttackRiderManeuverUse, handleAttackRiderManeuverSkip, handleAttackRiderOptionSelect };
 }

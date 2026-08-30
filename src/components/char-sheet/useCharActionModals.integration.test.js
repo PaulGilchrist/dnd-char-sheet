@@ -87,7 +87,7 @@ describe('useCharActionModals — integration', () => {
   });
 
   describe('return object shape', () => {
-    it('returns exactly 30 properties with the expected keys', () => {
+    it('returns exactly 31 properties with the expected keys', () => {
       const { result } = renderHook(() => useCharActionModals(baseArgs));
       const expectedKeys = [
         'modalState',
@@ -121,6 +121,7 @@ describe('useCharActionModals — integration', () => {
         'handleFlurryOfBlowsSkip',
         'handleOpenHandFromFlurryConfirm',
         'handleOpenHandFromFlurrySkip',
+        'resumeAttackPipeline',
       ];
       const actualKeys = Object.keys(result.current).sort();
       const sortedExpected = [...expectedKeys].sort();

@@ -72,10 +72,12 @@ export function buildCunningStrikeStep() {
         passives.find(p => p.name === 'Improved Cunning Strike' && p.type === 'attack_rider') ||
         passives.find(p => p.name === 'Cunning Strike' && p.type === 'attack_rider');
       if (csPassive && sneakDice > 0) {
-        const round = getCurrentCombatRound();
-        const used = getRuntimeValue(ctx.playerStats.name, '_CunningStrike_usedRound', ctx.campaignName);
-        const skipped = getRuntimeValue(ctx.playerStats.name, '_cunningStrikeSkippedRound', ctx.campaignName);
-        if (used !== round && skipped !== round) {
+        const round = getCurrentCombatRound(ctx.campaignName);
+        const usedRaw = getRuntimeValue(ctx.playerStats.name, '_CunningStrike_usedRound', ctx.campaignName);
+        const skippedRaw = getRuntimeValue(ctx.playerStats.name, '_cunningStrikeSkippedRound', ctx.campaignName);
+        const usedRound = usedRaw && typeof usedRaw === 'object' ? usedRaw.round : usedRaw;
+        const skippedRound = skippedRaw && typeof skippedRaw === 'object' ? skippedRaw.round : skippedRaw;
+        if (usedRound !== round && skippedRound !== round) {
           const cs = await getCombatContext(ctx.campaignName);
           const target = cs ? getTargetFromAttacker(cs, ctx.playerStats.name) : null;
           ctx.setAttackRiderModal?.({
@@ -97,7 +99,7 @@ export function buildCunningStrikeStep() {
             },
           };
         }
-        if (skipped === round) {
+        if (skippedRound === round) {
           setRuntimeValue(ctx.playerStats.name, '_cunningStrikeSkippedRound', null, ctx.campaignName);
         }
       }

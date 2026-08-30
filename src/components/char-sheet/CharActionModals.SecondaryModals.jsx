@@ -102,7 +102,6 @@ function SecondaryModals({
     buildHealingIllusionTargets,
     buildInvokeDuplicityTargets,
     setPopupHtml,
-    autoDamageContext,
     pendingDamage,
     mapName,
     buildCtx,
@@ -640,7 +639,6 @@ function SecondaryModals({
                 mergedModalState={mergedModalState}
                 setModalState={setModalState}
                 setPopupHtml={setPopupHtml}
-                _autoDamageContext={autoDamageContext}
                 pendingDamage={pendingDamage}
                 _mapName={mapName}
                 _buildCtx={buildCtx}

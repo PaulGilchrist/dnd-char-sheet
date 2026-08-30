@@ -1,5 +1,4 @@
 import React, { useEffect } from 'react';
-import { rollExpression, rollExpressionDoubled } from '../../services/dice/diceRoller.js';
 import { setSkipFlag } from '../../services/automation/common/oncePerTurn.js';
 import HealingPoolModal from './modals/divine/HealingPoolModal.jsx'
 import HandOfHealingModal from './modals/shared/HandOfHealingModal.jsx'
@@ -66,9 +65,9 @@ function CharActionModals({
     handleOceanicGiftConfirm,
     handleDivineInterventionCast,
     pendingDamage,
+    resumeAttackPipeline,
     buildCtx,
     buildCtxSync,
-    autoDamageContext,
     rollDamage,
     setPopupHtml,
     mapName,
@@ -271,76 +270,7 @@ function CharActionModals({
         }
         const isCunningStrikeVariant = ['Cunning Strike', 'Improved Cunning Strike', 'Devious Strikes'].includes(modalAction?.name);
         if (isCunningStrikeVariant) {
-            const costUsed = getRuntimeValue(modalPlayerStats.name, '_cunningStrikeCostUsed', modalCampaignName);
-            if (!costUsed || costUsed === 0) {
-                if (autoDamageContext?.current) {
-                    const ctx = autoDamageContext.current;
-                    const sneakAttackDice = ctx.sneakAttackDice || 0;
-                    let formula = ctx.formula;
-                    let total = ctx.total;
-                    let rolls = ctx.rolls;
-                    if (sneakAttackDice > 0) {
-                        const sneakFormula = `${sneakAttackDice}d6`;
-                        const sneakResult = ctx.context?.isAutoCrit ? rollExpressionDoubled(sneakFormula) : rollExpression(sneakFormula);
-                        if (sneakResult) {
-                            formula += ` + ${sneakFormula} [Sneak Attack]`;
-                            total += sneakResult.total;
-                            rolls = [...rolls, ...sneakResult.rolls];
-                        }
-                    }
-                    setPopupHtml(null);
-                    rollDamage(ctx.attackName, formula, total, rolls, ctx.modifier, ctx.context);
-                    autoDamageContext.current = null;
-                }
-            } else if (autoDamageContext) {
-                const ctx = autoDamageContext.current;
-                if (ctx) {
-                    const cunningStrikeCost = Number(getRuntimeValue(modalPlayerStats.name, '_cunningStrikeCostUsed', modalCampaignName) ?? 0);
-                    const effectiveSneakDice = Math.max(0, ctx.sneakAttackDice - cunningStrikeCost);
-                    let formula = ctx.formula;
-                    let total = ctx.total;
-                    let rolls = ctx.rolls;
-                    if (effectiveSneakDice > 0) {
-                        const sneakFormula = `${effectiveSneakDice}d6`;
-                        const sneakResult = ctx.context?.isAutoCrit ? rollExpressionDoubled(sneakFormula) : rollExpression(sneakFormula);
-                        if (sneakResult) {
-                            formula += ` + ${sneakFormula} [Sneak Attack]`;
-                            total += sneakResult.total;
-                            rolls = [...rolls, ...sneakResult.rolls];
-                        }
-                    }
-                    setPopupHtml(null);
-                    rollDamage(ctx.attackName, formula, total, rolls, ctx.modifier, ctx.context);
-                    autoDamageContext.current = null;
-                }
-            } else if (pendingDamage?._cunningStrike) {
-                const pending = pendingDamage;
-                const { attack } = pending;
-                pendingDamage = null;
-                (mapName ? buildCtx(attack) : buildCtxSync(attack)).then(ctx => {
-                    const sneakAttackDice = ctx?.sneakAttackDice || 0;
-                    const cunningStrikeCost = Number(getRuntimeValue(playerStats.name, '_cunningStrikeCostUsed', campaignName) ?? 0);
-                    const effectiveSneakDice = Math.max(0, sneakAttackDice - cunningStrikeCost);
-                    const wasCrit = pending.popupHtml?.isCrit;
-                    const baseResult = rollExpression(attack.damage);
-                    if (!baseResult) return;
-                    let formula = attack.damage;
-                    let total = baseResult.total;
-                    let rolls = baseResult.rolls;
-                    const modifier = baseResult.modifier;
-                    if (effectiveSneakDice > 0) {
-                        const sneakFormula = `${effectiveSneakDice}d6`;
-                        const sneakResult = wasCrit ? rollExpressionDoubled(sneakFormula) : rollExpression(sneakFormula);
-                        if (sneakResult) {
-                            formula += ` + ${sneakFormula} [Sneak Attack]`;
-                            total += sneakResult.total;
-                            rolls = [...rolls, ...sneakResult.rolls];
-                        }
-                    }
-                    setPopupHtml(null);
-                    rollDamage(attack.name, formula, total, rolls, modifier, ctx);
-                }).catch((e) => { console.error("[CharActionModals] Error:", e); });
-            }
+            resumeAttackPipeline?.();
         }
     };
 
@@ -555,7 +485,6 @@ function CharActionModals({
                 buildHealingIllusionTargets={buildHealingIllusionTargets}
                 buildInvokeDuplicityTargets={buildInvokeDuplicityTargets}
                 setPopupHtml={setPopupHtml}
-                autoDamageContext={autoDamageContext}
                 pendingDamage={pendingDamage}
                 mapName={mapName}
                 buildCtx={buildCtx}

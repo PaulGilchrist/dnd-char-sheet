@@ -145,7 +145,10 @@ describe('useAttackDamageResolution - pipeline paused states', () => {
                 _weaponHitOnceKey: '_DivineFury_usedRound',
                 _damageTypeModifier: undefined,
             };
-            mockPendingDamageRef.current = pausedCtx;
+            buildPipelineForAction.mockReturnValueOnce({
+                run: vi.fn(async (_event, _ctx, ref) => { ref.current = { pipelineStash: {}, ...pausedCtx }; }),
+                resume: vi.fn(async (_ctx, ref) => { ref.current = null; }),
+            });
 
             const { resolveAttackDamage } = UseAttackDamageResolution();
             const attack = { name: 'Longsword', damage: '1d8+3', damageType: 'slashing' };
@@ -184,7 +187,10 @@ describe('useAttackDamageResolution - pipeline paused states', () => {
                 modifier: 3,
                 _damageTypeModifier: empMod,
             };
-            mockPendingDamageRef.current = pausedCtx;
+            buildPipelineForAction.mockReturnValueOnce({
+                run: vi.fn(async (_event, _ctx, ref) => { ref.current = { pipelineStash: {}, ...pausedCtx }; }),
+                resume: vi.fn(async (_ctx, ref) => { ref.current = null; }),
+            });
 
             const { resolveAttackDamage } = UseAttackDamageResolution();
             const attack = { name: 'Unarmed Strike', damage: '1d12+3', damageType: 'bludgeoning' };
@@ -213,7 +219,10 @@ describe('useAttackDamageResolution - pipeline paused states', () => {
                 bonusTotal: 6,
                 bonusRolls: [4, 2],
             };
-            mockPendingDamageRef.current = pausedCtx;
+            buildPipelineForAction.mockReturnValueOnce({
+                run: vi.fn(async (_event, _ctx, ref) => { ref.current = { pipelineStash: {}, ...pausedCtx }; }),
+                resume: vi.fn(async (_ctx, ref) => { ref.current = null; }),
+            });
 
             const { resolveAttackDamage } = UseAttackDamageResolution();
             const attack = { name: 'Longsword', damage: '1d8+3', damageType: 'slashing' };
@@ -245,7 +254,10 @@ describe('useAttackDamageResolution - pipeline paused states', () => {
                 _modalType: 'secondaryTarget',
                 _modalProps: { title: 'Choose Target', targets: ['Orc', 'Goblin'] },
             };
-            mockPendingDamageRef.current = pausedCtx;
+            buildPipelineForAction.mockReturnValueOnce({
+                run: vi.fn(async (_event, _ctx, ref) => { ref.current = { pipelineStash: {}, ...pausedCtx }; }),
+                resume: vi.fn(async (_ctx, ref) => { ref.current = null; }),
+            });
 
             const { resolveAttackDamage } = UseAttackDamageResolution();
             const attack = { name: 'Longsword', damage: '1d8+3', damageType: 'slashing' };
@@ -268,7 +280,10 @@ describe('useAttackDamageResolution - pipeline paused states', () => {
                 _modalType: 'tacticalMaster',
                 _modalProps: { title: 'Tactical Choice', options: ['attack', 'defend'] },
             };
-            mockPendingDamageRef.current = pausedCtx;
+            buildPipelineForAction.mockReturnValueOnce({
+                run: vi.fn(async (_event, _ctx, ref) => { ref.current = { pipelineStash: {}, ...pausedCtx }; }),
+                resume: vi.fn(async (_ctx, ref) => { ref.current = null; }),
+            });
 
             const { resolveAttackDamage } = UseAttackDamageResolution();
             const attack = { name: 'Longsword', damage: '1d8+3', damageType: 'slashing' };
@@ -295,7 +310,10 @@ describe('useAttackDamageResolution - pipeline paused states', () => {
                 _modalType: 'shieldBash',
                 _modalProps: { title: 'Shield Bash', damageExpression: '1d6' },
             };
-            mockPendingDamageRef.current = pausedCtx;
+            buildPipelineForAction.mockReturnValueOnce({
+                run: vi.fn(async (_event, _ctx, ref) => { ref.current = { pipelineStash: {}, ...pausedCtx }; }),
+                resume: vi.fn(async (_ctx, ref) => { ref.current = null; }),
+            });
 
             const { resolveAttackDamage } = UseAttackDamageResolution();
             const attack = { name: 'Longsword', damage: '1d8+3', damageType: 'slashing' };
