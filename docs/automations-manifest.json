@@ -3382,7 +3382,7 @@
       "handler": "src/services/combat/automation/handlers/classFeatureHandler.js",
       "router": "src/services/combat/automation/routers/classFeatureRouter.js",
       "infoBuilder": "src/services/combat/automation/infoBuilders/classFeatureInfoBuilder.js",
-      "verified": "broken — see .opencode/plans/bug-cla-181-implements-of-mercy.md",
+      "verified": "verified",
       "class": "Monk",
       "triggerConditions": "",
       "expectedBehavior": "Gain proficiency in Insight and Medicine skills and Herbalism Kit."

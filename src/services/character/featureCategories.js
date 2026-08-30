@@ -163,7 +163,6 @@ const categories2024 = {
         "Foe Slayer",
         "Gnomish Cunning",
         "Heavenly Wings", // Included in Celestial Revelation
-        "Implements of Mercy",
         "Improved Combat Superiority",
         "Increased Hit Points",
         "Inner Radiance", // Included in Celestial Revelation
@@ -223,6 +222,7 @@ const categories2024 = {
         "Dwarven Toughness",
         "Expertise",
         "Halfling Nimbleness",
+        "Implements of Mercy",
         "Fiendish Legacies",
         "LightBearer",
         "Magical Secrets",

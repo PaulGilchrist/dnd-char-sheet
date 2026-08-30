@@ -58,6 +58,15 @@ export const getProficiencies = (playerStats, skill = true, getProficiencyChoice
         // Add class-based skill proficiency choices
         proficienciesAllowed += getProficiencyChoiceCount(playerStats, true);
 
+        // Merge fixed skill grants from subclass/major bonus_proficiencies
+        // (e.g., Warrior of Mercy's Implements of Mercy grants Insight and Medicine)
+        if (config.bonusSource?.bonus_proficiencies) {
+            const bonusSkills = config.bonusSource.bonus_proficiencies
+                .filter((proficiency) => proficiency.startsWith('Skill'))
+                .map((proficiency) => proficiency.substring(7));
+            proficiencies = [...new Set([...proficiencies, ...bonusSkills])];
+        }
+
         // Merge with already-selected skill proficiencies
         if (playerStats.skillProficiencies) {
             proficiencies = [...new Set([...proficiencies, ...playerStats.skillProficiencies])];
@@ -84,8 +93,10 @@ export const getProficiencies = (playerStats, skill = true, getProficiencyChoice
         }
 
         // Add bonus proficiencies from subclass/major (e.g., Bard/Valor, Rogue/Assassin)
+        // Skill: prefixed entries are fixed skill grants handled in the skill pass
         if (config.bonusSource && config.bonusSource.bonus_proficiencies) {
-            proficiencies = [...new Set([...proficiencies, ...config.bonusSource.bonus_proficiencies])];
+            const bonusProfs = config.bonusSource.bonus_proficiencies.filter((proficiency) => !proficiency.startsWith('Skill'));
+            proficiencies = [...new Set([...proficiencies, ...bonusProfs])];
         }
 
         // Calculate allowed count from existing proficiencies plus class choices

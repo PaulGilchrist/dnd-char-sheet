@@ -99,6 +99,7 @@ describe('featureCategories2024', () => {
         'Deft Explorer',
         'Draconic Ancestry',
         'Expertise',
+        'Implements of Mercy',
         'Magical Secrets',
         'Pact Magic',
       ];
@@ -106,6 +107,10 @@ describe('featureCategories2024', () => {
       for (const item of expectedItems) {
         expect(characterAdvancement).toContain(item);
       }
+    });
+
+    it('does not ignore Implements of Mercy so it renders on the sheet (CLA-181)', () => {
+      expect(featuresToIgnore).not.toContain('Implements of Mercy');
     });
 
     it('should have no duplicates', () => {

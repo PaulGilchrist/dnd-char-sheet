@@ -290,6 +290,32 @@ describe('proficiencyUtils', () => {
         expect(skillProfs).not.toContain('Tool: Smith Tools');
       });
 
+      it('merges Skill: prefixed bonus_proficiencies as fixed skill grants (CLA-181 Implements of Mercy)', () => {
+        const config = {
+          raceProficiencies: () => [],
+          bonusSource: {
+            bonus_proficiencies: ['Skill: Insight', 'Skill: Medicine', 'Herbalism Kit'],
+          },
+        };
+
+        const playerStats = {
+          class: {
+            proficiencies: [],
+          },
+          race: {
+            starting_proficiencies: [],
+          },
+          skillProficiencies: ['Religion'],
+        };
+
+        const getChoiceCount = () => 0;
+        const [allowed, proficiencies] = getProficiencies(playerStats, true, getChoiceCount, config);
+
+        expect(proficiencies).toEqual(['Insight', 'Medicine', 'Religion']);
+        // Fixed grants must not inflate the selectable allowance
+        expect(allowed).toBe(2);
+      });
+
       it('handles empty proficiencies from all sources', () => {
         const playerStats = {
           class: {
@@ -366,6 +392,30 @@ describe('proficiencyUtils', () => {
 
         expect(proficiencies).toEqual(['Heavy Armor', 'Light Armor', 'Martial Weapons']);
         expect(allowed).toBe(3);
+      });
+
+      it('excludes Skill: prefixed bonus_proficiencies from non-skill pool (CLA-181 Implements of Mercy)', () => {
+        const config = {
+          raceProficiencies: () => [],
+          bonusSource: {
+            bonus_proficiencies: ['Skill: Insight', 'Skill: Medicine', 'Herbalism Kit'],
+          },
+        };
+
+        const playerStats = {
+          class: {
+            proficiencies: ['Light Martial Weapons', 'Simple Weapons'],
+          },
+          race: {
+            starting_proficiencies: [],
+          },
+          proficiencies: [],
+        };
+
+        const getChoiceCount = () => 0;
+        const [, proficiencies] = getProficiencies(playerStats, false, getChoiceCount, config);
+
+        expect(proficiencies).toEqual(['Herbalism Kit', 'Light Martial Weapons', 'Simple Weapons']);
       });
 
       it('adds class-based non-skill proficiency choices to the allowed count', () => {

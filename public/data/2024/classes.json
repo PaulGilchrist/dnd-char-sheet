@@ -6582,6 +6582,7 @@
                     }
                 ],
                 "spells": [],
+                "bonus_proficiencies": ["Skill: Insight", "Skill: Medicine", "Herbalism Kit"],
                 "spell_casting_ability": "Wisdom",
                 "spellcasting": {
                     "cantrips_known": 0,
