@@ -3466,7 +3466,7 @@
       "handler": "src/services/combat/automation/handlers/classFeatureHandler.js",
       "router": "src/services/combat/automation/routers/classFeatureRouter.js",
       "infoBuilder": "src/services/combat/automation/infoBuilders/classFeatureInfoBuilder.js",
-      "verified": "broken — see .opencode/plans/bug-cla-189-improved-duplicity.md",
+      "verified": "verified",
       "class": "Cleric",
       "triggerConditions": "Passive: Always active",
       "expectedBehavior": "The illusion has grown more powerful: Enhanced Distraction - when you and your allies make attack rolls against a creature within 5 feet of the illusion, the attacks have Advantage. Healing Illusion - when the illusion ends, you or a creature of your choice within 5 feet of it regains a number of Hit Points equal to your Cleric level."

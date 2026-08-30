@@ -266,19 +266,6 @@ function MonsterCardModal({ monster, onClose, campaignName, creatures, creatureN
 
     const attackRange = action?.reach ? rangeToFeet(action.reach) : (action?.range ? rangeToFeet(action.range) : 30);
 
-    let duplicityAdvantage = false;
-    const clericNames = (characters || []).filter(c => c.computedStats?.automation?.passives?.some(p => p.effect === 'enhanced_distraction_and_healing'));
-    for (const cleric of clericNames) {
-      const clericBuffs = getRuntimeValue(cleric.name, 'activeBuffs', campaignName) || [];
-      const hasBuff = Array.isArray(clericBuffs) && clericBuffs.some(b => b.effect === 'create_illusion' && b.isImprovedDuplicity);
-      if (!hasBuff) continue;
-      const advantageTargets = getRuntimeValue(cleric.name, 'invokeDuplicityAdvantageTargets', campaignName) || [];
-      if (advantageTargets.includes(monsterName)) {
-        duplicityAdvantage = true;
-        break;
-      }
-    }
-
     if (isProtectionFromEvilAndGoodActive(target?.name, campaignName)) {
       const attackerCreature = getAttackerCreature();
       if (attackerCreature && isCreatureWarded(attackerCreature.type, target?.name, campaignName)) {
@@ -376,7 +363,7 @@ function MonsterCardModal({ monster, onClose, campaignName, creatures, creatureN
       damageType: formatDamageTypes(primaryDamageType),
       damageTypeChoices: getDamageTypeChoices(action),
       resistanceNotice,
-      forcedMode: rangeForcedMode || (forcedMode !== 'normal' ? forcedMode : (duplicityAdvantage ? 'advantage' : undefined)),
+      forcedMode: rangeForcedMode || (forcedMode !== 'normal' ? forcedMode : undefined),
       isAutoCrit,
       isAutoMiss,
       rangeReason,

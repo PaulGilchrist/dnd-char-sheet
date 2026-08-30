@@ -56,7 +56,7 @@ export function buildAttackContext(attack, playerStats, campaignName, mapName, c
                 if (wolfResult.advantage) {
                     mapAdv++;
                 }
-                const duplicityResult = getDuplicityAdvantageAgainst({
+                const duplicityResult = await getDuplicityAdvantageAgainst({
                     targetPos,
                     attackerName: playerStats.name,
                     campaignName,
@@ -108,7 +108,7 @@ export function buildAttackContext(attack, playerStats, campaignName, mapName, c
                 if (noMapWolf.advantage) {
                     mapAdv++;
                 }
-                const noMapDuplicity = getDuplicityAdvantageAgainst({
+                const noMapDuplicity = await getDuplicityAdvantageAgainst({
                     attackerName: playerStats.name,
                     campaignName,
                     mapData,

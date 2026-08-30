@@ -8,14 +8,12 @@
 //       → merged into single parameterized test covering both negative cases
 //         with identical assertions (coverAcBonus: 0, coverLevel: null, coverReason: null)
 //
-//   Improved Duplicity: 3 tests → 2 tests
-//     "does not grant advantage when the monster is not in the cleric's advantage targets"
-//     "does not grant advantage when the cleric lacks an improved duplicity buff"
-//       → merged into single parameterized test covering both negative cases
-//         with identical assertions (forcedMode: undefined)
+//   Improved Duplicity: CLA-189 fixed — the picker list stores granted ALLY names;
+//     monsters never gain Advantage from Improved Duplicity. These tests now assert
+//     monster attacks stay un-boosted (including the old inverted-semantics case).
 //
 // Kept (unique behavioral coverage for handleAttack in this component):
-//   Bulwark of Force cover, Improved Duplicity advantage, Graze weapon
+//   Bulwark of Force cover, Improved Duplicity negatives, Graze weapon
 //   mastery, and auto-crit within 5 feet.
 
 import { render, fireEvent } from '@testing-library/react';
@@ -258,7 +256,7 @@ describe('MonsterCardModal - handleAttack: Bulwark of Force cover', () => {
   });
 });
 
-describe('MonsterCardModal - handleAttack: Improved Duplicity advantage', () => {
+describe('MonsterCardModal - handleAttack: Improved Duplicity never buffs monster attacks (CLA-189)', () => {
   beforeEach(resetAttackMocks);
 
   function makeCleric() {
@@ -272,21 +270,11 @@ describe('MonsterCardModal - handleAttack: Improved Duplicity advantage', () => 
     };
   }
 
-  it('grants advantage when a cleric has improved duplicity active and the monster is in its targets', () => {
-    setAttackTarget();
-    useRuntimeState.__setInvokeDuplicityAdvantageTargets(['Goblin']);
-    useRuntimeState.__setActiveBuffs([{ effect: 'create_illusion', isImprovedDuplicity: true }]);
-
-    renderAttackAction(null, { characters: [makeCleric()] });
-    clickAttackLink();
-
-    expect(getAttackContext().forcedMode).toBe('advantage');
-  });
-
   it.each([
-    { advantageTargets: ['Other Monster'], buffs: [{ effect: 'create_illusion', isImprovedDuplicity: true }], desc: "the monster is not in the cleric's advantage targets" },
-    { advantageTargets: ['Goblin'], buffs: [], desc: "the cleric lacks an improved duplicity buff" },
-  ])('does not grant advantage when $desc', ({ advantageTargets, buffs }) => {
+    { advantageTargets: ['Goblin'], buffs: [{ effect: 'create_illusion', isImprovedDuplicity: true }], desc: 'the monster name matches the granted list (inverted-semantics regression)' },
+    { advantageTargets: ['Player A'], buffs: [{ effect: 'create_illusion', isImprovedDuplicity: true }], desc: 'a granted ally is the monster target' },
+    { advantageTargets: ['Goblin'], buffs: [], desc: 'the cleric lacks an improved duplicity buff' },
+  ])('does not grant the attacking monster advantage when $desc', ({ advantageTargets, buffs }) => {
     setAttackTarget();
     useRuntimeState.__setInvokeDuplicityAdvantageTargets(advantageTargets);
     useRuntimeState.__setActiveBuffs(buffs);

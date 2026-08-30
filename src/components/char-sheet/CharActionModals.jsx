@@ -185,6 +185,7 @@ function CharActionModals({
         const activeBuffs = Array.isArray(stored) ? stored : [];
         const newBuffs = activeBuffs.filter(b => b.name !== action.name);
         setRuntimeValue(casterName, 'activeBuffs', newBuffs, campaignName);
+        setRuntimeValue(casterName, 'invokeDuplicityAdvantageTargets', [], campaignName);
         const healAmount = playerStats.level || 1;
         const maxHp = targetName === playerStats.name
             ? playerStats.hitPoints

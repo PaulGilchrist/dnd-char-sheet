@@ -496,13 +496,14 @@ export async function buildAttackContextSync(attack, playerStats, campaignName, 
             }
         }
         if (forcedMode === undefined) {
-            const noMapDuplicity = getDuplicityAdvantageAgainst({
+            const noMapDuplicity = await getDuplicityAdvantageAgainst({
                 attackerName: playerName,
                 campaignName,
                 skipRangeCheck: true,
             });
             if (noMapDuplicity.advantage) {
                 forcedMode = 'advantage';
+                advantageReason = 'Improved Duplicity';
             }
         }
         if (forcedMode === undefined) {
