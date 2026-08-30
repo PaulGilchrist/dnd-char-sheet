@@ -4128,21 +4128,22 @@
                         "level": 6,
                         "automation": [
                             {
-                                "type": "damage_bonus",
-                                "damageExpression": "1d10",
-                                "damageType": "Radiant",
+                                "type": "damage_type_choice",
+                                "effect": "lunar_radiance",
                                 "trigger": "weapon_or_beast_form_attack_hit",
-                                "oncePerTurn": true,
+                                "damageTypes": [
+                                    "Normal",
+                                    "Radiant"
+                                ],
                                 "casting_time": "passive"
                             },
                             {
-                                "type": "conditional_advantage",
-                                "target": "saving_throw",
+                                "type": "passive_buff",
+                                "target": "self",
                                 "condition": "shape_shift",
-                                "effect": "advantage",
-                                "abilities": [
-                                    "CON"
-                                ],
+                                "effect": "wisdom_to_con_saves",
+                                "saveType": "CON",
+                                "bonusExpression": "wisdom_modifier",
                                 "casting_time": "passive"
                             }
                         ]

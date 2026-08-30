@@ -193,6 +193,7 @@ export function createLogAndShow(deps) {
             formula: context.autoDamageFormula,
             autoDamageSchool: context.autoDamageSchool,
             damageType: context.damageType,
+            damageTypeChoices: context.damageTypeChoices,
             targetName: targetName,
             attackerName: context.attackerName || characterName,
             saveDc: context.saveDc,

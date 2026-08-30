@@ -14,11 +14,14 @@ function AttackResultPopup({ popupHtml, onClose, campaignName, attackerName, pla
     hasBoonBeenUsedRef.current = !!used;
   }
 
-  const handleDone = useCallback((computedHit) => {
+  const handleDone = useCallback((computedHit, chosenDamageType) => {
     const actualHit = computedHit !== undefined ? computedHit : (missToHitApplied || popupHtml?.hit);
     if (popupHtml?.autoDamage && actualHit) {
+      const autoDamage = chosenDamageType
+        ? { ...popupHtml.autoDamage, damageType: chosenDamageType }
+        : popupHtml.autoDamage;
       window.dispatchEvent(new CustomEvent('dice-roll-done', {
-        detail: { autoDamage: popupHtml.autoDamage, isCrit: popupHtml.isCrit, hit: true },
+        detail: { autoDamage, isCrit: popupHtml.isCrit, hit: true },
       }));
     }
     if (onClose) onClose();

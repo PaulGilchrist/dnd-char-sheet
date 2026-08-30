@@ -193,7 +193,7 @@ describe('createNpcClickHandler - Polymorph form path', () => {
         expect(monster.languages).toBe('Common, Elvish');
     });
 
-    it('should change action damage types to Radiant for polymorph', async () => {
+    it('should keep the beast normal damage types for polymorph', async () => {
         vi.mocked(runtimeState.getRuntimeValue).mockImplementation((key, prop, _campaign) => {
             if (prop === 'currentHitPoints') return 25;
             if (prop === 'polymorphTempHp') return 0;
@@ -214,9 +214,10 @@ describe('createNpcClickHandler - Polymorph form path', () => {
         await handler({ name: 'DruidAlice' });
 
         const monster = setViewingMonster.mock.calls[0][0];
-        expect(monster.actions[0].damage_type_primary).toBe('Radiant');
-        expect(monster.actions[0].damage_type_secondary).toBe('Radiant');
-        expect(monster.actions[0].description).toContain('Radiant damage');
+        expect(monster.actions[0].damage_type_primary).toBe('Bludgeoning');
+        expect(monster.actions[0].damage_type_secondary).toBe('Piercing');
+        expect(monster.actions[0].damage_type_choices).toBeUndefined();
+        expect(monster.actions[0].description).toBe('5 Bludgeoning damage');
     });
 
     it('should use ability_score_modifiers for saving throws when saving_throws is missing', async () => {

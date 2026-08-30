@@ -20,6 +20,10 @@ import { MonsterEvasionModal } from './MonsterEvasionModal.jsx';
 import { saveAbilityAbbr, abilityNameMap, extractConditionsFromSaveEffect, getSaveModifierForSaveType, toAbbr } from './MonsterCardHelpers.js';
 import './MonsterCardModal.css';
 
+function getDamageTypeChoices(action) {
+  return action?.damage_type_choices?.length > 0 ? action.damage_type_choices : undefined;
+}
+
 // eslint-disable-next-line react-refresh/only-export-components
 export function extractDamageDiceFromDescription(description, existingDamageDice) {
   if (existingDamageDice) return existingDamageDice;
@@ -370,6 +374,7 @@ function MonsterCardModal({ monster, onClose, campaignName, creatures, creatureN
 
     rollAttack(name, effectiveBonus, {
       damageType: formatDamageTypes(primaryDamageType),
+      damageTypeChoices: getDamageTypeChoices(action),
       resistanceNotice,
       forcedMode: rangeForcedMode || (forcedMode !== 'normal' ? forcedMode : (duplicityAdvantage ? 'advantage' : undefined)),
       isAutoCrit,

@@ -64,6 +64,9 @@ const moonDruidCharacters = [
             ],
             languages: ['Common', 'Elvish'],
             class: { major: { name: 'Circle of the Moon' } },
+            automation: {
+                passives: [{ type: 'damage_type_choice', effect: 'lunar_radiance' }],
+            },
         },
     },
 ];
@@ -196,7 +199,7 @@ describe('createNpcClickHandler - Wild Shape form path', () => {
         expect(monster.saving_throws.dex.modifier).toBe(2);
     });
 
-    it('should change action damage types to Radiant for Moon Druid', async () => {
+    it('should tag attacks with Lunar Radiance damage type choices for Moon Druid lv6+', async () => {
         mockRuntimeValues();
         vi.mocked(getCombatSummary).mockReturnValue({
             creatures: [makeCombatCreature()],
@@ -206,7 +209,7 @@ describe('createNpcClickHandler - Wild Shape form path', () => {
                 ...baseBear,
                 actions: [
                     { name: 'Bite', attack_bonus: 5, damage_type_primary: 'Bludgeoning', damage_type_secondary: 'Piercing', description: '5 Bludgeoning damage' },
-                    { name: 'Claw', attack_bonus: 5, damage_type_primary: 'Slashing', description: 'Claw attack' },
+                    { name: 'Claw', attack_bonus: 5, damage_type_primary: 'Slashing', description: 'Claw attack dealing Slashing damage' },
                 ],
             },
         ]);
@@ -214,10 +217,82 @@ describe('createNpcClickHandler - Wild Shape form path', () => {
         await handler({ name: 'DruidAlice' });
 
         const monster = setViewingMonster.mock.calls[0][0];
-        expect(monster.actions[0].damage_type_primary).toBe('Radiant');
-        expect(monster.actions[0].damage_type_secondary).toBe('Radiant');
-        expect(monster.actions[0].description).toContain('Radiant damage');
-        expect(monster.actions[1].damage_type_primary).toBe('Radiant');
+        expect(monster.actions[0].damage_type_primary).toBe('Bludgeoning');
+        expect(monster.actions[0].damage_type_secondary).toBe('Piercing');
+        expect(monster.actions[0].damage_type_choices).toEqual(['Bludgeoning', 'Radiant']);
+        expect(monster.actions[0].description).toContain('Bludgeoning or Radiant damage');
+        expect(monster.actions[1].damage_type_choices).toEqual(['Slashing', 'Radiant']);
+        expect(monster.actions[1].description).toContain('Slashing or Radiant damage');
+    });
+
+    it('should not add Lunar Radiance choices for Moon Druid below level 6', async () => {
+        const youngMoonDruid = [
+            {
+                name: 'DruidAlice',
+                computedStats: {
+                    abilities: [{ name: 'Wisdom', score: 14 }],
+                    class: { major: { name: 'Circle of the Moon' } },
+                    automation: { passives: [] },
+                },
+            },
+        ];
+        const handler2 = createNpcClickHandler({
+            isLocalhost: true,
+            campaignNpcs: [],
+            campaignName: 'test-campaign',
+            characters: youngMoonDruid,
+            setViewingMonster,
+            setViewingMonsterCreatureName,
+        });
+        mockRuntimeValues();
+        vi.mocked(getCombatSummary).mockReturnValue({
+            creatures: [makeCombatCreature()],
+        });
+        vi.mocked(loadMonsters).mockResolvedValue([
+            {
+                ...baseBear,
+                actions: [
+                    { name: 'Bite', attack_bonus: 5, damage_type_primary: 'Piercing', description: '7 Piercing damage' },
+                ],
+            },
+        ]);
+
+        await handler2({ name: 'DruidAlice' });
+
+        const monster = setViewingMonster.mock.calls[0][0];
+        expect(monster.actions[0].damage_type_choices).toBeUndefined();
+        expect(monster.actions[0].damage_type_primary).toBe('Piercing');
+        expect(monster.actions[0].description).toBe('7 Piercing damage');
+    });
+
+    it('should not convert or tag attacks for non-Moon druid wild shape', async () => {
+        const handler2 = createNpcClickHandler({
+            isLocalhost: true,
+            campaignNpcs: [],
+            campaignName: 'test-campaign',
+            characters: nonMoonDruidCharacters,
+            setViewingMonster,
+            setViewingMonsterCreatureName,
+        });
+        mockRuntimeValues();
+        vi.mocked(getCombatSummary).mockReturnValue({
+            creatures: [makeCombatCreature({ name: 'DruidBob', wildShapeSource: 'DruidBob' })],
+        });
+        vi.mocked(loadMonsters).mockResolvedValue([
+            {
+                ...baseBear,
+                actions: [
+                    { name: 'Bite', attack_bonus: 5, damage_type_primary: 'Piercing', description: '7 Piercing damage' },
+                ],
+            },
+        ]);
+
+        await handler2({ name: 'DruidBob' });
+
+        const monster = setViewingMonster.mock.calls[0][0];
+        expect(monster.actions[0].damage_type_choices).toBeUndefined();
+        expect(monster.actions[0].damage_type_primary).toBe('Piercing');
+        expect(monster.actions[0].description).toBe('7 Piercing damage');
     });
 
     it('should add lunarFormAction when present', async () => {

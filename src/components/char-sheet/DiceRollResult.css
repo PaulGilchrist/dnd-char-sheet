@@ -204,6 +204,23 @@
     opacity: 0.9;
 }
 
+.lunar-radiance-choice {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 8px;
+}
+
+.lunar-radiance-choice-label {
+    font-weight: bold;
+    color: #ffeb3b;
+}
+
+.lunar-radiance-choice .lunar-radiance-choice-btn {
+    background-color: #b8860b;
+    margin: 0 6px;
+}
+
 .dice-roll-reroll-result {
     text-align: center;
     font-size: 0.95em;

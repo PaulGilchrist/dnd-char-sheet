@@ -2,6 +2,31 @@ import './DiceRollResult.css';
 import { useDiceRollState } from './DiceRollResult.computed.js';
 import { createDiceRollHandlers } from './DiceRollResult.handlers.js';
 
+function AutoDamageActionButton({ autoDamage, computedHit, onDone }) {
+    if (autoDamage.damageTypeChoices?.length > 0) {
+        return (
+            <div className="lunar-radiance-choice">
+                <div className="lunar-radiance-choice-label">Choose damage type:</div>
+                {autoDamage.damageTypeChoices.map((choice) => (
+                    <button
+                        key={choice}
+                        className="dice-roll-reroll-btn lunar-radiance-choice-btn"
+                        onClick={() => onDone?.(computedHit, choice)}
+                        type="button"
+                    >
+                        {choice}
+                    </button>
+                ))}
+            </div>
+        );
+    }
+    return (
+        <button className="dice-roll-reroll-btn" onClick={() => onDone?.(computedHit)} type="button">
+            <i className="fa-solid fa-check"></i> Done
+        </button>
+    );
+}
+
 function DiceRollResult(props) {
     const {
         name, type, rolls, rollType, bonus = 0, bonusDetail, formula = '', modifier = 0,
@@ -652,9 +677,7 @@ function DiceRollResult(props) {
 
             {autoDamage && computedHit && (
               <div className="dice-roll-reroll">
-                <button className="dice-roll-reroll-btn" onClick={() => onDone?.(computedHit)} type="button">
-                  <i className="fa-solid fa-check"></i> Done
-                </button>
+                <AutoDamageActionButton autoDamage={autoDamage} computedHit={computedHit} onDone={onDone} />
               </div>
             )}
 

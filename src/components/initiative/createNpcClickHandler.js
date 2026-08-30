@@ -76,14 +76,16 @@ export function createNpcClickHandler({
                     const wisMod = Math.floor(((wisScore ?? 10) - 10) / 2)
                     merged.saving_throws.con.modifier = beastSaves.con + wisMod
                 }
-                for (const action of merged.actions || []) {
-                    if (action.attack_bonus != null) {
-                        action.damage_type_primary = 'Radiant'
-                        if (action.damage_type_secondary) {
-                            action.damage_type_secondary = 'Radiant'
-                        }
-                        if (action.description) {
-                            action.description = action.description.replace(/\b([A-Za-z]+) damage\b/gi, 'Radiant damage')
+                const hasLunarRadiance = isMoonDruid && !!druidCharacter &&
+                    (druidCharacter.computedStats?.automation?.passives || druidCharacter.automation?.passives || []).some(p => p.effect === 'lunar_radiance')
+                if (hasLunarRadiance) {
+                    for (const action of merged.actions || []) {
+                        if (action.attack_bonus != null) {
+                            const baseType = action.damage_type_primary || ''
+                            action.damage_type_choices = [...(baseType ? [baseType] : []), 'Radiant']
+                            if (action.description) {
+                                action.description = action.description.replace(/\b([A-Za-z]+) damage\b/gi, '$1 or Radiant damage')
+                            }
                         }
                     }
                 }
@@ -140,17 +142,6 @@ export function createNpcClickHandler({
                 for (const [abbr, mod] of Object.entries(beastSaves)) {
                     merged.saving_throws[abbr] = { modifier: mod }
                 }
-                for (const action of merged.actions || []) {
-                    if (action.attack_bonus != null) {
-                        action.damage_type_primary = 'Radiant'
-                        if (action.damage_type_secondary) {
-                            action.damage_type_secondary = 'Radiant'
-                        }
-                        if (action.description) {
-                            action.description = action.description.replace(/\b([A-Za-z]+) damage\b/gi, 'Radiant damage')
-                        }
-                    }
-                }
                 setViewingMonster(merged)
                 setViewingMonsterCreatureName(creature.name)
                 return
@@ -199,17 +190,6 @@ export function createNpcClickHandler({
                 merged.saving_throws = {}
                 for (const [abbr, mod] of Object.entries(beastSaves)) {
                     merged.saving_throws[abbr] = { modifier: mod }
-                }
-                for (const action of merged.actions || []) {
-                    if (action.attack_bonus != null) {
-                        action.damage_type_primary = 'Radiant'
-                        if (action.damage_type_secondary) {
-                            action.damage_type_secondary = 'Radiant'
-                        }
-                        if (action.description) {
-                            action.description = action.description.replace(/\b([A-Za-z]+) damage\b/gi, 'Radiant damage')
-                        }
-                    }
                 }
                 setViewingMonster(merged)
                 setViewingMonsterCreatureName(creature.name)
