@@ -55,13 +55,13 @@ You are given the current **setup playbook** (including known pitfalls) and **ch
 
 ### Step 1 — Orient (cheap, do this first)
 
-1. Check the character registry for an existing character/NPCs matching what this automation needs. Reuse them if found — don't rebuild from scratch.
+1. Check the character registry for an existing character/NPCs matching what this automation needs. Reuse them if found — don't rebuild from scratch. **"Matching" does NOT mean the character must already be set up correctly: EDIT an existing character's class/subclass/level/spells/feats/abilities via the Edit wizard to fit your test scenario.** Do NOT expect a player character to already be configured for the automation, and do NOT treat "existing character doesn't have the right subclass/feature/level" as a blocker — repurposing an existing character by editing it is the DEFAULT path (the campaign keeps exactly one character per class for exactly this reason; the registry note tells you its current config — change it as needed, and record the new config back when done).
 2. Check the setup playbook for a recipe matching this trigger type or class/subclass/feat/background combination. Follow it instead of improvising if one exists.
 3. If it's unclear exactly what to build or trigger, **read the source first** (the handler/router/infoBuilder files given in the automation details, and relevant files under `public/data/2024/`, e.g. `spells.json`, `monsters.json`) rather than guessing through the UI — it's far cheaper than trial-and-error clicking and usually tells you exactly what state is needed. This is also where most of the pitfalls above get caught before they cost you time.
 
 ### Step 2 — Build/confirm the scenario (via Playwright MCP)
 
-1. In "test-campaign," create (or edit) a 2024 character (never 5e) with the exact class/subclass/race/subrace/feat/background needed, or reuse a registry match.
+1. In "test-campaign," EDIT an existing 2024 character (or create one only if the class doesn't exist at all) via the Edit wizard so it has the exact class/subclass/race/subrace/feat/background needed. Never assume an existing character is already configured correctly for the automation — open the Edit wizard and set it up yourself; never 5e.
 2. Create or reuse any needed NPC creatures for combat/spell targeting tests via the Encounter Builder. NPC monster names must match `monsters.json` exactly — check `public/data/2024/monsters.json` or `public/data/monsters.json` rather than guessing a name.
 3. If what you're given doesn't quite support the scenario (missing feature, wrong target type, wrong level), **fix it** — edit the character, add the right NPC, adjust level — rather than declaring incomplete. Run through the pitfalls checklist above first; most "can't test this" situations turn out to be one of those five.
 4. **Checkpoint:** write one line to `.opencode/plans/checkpoint-<automation-id>.md` — what character/NPCs now exist and their exact names. Cheap insurance if you get compacted after this point.

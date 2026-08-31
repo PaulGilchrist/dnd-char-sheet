@@ -4082,7 +4082,7 @@
       "handler": "src/services/combat/automation/handlers/spellHandler.js",
       "router": "src/services/combat/automation/routers/spellRouter.js",
       "infoBuilder": "src/services/combat/automation/infoBuilders/spellInfoBuilder.js",
-      "verified": "not verified",
+      "verified": "verified",
       "class": "Spell",
       "triggerConditions": "Action: 1 bonus action; Action: bonus_action",
       "expectedBehavior": "Up to six creatures of your choice that you can see within range regain Hit Points equal to 2d4 plus your spellcasting ability modifier."
@@ -4106,7 +4106,7 @@
       "handler": "src/services/combat/automation/handlers/spellHandler.js",
       "router": "src/services/combat/automation/routers/spellRouter.js",
       "infoBuilder": "src/services/combat/automation/infoBuilders/spellInfoBuilder.js",
-      "verified": "not verified",
+      "verified": "verified",
       "class": "Spell",
       "triggerConditions": "Range: 60 feet",
       "expectedBehavior": "You banish a creature that you can see within range into a labyrinthine demiplane. The target remains there for the duration or until it escapes the maze. The target can take a Study action to try to escape. When it does so, it makes a DC 20 Intelligence (Investigation) check. If it succeeds, it escapes, and the spell ends. When the spell ends, the target reappears in the space it left or, if that space is occupied, in the nearest unoccupied space."
@@ -4118,7 +4118,7 @@
       "handler": "src/services/combat/automation/handlers/featHandler.js",
       "router": "src/services/combat/automation/routers/featRouter.js",
       "infoBuilder": "src/services/combat/automation/infoBuilders/featInfoBuilder.js",
-      "verified": "not verified",
+      "verified": "verified",
       "triggerConditions": "",
       "expectedBehavior": "Ability Score Increase. Increase your Strength or Dexterity score by 1, to a maximum of 20. Dexterous Wearer. While you're wearing Medium armor, you can add 3, rather than 2, to your AC if you have a Dexterity score of 16 or higher."
     },
@@ -4129,7 +4129,7 @@
       "handler": "src/services/combat/automation/handlers/classFeatureHandler.js",
       "router": "src/services/combat/automation/routers/classFeatureRouter.js",
       "infoBuilder": "src/services/combat/automation/infoBuilders/classFeatureInfoBuilder.js",
-      "verified": "not verified",
+      "verified": "broken — see .opencode/plans/bug-cla-226-memorize-spell.md",
       "class": "Wizard",
       "triggerConditions": "Action: passive",
       "expectedBehavior": "Whenever you finish a Short Rest, you can study your spellbook and replace one of the level 1+ Wizard spells you have prepared with another level 1+ spell from the book."
@@ -4141,7 +4141,7 @@
       "handler": "src/services/combat/automation/handlers/maneuverHandler.js",
       "router": "src/services/combat/automation/routers/maneuverRouter.js",
       "infoBuilder": "src/services/combat/automation/infoBuilders/maneuverInfoBuilder.js",
-      "verified": "not verified",
+      "verified": "broken — see .opencode/plans/bug-mn-012-menacing-attack.md",
       "class": "Fighter",
       "triggerConditions": "Action type: attack_rider; Trigger: weapon_attack_hit; Uses: superiority_die",
       "expectedBehavior": "When you hit a creature with an attack roll, you can expend one Superiority Die to attempt to frighten the target. Add the Superiority Die to the attack's damage roll. The target must succeed on a Wisdom saving throw or be Frightened until the end of your next turn."
@@ -4166,7 +4166,7 @@
       "handler": "src/services/combat/automation/handlers/metamagicHandler.js",
       "router": "src/services/combat/automation/routers/metamagicRouter.js",
       "infoBuilder": "src/services/combat/automation/infoBuilders/metamagicInfoBuilder.js",
-      "verified": "not verified",
+      "verified": "verified",
       "class": "Sorcerer",
       "triggerConditions": "Applied when casting a sorcerer spell using a metamagic option",
       "expectedBehavior": "Apply a Metamagic option when casting a sorcerer spell. Options include: Careful Spell, Empowered Spell, Twinned Spell. Each costs sorcery points."
@@ -4178,7 +4178,7 @@
       "handler": "src/services/combat/automation/handlers/classFeatureHandler.js",
       "router": "src/services/combat/automation/routers/classFeatureRouter.js",
       "infoBuilder": "src/services/combat/automation/infoBuilders/classFeatureInfoBuilder.js",
-      "verified": "not verified",
+      "verified": "verified",
       "class": "Barbarian",
       "triggerConditions": "Action: passive",
       "expectedBehavior": "You have Immunity to the Charmed and Frightened conditions while your Rage is active. If you're Charmed or Frightened when you enter your Rage, the condition ends on you."
@@ -4190,7 +4190,7 @@
       "handler": "src/services/combat/automation/handlers/classFeatureHandler.js",
       "router": "src/services/combat/automation/routers/classFeatureRouter.js",
       "infoBuilder": "src/services/combat/automation/infoBuilders/classFeatureInfoBuilder.js",
-      "verified": "not verified",
+      "verified": "verified",
       "class": "Warlock",
       "triggerConditions": "Action: 1 reaction",
       "expectedBehavior": "You can cast Misty Step as a Reaction in response to taking damage. In addition, the following effects are now among your Steps of the Fey options. Disappearing Step: You have the Invisible condition until the start of your next turn or, until immediately after you make an attack roll, deal damage, or cast a spell. Dreadful Step: Creatures within 5 feet of the space you left or the space you appear in (your choice) must succeed on a Wisdom saving throw against your spell save DC or take 2d10 Psychic damage."
@@ -4202,7 +4202,7 @@
       "handler": "src/services/combat/automation/handlers/classFeatureHandler.js",
       "router": "src/services/combat/automation/routers/classFeatureRouter.js",
       "infoBuilder": "src/services/combat/automation/infoBuilders/classFeatureInfoBuilder.js",
-      "verified": "not verified",
+      "verified": "broken — see .opencode/plans/bug-cla-229-misty-wanderer.md",
       "class": "Ranger",
       "triggerConditions": "Automation type: undefined",
       "expectedBehavior": "Cast Misty Step without spell slot, uses = Wisdom modifier (minimum once). When casting Misty Step, bring one willing creature within 5 feet to an unoccupied space within 5 feet of your destination."
@@ -4214,7 +4214,7 @@
       "handler": "src/services/combat/automation/handlers/featHandler.js",
       "router": "src/services/combat/automation/routers/featRouter.js",
       "infoBuilder": "src/services/combat/automation/infoBuilders/featInfoBuilder.js",
-      "verified": "not verified",
+      "verified": "verified",
       "class": "Feat",
       "triggerConditions": "",
       "expectedBehavior": "Ability Score Increase. Increase your Strength or Dexterity score by 1, to a maximum of 20. Armor Training. You gain training with Medium armor."
@@ -4226,7 +4226,7 @@
       "handler": "src/services/combat/automation/handlers/classFeatureHandler.js",
       "router": "src/services/combat/automation/routers/classFeatureRouter.js",
       "infoBuilder": "src/services/combat/automation/infoBuilders/classFeatureInfoBuilder.js",
-      "verified": "not verified",
+      "verified": "broken — see .opencode/plans/bug-cla-230-moonlight-step.md",
       "class": "Druid",
       "triggerConditions": "Automation type: undefined",
       "expectedBehavior": "As a Bonus Action, teleport up to 30 feet and have Advantage on the next attack roll. Uses equal to Wisdom modifier. Can restore uses by expending level 2+ spell slot."
@@ -4238,7 +4238,7 @@
       "handler": "src/services/combat/automation/handlers/featHandler.js",
       "router": "src/services/combat/automation/routers/featRouter.js",
       "infoBuilder": "src/services/combat/automation/infoBuilders/featInfoBuilder.js",
-      "verified": "not verified",
+      "verified": "verified",
       "triggerConditions": "Action: passive",
       "expectedBehavior": "As you finish a Short or Long Rest, you can play a song on a Musical Instrument with which you have proficiency and give Heroic Inspiration to allies who hear the song. The number of allies you can affect in this way equals your Proficiency Bonus."
     },
@@ -4249,7 +4249,7 @@
       "handler": "src/services/combat/automation/handlers/classFeatureHandler.js",
       "router": "src/services/combat/automation/routers/classFeatureRouter.js",
       "infoBuilder": "src/services/combat/automation/infoBuilders/classFeatureInfoBuilder.js",
-      "verified": "not verified",
+      "verified": "broken — see .opencode/plans/bug-cla-231-mystic-arcanum.md",
       "class": "Warlock",
       "triggerConditions": "",
       "expectedBehavior": "Your patron grants you a magical secret called an arcanum. Choose one level 6 Warlock spell as this arcanum. You can cast your arcanum spell once without expending a spell slot, and you must finish a Long Rest before you can cast it in this way again. You gain another Warlock spell of your choice that can be cast in this way when you reach Warlock levels 13 (level 7 spell), 15 (level 8 spell), and 17 (level 9 spell). You regain all uses of your Mystic Arcanum when you finish a Long Rest. Whenever you gain a Warlock level, you can replace one of your arcanum spells with another Warlock spell of the same level."
@@ -4261,7 +4261,7 @@
       "handler": "src/services/combat/automation/handlers/classFeatureHandler.js",
       "router": "src/services/combat/automation/routers/classFeatureRouter.js",
       "infoBuilder": "src/services/combat/automation/infoBuilders/classFeatureInfoBuilder.js",
-      "verified": "not verified",
+      "verified": "verified",
       "class": "Druid",
       "triggerConditions": "Trigger: short_rest; Action: passive",
       "expectedBehavior": "You can cast one level 1+ prepared spell from Circle Spells without expending a spell slot, once per Long Rest. When you finish a Short Rest, you can recover expended spell slots with combined levels equal to or less than half your Druid level."
@@ -4273,10 +4273,11 @@
       "handler": "src/services/combat/automation/handlers/spellHandler.js",
       "router": "src/services/combat/automation/routers/spellRouter.js",
       "infoBuilder": "src/services/combat/automation/infoBuilders/spellInfoBuilder.js",
-      "verified": "not verified",
+      "verified": "verified",
       "class": "Druid",
       "triggerConditions": "Short Rest; Druid level 6+ Circle of the Land",
-      "expectedBehavior": "You can cast one level 1+ prepared spell from Circle Spells without expending a spell slot, once per Long Rest. When you finish a Short Rest, you can recover expended spell slots with combined levels equal to half your Druid level (min 1). (Druid Circle of the Land class feature)"
+      "expectedBehavior": "You can cast one level 1+ prepared spell from Circle Spells without expending a spell slot, once per Long Rest. When you finish a Short Rest, you can recover expended spell slots with combined levels equal to half your Druid level (min 1). (Druid Circle of the Land class feature)",
+      "notes": "DUPLICATE of CLA-232 — NOT a spell: 'Natural Recovery' has no entry in public/data/spells.json or public/data/2024/spells.json; single implementation is the Circle of the Land lv6 classFeature (2024 classes.json majors[0], automation type natural_recovery). Manifest spellHandler/spellRouter/spellInfoBuilder paths stale. VERIFIED PASS 2026-08-31 via class-feature surface (Short Rest modal budget '10 of 10' + Special Actions free-cast row, spell-specific evidence: type:'spell' cast log, spell_slots counters unchanged on free cast)."
     },
     {
       "id": "CLA-233",
@@ -4285,7 +4286,7 @@
       "handler": "src/services/combat/automation/handlers/classFeatureHandler.js",
       "router": "src/services/combat/automation/routers/classFeatureRouter.js",
       "infoBuilder": "src/services/combat/automation/infoBuilders/classFeatureInfoBuilder.js",
-      "verified": "not verified",
+      "verified": "verified",
       "class": "Lightfoot",
       "triggerConditions": "Action; You are obscured by a creature at least one size larger",
       "expectedBehavior": "You can take the Hide action even when you are obscured only by a creature that is at least one size larger than you. (Lightfoot Halfling trait)"
@@ -4297,7 +4298,7 @@
       "handler": "src/services/combat/automation/handlers/classFeatureHandler.js",
       "router": "src/services/combat/automation/routers/classFeatureRouter.js",
       "infoBuilder": "src/services/combat/automation/infoBuilders/classFeatureInfoBuilder.js",
-      "verified": "not verified",
+      "verified": "broken — see .opencode/plans/bug-cla-234-nature-speaker.md",
       "class": "Barbarian",
       "triggerConditions": "",
       "expectedBehavior": "You can cast the Commune with Nature spell but only as a Ritual. Wisdom is your spellcasting ability for it."
@@ -4309,7 +4310,7 @@
       "handler": "src/services/combat/automation/handlers/classFeatureHandler.js",
       "router": "src/services/combat/automation/routers/classFeatureRouter.js",
       "infoBuilder": "src/services/combat/automation/infoBuilders/classFeatureInfoBuilder.js",
-      "verified": "not verified",
+      "verified": "broken — see .opencode/plans/bug-cla-235-natures-sanctuary.md",
       "class": "Druid",
       "triggerConditions": "Action: 1 action; Range: 120_ft; Duration: 1_minute",
       "expectedBehavior": "As a Action, expend Wild Shape to cause spectral trees and vines to appear in a 15-foot Cube within 120 feet. Lasts 1 minute. You and allies have Half Cover; allies gain current Nature's Ward Resistance. As a Bonus Action, move the Cube up to 60 feet."
@@ -4321,7 +4322,7 @@
       "handler": "src/services/combat/automation/handlers/classFeatureHandler.js",
       "router": "src/services/combat/automation/routers/classFeatureRouter.js",
       "infoBuilder": "src/services/combat/automation/infoBuilders/classFeatureInfoBuilder.js",
-      "verified": "not verified",
+      "verified": "verified",
       "class": "Ranger",
       "triggerConditions": "Action: 1 bonus action; Action: bonus_action",
       "expectedBehavior": "You invoke spirits of nature to magically hide yourself. As a Bonus Action, you can give yourself the Invisible condition until end of your next turn. Uses = Wisdom modifier (minimum once). Regain all on Long Rest."
@@ -4333,7 +4334,7 @@
       "handler": "src/services/combat/automation/handlers/classFeatureHandler.js",
       "router": "src/services/combat/automation/routers/classFeatureRouter.js",
       "infoBuilder": "src/services/combat/automation/infoBuilders/classFeatureInfoBuilder.js",
-      "verified": "not verified",
+      "verified": "broken — see .opencode/plans/bug-cla-237-natures-ward.md",
       "class": "Druid",
       "triggerConditions": "Action: passive",
       "expectedBehavior": "Immune to Poisoned condition. Resistance to a damage type based on land choice: Arid=Fire, Polar=Cold, Temperate=Lightning, Tropical=Poison."
@@ -4345,7 +4346,7 @@
       "handler": "src/services/combat/automation/handlers/classFeatureHandler.js",
       "router": "src/services/combat/automation/routers/classFeatureRouter.js",
       "infoBuilder": "src/services/combat/automation/infoBuilders/classFeatureInfoBuilder.js",
-      "verified": "not verified",
+      "verified": "broken — see .opencode/plans/bug-cla-238-natures-wrath.md",
       "class": "Paladin",
       "triggerConditions": "Action: 1 action; Range: 15 ft; Save: STR",
       "expectedBehavior": "As a action, you can expend one use of your Channel Divinity to conjure spectral vines around nearby creatures. Each creature of your choice that you can see within 15 feet of yourself must succeed on a Strength saving throw or have the Restrained condition for 1 minute. A Restrained creature repeats the save at the end of each of its turns, ending the effect on itself on a success."
@@ -4357,7 +4358,7 @@
       "handler": "src/services/combat/automation/handlers/classFeatureHandler.js",
       "router": "src/services/combat/automation/routers/classFeatureRouter.js",
       "infoBuilder": "src/services/combat/automation/infoBuilders/classFeatureInfoBuilder.js",
-      "verified": "not verified",
+      "verified": "broken — see .opencode/plans/bug-cla-239-necrotic-shroud.md",
       "race": "Aasimar",
       "triggerConditions": "Automation type: undefined",
       "expectedBehavior": "Your eyes briefly become pools of darkness, and flightless wings sprout from your back temporarily. Creatures other than your allies within 10 feet of you must succeed on a Charisma saving throw (DC 8 plus your Charisma modifier and Proficiency Bonus) or have the Frightened condition until the end of your next turn."
@@ -4369,7 +4370,7 @@
       "handler": "src/services/combat/automation/handlers/weaponMasteryHandler.js",
       "router": "src/services/combat/automation/routers/weaponMasteryRouter.js",
       "infoBuilder": "src/services/combat/automation/infoBuilders/weaponMasteryInfoBuilder.js",
-      "verified": "not verified",
+      "verified": "broken — see .opencode/plans/bug-wm-003-nick.md",
       "class": "Barbarian",
       "triggerConditions": "",
       "expectedBehavior": "When you make the extra attack of the Light property, you can make it as part of the Attack action instead of as a Bonus Action. You can make this extra attack only once per turn."
@@ -4394,7 +4395,7 @@
       "handler": "src/services/combat/automation/handlers/classFeatureHandler.js",
       "router": "src/services/combat/automation/routers/classFeatureRouter.js",
       "infoBuilder": "src/services/combat/automation/infoBuilders/classFeatureInfoBuilder.js",
-      "verified": "not verified",
+      "verified": "broken — see .opencode/plans/bug-cla-240-oceanic-gift.md",
       "class": "Druid",
       "triggerConditions": "Automation type: undefined",
       "expectedBehavior": "Instead of manifesting the Emanation of Wrath of the Sea around yourself, you can manifest it around one willing creature within 60 feet of yourself. That creature gains all the benefits of the Emanation and uses your spell save DC and Wisdom modifier for it. In addition, you can manifest the Emanation around both the other creature and yourself if you expend two uses of your Wild Shape instead of one when manifesting it."
@@ -4406,7 +4407,7 @@
       "handler": "src/services/combat/automation/handlers/classFeatureHandler.js",
       "router": "src/services/combat/automation/routers/classFeatureRouter.js",
       "infoBuilder": "src/services/combat/automation/infoBuilders/classFeatureInfoBuilder.js",
-      "verified": "not verified",
+      "verified": "verified",
       "class": "Monk",
       "triggerConditions": "Trigger: flurry_of_blows_unarmed_strike_hit",
       "expectedBehavior": "Whenever you hit a Creature with an attack granted by your Flurry of Blows, you can impose one of the following effects on that target. Addle: The target can't make Opportunity Attacks until the start of its next turn. Push: The target must succeed on a Strength saving throw or be pushed up to 15 feet away from you. Topple: The target must succeed on a Dexterity saving throw or have the Prone condition."
@@ -4418,7 +4419,7 @@
       "handler": "src/services/combat/automation/handlers/classFeatureHandler.js",
       "router": "src/services/combat/automation/routers/classFeatureRouter.js",
       "infoBuilder": "src/services/combat/automation/infoBuilders/classFeatureInfoBuilder.js",
-      "verified": "not verified",
+      "verified": "verified",
       "class": "Ranger",
       "triggerConditions": "Action: passive",
       "expectedBehavior": "Bonus to Charisma checks = Wisdom modifier (minimum +1). Gain proficiency in Deception, Performance, or Persuasion."
@@ -4430,7 +4431,7 @@
       "handler": "src/services/combat/automation/handlers/classFeatureHandler.js",
       "router": "src/services/combat/automation/routers/classFeatureRouter.js",
       "infoBuilder": "src/services/combat/automation/infoBuilders/classFeatureInfoBuilder.js",
-      "verified": "not verified",
+      "verified": "broken — see .opencode/plans/bug-cla-243-otherworldly-presence.md",
       "class": "Rogue",
       "triggerConditions": "Passive: Always active",
       "expectedBehavior": "You know the Thaumaturgy cantrip. When you cast it with this trait, the spell uses the same spellcasting ability you use for your Fiendish Legacy trait."
@@ -4442,7 +4443,7 @@
       "handler": "src/services/combat/automation/handlers/spellHandler.js",
       "router": "src/services/combat/automation/routers/spellRouter.js",
       "infoBuilder": "src/services/combat/automation/infoBuilders/spellInfoBuilder.js",
-      "verified": "not verified",
+      "verified": "broken — see .opencode/plans/bug-sp-082-otilukes-freezing-sphere.md",
       "class": "Spell",
       "triggerConditions": "Action: 1 action; Range: 300 feet",
       "expectedBehavior": "A frigid globe streaks from you to a point of your choice within range, where it explodes in a 60-foot-radius Sphere. Each creature in that area makes a Constitution saving throw, taking 10d6 Cold damage on failed save or half as much damage on a successful one. If the globe strikes a body of water, it freezes the water to a depth of 6 inches over an area 30 feet square. This ice lasts for 1 minute. Creatures that were swimming on the surface of frozen water are trapped in the ice and have the Restrained condition. A trapped creature can take an action to make a Strength (Athletics) check against your spell save DC to break free. You can refrain from firing the globe after completing the spell's casting. If you do so, a globe about the size of a sling bullet, cool to the touch, appears in your hand. At any time, you or a creature you give the globe to can throw the globe (to a range of 40 feet) or hurl it with a sling (to the sling's normal range). It shatters on impact, with the same effect as a normal casting of the spell. You can also set the globe down without shattering it. After 1 minute, if the globe hasn't already shattered, it explodes."
@@ -4454,7 +4455,7 @@
       "handler": "src/services/combat/automation/handlers/spellHandler.js",
       "router": "src/services/combat/automation/routers/spellRouter.js",
       "infoBuilder": "src/services/combat/automation/infoBuilders/spellInfoBuilder.js",
-      "verified": "not verified",
+      "verified": "verified",
       "class": "Spell",
       "triggerConditions": "Duration: Concentration, up to 1 minute",
       "expectedBehavior": "A shimmering sphere encloses a Large or smaller creature or object within range. An unwilling creature must succeed on a Dexterity saving throw or be enclosed for the duration. Nothing—not physical objects, energy, or other spell effects—can pass through the barrier, in or out, though a creature in the sphere can breathe there. The sphere is immune to all damage, and a creature or object inside can't be damaged by attacks or effects originating from outside, nor can a creature inside the sphere damage anything outside it. The sphere is weightless and just large enough to contain the creature or object inside. An enclosed creature can take an action to push against the sphere's walls and thus roll the sphere at up to half the creature's Speed. Similarly, the globe can be picked up and moved by other creatures. A Disintegrate spell targeting the globe destroys it without harming anything inside."
@@ -4478,7 +4479,7 @@
       "handler": "src/services/combat/automation/handlers/classFeatureHandler.js",
       "router": "src/services/combat/automation/routers/classFeatureRouter.js",
       "infoBuilder": "src/services/combat/automation/infoBuilders/classFeatureInfoBuilder.js",
-      "verified": "not verified",
+      "verified": "broken — see .opencode/plans/bug-cla-244-overchannel.md",
       "class": "Wizard",
       "triggerConditions": "Action: passive",
       "expectedBehavior": "When you cast a Wizard spell with spell slot of levels 1-5 that deals damage, you can deal maximum damage with that spell on the turn you cast it. First time: no adverse effect. If used again before Long Rest, take 2d12 Necrotic damage per level of spell slot immediately after casting. This damage ignores Resistance and Immunity. Each additional use increases Necrotic damage per spell level by 1d12."

@@ -1,337 +1,228 @@
 {
-  "description": "Existing test characters in 'test-campaign' keyed by class/subclass/race/subrace/feat/background, for reuse during automation verification.",
+  "description": "Existing test characters in 'test-campaign' keyed by class/subclass/race/subrace/feat/background, for reuse during automation verification. One character per class only (deduped 2026-08-31) — subagents must EDIT these characters via the Edit wizard to fit a scenario, never expect them pre-configured.",
   "characters": [
     {
-      "name": "FeyRanger",
-      "file": "public/campaigns/test-campaign/FeyRanger.json",
-      "ruleset": "2024",
-      "class": "Ranger",
-      "subclass": "Fey Wanderer",
+      "name": "AasimarTest",
+      "class": "Rogue",
+      "subclass": "Assassin",
+      "race": {
+        "name": "Aasimar",
+        "subrace": {
+          "name": "Aasimar"
+        }
+      },
       "level": 14,
-      "race": "Human",
-      "subrace": "Human",
+      "rules": "2024",
       "feats": [
         "Magic Initiate"
       ],
-      "background": "(see file)",
-      "note": "Pre-existing test-campaign PC, registered 2026-08-30 during CLA-223 Mantle of Inspiration (HeroesFeastBard lv17 Glamour, verified PASS). Fey Wanderer Ranger — useful as a within-60ft ally target for temp-HP/buff/reaction-move tests (received tempHp:12 as a Mantle target). Has Magic Initiate feat. PB at lv14 = +5."
-    },
-    {
-      "name": "AasimarTest",
-      "file": "public/campaigns/test-campaign/AasimarTest.json",
-      "ruleset": "2024",
-      "class": "Rogue",
-      "subclass": "Assassin",
-      "level": 14,
-      "race": "Aasimar",
-      "subrace": "Aasimar",
-      "feats": [],
-      "background": "(none stored)",
-      "note": "CLA-188 run 2026-08-29: Shortsword now EQUIPPED (inventory.equipped=['Shortsword'] — unarmed fallback has no finesse property so sneak needs it; equipped textarea in Edit-wizard Inventory step works). lv14 sneak=7d6 (2024 evens-odd progression in this data). At lv14 the Cunning Strike rider picker surfaces as 'Devious Strikes' (base-Rogue lv14 in this dataset, maxEffects 2, all 6 options incl. ICS trio); 'Improved Cunning Strike' header only at lv11-13. CLA-188 FAIL: rider select/cost/save/log half works, damage never applied (bug-cla-188-improved-cunning-strike.md). | CLA-162 Healing Hands VERIFIED 2026-08-29: Healing Hands is the Aasimar RACIAL TRAIT (2024 races.json traits[2], automation type healing / proficiency_bonus_d4 / 1 long rest), NOT a Cleric subclass feature. lv14 PB+5 -> 5d4 popup 'Healing Hands on AasimarTest: 5d4=9 (…) — Regained 9 HP (no uses remaining)', HP 91->100 then 90->101 (clamped, roll 15 restores 11). Re-use blocked popup 'cannot be used again until you finish a Long Rest'. Long Rest reset (healinghandsUses in LONG_REST_RESOURCES) proven by second heal succeeding. Self-target works with empty Target dropdown (handler defaults self). | CLA-197 Infiltration Expertise VERIFIED 2026-08-29: Assassin-major lv9 feature (2024 classes.json, automation passive_rule/roving_aim); lv14 qualifies. Sheet Special Actions shows 'Infiltration Expertise:' row; Bonus Actions 'Steady Aim:' click → popup 'Steady Aim activated! … (Roving Aim: Speed not reduced to 0)' + 'Adv' badge, change-data next_attack_advantage te written and activeConditions stays [] (no speed_zero), sheet Speed stays 30 ft. Masterful Mimicry half is flavor-only (no automation by design). Keep lv14 Assassin for rogue/roving-aim tests. | CLA-198 Inner Radiance FAIL 2026-08-29 (bug-cla-198-inner-radiance.md): activation half VERIFIED (Celestial Revelation: Special Actions row → radio Inner Radiance → Transform: innerRadianceActive=true, _celestialRevelationUses 1→0, buff inner_radiance, pendingExpirations, log, re-use block popup). Damage half FAIL: applyAuraDamage fires ONCE at activation (-5 Skeleton + -5 ALL PCs, pushed LightfootHalfling to death saves) then NEVER recurs across 3+ walked rounds — navigationHandlers.js:31-36 early-returns unless roundIncrement, so applyTurnStartEffects only runs on wrap to initiative index 0; aura also modelled turn-START not turn-END, and sits in the turnStartEffects loop (multi-tick per entry). No badge renders. Direct applyTurnStartEffects diagnostic ticked exact -5. Runtime+log cleared after run; keep lv14 Assassin Aasimar for Aasimar/celestial tests."
+      "note": "CLA-239 Necrotic Shroud FAIL 2026-08-31 (bug-cla-239-necrotic-shroud.md): Necrotic Shroud is BASE Aasimar Celestial Revelation option (2024 races.json, subrace-irrelevant) — this char qualifies as-is, no edit made. Activation row + radio modal work; log 'Necrotic Shroud activated — CHA save DC 14' proves DC built from WIS +1 (8+1+5) not CHA +3 (expected 16; conditionHandler.js:16 saveAbility defaults WIS, revelation handler passes only saveType). SetConditionModal NEVER mounts (CelestialRevelationModal.jsx:21 passes flat payload to raw setModalState — replaces state, key setConditionModal never set) → no saves, no Frightened, use still consumed 1->0. Residual runtime channelDivinityCharges=0 on this Rogue additionally swallowed first activation (conditionHandler CD gate, popup discarded) — Long Rest resets both keys (LONG_REST_RESOURCES has channelDivinityCharges + _celestialRevelationUses). Uses-block popup + Long-Rest re-arm VERIFIED. EB targets proven: Animated Rug CHA -5 (saveBonuses.cha), Archmage CHA +3. Runtime+log+NPCs cleared after run. | CLA-188 run 2026-08-29: Shortsword now EQUIPPED (inventory.equipped=['Shortsword'] — unarmed fallback has no finesse property so sneak needs it; equipped textarea in Edit-wizard Inventory step works). lv14 sneak=7d6 (2024 evens-odd progression in this data). At lv14 the Cunning Strike rider picker surfaces as 'Devious Strikes' (base-Rogue lv14 in this dataset, maxEffects 2, all 6 options incl. ICS trio); 'Improved Cunning Strike' header only at lv11-13. CLA-188 FAIL: rider select/cost/save/log half works, damage never applied (bug-cla-188-improved-cunning-strike.md). | CLA-162 Healing Hands VERIFIED 2026-08-29: Healing Hands is the Aasimar RACIAL TRAIT (2024 races.json traits[2], automation type healing / proficiency_bonus_d4 / 1 long rest), NOT a Cleric subclass feature. lv14 PB+5 -> 5d4 popup 'Healing Hands on AasimarTest: 5d4=9 (…) — Regained 9 HP (no uses remaining)', HP 91->100 then 90->101 (clamped, roll 15 restores 11). Re-use blocked popup 'cannot be used again until you finish a Long Rest'. Long Rest reset (healinghandsUses in LONG_REST_RESOURCES) proven by second heal succeeding. Self-target works with empty Target dropdown (handler defaults self). | CLA-197 Infiltration Expertise VERIFIED 2026-08-29: Assassin-major lv9 feature (2024 classes.json, automation passive_rule/roving_aim); lv14 qualifies. Sheet Special Actions shows 'Infiltration Expertise:' row; Bonus Actions 'Steady Aim:' click → popup 'Steady Aim activated! … (Roving Aim: Speed not reduced to 0)' + 'Adv' badge, change-data next_attack_advantage te written and activeConditions stays [] (no speed_zero), sheet Speed stays 30 ft. Masterful Mimicry half is flavor-only (no automation by design). Keep lv14 Assassin for rogue/roving-aim tests. | CLA-198 Inner Radiance FAIL 2026-08-29 (bug-cla-198-inner-radiance.md): activation half VERIFIED (Celestial Revelation: Special Actions row → radio Inner Radiance → Transform: innerRadianceActive=true, _celestialRevelationUses 1→0, buff inner_radiance, pendingExpirations, log, re-use block popup). Damage half FAIL: applyAuraDamage fires ONCE at activation (-5 Skeleton + -5 ALL PCs, pushed LightfootHalfling to death saves) then NEVER recurs across 3+ walked rounds — navigationHandlers.js:31-36 early-returns unless roundIncrement, so applyTurnStartEffects only runs on wrap to initiative index 0; aura also modelled turn-START not turn-END, and sits in the turnStartEffects loop (multi-tick per entry). No badge renders. Direct applyTurnStartEffects diagnostic ticked exact -5. Runtime+log cleared after run; keep lv14 Assassin Aasimar for Aasimar/celestial tests. | Campaign deduped 2026-08-31: sole Rogue retained; edit this character freely to fit test scenarios."
     },
     {
       "name": "Disciplined_Monk",
-      "file": "public/campaigns/test-campaign/Disciplined_Monk.json",
-      "ruleset": "2024",
       "class": "Monk",
-      "subclass": "Warrior of the Elements",
+      "subclass": "Warrior of the Open Hand",
+      "race": {
+        "name": "Human",
+        "subrace": {
+          "name": "Human"
+        }
+      },
       "level": 17,
-      "race": "Human",
-      "subrace": "Human",
-      "feats": [],
-      "background": "Acolyte",
-      "note": "Converted Warrior of the Elements lv14 → Warrior of Shadow lv17 2026-08-29 for CLA-191 (JSON ground truth). WIS 19 → Focus DC 18, PB +6. Shadow Step = Special Actions row (lv6+); Improved Shadow Step lv10 in this data (manifest lv11+ stale). CLA-191 FAIL (bug-cla-191-improved-shadow-step.md): teleport + origin-cloud + WIS save + Blinded all fire, but flags never expire (tempTeleportHandler.js writes directly, bypasses expirationQueue). Keep for Shadow tests. | SUBCLASS CONVERTED Shadow→WARRIOR OF THE ELEMENTS lv17 2026-08-30 (Edit wizard step-7) for CLA-222 Manipulate Elements VERIFIED PASS: Monk spell grants flow via `class_levels[].spellcasting.required_major:'Warrior of the Elements'` gating (spellCalc2024.js:8-26) + `major.spells` append (:150-182), WIS casting. Sheet shows Cantrips Known:1, Elementalism cantrip row + 'Manipulate Elements:' passive; `getSpellAbilities` → spellCastingAbility Wisdom, +4, saveDc 18 (8+4+6, WIS19 PB6). MercyMonk (Warrior of Mercy) control → no Elementalism. NOTE: Shadow Step tests (CLA-191/CLA-217 bug files) used the PRIOR Warrior-of-Shadow state. WIS 19, Focus DC 18, PB +6."
-    },
-    {
-      "name": "Divine_Cleric",
-      "file": "public/campaigns/test-campaign/Divine_Cleric.json",
-      "ruleset": "2024",
-      "class": "Cleric",
-      "subclass": "Trickery Domain",
-      "level": 17,
-      "race": "Human",
-      "subrace": "Human",
+      "rules": "2024",
       "feats": [
         "Magic Initiate"
       ],
-      "background": "Acolyte",
-      "note": "Life Domain — does NOT have Guided Strike (2024 data: War Domain only). Leveled 3→13 2026-08-29 for SP-060 Heal. CLA-067 run: lv17 Life, Holy Aura prepared. SUBCLASS CHANGED → TRICKERY DOMAIN lv17 2026-08-29 for CLA-189 Improved Duplicity (FAIL: bug-cla-189-improved-duplicity.md). MUST BE lv17 for Improved Duplicity (2024 classes.json Trickery major lv17, NOT lv6 per manifest). Invoke Duplicity row = combat_stance: CD max 3 at lv17, activate → buff create_illusion isImprovedDuplicity:true + 'Choose Allies' picker; re-click while active → Healing Illusion modal heals exactly level (17) capped at max. Caster-self attacks get advantage via contextBuilder-sync.js:475; granted ally advantage NOT applied (bug). AC 12 unarmored-by-data; Mace +8 1d6+2+1d8 radiant; WIS-based; Shortsword N/A. Keep lv17 Trickery for duplicity tests. | CLA-203 Invoke Duplicity (base) VERIFIED 2026-08-29: 'Invoke Duplicity:' bonus-action row click → CD 3→2 (change-data channelDivinityCharges) + activeBuffs create_illusion duration 1_minute → Mace vs Wight 1 popup 'd20 9, 9 → 9 / Advantage / ✓ HIT (17 vs AC 14)' + log roll mode:advantage + damage 13 (82→69). lv17 passive forces lv3-row click to open 'Choose Allies' picker AFTER commit — click Skip. No illusion-move/cast-from-space UI (gridless) = PASS-subset. Runtime+log cleared after run. | SP-072 Lesser Restoration FAIL 2026-08-29 (bug-sp-072-lesser-restoration.md): LR now PREPARED (spells[] ground truth). LR is Bonus Action -> cast via Bonus Actions row (CharBonusActions.jsx:245), NOT main Spells table. 'Cast Spell' sets pendingOps.lesserRestoration (fiber-confirmed 20 targets) but CharBonusActions omits the target/condition SecondaryTargetModal -> cast stalls; poisoned unchanged, lv2 slot 3->3, no log. Affects all bonus-action lesser_restoration casters. Runtime+log cleared. | SP-076 Mass Cure Wounds VERIFIED PASS 2026-08-30: Mass Cure Wounds now PREPARED (permanent, spells[] ground truth). lv17, WIS 16/+3, lv5 slots 2 at cast. Modal 'Mass Cure Wounds' listed 22 creatures, 7th checkbox disabled at 6/6 (max-6 exact); Cure (3): AasimarTest +32 (HP 10→42), MercyMonk +30 (HP 20→50), formula '5d8 + 3' exact per target, lv5 slot 2→1. Wight 1 +0 HP = known bug-cla-208 NPC runtime-HP no-op (monster HP in combatSummary.currentHp; massHealUtils.confirmFn reads runtime currentHitPoints) — ally path exact. KEY SETUP: Admin Clear Change Data FIRST to drop stale maxHp:1 PC stubs so handler falls back to caster playerStats.hitPoints (122). See playbook SP-076 recipe. | SP-077 Mass Heal VERIFIED PASS 2026-08-30: Mass Heal now PREPARED (permanent, spells[] ground truth). lv9 Cleric spell (manifest lv6 stale); lv17 gets 1 lv9 slot (classRules2024.js:334). Real impl massHealHandler.js (handle -> massHealTarget modal -> MassHealModal allocation form -> confirmMassHeal) — NOT massHealUtils. Cast1: split from 700 pool AasimarTest 51->101 (+50) + FeyRanger 44->74 (+30, blinded removed); cast2 after Long Rest slot refill: Poisoned AasimarTest 51->101, ['poisoned']->[] with removed-logs; lv9 slot 1->0 each cast, spell log spellLevel:9. Modal slices targets to first 10 alphabetical (MercyMonk unreachable). Trusted fill+Enter required on initiative HP inputs (synthetic setter no-op this session). Runtime+log cleared after run."
-    },
-    {
-      "name": "Wild_Sage_Druid",
-      "file": "public/campaigns/test-campaign/Wild_Sage_Druid.json",
-      "ruleset": "2024",
-      "class": "Druid",
-      "subclass": "Circle of the Moon",
-      "level": 20,
-      "race": "Human",
-      "subrace": "Human",
-      "feats": [
-        "Magic Initiate"
-      ],
-      "background": "Acolyte",
-      "note": "SP-073 Longstrider VERIFIED PASS 2026-08-30: Longstrider now PREPARED (permanent, spells[] ground truth) — reusable touch lv1 Action caster (no concentration). Self-cast: sheet spell row → Cast Spell → radio self → Cast Longstrider → sheet Speed 30→40 ft + activeBuffs {name:'Longstrider',effect:'speed_boost',speedBonus:10,duration:'1 hour'} + lv1 slot 4→3 + pendingExpirations remove_active_buff + ability_use log. Cosmetic: generic 'spell' log targetName = targets[0] (AasimarTest), not the selected self target. Runtime+log cleared after run. | SUBCLASS CHANGED Moon->CIRCLE OF THE LAND lv20 2026-08-29 for CLA-208 Land's Aid FAIL (bug-cla-208-lands-aid.md): Land's Aid = Circle of the Land lv3 in 2024 classes.json (manifest lv6 stale), save_attack+healExpression -> SaveAttackHealModal. DC 17 CON exact (8+WIS3+PB6), WS 4->3 spent, damage lands (Rug 27->20), BUT rolls 2d6/2d6 not lv20 4d6/4d6 (resolveScaling array-only vs object-map data), and NPC heal no-op ('actual: 0' - reads per-name currentHitPoints vs NPC HP in combatSummary currentHp). Moon features gone after swap. Keep Land lv20 for retry. | Prior: leveled 9->20 for CLA-176 Nature Magician (ResourcePoolModal, WS 4/4). CLA-190 Improved Elemental Fury VERIFIED (base-Druid lv15 subclass-irrelevant, 'Elemental Fury:' row +2d8 once/turn; range+300 no UI readout). Runtime cleared after each run. | SUBCLASS SWAPPED BACK Land->Moon lv20 2026-08-30 for CLA-217 FAIL (bug-cla-217-lunar-form.md): first-turn +2d10 radiant exact (HIT 21 vs AC12, 18 dmg, once-per-turn gate + miss exclusion OK) but never re-arms round 2+ — attackRollBonuses.js:196/219 no-arg getCurrentCombatRound() stuck at 1; fix=pass ctx.campaignName. Moonlight Step pool zero-init (CLA-163 family). Keep Moon lv20 for post-fix retest."
-    },
-    {
-      "name": "Bard_Spellcaster",
-      "file": "public/campaigns/test-campaign/Bard_Spellcaster.json",
-      "ruleset": "2024",
-      "class": "Bard",
-      "subclass": "College of Lore",
-      "level": 9,
-      "race": "Human",
-      "subrace": "Human",
-      "feats": [],
-      "background": "Sage",
-      "note": "STALE 2026-08-29: public/campaigns/test-campaign/Bard_Spellcaster.json no longer exists on disk. Use HeroesFeastBard (2024 Bard lv17 College of Lore, feats incl. Inspiring Leader) for Bard tests."
-    },
-    {
-      "name": "DraconicDragon",
-      "file": "public/campaigns/test-campaign/DraconicDragon.json",
-      "ruleset": "2024",
-      "class": "Barbarian",
-      "subclass": "Path of the Berserker",
-      "level": 18,
-      "race": "Dragonborn",
-      "subrace": "Red",
-      "feats": [
-        "Magic Initiate",
-        "Healer"
-      ],
-      "background": "Acolyte",
-      "note": "CLA-202 Intimidating Presence VERIFIED 2026-08-29: feature is Path of the Berserker MAJOR lv14 in 2024 classes.json (majors[0].features[3], save_attack/STR-ability DC/emanation_30ft/Frightened/uses 1 resourceKey intimidatingPresenceUses/recharge long_rest_or_expend_rage) — lv18 qualifies. Manifest handler/router/infoBuilder paths stale; real chain: automationRouter.js save_attack→bonusActions → automation/index.js:298 → src/services/automation/handlers/combat/saveAttackHandler.js → SetConditionModal. STR 16 (+3) + PB +6 → DC 17 EXACT (8+3+6; manifest's 19 assumed STR 20 — wrong). Evidence: Animated Rug (WIS −4) auto-roll d20(1)−4=−3 < 17 → 'Failed — Frightened!', rug activeConditions [frightened] + meta dc17/WIS, uses 1→0, save+condition logs; re-click with uses 0 spent rage 6→5 (no action) and reopened modal DC 17 = rage-expend recharge works. End-of-turn repeat save NEVER fires (frightened persists past rug's turn-end; no consumer — residual-flag family CLA-175/191/194). Runtime+log cleared after run. | LEVELED 13→18 2026-08-29 for CLA-196 Indomitable Might VERIFIED (2024 classes.json: base Barbarian lv18, automation conditional_replacement target ability_check saveType STR — target is ability_check ONLY, strSaveReplace never set so STR saves are NOT floored by data design). STR 16 (+3): STR check cell (.clickable idx 19) auto-rolls; popup 'd20 N → 16 (Indomitable Might)' whenever N+3<16, exact floor; total == 16 not replaced (rule says 'less than'); ≥16 untouched; log 'used Indomitable Might on Strength check: d20 N + 3 = T → replaced by Strength 16'. STR save cell (idx 20, +9 Adv) needs both adv dice ≤6 to go below 16 — never hit in 8 rolls. Real chain: automationModifiers.js:62 → conditionEffectsInternal.js:243-251 → CharAbilities.jsx:162-166 → DiceRollResult.computed.js:70-72 → DiceRollResult.jsx:166 + useLoggedDiceRollAttack.js:143-153 (manifest handler/router/infoBuilder paths don't exist). Keep lv18 Barbarian for STR-floor/lv18 tests. | Level 13 since 2026-08-29 (CLA-182 test): 2024 classes.json has Brutal Strike at lv9, Improved Brutal Strike at lv13 — NOT lv11. CLA-182 FAIL: picker still lists only lv9 2 options (bug-cla-182-improved-brutal-strike.md). CLA-161 verified 2026-08-29: Healer feat (Origin) added via Edit wizard Feats step (.list-item-checkbox-trigger click works on feat rows), Healer's Kit added via Inventory step backpack textarea. Max HP 35, PB +3, d12. Self-target Battle Medic works with empty Target dropdown (handler self-fallback healingHandler.js:51-52). CLA-201 Instinctive Pounce VERIFIED 2026-08-29: 2024 classes.json Barbarian lv7 class_feature (automation temp_buff/effect rage_bonus_movement/triggerOnRage) — lv18 qualifies; manifest paths stale, real consumer combatStanceHandler.js:281-286+318-320. Sheet Bonus Actions 'Rage:' click → popup 'Rage activated — Instinctive Pounce: You can move up to 15 feet as part of entering your Rage. Move your token on the combat map.' (speed null → 30 fallback → half 15). ragePoints 6→5 consumed, Rage stance buff written. No persisted pounce flag / no log entry (popup-only delivery by design; token move manual on map). Runtime+log cleared after run. Keep feat+kit for reuse.",
-      "hasKits": [
-        "Healer's Kit"
-      ]
-    },
-    {
-      "name": "DraconicSorcerer",
-      "file": "public/campaigns/test-campaign/DraconicSorcerer.json",
-      "ruleset": "2024",
-      "class": "Sorcerer",
-      "subclass": "Draconic Sorcery",
-      "level": 6,
-      "race": "Human",
-      "subrace": "Human",
-      "feats": [
-        "Magic Initiate"
-      ],
-      "background": "Acolyte",
-      "note": "Actually level 6 (not 5). Has Chromatic Orb (1st, +6, 90 ft) and Fireball (3rd, DC 14 DEX) — good outside-globe / generic spell attacker. | CLA-194 Innate Sorcery VERIFIED 2026-08-29: Innate Sorcery is BASE Sorcerer lv1 in 2024 classes.json (automation sorcery_aura, 2 uses/long rest, 1 bonus action) — NO subclass conversion needed; subclass stays Draconic Sorcery. Base Save DC 14 (+6 spell attack); activated via Special Actions 'Innate Sorcery:' row click → popup 'activated (1/2 uses remaining)' + badge '+1 Save DC, Spell Adv' + sheet Save DC readout 14→15 + spell rows show 'DC 15 DEX'. Chromatic Orb +6 roll popup: d20 (18, 10 → 18) mode advantage HIT vs AC14; Fireball save log saveDc:15. innateSorceryUses 2→1 in change-data. Keep lv6 Draconic Sorcery for sorcery tests."
-    },
-    {
-      "name": "GlobeWizard",
-      "file": "public/campaigns/test-campaign/GlobeWizard.json",
-      "ruleset": "2024",
-      "class": "Wizard",
-      "subclass": "Abjurer",
-      "level": 13,
-      "race": "Human",
-      "subrace": "Human",
-      "feats": [
-        "Magic Initiate"
-      ],
-      "background": "Acolyte",
-      "note": "Created for SP-055 Globe of Invulnerability testing. Globe prepared. Reusable for abjuration/anti-magic tests. | SP-074 Mage Armor VERIFIED PASS 2026-08-30: Mage Armor now PREPARED (permanent, JSON ground truth) — reusable AC-buff touch caster. Baseline unarmored AC 9 (DEX 8 → −1 mod); after self-cast Mage Armor sheet AC = 12 (13 + −1 Dex) with source badge, activeBuffs effect:mage_armor baseAc:13 duration '8 hours', lv1 slot 4→3. Self-cast works via radio SecondaryTargetModal. Good generic lv13 Abjurer for touch/AC buffs. | FT-054 Magic Initiate VERIFIED PASS 2026-08-30: configured MI on this char via Edit-wizard Spells-step .mi-overlay modal (NOT Feats step) — magicInitiateInstances={class:'Cleric',cantrips:['Guidance','Sacred Flame'],level1Spell:'Guiding Bolt'} now PERMANENT in JSON + spells[] gained; free_spell specialAction 'Level 1 Spell [Instance 1]' uses1/long_rest. Free cast: Guiding Bolt popup 'Free Cast — no spell slot consumed' → HIT 15 vs AC8, 4d6=16 radiant (Zombie HP→0), lv1 slots UNCHANGED 4→4, _Level_1_Spell_[Instance_1]_freeCastCount 1→0; second cast consumed lv1 slot 4→3; Long Rest reset counter→null + slots 4 + free-cast re-offered. lv1 spell shows prepared:'Prepared' here only because GlobeWizard is a Wizard (spellbook default), NOT an MI bug — non-wizard hosts show 'Always' (Wild_Sage_Druid/Bless). Guiding Bolt surfaces as .clickable.left in Actions grid (attack spell pulled from spells table). lv1 slots=4 (Int mod -1, save DC 12). Runtime+log+monster cleared after run."
-    },
-    {
-      "name": "ElderPaladin",
-      "file": "public/campaigns/test-campaign/ElderPaladin.json",
-      "ruleset": "2024",
-      "class": "Paladin",
-      "subclass": "Oath of Glory",
-      "level": 20,
-      "race": "Human",
-      "subrace": "Human",
-      "feats": [],
-      "background": "Acolyte",
-      "note": "CLA-210 Lay On Hands VERIFIED PASS 2026-08-29: healing_pool automation (2024 classes.json Paladin lv1, pool 5×lv = 100/100 at lv20). Bonus Actions 'Lay On Hands:' row → target radio picker → amount input + Apply Heal → HP 214→224 (+10) via RUNTIME hitPoints/currentHitPoints (SP-060 maxHp:1 combatSummary stub NOT on this path — hpModifier.js reads runtime) + layOnHandsPool 100→90 + healing_pool log. Poisoned add → cure button 'Cure Selected (1 for 5 HP)' → pool 90→85 + activeConditions [] + 'condition broken' log. Long Rest (no modal, instant) → layOnHandsPool null → badge 100/100. Runtime+log cleared after run. | SUBCLASS CHANGED Devotion→GLORY lv20 2026-08-29 for CLA-200 Inspiring Smite (FAIL: bug-cla-200-inspiring-smite.md) — Inspiring Smite is Oath of GLORY major lv3 in 2024 classes.json (majors[1].features[0], post_cast_inspiring_smite), NOT Devotion. CD max 3. Divine Smite cast HIT (18 vs AC14, 18 radiant, Wight 82→64) + lastAttack.attackName='Divine Smite' written, but NO auto modal (spellCastService/execution/index.js:566-568 no-dc return skips :588 trigger) and 'Inspiring Smite:' row INERT (not in INTERACTIVE_HANDLER_TYPES). Isolation probe of handle() proved internals exact: 'Rolled 2d8 + 20: 27', split 10/9/8 → tempHp in change-data, CD 3→2, ability_use log. No-map targets = runtime selectedAllies+self only. Runtime+log cleared after run; subclass kept Glory for retries. | CLA-213 Living Legend VERIFIED PASS 2026-08-30: Special Actions 'Living Legend:' row IS clickable despite static inert prediction (not in INTERACTIVE_HANDLER_TYPES but row gate hasStringOptions fires) - click sets livingLegendActive=true + badge + ability_use log. (a) Persuasion CHA check advantage: rolls [10,14]->14 'Advantage' bonus +5; control INT single d20. (b) sheet INT save reroll .dice-roll-reroll-btn when active (9->14); sp-overlay monster-forced WIS DC13 FAIL (1+10=11) -> 'Reroll Save' -> 9+10=19 SUCCESS, save-damage log saveRawRolls:[9,9] (name 'Unknown' cosmetic gap). (c) Longsword vs Wight AC14 d20 2+11=13 MISS -> 'turned into a hit' popup + log + Wight 82->0; once-per-turn gate: second miss (1+12 crit miss) NOT converted, unerringStrikeUsed=true, resets turn start (turnStartEffects.js:87). LIMITS: 10-min duration unenforced (flag cleared only on initiative roll); no use counters; pitfall: Aura of Protection WIS save totals +10 vs DC13 so failures need d20<=2 (~10%/roll); stale reroll button lags one roll after flag clear until sheet remount. Runtime+log cleared (Full Reset)."
-    },
-    {
-      "name": "HeroesFeastBard",
-      "file": "public/campaigns/test-campaign/HeroesFeastBard.json",
-      "ruleset": "2024",
-      "class": "Bard",
-      "subclass": "College of Glamour",
-      "level": 17,
-      "race": "Human",
-      "subrace": "",
-      "feats": [
-        "Inspiring Leader"
-      ],
-      "background": "Entertainer",
-      "note": "CLA-224 Mantle of Majesty VERIFIED PASS 2026-08-30: Glamour lv6 free_spell automation on this char as-is. Command force-prepared (not in JSON spells[]) — 'Command' row on sheet + Bonus Actions after activation. Mantle row click → activeBuffs mantle_of_majesty 1_minute + concentration dc 19 in combatSummary + pendingExpirations + badges. Two free Command casts vs EB-joined Goblin: popup 'Free Cast — no spell slot consumed', spell_slots_level_1 stayed 4, WIS DC 19 saves failed, Grovel → prone condition, Flee → log-only (by design commandHandler.js). Cleared after run. | CLA-223 Mantle of Inspiration VERIFIED PASS 2026-08-30: feature is College of GLAMOUR major lv3 (2024 classes.json majors[1].features[1], temp_hp_buff + bonusMovement + '2 * bardic_inspiration_die') — this char qualifies as-is (lv17 Glamour, CHA +5, d12 pool 5/5). Bonus Actions row click spends use + rolls d12 immediately (uses 5->4->3->2 over 3 activations); modal 'Choose up to 5 allies' (CHA max exact); confirm writes tempHp=2x die exact per ally (rolls 9->18 AasimarTest+KeenElf, 6->12 HunterRanger+FeyRanger) + inspiringMovementNoOA flag + pendingExpirations + ability_use log. Reaction-move leg IMPLEMENTED (not pitfall #8 prose-only): Insp. Move badge + OA-block consumers. Cosmetic gaps noted: picker lists self (rule says 'other creatures'); 60 ft range unchecked gridless. Uses left at 2/5, runtime+log cleared after run. | SUBCLASS CHANGED Lore→Dance 2026-08-29 for CLA-199 Inspiring Movement FAIL (bug-cla-199-inspiring-movement.md): feature is College of Dance MAJOR lv6 in 2024 classes.json (majors[0].features[1]) — Lore Bard shows no row; reaction_bonus flow (sheet row → Choose Ally modal → Move) grants flags/expirations/log but NEVER spends bardicInspirationUses (usesMax=0 gate, reactionBonusHandler.js:569-644) and Agile Strikes chain hijacks popup. Bardic pool 5/5 d12 at lv17. Keep lv17 College of Dance for Dance/movement-reaction tests. | FT-046 Inspiring Leader VERIFIED 2026-08-29: feat ALREADY on this char (feats:[\"Inspiring Leader\"] in JSON). 2024 feats.json models it as benefits[1] 'Bolstering Performance' automation temp_hp_buff/multiTargetAlly — sheet shows clickable Special Actions row 'Bolstering Performance:' (NOT named Inspiring Leader). After Short Rest click row → .sp-overlay CreatureSelectionModal 'Each target gains 22 temporary hit points' (17 lv + CHA 20/+5; no featAbilityChoices in JSON so handler fallback = level + max(CHA,WIS) mod) → tick label.secondary-target-row allies → 'Inspire (N)' → change-data tempHp:22 per target + ability_use log. maxTargets 6 via slice. No-map range skip: all 18 PCs listed. Keep lv17 Bard w/ Inspiring Leader + Heroes' Feast. | CLA-205 Jack of All Trades VERIFIED PASS 2026-08-29: base Bard lv2 passive (2024 classes.json, automation jack_of_all_trades); consumer CharAbilities.jsx:87-94 adds floor(PB/2)=+3 to non-proficient skill bonus (display + roll popup). Sheet: Arcana/History/Investigation +3 (INT 10/+0), Stealth/Sleight of Hand +5 (DEX +2); proficient Acrobatics +8, Persuasion/Performance +11 (CHA +5 + PB +6, lv17). Rolls: History \"d20 13 +3\", Persuasion \"d20 6 +11\". Runtime+log cleared. Keep lv17 Dance Bard for skill-check/Jack tests. | CLA-211 Leading Evasion VERIFIED PASS 2026-08-29: Behir DC16 Lightning Breath 12d10; Bard save-success ->0 dmg, save-fail ->floor(dmg/2)=28 (logged 'Evasion'); shared ally HexWarlock fail->floor(71/2)=35, success->0 (logged 'Leading Evasion'). 5ft adjacency NOT enforced (no map, accepted subset). SUBCLASS SUBAgent did not record whether Dance or converted — VERIFY HeroesFeastBard subclass via JSON before relying on it for subclass-gated Bard tests. | SUBCLASS CONFIRMED College of Glamour 2026-08-30 (disk `class.subclass.name`). CLA-221 Magical Secrets VERIFIED PASS: lv17 CHA+5 PB+6 (DC19). Added CLERIC-only Spirit Guardians via Edit Spells step (`.list-item-checkbox-trigger`) accepted to disk, sheet DC 19 WIS (Charisma=Bard-list treatment), live-cast consumed Bard lv3 slot+concentration+DC19 WIS save/half-damage. Validation expansion gate `spellValidation.js:379` only unlocks at exact level bearing `magical_secrets` (lv10), so lv17 add emits spurious advisory but still accepts (cosmetic gap). Spirit Guardians lv3 left PREPARED (reusable Cleric-list probe)."
-    },
-    {
-      "name": "HexWarlock",
-      "file": "public/campaigns/test-campaign/HexWarlock.json",
-      "ruleset": "2024",
-      "class": "Warlock",
-      "subclass": "Fiend Patron",
-      "level": 14,
-      "race": "Human",
-      "subrace": "Human",
-      "feats": [],
-      "background": "Acolyte",
-      "note": "Attack-roll spellcaster: Eldritch Blast +8 (lv14). SUBCLASS CHANGED 2026-08-29: Celestial Patron → Fiend Patron + level 10→14 (Edit wizard step-7 combobox + level fill; JSON ground truth). CLA-175 Hurl Through Hell FIXED 2026-08-30 (was FAIL): duration now enqueued via addExpiration (rounds=2) + clearExpirationEffects 'hurl_through_hell_return' strips incapacitated/te and logs return-to-space. Fail-branch verified — after EB hit, sheet 'Hurl Through Hell:' → modal (CHA DC 16, 8d10, Uses 1/1) → .sp-overlay save prompt → fail → 8d10=31 psychic, Ogre 55→24 exact, Incapacitated badge + te, uses 1→0, once-per-turn popup, 4 log entries. BUT duration never expires: round 4 (past caster's next turn) Ogre still incapacitated, pendingExpirations [], returnToSpace flag inert — modal bypasses expirationQueue; no cleanup consumer in src. Long Rest resets hurlThroughHellUses/turnUsed to null + slots 3/3 (verified). Keep Fiend lv14 for Fiend/hurl tests. Runtime change-data + log cleared after run."
-    },
-    {
-      "name": "VenomStrike",
-      "file": "public/campaigns/test-campaign/VenomStrike.json",
-      "ruleset": "5e",
-      "class": "Rogue",
-      "subclass": "Assassin",
-      "level": 13,
-      "race": "Human",
-      "subrace": "",
-      "feats": [
-        "Magic Initiate"
-      ],
-      "background": "Acolyte",
-      "note": "Existing Rogue for Cunning Strike / Envenom Weapons testing."
-    },
-    {
-      "name": "EvasiveFighter",
-      "ruleset": "2024",
-      "class": "Fighter",
-      "subclass": "Battle Master",
-      "level": 18,
-      "race": "Human",
-      "feats": [
-        "Savage Attacker",
-        "Great Weapon Master",
-        "Mage Slayer"
-      ],
-      "note": "Was Battle Master lv10; CONVERTED 2026-08-29 to **Eldritch Knight lv18** for CLA-192 (JSON ground truth: subclass Eldritch Knight, lv18; Improved War Magic is lv18 in 2024 classes.json, manifest lv15 stale). Magic Missile prepared, Shortsword equipped, all abilities 8, PB+6. CLA-192 FAIL (bug-cla-192-improved-war-magic.md): lv18 'Improved War Magic:' row dispatches the lv7 CANTRIP picker (multi-automation features dedupe by name via uniqBy('name') + sheet builds from automation[0]); neither spell nor extra weapon attack resolves — Replace Attack is log-only, no slot spend, no damage. Kept for retry after fix. (CLA-186 BM verification still valid historically.) | FS-008 Interception FAIL 2026-08-29 (bug-fs-008-interception.md): NOW HAS fightingStyles:['Interception'] (Edit-wizard step 12 checkbox) + equipped ['Shortsword','Shield'] — JSON ground truth, permanent. Runtime HP 94, PB+6. Grant/routing/shield-gate/1d10+PB popup math all work; FAIL because disadvantage te written under wrong runtime key (per-character, consumers read campaign-level — runtime store logs wrong-key errors) and reaction never consumed (4 clicks fired, ally double-healed). Keep Interception grant for post-fix retest. | CLA-207 Know Your Enemy FAIL 2026-08-29 (bug-cla-207-know-your-enemy.md): CONVERTED BACK to **Battle Master lv18** (step-7 combobox + ✓Save, JSON ground truth). Bonus Actions 'Know Your Enemy:' row live; vs EB-joined Shadow 1 (Target dropdown set first) it spends superiorityDie 4→3 (Short Rest refills, SHORT_REST_RESOURCES) and logs, but reveals NOTHING — handler knowEnemyHandler.js:66-69 reads damage_immunities/damage_resistances/damage_vulnerabilities keys absent from 466/605 monsters.json entries (Shadow IRV lives under immunities/resistances/vulnerabilities). Same key-name family as bug-cla-173. | FT-052 Mage Slayer VERIFIED PASS 2026-08-30: **Mage Slayer feat ADDED to this char** (Edit-wizard Feats step checkbox + STR ASI; JSON feats:['Savage Attacker','Great Weapon Master','Mage Slayer'], featAbilityChoices Mage Slayer-0:Strength — permanent, keep for concentration-breaker tests). Shortsword +6 vs concentrating PC (Add→Concentration tab on initiative card) → ConcentrationPromptModal CON save DISADVANTAGE (two d20, min kept) + log 'DISADVANTAGE … vs Concentration: Hold Person DC 10'; control HexWarlock (no feat) = single-d20 normal. Monster targets blocked by applyDamage activeBuffs-guard crash (playbook FT-052 recipe). Runtime+log+monster cleared after run.",
-      "file": "public/campaigns/test-campaign/EvasiveFighter.json"
-    },
-    {
-      "name": "GoliathFireGiant",
-      "file": "public/campaigns/test-campaign/GoliathFireGiant.json",
-      "ruleset": "2024",
-      "class": "Fighter",
-      "subclass": "Battle Master",
-      "level": 5,
-      "race": "Goliath",
-      "subrace": "Fire Giant",
-      "feats": [],
-      "background": "Acolyte",
-      "note": "RE-CREATED 2026-08-29 (prior registry file was missing from disk): 2024 wizard Goliath/Fire Giant lv5 Fighter Battle Master, abilities all 8 except INT/WIS/CHA 9 (Acolyte), STR 8 (STR save +2 = -1 + PB +3). Large Form/Powerful Build FAIL (bug-cla-209-large-form-goliath.md): grapple-escape badge rolls mode:normal — rules.js:458 clobbers the powerful_build_grapple_escape saveModifier pushed at :174; consumers (CharConditions.jsx:96, conditionSaveService.js:62) require condition:'powerful_build_grapple_escape'+abilities:['STR'] and never match the surviving parsed {condition:'grappled',abilities:[]}. Carrying sizeMultiplier=2 IS computed (no UI readout). Escape-badge lifecycle works (success cleared grappled). Keep as reusable Goliath test char."
-    },
-    {
-      "name": "War_Cleric",
-      "file": "public/campaigns/test-campaign/War_Cleric.json",
-      "ruleset": "2024",
-      "class": "Cleric",
-      "subclass": "Light Domain",
-      "level": 6,
-      "race": "Aasimar",
-      "subrace": "Human",
-      "feats": [
-        "Martial Weapon Training",
-        "Magic Initiate"
-      ],
-      "background": "Acolyte",
-      "note": "FT-055 Martial Weapon Training VERIFIED PASS 2026-08-30: feat ADDED to this char via Edit-wizard Feats step (+ Abilities-step ASI combobox Strength). JSON feats now ['Martial Weapon Training','Magic Initiate']; STR featIncrease:1 (8->9 exactly once, no FT-047 double-count across multiple wizard saves); featAbilityChoices 'Martial Weapon Training-0':'Strength'; computed proficiencies gained 'Martial Weapons' (baseline was Light/Medium Armor+Shields+Simple Weapons only); Longsword equipped (inventory.equipped) — sheet attack +2 (DEX -1 + PB +3) HIT 14 vs AC 8 Zombie, damage 1d8-1 landed, hp_change -4. Feat LEFT ON (choice-ASI rollback orphan risk). Inventory Equipped textarea commits only on Enter/blur. Runtime+log+monster cleared after run. | Created 2026-08-28 for CLA-156 Guided Strike (War Domain lv3). CONVERTED 2026-08-29 → Light Domain lv6 for CLA-193 Improved Warding Flare VERIFIED (2024 classes.json: Warding Flare = Light lv3 reaction_debuff, Improved = Light lv6 passive_rule — NOT War Domain; manifest wrong). WIS 9 → mod -1, wardingflareUses max 1. CLA-193 evidence: Wight +4 vs HexWarlock(AC9) d20(10) HIT → click 'Warding Flare:' → popup 'Disadvantage (second d20: 3): d20(3)+4=7 vs AC9 MISS' + hit→miss rollback heal 3 + 'gains 6 Temporary Hit Points' (2d6-1) + change-data HexWarlock.tempHp=6 + uses 1→0; Short Rest → wardingflareUses null → sheet 1/1. Rollback heal path logs 'setRuntimeValue called with undefined campaignName' (CharReactions.jsx:218, 400 POST) — noise, heal still applied. Runtime + log cleared after run. NOTE: subclass changed — no longer War Domain/Guided Strike. | RACE CHANGED Human→AASIMAR + CHA base 8→15 (total 16/+3) 2026-08-30 for CLA-212 LightBearer FAIL (bug-cla-212-lightbearer.md): LightBearer is an Aasimar RACIAL trait (races.json), not Cleric — manifest wrong. Light auto-grants + casts log OK, but CHA override stripped by spellCalc2024.js:477-485 detail remap; casts resolve WIS (+2 not CHA +6). Now the reusable Aasimar-caster probe char: lv6 Light Domain Cleric, CHA +3 vs WIS −1, PB +3, JSON spells[] empty (Light dynamic). Lightbearer passive row + Light spell row live on sheet."
-    },
-    {
-      "name": "MercyMonk",
-      "file": "public/campaigns/test-campaign/MercyMonk.json",
-      "ruleset": "2024",
-      "class": "Monk",
-      "subclass": "Warrior of Mercy",
-      "level": 17,
-      "race": "Human",
-      "subrace": "Human",
-      "feats": [],
-      "background": "Acolyte",
-      "note": "Leveled 5→17 2026-08-28 for CLA-160 (Focus max 17, Focus Save DC 17, martial arts d12, HP 122, Unarmed Strike +7 1d12+1 DEX-based; attack rows auto-roll, Empowered Strikes damage-type modal appears after Done). CLA-158/159 notes: no Target dropdown option for self; handler self-fallback at healingHandler.js:150; no per-turn bonus-action UI marker. CLA-160 FAIL: monster-corpse revive HP never persists (bug-cla-160-hand-of-ultimate-mercy.md). | CLA-225 Martial Arts VERIFIED PASS 2026-08-30: STR 8/-1 vs DEX 13/+1 makes the DEX substitution decisive. Unarmed Strike +7 = DEX+1 + PB+6 (STR would be +5); damage '1d12+1 [bludgeoning]' logged (STR would be -1). Bonus Actions section has its own clickable Unarmed Strike row (buildMonkAttacks action+bonus entries, CharBonusActions.jsx:164 filter type=='Bonus Action'). Grapple base action rolls DEX for monks (useCharActionsBaseActions.js:162): log roll rollType check name Dexterity bonus +1 + ability_use 'Dexterity check: 20 (d20 19+1) vs target STR (+3)'. Shove has NO separate clickable row (only Grapple wrapped in CharActions.jsx:609). lv17 die = d12 per 2024 data ladder (lv1-4 d6, lv5-10 d8, lv11-16 d10, lv17+ d12 in THIS dataset; official 2024 lv1 is d4 — data quirk at low levels, lv17 correct). NOTE feats actually ['Magic Initiate'] in JSON. Runtime+log+monster cleared after run."
-    },
-    {
-      "name": "HunterRanger",
-      "file": "public/campaigns/test-campaign/HunterRanger.json",
-      "ruleset": "2024",
-      "class": "Ranger",
-      "subclass": "Gloom Stalker",
-      "level": 7,
-      "race": "Human",
-      "subrace": "Human",
-      "feats": [
-        "Savage Attacker"
-      ],
-      "background": "Soldier",
-      "note": "SUBCLASS CHANGED Hunter→Gloom Stalker + leveled 6→7 + WIS base 15 2026-08-29 for CLA-204 Iron Mind VERIFIED PASS (2024 classes.json: Iron Mind is Gloom Stalker MAJOR lv7, NOT base Ranger lv7 as manifest claimed; grant is structured automation save_proficiency/Wisdom+fallbackTypes INT/CHA — parsed, unlike CLA-181 free-text). Sheet: WIS 15 bonus +2, Save +5 (+2+PB3 proficient); INT/CHA saves -1 (no fallback consumed since WIS was open); Iron Mind passive row renders. LATENT GAP (control probe): with feats=[] the WIS save reverts to +2 — playerStats.saveProficiencies is ONLY written inside rules.js:262-341 'if (featFeatures.length>0)' block (getAllSaveProficiencies sole call site rules.js:340); zero-feat lv7+ characters silently miss ALL feature save grants. Edit wizard auto-added Savage Attacker, keeping grant live — DO NOT remove the feat or Iron Mind WIS proficiency disappears. | Original CLA-173 note: FAIL bug-cla-173-hunters-lore.md (combatSummary monster IRV empty, encounterToInitiative.js:184-185 wrong keys). Shortsword+Shortbow equipped."
-    },
-    {
-      "name": "LightfootHalfling",
-      "file": "public/campaigns/test-campaign/LightfootHalfling.json",
-      "ruleset": "2024",
-      "class": "Fighter",
-      "subclass": "Champion",
-      "level": 3,
-      "race": "Halfling",
-      "subrace": "",
-      "feats": [],
-      "background": "Soldier",
-      "note": "CLA-177 left incomplete (trait has no consumer). Now lv3 2024 Champion Fighter (CLA-187 VERIFIED 2026-08-29): Improved Critical = Champion-major-only, crit on 19-20 confirmed via Shortsword nat-19 popup 'CRITICAL HIT! DAMAGE DOUBLED' + log isCrit=true. Shortsword equipped, abilities all 8 (+1 mental), to-hit +1. Keep for crit-range and halfling Lucky tests. | CLA-216 FAIL 2026-08-30: 2024 Halfling Lucky auto-reroll dead (d20RollComputation.js:21 uninitialized effectiveD20Roll compare); keep lv3 fighter for post-fix retest."
-    },
-    {
-      "name": "IllusionWizard",
-      "file": "public/campaigns/test-campaign/IllusionWizard.json",
-      "ruleset": "2024",
-      "class": "Wizard",
-      "subclass": "Illusionist",
-      "level": 14,
-      "race": "Human",
-      "subrace": "Human",
-      "feats": [],
-      "background": "Acolyte",
-      "note": "CLA-178 Illusion Savant VERIFIED 2026-08-29. CLA-180 Illusory Self FAIL 2026-08-29 (bug-cla-180-illusory-self.md): auto-miss popup, rollback, uses 0→1, lv2-slot restore all work; illusorySelfUses NEVER resets on Short/Long Rest (missing from restRules-constants SHORT/LONG_REST_RESOURCES). lv14 (registry was stale lv5); AC 9 unarmored — easy target for +4 monsters. Wight 1 (AC14, HP 82, Necrotic Sword +4 = .mc-dice-link idx 9 in .mc-overlay) proven attacker. Post-run change data cleared (runtime state back to defaults, slots full). | FT-048 Lightly Armored VERIFIED PASS 2026-08-29: granted+reverted via Edit wizard (Feats tick + Abilities-step ASI combobox default Strength + Inventory equipped textarea 'Leather, Shield'). STR 8->9 exactly once (choice-ASI parses to name:'any' -> rules.js:203 skips re-add -> FT-047 double-count NOT applicable); AC 9->12 (Leather 11 + DEX -1 + Shield +2); computed playerStats.proficiencies includes Light Armor+Shields. Wizard untick rollback ORPHANED featIncrease:1 + featAbilityChoices key (FT-047 rollback family) — JSON hand-fixed, restored pristine. Keep for feat/ASI tests."
+      "note": "SUBCLASS CHANGED Elements→WARRIOR OF THE OPEN HAND lv17 2026-08-31 for CLA-241 Open Hand Technique VERIFIED PASS (2024 classes.json majors 'Warrior of the Open Hand' features[0] lv3; Edit step-7 chip+combobox+✓Save, JSON ground truth). WIS 18/+4, PB +6, Focus 17 max; sheet 'Focus Save DC: 18' = buildSaveDc ability branch 8+WIS+PB exact. Full E2E vs EB-joined Gibbering Mouther (STR+0/DEX-1/AC9/HP52): Bonus Actions 'Heightened Flurry of Blows:' (lv10 rename, 1 FP) -> distribute modal prefills Target=3 -> Strike All -> auto-rolls -> OpenHandTechniqueModal radio Addle/Push/Topple per hit-target. Push: STR DC18 fail (d20 17+0) -> 'pushed 15 ft' popup + ability_use log (push is LOG-ONLY by design). Topple: DEX DC18 fail (nat1 -1=0) -> activeConditions ['prone'] + meta dc18/DEX + te prone until_start_of_next_turn. Addle: no-save -> te addled noOpportunityAttacks:true + activeCondition 'addled' + log. Focus 17->14 across 3 flurries exact. Gating: ONE rider modal per target per flurry (pendingOpenHandTargets Map, NOT per hit — app design); re-offered every qualifying flurry. Rider modal path did NOT hit MN-012 currentRolls crash (separate flurry pipeline, not attack-rider modal). Mouther died at HP 0 round 2 (52HP can't absorb 3 flurries ~40dmg) — Addle still applied post-death. Console noise: pipeline-pause wrong-key errors (CharActions.jsx:95), harmless. Runtime+log+mouther cleared after run; subclass LEFT Open Hand — reusable for Quivering Palm lv17/other Open Hand tests. | PRIOR: Converted Warrior of the Elements lv14 → Warrior of Shadow lv17 2026-08-30 | Campaign deduped 2026-08-31: sole Monk retained; edit this character freely to fit test scenarios."
     },
     {
       "name": "DivinationWizard",
-      "file": "public/campaigns/test-campaign/DivinationWizard.json",
-      "ruleset": "2024",
       "class": "Wizard",
-      "subclass": "Divination",
+      "subclass": "Evoker",
+      "race": {
+        "name": "Human",
+        "subrace": {
+          "name": ""
+        }
+      },
       "level": 20,
-      "race": "Human",
-      "subrace": "Human",
-      "feats": [],
-      "background": "Sage",
-      "note": "FT-047 Keen Mind FAIL 2026-08-29 (bug-ft-047-keen-mind.md): granted+persisted via Edit wizard (feats step tick + Skills-step 'Keen Mind: 0 of 1' picker → Investigation), then FULLY ROLLED BACK — JSON restored feats:['Magic Initiate'], skillProficiencies:[Arcana,History], INT featIncrease:0 (direct JSON fix; wizard clearBuffs under-subtracted the persisted +1). Evidence: Lore skill proficiency exact (Investigation +3→+10 = INT+4+PB6, roll 'd20 8 +10'); FAIL because INT double-counted (sheet 19, JSON/ground-truth 18 — rules.js:209 re-adds computed ASI onto wizard-persisted featIncrease, useWizardFeatBuffs.js:15) and Quiet Study inert (no Study row, dropped by rules.js no-casting_time fallback). | Created SP-070 (lv20, lv9 slots, INT-based spell DC 14 observed). Keep for lv9 spell tests. SP-071 Invisibility VERIFIED PASS 2026-08-29: Invisibility now PREPARED in spells[] (permanent, ground truth) — reusable touch/concentration caster. Self-cast via sheet spell popup → SecondaryTargetModal radio self → 'Cast Invisibility'; applied activeConditions:['invisible']+buff+campaign `_activeInvisibility_DivinationWizard`+te; attack click (Unarmed Strike +5, nat-20 crit 25 vs AC14, Wight 82→77) broke it immediately (conds/buffs/key/te all cleared + 'Invisibility ends' log). Residual: combatSummary creature.concentration + 'Invisibility DC 10' badge linger post-break (cosmetic). Unarmed Strike +5, lv2 slots 4-level-2 table 3 (consumed 1 at cast)."
+      "rules": "2024",
+      "feats": [
+        "Magic Initiate"
+      ],
+      "note": "CLA-244 Overchannel VERIFIED FAIL 2026-08-31 (bug-cla-244-overchannel.md): feature is EVOKER major lv14 in 2024 classes.json (manifest lv6+ wrong). THIS CHAR CONVERTED Divination->Evoker lv20 PERMANENT + Burning Hands/Chain Lightning/Mind Spike PREPARED. STALE class.major GOTCHA: subclass combobox only writes class.subclass.name; classRules2024.getClass prefers stored playerSummary.class.major -> conversion inert until major removed; UI fix = step-6 Class re-pick other class then Wizard (handleClassChange rebuilds class obj dropping major) + step-7 re-select + Save (JSON ground truth major gone, sheet shows Evoker + Overchannel/Empowered Evocation/Soulstitch rows). PASS legs: lv1 BH checkbox surfaces w/ First-use-no-damage info; lv6 Chain Lightning popup NO checkbox; single-target Mind Spike lv2 use2 maximized 3d8 [Overchannel Maximize] [8,8,8]=24, backlash overchannel-damage 6d12=[4,6,2,10,10,3]=35 Necrotic ignores-IRV note, caster HP 82->47 exact, CON conc-save prompt fired, Long Rest key->0, re-cast use1 maximized + zero self damage. FAIL leg: AoE (Burning Hands, saveAttackAoe) savePath.handleAoE drops all overchannel ctx from payload - normal 3d6 (11/10) rolled while computeOverchannel still consumed useCount 0->1; backlash also unwired there; noSavePath rollExpression unmaximized too; app formula 2+(useCount-1) d12/slot (use2=3/level, RAW says 2 - consistent across UI/steps). Zombies joined x2 via EB exact Select Zombie (remove-btn native confirms arm; soulstitch Cancel hangs cast - must Apply 0-spared via >=1 pick). Runtime+log cleared, zombies removed, char LEFT Evoker/prepared for retest. | SP-083 Otiluke's Resilient Sphere VERIFIED PASS 2026-08-31: spell PERMANENTLY PREPARED via Edit-wizard Spells step (.list-item-checkbox-trigger tick + dismiss .mi-overlay + /✓\\s*Save/ chip; JSON ground truth, 19 spells). Full E2E vs EB-joined Zombie 1 (DEX -2): spell row -> Cast Spell popup -> handler used Target-dropdown target (no SecondaryTargetModal writer exists for resilientSphereTargetName), .sp-overlay 'DEX saving throw DC 17' EXACT (lastAttack.saveDc:17, spell+ability_use logs DC 17; NO SP-082 DC-10 fallback - spells.json has saveDc:'ability' and resilientSphereService overrides with numeric spellSaveDc), Roll Save d20 4 + -2 = 2 FAIL -> Done -> Zombie activeBuffs resilient_sphere + top-level targetEffects te + initiative-card 'Resilient Sphere' badge + condition log; lv4 slot 3->2; caster combatSummary concentration {spell,dc:10}. Immunity: MercyMonk Unarmed Strike vs enclosed Zombie -> AUTO-MISS popup 'Resilient Sphere blocks attacks - nothing passes through the barrier' (d20 14, would-hit vs AC8), HP 15/15 frozen, Remove-NPC confirm probe 'has 15 HP', no hp_change log. Duration: pendingExpirations expiryRounds:null/Infinity + expireOnCreatureName:null - NO round-based 1-minute expiry consumer (CLA-235 family, accepted); enclosure cleared FULLY on concentration break (cast Invisibility -> te + target activeBuffs + card badge all cleared, no residual - better than CLA-175 family). Cosmetic: generic save_result description mislabels failed save as 'full success' (success:false correct in payload). Runtime+log cleared, zombie removed, wizard long rested (slots null), sphere LEFT PREPARED. | SP-082 Otiluke's Freezing Sphere FAIL 2026-08-31 (bug-sp-082-otilukes-freezing-sphere.md): spell PREPARED permanently via Edit-wizard Spells step (JSON ground truth). Full E2E cast (4 EB monsters Kobold/Goblin/Berserker/Ogre Zombie, lv6 slot 2->1, save-damage 10d6 x4, floor-half exact 29->14/37->18/33->16, fail full 25, HP persists, results popup complete) BUT saves resolved at DC 10 not DC 17: spells.json automation has no saveDc key, freezingSphereHandler.js:5 buildSaveDc(auto,stats) hits console.error+return 10 fallback; modal text + ability_use log say DC 10 while generic spell cast log says saveDC:17 (self-contradicting). freezingSphereHandler.test.js:283 encodes the DC-10 bug as expected. AoE picker lists ALL combatants (gridless manual selection convention). No per-creature save-roll log entries. Freezing Sphere LEFT PREPARED for post-fix retest (lv6 slots refill on Long Rest). | SP-080 Maze VERIFIED PASS 2026-08-30: Maze (Wizard-only lv8) now PREPARED in spells[] (permanent, ground truth) — reusable lv8 control caster, lv8 slots=1 at lv20. Cast via sheet row (no target modal — set initiative-card Target=monster first); escape = click 'Mazed' badge (INT DC 20, +5 Archmage escaped 16+5=21). Caster concentration stub + 'Incapacitated DC 20' badge linger post-escape (cosmetic, known family). | FT-047 Keen Mind FAIL 2026-08-29 (bug-ft-047-keen-mind.md): granted+persisted via Edit wizard (feats step tick + Skills-step 'Keen Mind: 0 of 1' picker → Investigation), then FULLY ROLLED BACK — JSON restored feats:['Magic Initiate'], skillProficiencies:[Arcana,History], INT featIncrease:0 (direct JSON fix; wizard clearBuffs under-subtracted the persisted +1). Evidence: Lore skill proficiency exact (Investigation +3→+10 = INT+4+PB6, roll 'd20 8 +10'); FAIL because INT double-counted (sheet 19, JSON/ground-truth 18 — rules.js:209 re-adds computed ASI onto wizard-persisted featIncrease, useWizardFeatBuffs.js:15) and Quiet Study inert (no Study row, dropped by rules.js no-casting_time fallback). | Created SP-070 (lv20, lv9 slots, INT-based spell DC 14 observed). Keep for lv9 spell tests. CLA-226 Memorize Spell FAIL 2026-08-30 (bug-cla-226-memorize-spell.md): lv20 fully-qualified Wizard — Short Rest modal shows ONLY Hit Dice/Resources Restored/Arcane Recovery, no Memorize Spell swap section. Fiber-probe proof: automation.specialActions has memorize_spell but ShortRestModal.jsx:87 gate reads automation.passives (router sends to specialActions, automationRouter.js:589). Swap UI unreachable; no swap on rest. Prepared checkbox column in sheet spell table toggles prepared state + writes runtime preparedSpells (setup for prepared/unprepared mix). | SP-071 Invisibility VERIFIED PASS 2026-08-29: Invisibility now PREPARED in spells[] (permanent, ground truth) — reusable touch/concentration caster. Self-cast via sheet spell popup → SecondaryTargetModal radio self → 'Cast Invisibility'; applied activeConditions:['invisible']+buff+campaign `_activeInvisibility_DivinationWizard`+te; attack click (Unarmed Strike +5, nat-20 crit 25 vs AC14, Wight 82→77) broke it immediately (conds/buffs/key/te all cleared + 'Invisibility ends' log). Residual: combatSummary creature.concentration + 'Invisibility DC 10' badge linger post-break (cosmetic). Unarmed Strike +5, lv2 slots 4-level-2 table 3 (consumed 1 at cast). | Campaign deduped 2026-08-31: sole Wizard retained; edit this character freely to fit test scenarios."
     },
     {
-      "name": "KeenElf",
-      "file": "public/campaigns/test-campaign/KeenElf.json",
-      "ruleset": "2024",
+      "name": "Divine_Cleric",
+      "class": "Cleric",
+      "subclass": "Trickery Domain",
+      "race": {
+        "name": "Human",
+        "subrace": {
+          "name": ""
+        }
+      },
+      "level": 17,
+      "rules": "2024",
+      "feats": [
+        "Magic Initiate"
+      ],
+      "note": "Life Domain — does NOT have Guided Strike (2024 data: War Domain only). Leveled 3→13 2026-08-29 for SP-060 Heal. CLA-067 run: lv17 Life, Holy Aura prepared. SUBCLASS CHANGED → TRICKERY DOMAIN lv17 2026-08-29 for CLA-189 Improved Duplicity (FAIL: bug-cla-189-improved-duplicity.md). MUST BE lv17 for Improved Duplicity (2024 classes.json Trickery major lv17, NOT lv6 per manifest). Invoke Duplicity row = combat_stance: CD max 3 at lv17, activate → buff create_illusion isImprovedDuplicity:true + 'Choose Allies' picker; re-click while active → Healing Illusion modal heals exactly level (17) capped at max. Caster-self attacks get advantage via contextBuilder-sync.js:475; granted ally advantage NOT applied (bug). AC 12 unarmored-by-data; Mace +8 1d6+2+1d8 radiant; WIS-based; Shortsword N/A. Keep lv17 Trickery for duplicity tests. | CLA-203 Invoke Duplicity (base) VERIFIED 2026-08-29: 'Invoke Duplicity:' bonus-action row click → CD 3→2 (change-data channelDivinityCharges) + activeBuffs create_illusion duration 1_minute → Mace vs Wight 1 popup 'd20 9, 9 → 9 / Advantage / ✓ HIT (17 vs AC 14)' + log roll mode:advantage + damage 13 (82→69). lv17 passive forces lv3-row click to open 'Choose Allies' picker AFTER commit — click Skip. No illusion-move/cast-from-space UI (gridless) = PASS-subset. Runtime+log cleared after run. | SP-072 Lesser Restoration FAIL 2026-08-29 (bug-sp-072-lesser-restoration.md): LR now PREPARED (spells[] ground truth). LR is Bonus Action -> cast via Bonus Actions row (CharBonusActions.jsx:245), NOT main Spells table. 'Cast Spell' sets pendingOps.lesserRestoration (fiber-confirmed 20 targets) but CharBonusActions omits the target/condition SecondaryTargetModal -> cast stalls; poisoned unchanged, lv2 slot 3->3, no log. Affects all bonus-action lesser_restoration casters. Runtime+log cleared. | SP-076 Mass Cure Wounds VERIFIED PASS 2026-08-30: Mass Cure Wounds now PREPARED (permanent, spells[] ground truth). lv17, WIS 16/+3, lv5 slots 2 at cast. Modal 'Mass Cure Wounds' listed 22 creatures, 7th checkbox disabled at 6/6 (max-6 exact); Cure (3): AasimarTest +32 (HP 10→42), MercyMonk +30 (HP 20→50), formula '5d8 + 3' exact per target, lv5 slot 2→1. Wight 1 +0 HP = known bug-cla-208 NPC runtime-HP no-op (monster HP in combatSummary.currentHp; massHealUtils.confirmFn reads runtime currentHitPoints) — ally path exact. KEY SETUP: Admin Clear Change Data FIRST to drop stale maxHp:1 PC stubs so handler falls back to caster playerStats.hitPoints (122). See playbook SP-076 recipe. | SP-077 Mass Heal VERIFIED PASS 2026-08-30: Mass Heal now PREPARED (permanent, spells[] ground truth). lv9 Cleric spell (manifest lv6 stale); lv17 gets 1 lv9 slot (classRules2024.js:334). Real impl massHealHandler.js (handle -> massHealTarget modal -> MassHealModal allocation form -> confirmMassHeal) — NOT massHealUtils. Cast1: split from 700 pool AasimarTest 51->101 (+50) + FeyRanger 44->74 (+30, blinded removed); cast2 after Long Rest slot refill: Poisoned AasimarTest 51->101, ['poisoned']->[] with removed-logs; lv9 slot 1->0 each cast, spell log spellLevel:9. Modal slices targets to first 10 alphabetical (MercyMonk unreachable). Trusted fill+Enter required on initiative HP inputs (synthetic setter no-op this session). Runtime+log cleared after run. | SP-078 Mass Healing Word VERIFIED PASS 2026-08-30: MHW now PREPARED (permanent, spells[] ground truth). lv3 Bonus Action heal - cast via sheet Bonus Actions row -> MassHealingWordModal (max 6, 7th checkbox disabled gate proven) -> per-target 2d4+3 exact (AasimarTest 10->21 roll 4,4; FeyRanger 20->28 roll 2,3), lv3 slot 3->2->1, clamp proof 100->101 exact. Log delta over-reports near max (massHealUtils.js:128 caster maxHp fallback) - trust change-data. | Campaign deduped 2026-08-31: sole Cleric retained; edit this character freely to fit test scenarios."
+    },
+    {
+      "name": "DraconicDragon",
+      "class": "Barbarian",
+      "subclass": "Path of the Wild Heart",
+      "race": {
+        "name": "Dragonborn",
+        "subrace": {
+          "name": "Red Dragonborn"
+        }
+      },
+      "level": 13,
+      "rules": "2024",
+      "feats": [
+        "Healer",
+        "Magic Initiate"
+      ],
+      "note": "CLA-227 Mindless Rage VERIFIED PASS 2026-08-30: feature is Berserker major lv6 in 2024 classes.json (automation condition_immunity_while_active, immunities [charmed, frightened], requiresActive 'Rage') — this lv18 char qualifies as-is. GM Add→Conditions refusals while raging (Frightened + 2x Charmed) never landed in activeConditions (silent refusal via conditionSaveService addCondition→playerIsImmuneToCondition requiresActive gate on activeBuffs name 'Rage'); pre-rage control Frightened stuck then CLEARED on sheet 'Rage:' activation (combatStanceHandler filters charmed/frightened); post-'Rage ended' Frightened stuck again (immunity lapsed). Rage uses 5→4→3. Cosmetic gaps: activeConditionMeta.frightened NOT cleared on rage-entry clear (renders no badge); Add modal logs 'Condition Applied' even when immunity refuses. Runtime+log cleared after run. | CLA-202 Intimidating Presence VERIFIED 2026-08-29: feature is Path of the Berserker MAJOR lv14 in 2024 classes.json (majors[0].features[3], save_attack/STR-ability DC/emanation_30ft/Frightened/uses 1 resourceKey intimidatingPresenceUses/recharge long_rest_or_expend_rage) — lv18 qualifies. Manifest handler/router/infoBuilder paths stale; real chain: automationRouter.js save_attack→bonusActions → automation/index.js:298 → src/services/automation/handlers/combat/saveAttackHandler.js → SetConditionModal. STR 16 (+3) + PB +6 → DC 17 EXACT (8+3+6; manifest's 19 assumed STR 20 — wrong). Evidence: Animated Rug (WIS −4) auto-roll d20(1)−4=−3 < 17 → 'Failed — Frightened!', rug activeConditions [frightened] + meta dc17/WIS, uses 1→0, save+condition logs; re-click with uses 0 spent rage 6→5 (no action) and reopened modal DC 17 = rage-expend recharge works. End-of-turn repeat save NEVER fires (frightened persists past rug's turn-end; no consumer — residual-flag family CLA-175/191/194). Runtime+log cleared after run. | LEVELED 13→18 2026-08-29 for CLA-196 Indomitable Might VERIFIED (2024 classes.json: base Barbarian lv18, automation conditional_replacement target ability_check saveType STR — target is ability_check ONLY, strSaveReplace never set so STR saves are NOT floored by data design). STR 16 (+3): STR check cell (.clickable idx 19) auto-rolls; popup 'd20 N → 16 (Indomitable Might)' whenever N+3<16, exact floor; total == 16 not replaced (rule says 'less than'); ≥16 untouched; log 'used Indomitable Might on Strength check: d20 N + 3 = T → replaced by Strength 16'. STR save cell (idx 20, +9 Adv) needs both adv dice ≤6 to go below 16 — never hit in 8 rolls. Real chain: automationModifiers.js:62 → conditionEffectsInternal.js:243-251 → CharAbilities.jsx:162-166 → DiceRollResult.computed.js:70-72 → DiceRollResult.jsx:166 + useLoggedDiceRollAttack.js:143-153 (manifest handler/router/infoBuilder paths don't exist). Keep lv18 Barbarian for STR-floor/lv18 tests. | Level 13 since 2026-08-29 (CLA-182 test): 2024 classes.json has Brutal Strike at lv9, Improved Brutal Strike at lv13 — NOT lv11. CLA-182 FAIL: picker still lists only lv9 2 options (bug-cla-182-improved-brutal-strike.md). CLA-161 verified 2026-08-29: Healer feat (Origin) added via Edit wizard Feats step (.list-item-checkbox-trigger click works on feat rows), Healer's Kit added via Inventory step backpack textarea. Max HP 35, PB +3, d12. Self-target Battle Medic works with empty Target dropdown (handler self-fallback healingHandler.js:51-52). CLA-201 Instinctive Pounce VERIFIED 2026-08-29: 2024 classes.json Barbarian lv7 class_feature (automation temp_buff/effect rage_bonus_movement/triggerOnRage) — lv18 qualifies; manifest paths stale, real consumer combatStanceHandler.js:281-286+318-320. Sheet Bonus Actions 'Rage:' click → popup 'Rage activated — Instinctive Pounce: You can move up to 15 feet as part of entering your Rage. Move your token on the combat map.' (speed null → 30 fallback → half 15). ragePoints 6→5 consumed, Rage stance buff written. No persisted pounce flag / no log entry (popup-only delivery by design; token move manual on map). Runtime+log cleared after run. Keep feat+kit for reuse. | SUBCLASS CHANGED Berserker->PATH OF THE WILD HEART lv13 PERMANENT 2026-08-31 for CLA-234 Nature Speaker FAIL (bug-cla-234-nature-speaker.md): lv13 (registry lv18 stale - disk ground truth). Nature Speaker = Wild Heart major lv10 prose-only (NO automation metadata). Sheet: 'Nature Speaker:' passive row + Commune with Nature lv5 spell row (casting_time cosmetic override to Ritual, spellCalc2024.js:517-523). Cast path is slot-only: pre-Long-Rest Cast Spell disabled ('No spell slots available for this level'); post generic Long Rest Barbarian gets real lv1-5+lv6 slots from class_levels spellcasting block and Cast Spell ENABLES consuming lv5 slot 1->0 (log castingTime 'Ritual' but slot spent). WIS NOT casting ability: spellCastingAbility 'Intelligence' in class + class_levels spellcasting wins over major 'Wisdom' (spellCalc2024.js:123-127); decisive probe WIS 8->15 total 16/+3 sheet Save DC stayed 12 (INT -1; WIS would 14), WIS rolled back to 8 after. Manifest handler/router/infoBuilder paths do not exist. Keep lv13 Wild Heart for post-fix Nature Speaker/Animal Speaker ritual retest. | Campaign deduped 2026-08-31: sole Barbarian retained; edit this character freely to fit test scenarios."
+    },
+    {
+      "name": "DraconicSorcerer",
+      "class": "Sorcerer",
+      "subclass": "Draconic Sorcery",
+      "race": {
+        "name": "Human",
+        "subrace": {
+          "name": ""
+        }
+      },
+      "level": 6,
+      "rules": "2024",
+      "feats": [
+        "Magic Initiate"
+      ],
+      "note": "Actually level 6 (not 5). Has Chromatic Orb (1st, +6, 90 ft) and Fireball (3rd, DC 14 DEX) — good outside-globe / generic spell attacker. | CLA-194 Innate Sorcery VERIFIED 2026-08-29: Innate Sorcery is BASE Sorcerer lv1 in 2024 classes.json (automation sorcery_aura, 2 uses/long rest, 1 bonus action) — NO subclass conversion needed; subclass stays Draconic Sorcery. Base Save DC 14 (+6 spell attack); activated via Special Actions 'Innate Sorcery:' row click → popup 'activated (1/2 uses remaining)' + badge '+1 Save DC, Spell Adv' + sheet Save DC readout 14→15 + spell rows show 'DC 15 DEX'. Chromatic Orb +6 roll popup: d20 (18, 10 → 18) mode advantage HIT vs AC14; Fireball save log saveDc:15. innateSorceryUses 2→1 in change-data. Keep lv6 Draconic Sorcery for sorcery tests. | MM-001 Metamagic VERIFIED PASS 2026-08-30: Metamagic is BASE Sorcerer lv2 in 2024 classes.json (automation spell_modifier, resource sorcery_points, all 8 options — no option-choice gate; panel offers all 7 pre-cast options). Sorcery panel on every sorcerer spell cast (Chromatic Orb lv1): SP readout 6/max; control 'Cast Without Metamagic' = normal cast (slot 4→3, SP stays 6); Twinned tick (1 SP = lv) opens second-target select (Goblin 2), 'Apply & Cast (1 SP)' → SP 6→5, twin damage 14 applied to BOTH goblins (handlePlainDamage.js twin branch, log 'Chromatic Orb (Twinned)' + twin_damage_roll_before_apply). Empowered reroll lives ONLY on the post-Done damage popup button 'Empowered Spell (1 SP)' (DiceRollResult.jsx:501) — click rerolls CHA-mod(3) dice (6,8,5→4,3,3, 19→10, -9 rollback heal, Goblin 36→26 correct), SP 5→4, metamagic_use log x2. Standalone sheet 'Empowered Spell:' row click is inert (no popup). Runtime+log cleared after run. | Campaign deduped 2026-08-31: sole Sorcerer retained; edit this character freely to fit test scenarios."
+    },
+    {
+      "name": "ElderPaladin",
+      "class": "Paladin",
+      "subclass": "Oath of the Ancients",
+      "race": {
+        "name": "Human",
+        "subrace": {
+          "name": ""
+        }
+      },
+      "level": 20,
+      "rules": "2024",
+      "feats": [
+        "Medium Armor Master",
+        "Magic Initiate"
+      ],
+      "note": "FT-056 Medium Armor Master VERIFIED PASS 2026-08-30: feat ADDED via Edit-wizard Feats step (.list-item-checkbox-trigger) + Abilities-step ASI combobox set to Dexterity + Inventory Equipped textarea 'Longsword, Scale Mail, Shield'. JSON feats now ['Medium Armor Master','Magic Initiate']; DEX baseScore 15 + featIncrease:1 = 16 exactly once (choice-ASI skip pattern — no FT-047 double-count across 3 wizard saves); featAbilityChoices 'Medium Armor Master-0':'Dexterity'. AC sheet 19 with formula 'Armor (14) + Dexterity Bonus (2) + Shield (2) + Medium Armor Master (+1)' = cap raised 2->3 (consumer rules-armorClass.js:196-212). Control: feat ON but DEX total 15 -> AC 18, formula omits MAM term. STR 20 untouched (featIncrease:0). Feat LEFT ON; DEX kept base 15 (total 16). Passive — 'Dexterous Wearer:' row renders in Special Actions. Runtime change-data + log cleared after run. | CLA-210 Lay On Hands VERIFIED PASS 2026-08-29: healing_pool automation (2024 classes.json Paladin lv1, pool 5×lv = 100/100 at lv20). Bonus Actions 'Lay On Hands:' row → target radio picker → amount input + Apply Heal → HP 214→224 (+10) via RUNTIME hitPoints/currentHitPoints (SP-060 maxHp:1 combatSummary stub NOT on this path — hpModifier.js reads runtime) + layOnHandsPool 100→90 + healing_pool log. Poisoned add → cure button 'Cure Selected (1 for 5 HP)' → pool 90→85 + activeConditions [] + 'condition broken' log. Long Rest (no modal, instant) → layOnHandsPool null → badge 100/100. Runtime+log cleared after run. | SUBCLASS CHANGED Devotion→GLORY lv20 2026-08-29 for CLA-200 Inspiring Smite (FAIL: bug-cla-200-inspiring-smite.md) — Inspiring Smite is Oath of GLORY major lv3 in 2024 classes.json (majors[1].features[0], post_cast_inspiring_smite), NOT Devotion. CD max 3. Divine Smite cast HIT (18 vs AC14, 18 radiant, Wight 82→64) + lastAttack.attackName='Divine Smite' written, but NO auto modal (spellCastService/execution/index.js:566-568 no-dc return skips :588 trigger) and 'Inspiring Smite:' row INERT (not in INTERACTIVE_HANDLER_TYPES). Isolation probe of handle() proved internals exact: 'Rolled 2d8 + 20: 27', split 10/9/8 → tempHp in change-data, CD 3→2, ability_use log. No-map targets = runtime selectedAllies+self only. Runtime+log cleared after run; subclass kept Glory for retries. | CLA-213 Living Legend VERIFIED PASS 2026-08-30: Special Actions 'Living Legend:' row IS clickable despite static inert prediction (not in INTERACTIVE_HANDLER_TYPES but row gate hasStringOptions fires) - click sets livingLegendActive=true + badge + ability_use log. (a) Persuasion CHA check advantage: rolls [10,14]->14 'Advantage' bonus +5; control INT single d20. (b) sheet INT save reroll .dice-roll-reroll-btn when active (9->14); sp-overlay monster-forced WIS DC13 FAIL (1+10=11) -> 'Reroll Save' -> 9+10=19 SUCCESS, save-damage log saveRawRolls:[9,9] (name 'Unknown' cosmetic gap). (c) Longsword vs Wight AC14 d20 2+11=13 MISS -> 'turned into a hit' popup + log + Wight 82->0; once-per-turn gate: second miss (1+12 crit miss) NOT converted, unerringStrikeUsed=true, resets turn start (turnStartEffects.js:87). LIMITS: 10-min duration unenforced (flag cleared only on initiative roll); no use counters; pitfall: Aura of Protection WIS save totals +10 vs DC13 so failures need d20<=2 (~10%/roll); stale reroll button lags one roll after flag clear until sheet remount. Runtime+log cleared (Full Reset). | SUBCLASS CHANGED Glory->OATH OF THE ANCIENTS lv20 2026-08-31 for CLA-238 Nature's Wrath FAIL (bug-cla-238-natures-wrath.md): activation/save/restrain/consumption halves all VERIFIED - CD 3->2->1 change-data (lv20 channel_divinity 3), per-target STR auto-rolls, Restrained+meta on fails, Wolf 18>=DC saved unaffected, unchosen Skeleton never touched, badge repeat saves clear condition on success (Rat 4 stays/19 ends). FAIL = DC: modal/log/meta show DC 13 (8+WIS-1+PB6) vs rule 8+PB+CHA=19 (sheet spells block confirms CHA+5/PB+6); conditionHandler.js:15-16 defaults saveAbility WIS, data lacks saveAbility. Sheet CHA 20/+5, WIS 9/-1. Repeat saves manual-only, expiryRounds null, badge rolls bonus:0 (families CLA-235/202). CD LEFT 1/3 pre-clear (runtime cleared after; Long Rest refills 3/3). Keep lv20 Ancients for CD set_condition retests. | Campaign deduped 2026-08-31: sole Paladin retained; edit this character freely to fit test scenarios."
+    },
+    {
+      "name": "EvasiveFighter",
       "class": "Fighter",
       "subclass": "Battle Master",
-      "level": 1,
-      "race": "Elf",
-      "subrace": "Wood Elf",
+      "race": {
+        "name": "Human",
+        "subrace": {
+          "name": ""
+        }
+      },
+      "level": 18,
+      "rules": "2024",
       "feats": [
-        "Magic Initiate",
-        "Lucky"
+        "Great Weapon Master",
+        "Mage Slayer",
+        "Savage Attacker"
       ],
-      "background": "Acolyte",
-      "note": "CLA-206 Keen Senses VERIFIED PASS 2026-08-29: racial proficiency_choices grant works — JSON skillProficiencies [Insight,Religion,Perception]; sheet Perception +5 = WIS 16/+3 + PB +2, Survival +3 unproficient (exact 1-of-3). Wood Elf ancestral +2 NOT applied to ability totals (data gap, out of scope). All abilities base 8 except WIS 15(+Acolyte=16). | FT-049 Lucky feat VERIFIED PASS 2026-08-30: Lucky added via Edit-wizard Feats step (.list-item-checkbox-trigger tick + ✓Save). 2024 feats.json models Lucky as Advantage/Disadvantage reaction benefits (NOT 5e reroll). Sheet shows 'Luck Points 0/2' (PB max) + Reactions rows 'Advantage:'/'Disadvantage:'. LP runtime inits to 0 after grant — bump to max via Luck Points inline tracker (click → fill 2 → Enter) before spending. Reaction click: LP 2->1 + popup + log; next WIS save cell 'd20 10, 7 → 10' forced advantage, control roll single d20 (flag clears); Unarmed Strike 'd20 16, 4 → 16 +1 ✓ HIT 17 vs AC 14' (Wight 82→80); LP 0 → block popup 'Requires at least 1 Luck Point'; Long Rest → 2/2. Disadvantage: LP 2->1, Wight Necrotic Sword vs KeenElf 'd20 20, 7 → 7' forced low; control attack normal single d20. Runtime+log cleared after run. Keep lv1 Lucky fighter for LP tests."
+      "note": "Was Battle Master lv10; CONVERTED 2026-08-29 to **Eldritch Knight lv18** for CLA-192 (JSON ground truth: subclass Eldritch Knight, lv18; Improved War Magic is lv18 in 2024 classes.json, manifest lv15 stale). Magic Missile prepared, Shortsword equipped, all abilities 8, PB+6. CLA-192 FAIL (bug-cla-192-improved-war-magic.md): lv18 'Improved War Magic:' row dispatches the lv7 CANTRIP picker (multi-automation features dedupe by name via uniqBy('name') + sheet builds from automation[0]); neither spell nor extra weapon attack resolves — Replace Attack is log-only, no slot spend, no damage. Kept for retry after fix. (CLA-186 BM verification still valid historically.) | FS-008 Interception FAIL 2026-08-29 (bug-fs-008-interception.md): NOW HAS fightingStyles:['Interception'] (Edit-wizard step 12 checkbox) + equipped ['Shortsword','Shield'] — JSON ground truth, permanent. Runtime HP 94, PB+6. Grant/routing/shield-gate/1d10+PB popup math all work; FAIL because disadvantage te written under wrong runtime key (per-character, consumers read campaign-level — runtime store logs wrong-key errors) and reaction never consumed (4 clicks fired, ally double-healed). Keep Interception grant for post-fix retest. | CLA-207 Know Your Enemy FAIL 2026-08-29 (bug-cla-207-know-your-enemy.md): CONVERTED BACK to **Battle Master lv18** (step-7 combobox + ✓Save, JSON ground truth). Bonus Actions 'Know Your Enemy:' row live; vs EB-joined Shadow 1 (Target dropdown set first) it spends superiorityDie 4→3 (Short Rest refills, SHORT_REST_RESOURCES) and logs, but reveals NOTHING — handler knowEnemyHandler.js:66-69 reads damage_immunities/damage_resistances/damage_vulnerabilities keys absent from 466/605 monsters.json entries (Shadow IRV lives under immunities/resistances/vulnerabilities). Same key-name family as bug-cla-173. | FT-052 Mage Slayer VERIFIED PASS 2026-08-30: **Mage Slayer feat ADDED to this char** (Edit-wizard Feats step checkbox + STR ASI; JSON feats:['Savage Attacker','Great Weapon Master','Mage Slayer'], featAbilityChoices Mage Slayer-0:Strength — permanent, keep for concentration-breaker tests). Shortsword +6 vs concentrating PC (Add→Concentration tab on initiative card) → ConcentrationPromptModal CON save DISADVANTAGE (two d20, min kept) + log 'DISADVANTAGE … vs Concentration: Hold Person DC 10'; control HexWarlock (no feat) = single-d20 normal. Monster targets blocked by applyDamage activeBuffs-guard crash (playbook FT-052 recipe). Runtime+log+monster cleared after run. | WM-003 Nick weaponMastery FAIL 2026-08-31 (bug-wm-003-nick.md): temporarily equipped Scimitar+Dagger (both mastery=Nick in equipment.json, Light) + EB-joined Animated Rug, target set, full attack flows run — zero Nick automation: no prompt/modal pre- or post-Done, _Nick_UsedRound never written (no production writer; WeaponMasteryModal never mounted, weaponMastery modalName unmapped, applyPostDamageMasteryEffects test-only, Nick excluded from tacticalMaster auto-apply), zero nick logs, Dagger stays Bonus Action row even after Weapon Mastery kind grant (Scimitar/Dagger ticked via row modal, _Weapon_Kind_Mastery_chosenWeapons written; modal says properties available when attacking but nothing fires). Scimitar 5 slashing + Dagger 3/4 piercing damage legs work (Rug 27 to 17). Equipped RESTORED to Shortsword, Shield after run; runtime+log+NPC cleared. | Campaign deduped 2026-08-31: sole Fighter retained; edit this character freely to fit test scenarios."
     },
     {
-      "name": "ArcaneTricksterTest",
-      "file": "public/campaigns/test-campaign/ArcaneTricksterTest.json",
-      "ruleset": "2024",
-      "class": "Rogue",
-      "subclass": "Arcane Trickster",
-      "level": 9,
-      "race": "Human",
-      "subrace": "",
-      "feats": [],
-      "background": "(auto-selected)",
-      "note": "Created 2026-08-30 for CLA-218 Mage Hand Legerdemain FAIL (bug-cla-218-mage-hand-legerdemain.md): mage_hand_control collector routing works but no UI row is reachable — categorizeFeatures bins the multi-automation feature to Special Actions via automation[0] passive casting_time; row renders inert <b>; Mage Hand granted but cast stays Action, no invisible hand, no Sleight of Hand consumer. Wizard flow: name+lv fill, race Human combobox, step-7 'Subclass / Major' selectOption('Arcane Trickster'), bulk Next to 'Tool Proficiencies' Save. Runtime+log cleared after run. lv RAISED 3→9 2026-08-30 for CLA-219 Magical Ambush VERIFIED PASS — dataset places Magical Ambush at AT lv9 (majors[0]/features[2]); lv3 collector never emits the passive. Knows Mind Sliver (Magic Initiate). Invisible staged via DivinationWizard casting Invisibility ON it — Add→Conditions tab has NO Invisible entry."
+      "name": "FeyRanger",
+      "class": "Ranger",
+      "subclass": "Fey Wanderer",
+      "race": {
+        "name": "Human",
+        "subrace": {
+          "name": ""
+        }
+      },
+      "level": 15,
+      "rules": "2024",
+      "feats": [
+        "Magic Initiate"
+      ],
+      "note": "Pre-existing test-campaign PC, registered 2026-08-30 during CLA-223 Mantle of Inspiration (HeroesFeastBard lv17 Glamour, verified PASS). Fey Wanderer Ranger - useful as a within-60ft ally target for temp-HP/buff/reaction-move tests (received tempHp:12 as a Mantle target). Has Magic Initiate feat. | LEVELED 14->15 + WIS base 8->15 (total 16/+3, PB+5, spell DC 16) 2026-08-31 for CLA-229 Misty Wanderer FAIL (bug-cla-229-misty-wanderer.md): free-cast plumbing half works (Misty Step spell-row popup 'Free Cast - no spell slot consumed', _Misty_Wanderer_freeCastCount consumed null->0 with lv2 slots unchanged, exhaustion removes free option -> slot consumed 3->2, Long Rest resets key). BUT pool max stuck at 1 regardless of WIS (usesMax baked by collectAutomationFromFeatures BEFORE rules.getAbilities computes ability .bonus in rules.js - buildAttackInfo re-call with live stats returns correct 3), and companion-carry half unreachable (Special Actions row inert - misty_wanderer/free_spell not in INTERACTIVE_HANDLER_TYPES; MistyWandererModal companion select hardcoded to None only). Keep lv15 Fey Wanderer for post-fix retest. | CLA-236 Nature's Veil VERIFIED PASS 2026-08-31: feature is BASE Ranger lv14 (2024 classes.json class_levels[13], automation natures_veil/bonus_action/naturesVeilUses) - subclass-irrelevant, lv15 qualifies as-is. Pool 3/3 = WIS +3 exact (bakes correct). Cast on Ranger turn: popup 'Uses remaining: 2/1/0' + Invisible badge; activeConditions ['invisible'] + _activeInvisibility_FeyRanger + pendingExpirations expireOnCreatureName=GlobeWizard (creature after Ranger); survived current round AND Ranger next turn, cleared at GlobeWizard turn next round (end-of-next-turn model, expiryRounds:null OK here); 0 uses -> block popup 'cannot be used again until a Long Rest'; Long Rest -> key null -> 3/3. Initiative-card badge lags server clear (cosmetic). Runtime+log+Zombie cleared after run. | CLA-242 Otherworldly Glamour VERIFIED PASS 2026-08-31: feature is Fey Wanderer MAJOR lv3 in 2024 classes.json (majors[1].features[1], automation {type:'otherworldly_glamour', casting_time:'passive'}; major carries bonus_skill_proficiencies:1 + skill_proficiencies_choices Deception/Performance/Persuasion). PERSUASION ADDED via Edit-wizard step-10 Skills checkbox + Save (skillProficiencies now Insight/Religion/Persuasion, PERMANENT - pick a different skill for retests). Chain: automationModifiers.js:98 wis_replacement -> rules.js collectSaveModifiers -> conditionEffectsInternal.js:255 wisCheckReplace -> CharAbilities.jsx getSkillBonus:49-66. Sheet CHA skills show +3 (WIS, min+1; CHA would -1); Persuasion (+8) = WIS+3+PB+5 exact. Rolls: Persuasion log 17+8, raw Charisma check 7+3, control Religion 10+4 (INT not replaced). Runtime+log cleared after run. Keep lv15 Fey Wanderer. | Campaign deduped 2026-08-31: sole Ranger retained; edit this character freely to fit test scenarios."
+    },
+    {
+      "name": "HeroesFeastBard",
+      "class": "Bard",
+      "subclass": "College of Glamour",
+      "race": {
+        "name": "Human",
+        "subrace": {
+          "name": ""
+        }
+      },
+      "level": 17,
+      "rules": "2024",
+      "feats": [
+        "Inspiring Leader",
+        "Musician"
+      ],
+      "note": "CLA-224 Mantle of Majesty VERIFIED PASS 2026-08-30: Glamour lv6 free_spell automation on this char as-is. Command force-prepared (not in JSON spells[]) — 'Command' row on sheet + Bonus Actions after activation. Mantle row click → activeBuffs mantle_of_majesty 1_minute + concentration dc 19 in combatSummary + pendingExpirations + badges. Two free Command casts vs EB-joined Goblin: popup 'Free Cast — no spell slot consumed', spell_slots_level_1 stayed 4, WIS DC 19 saves failed, Grovel → prone condition, Flee → log-only (by design commandHandler.js). Cleared after run. | CLA-223 Mantle of Inspiration VERIFIED PASS 2026-08-30: feature is College of GLAMOUR major lv3 (2024 classes.json majors[1].features[1], temp_hp_buff + bonusMovement + '2 * bardic_inspiration_die') — this char qualifies as-is (lv17 Glamour, CHA +5, d12 pool 5/5). Bonus Actions row click spends use + rolls d12 immediately (uses 5->4->3->2 over 3 activations); modal 'Choose up to 5 allies' (CHA max exact); confirm writes tempHp=2x die exact per ally (rolls 9->18 AasimarTest+KeenElf, 6->12 HunterRanger+FeyRanger) + inspiringMovementNoOA flag + pendingExpirations + ability_use log. Reaction-move leg IMPLEMENTED (not pitfall #8 prose-only): Insp. Move badge + OA-block consumers. Cosmetic gaps noted: picker lists self (rule says 'other creatures'); 60 ft range unchecked gridless. Uses left at 2/5, runtime+log cleared after run. | SUBCLASS CHANGED Lore→Dance 2026-08-29 for CLA-199 Inspiring Movement FAIL (bug-cla-199-inspiring-movement.md): feature is College of Dance MAJOR lv6 in 2024 classes.json (majors[0].features[1]) — Lore Bard shows no row; reaction_bonus flow (sheet row → Choose Ally modal → Move) grants flags/expirations/log but NEVER spends bardicInspirationUses (usesMax=0 gate, reactionBonusHandler.js:569-644) and Agile Strikes chain hijacks popup. Bardic pool 5/5 d12 at lv17. Keep lv17 College of Dance for Dance/movement-reaction tests. | FT-046 Inspiring Leader VERIFIED 2026-08-29: feat ALREADY on this char (feats:[\"Inspiring Leader\"] in JSON). 2024 feats.json models it as benefits[1] 'Bolstering Performance' automation temp_hp_buff/multiTargetAlly — sheet shows clickable Special Actions row 'Bolstering Performance:' (NOT named Inspiring Leader). After Short Rest click row → .sp-overlay CreatureSelectionModal 'Each target gains 22 temporary hit points' (17 lv + CHA 20/+5; no featAbilityChoices in JSON so handler fallback = level + max(CHA,WIS) mod) → tick label.secondary-target-row allies → 'Inspire (N)' → change-data tempHp:22 per target + ability_use log. maxTargets 6 via slice. No-map range skip: all 18 PCs listed. Keep lv17 Bard w/ Inspiring Leader + Heroes' Feast. | CLA-205 Jack of All Trades VERIFIED PASS 2026-08-29: base Bard lv2 passive (2024 classes.json, automation jack_of_all_trades); consumer CharAbilities.jsx:87-94 adds floor(PB/2)=+3 to non-proficient skill bonus (display + roll popup). Sheet: Arcana/History/Investigation +3 (INT 10/+0), Stealth/Sleight of Hand +5 (DEX +2); proficient Acrobatics +8, Persuasion/Performance +11 (CHA +5 + PB +6, lv17). Rolls: History \"d20 13 +3\", Persuasion \"d20 6 +11\". Runtime+log cleared. Keep lv17 Dance Bard for skill-check/Jack tests. | CLA-211 Leading Evasion VERIFIED PASS 2026-08-29: Behir DC16 Lightning Breath 12d10; Bard save-success ->0 dmg, save-fail ->floor(dmg/2)=28 (logged 'Evasion'); shared ally HexWarlock fail->floor(71/2)=35, success->0 (logged 'Leading Evasion'). 5ft adjacency NOT enforced (no map, accepted subset). SUBCLASS SUBAgent did not record whether Dance or converted — VERIFY HeroesFeastBard subclass via JSON before relying on it for subclass-gated Bard tests. | SUBCLASS CONFIRMED College of Glamour 2026-08-30 (disk `class.subclass.name`). CLA-221 Magical Secrets VERIFIED PASS: lv17 CHA+5 PB+6 (DC19). Added CLERIC-only Spirit Guardians via Edit Spells step (`.list-item-checkbox-trigger`) accepted to disk, sheet DC 19 WIS (Charisma=Bard-list treatment), live-cast consumed Bard lv3 slot+concentration+DC19 WIS save/half-damage. Validation expansion gate `spellValidation.js:379` only unlocks at exact level bearing `magical_secrets` (lv10), so lv17 add emits spurious advisory but still accepts (cosmetic gap). Spirit Guardians lv3 left PREPARED (reusable Cleric-list probe). | Campaign deduped 2026-08-31: sole Bard retained; edit this character freely to fit test scenarios."
+    },
+    {
+      "name": "HexWarlock",
+      "class": "Warlock",
+      "subclass": "Archfey Patron",
+      "race": {
+        "name": "Human",
+        "subrace": {
+          "name": ""
+        }
+      },
+      "level": 14,
+      "rules": "2024",
+      "feats": [
+        "Magic Initiate"
+      ],
+      "note": "CLA-228 Misty Escape VERIFIED PASS 2026-08-30: SUBCLASS CHANGED Fiend→ARCHFEY PATRON (Edit step-7, JSON ground truth, PERMANENT). lv14 CHA16/+3 PB+5 → spell save DC 16. Misty Escape = Archfey major lv6; sheet Reactions 'Misty Escape:' row live. Full E2E vs EB-joined Ogre (card Target=HexWarlock, avatar .mc-overlay Greatclub +6, HIT 15dmg HP 73→58): reaction modal (mode mistyEscape) offers Refreshing/Taunting/Disappearing/Dreadful + 'Misty Step only (free cast)'. Plain free cast: popup 'without expending a spell slot', no slot spent. Long Rest refilled zero-init pool 0/3→3/3 (pitfall: fresh convert sees 'No uses remaining'). Disappearing: activeConditions ['invisible'] + pendingExpirations expireOnCreatureName=HexWarlock; expired to [] at caster's next turn (expiry WORKS). Dreadful: tick inner checkbox → 'Dreadful (1)' → .sp-overlay WIS save DC 16 prompt → FAIL 13 → exact 8 psychic, Ogre currentHp 68→60 + save_result logs; pool 3→2→1. GAP: no per-round reaction counter — same lastAttack re-fired modal 3x (no new damage) with duplicate ability_use logs (fs-008 family). Auto-assigned Archfey spells (Misty Step) show ✓ in wizard but don't persist to JSON spells[] — handler doesn't check known. Runtime+log cleared after run. Keep lv14 Archfey for fey/patron tests. | CLA-231 Mystic Arcanum FAIL 2026-08-31 (bug-cla-231-mystic-arcanum.md): arcanums now PERMANENTLY selected on this char via Edit-wizard Spells-step Mystic Arcanum picker (JSON class.arcanums:['Eyebite','Etherealness'] ground truth; lv6@11+lv7@13 grant correct, counters render '6th/7th Level Arcanum: 1/1'). But spells never reach the sheet: spellCalc2024.js slot-level filter (:487-504) drops everything above Pact max lv5 AFTER the force-prepare (:389-397) → no spell row, no SpellDetailPopup free-cast, counters unconsumable; live getSpellAbilities probe + innerText grep + filter-predicate replay all decisive; counter row click = numeric spinbutton only. 5e path has no filter (contrast). Retest here post-fix. | Attack-roll spellcaster: Eldritch Blast +8 (lv14). SUBCLASS CHANGED 2026-08-29: Celestial Patron → Fiend Patron + level 10→14 (Edit wizard step-7 combobox + level fill; JSON ground truth). CLA-175 Hurl Through Hell FIXED 2026-08-30 (was FAIL): duration now enqueued via addExpiration (rounds=2) + clearExpirationEffects 'hurl_through_hell_return' strips incapacitated/te and logs return-to-space. Fail-branch verified — after EB hit, sheet 'Hurl Through Hell:' → modal (CHA DC 16, 8d10, Uses 1/1) → .sp-overlay save prompt → fail → 8d10=31 psychic, Ogre 55→24 exact, Incapacitated badge + te, uses 1→0, once-per-turn popup, 4 log entries. BUT duration never expires: round 4 (past caster's next turn) Ogre still incapacitated, pendingExpirations [], returnToSpace flag inert — modal bypasses expirationQueue; no cleanup consumer in src. Long Rest resets hurlThroughHellUses/turnUsed to null + slots 3/3 (verified). Keep Fiend lv14 for Fiend/hurl tests. Runtime change-data + log cleared after run. | Campaign deduped 2026-08-31: sole Warlock retained; edit this character freely to fit test scenarios."
+    },
+    {
+      "name": "Wild_Sage_Druid",
+      "class": "Druid",
+      "subclass": "Circle of the Sea",
+      "race": {
+        "name": "Human",
+        "subrace": {
+          "name": ""
+        }
+      },
+      "level": 20,
+      "rules": "2024",
+      "feats": [
+        "Magic Initiate"
+      ],
+      "note": "SUBCLASS CHANGED Land→SEA lv20 2026-08-31 for CLA-240 Oceanic Gift FAIL (bug-cla-240-oceanic-gift.md): Oceanic Gift + Wrath of the Sea are Circle of the SEA majors (2024 classes.json majors[2], lv3 + lv14; lv14 automation array [single, doubleEmanation:true]). Edit step-7 combobox + first ✓Save persists in one shot; JSON ground truth class.subclass.name='Circle of the Sea'. Single-ally half VERIFIED: Oceanic Gift row -> .sp-overlay radio chooser (20 players) -> 'Grant Wrath of the Sea' -> WS 3->2, KeenElf wrathOfTheSeaActive/Dc17/WisMod3 (druid DC = 8+WIS16/+3+PB6 dataset-PB, NOT KeenElf own DC 13), druid NOT active + no self Wrath row; KeenElf synthetic allyAttack 'Wrath of the Sea:' row (CharBonusActions.jsx:399) hit Zombie 1 3d6=9 cold DC17 (HP 25->16, remove-NPC probe exact); logs ability_use+roll exact. FAIL = double variant (both self+ally, 2 WS) unreachable: uniqBy-name sheet dedup (rules.js:447) + executeHandler first-actionable find (automation/index.js:677) always dispatch automation[0]; modal radio-only, no both toggle; re-clicks both opened single modal. Cosmetic: wrathOfTheSeaSource absent from change-data; Skip burns nothing (good) but no skipped-popup; ally emanation never expires (no pendingExpirations enqueue). Wild Shape pool 4/4 via clear-change-data (key null->max). PB in this dataset is +6 at lv20 (Wrath DC 17). _circleOfTheLandType cleared with change-data. Prior: | CLA-237 Nature's Ward FAIL 2026-08-31 (bug-cla-237-natures-ward.md): lv20 Land/Temperate qualifies (2024 classes.json majors[0] features[3] lv10 land_resistance conditionImmunity poisoned, landMappings temperate=Lightning confirmed in data). Poison immunity half VERIFIED: Add->Conditions->Poisoned->Apply refused (activeConditions stays [], no badge; KeenElf control sticks). Resistance half FAIL live: Modron Pentadrone Electrical Discharge 1d6+2 Lightning raw 7 -> applied 7 (HP 143->136, hp_change delta -7; expected 3); KeenElf control raw 5 -> full 5. Root cause: App.jsx computedCharacters computes WITHOUT runtime _circleOfTheLandType injection; rulesFactory.js land branch reads only class.major/subclass.type (null in JSON) -> damage-path resistances always []. Sheet display (CharSheet-local injection) shows Resistances: Lightning and flips Arid=Fire via CircleOfTheLandSpellsModal - display works, damage path blind. _circleOfTheLandType was NULL at session start (Long Rest nulls it, restRules-longRest.js:330) - always re-set via sheet modal before land tests. Land LEFT = Temperate. | CLA-235 Nature's Sanctuary FAIL 2026-08-31 (bug-cla-235-natures-sanctuary.md): lv20 Land/Temperate qualifies as-is (2024 classes.json majors[0] features[4] lv14, manifest classFeatureHandler paths stale; real handler src/services/automation/handlers/class-ranger/naturesSanctuaryHandler.js). Action row -> CreatureSelectionModal 'Create Sanctuary (N)': WS 4->3, naturesSanctuaryActive/Creatures/Range 120/Resistance 'Lightning' (temperate via CharSheet.jsx:111-115 injecting runtime _circleOfTheLandType into class.major/subclass.type), Sanctuary badges (Half Cover AC+2) on covered cards only (Zombie control none), ability_use log. BA 'Nature's Sanctuary (Move):' pre-selected picker -> 'Move Sanctuary (N)' -> Creatures list + Added: delta log exact. FAIL = duration: handler :62 addExpiration omits rounds arg -> pendingExpirations expiryRounds:null -> Infinity; walked initiative r1->r12 (242 Next clicks) badges+keys persist, queue never consumed. Minor: movesPerDuration untracked (naturesSanctuaryMoves never written). Land type Temperate LEFT SET (runtime). | CLA-232 Natural Recovery VERIFIED PASS 2026-08-31: SUBCLASS CHANGED Moon->CIRCLE OF THE LAND lv20 PERMANENT (data places Natural Recovery at majors[0] lv6, NOT core lv2 as manifest claims). Land type Temperate set. Short Rest modal Natural Recovery section: budget 10=floor(lv/2) exact; expended lv1x2+lv3x2+lv4x1=12 -> recovered lv3x2+lv4x1=10 exact, lv1 plus-button disabled at budget 0 despite 2 available (clamp proof), log 'Natural Recovery: 2x level 3, 1x level 4'. 2nd short rest fresh budget (per-short-rest RAW), lv1x2 restored. Free-cast half: NR row modal -> Lightning Bolt -> 'Free Cast - no spell slot consumed' popup, lv3 unchanged 3, 27 dmg dealt (Zombie probe 140/200), used=true block 'already used this long rest', Long Rest resets naturalRecoveryFreeCast/Used/Slots null + re-offers. Keep lv20 Land/Temperate for Natural Recovery/Land tests; CLA-217/230 Moon retests need re-conversion first. Run cleaned (change-data + log cleared). | SP-073 Longstrider VERIFIED PASS 2026-08-30: Longstrider now PREPARED (permanent, spells[] ground truth) — reusable touch lv1 Action caster (no concentration). Self-cast: sheet spell row → Cast Spell → radio self → Cast Longstrider → sheet Speed 30→40 ft + activeBuffs {name:'Longstrider',effect:'speed_boost',speedBonus:10,duration:'1 hour'} + lv1 slot 4→3 + pendingExpirations remove_active_buff + ability_use log. Cosmetic: generic 'spell' log targetName = targets[0] (AasimarTest), not the selected self target. Runtime+log cleared after run. | SUBCLASS CHANGED Moon->CIRCLE OF THE LAND lv20 2026-08-29 for CLA-208 Land's Aid FAIL (bug-cla-208-lands-aid.md): Land's Aid = Circle of the Land lv3 in 2024 classes.json (manifest lv6 stale), save_attack+healExpression -> SaveAttackHealModal. DC 17 CON exact (8+WIS3+PB6), WS 4->3 spent, damage lands (Rug 27->20), BUT rolls 2d6/2d6 not lv20 4d6/4d6 (resolveScaling array-only vs object-map data), and NPC heal no-op ('actual: 0' - reads per-name currentHitPoints vs NPC HP in combatSummary currentHp). Moon features gone after swap. Keep Land lv20 for retry. | Prior: leveled 9->20 for CLA-176 Nature Magician (ResourcePoolModal, WS 4/4). CLA-190 Improved Elemental Fury VERIFIED (base-Druid lv15 subclass-irrelevant, 'Elemental Fury:' row +2d8 once/turn; range+300 no UI readout). Runtime cleared after each run. | SUBCLASS SWAPPED BACK Land->Moon lv20 2026-08-30 for CLA-217 FAIL (bug-cla-217-lunar-form.md): first-turn +2d10 radiant exact (HIT 21 vs AC12, 18 dmg, once-per-turn gate + miss exclusion OK) but never re-arms round 2+ — attackRollBonuses.js:196/219 no-arg getCurrentCombatRound() stuck at 1; fix=pass ctx.campaignName. Moonlight Step pool zero-init (CLA-163 family). Keep Moon lv20 for post-fix retest. | CLA-230 Moonlight Step FAIL 2026-08-31 (bug-cla-230-moonlight-step.md): WIS total 17/+3 (base 15 + Acolyte +2) -> pool max 3/3 EXACT (CLA-229 bake-to-1 NOT reproduced; max from trackedResources.js:266 max(WIS,1); first mid-hydration paint showed stale 1/2, ignore). Bonus Actions row -> TeleportModal -> teleport works, pool 3->2->1->0, no slots consumed by step; 0-uses fallback modal 'Consume a level 2 spell slot' -> lv2 3->2 + log 'Expend a level 2 spell slot' (inline per-use slot spend, pool stays 0). Weapon attack rolls mode:advantage ('d20 3, 13 -> 13', Adv badge) but advantage NEVER consumed (2nd attack also advantage; te stacks 4x, cleared only end-of-turn); Starry Wisp spell attack rolled normal (executeSpellCast drops forcedMode); MoonlightStepResourceModal restore UI unreachable (no row, CLA-192 dedupe family). Keep Moon lv20 for post-fix retest. | Campaign deduped 2026-08-31: sole Druid retained; edit this character freely to fit test scenarios."
     }
   ],
   "monsters": [
+    {
+      "name": "Archmage",
+      "index": "archmage",
+      "source": "public/data/monsters.json",
+      "monsterType": "Humanoid",
+      "cr": "12",
+      "hp": 170,
+      "ac": 17,
+      "intMod": 5,
+      "note": "Best INT target: INT mod +5 and NO saving_throws entry in this data (conditionSaveService.getCreatureSaveBonus falls back to ability_score_modifiers.int=+5). Use for INT-DC control spells — DC 20 escape/checks need raw d20 >=15 (~30%/attempt). Joined via Encounter Builder as 'Archmage 1'; SP-080 Maze VERIFIED PASS 2026-08-30 (banish + badge-click INT escape 16+5=21 vs DC 20, no damage taken HP 170)."
+    },
     {
       "name": "Aarakocra Aeromancer",
       "index": "aarakocra-aeromancer",
@@ -419,6 +310,27 @@
         "Poisoned"
       ],
       "note": "IRV spot-check unmarked target for CLA-173. Same empty-IRV combatSummary caveat as Shadow. Joined as 'Skeleton 1'."
+    },
+    {
+      "name": "Gibbering Mouther",
+      "index": "gibbering-mouther",
+      "source": "public/data/monsters.json",
+      "cr": "2",
+      "hp": 52,
+      "ac": 9,
+      "strMod": 0,
+      "dexMod": -1,
+      "note": "Durable low-STR/low-DEX save-sponge for STR/DEX DC~18 forced saves (STR +0 fails d20<=17, DEX -1 fails <=18 vs DC 18). AC 9 easy to hit. Joined via Encounter Builder checkbox aria-label 'Select Gibbering Mouther'. CLA-241 VERIFIED PASS 2026-08-31."
+    },
+    {
+      "name": "Zombie",
+      "index": "zombie",
+      "source": "public/data/monsters.json",
+      "cr": "0.25",
+      "hp": 15,
+      "ac": 8,
+      "dexMod": -2,
+      "note": "DEX -2 save-sponge (fails DC 17 unless nat 19/20), Medium undead, AC 8 easy to hit. Joined via Encounter Builder exact 'Select Zombie' checkbox. SP-083 Otiluke's Resilient Sphere VERIFIED PASS 2026-08-31 (enclosed, blocked all damage, HP 15/15)."
     }
   ]
 }
