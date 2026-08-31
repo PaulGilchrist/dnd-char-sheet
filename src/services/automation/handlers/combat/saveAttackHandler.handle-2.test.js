@@ -50,6 +50,7 @@ import * as savePrompt from '../../common/savePrompt.js';
 import * as runtimeState from '../../../../hooks/runtime/useRuntimeState.js';
 import * as mapsService from '../../../maps/mapsService.js';
 import * as rangeValidation from '../../../rules/combat/rangeValidation.js';
+import * as automationExpressions from '../../../combat/automation/automationExpressions.js';
 
 // ── Helpers ────────────────────────────────────────────────────
 
@@ -175,6 +176,36 @@ describe('saveAttackHandler - handle (part 2)', () => {
       expect(result.payload.damageExpression).toBe('1d6');
       expect(result.payload.healExpression).toBe('2d4');
       expect(result.payload.rangeFeet).toBe(30);
+    });
+
+    // CLA-208: scaled damage + heal expressions and auto.range must reach the modal payload
+    it('resolves level scaling and auto.range into the saveAttackHeal payload', async () => {
+      diceRoller.rollExpression.mockReturnValue({ total: 5, rolls: [5], modifier: 0 });
+      runtimeState.getRuntimeValue.mockReturnValue(null);
+      mapsService.loadMapData.mockResolvedValue(null);
+      automationExpressions.resolveScaling.mockImplementation((stats, scaling) => {
+        if (!scaling) return null;
+        const entries = Object.entries(scaling).map(([level, damage]) => ({ level: parseInt(level, 10), damage }));
+        return entries.sort((a, b) => a.level - b.level).filter(e => stats.level >= e.level).pop() || null;
+      });
+
+      const action = makeAction({
+        shape: 'sphere',
+        range: '60_ft',
+        damage: '2d6',
+        healExpression: '2d6',
+        scaling: { '10': '3d6', '14': '4d6' },
+        healScaling: { '10': '3d6', '14': '4d6' },
+        resourceCost: 'wild_shape',
+      });
+
+      const result = await handle(action, makePlayerStats({ level: 20, class: { class_levels: [{ level: 20, wild_shape: 4 }] } }), campaignName, null);
+
+      expect(result.modalName).toBe('saveAttackHeal');
+      expect(result.payload.damageExpression).toBe('4d6');
+      expect(result.payload.healExpression).toBe('4d6');
+      expect(result.payload.rangeFeet).toBe(30); // rangeToFeet is mocked → returns 30
+      expect(rangeValidation.rangeToFeet).toHaveBeenCalledWith('60_ft');
     });
 
     it('should use custom saveType when provided', async () => {

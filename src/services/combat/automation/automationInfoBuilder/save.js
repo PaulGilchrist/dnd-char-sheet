@@ -18,8 +18,8 @@ export const saveHandlers = {
         let healExpression = auto.healExpression || ''
         if (auto.healScaling) {
             const healScaling = resolveScaling(playerStats, auto.healScaling)
-            if (healScaling?.healExpression) {
-                healExpression = healScaling.healExpression
+            if (healScaling?.damage) {
+                healExpression = healScaling.damage
             }
         }
         if (healExpression) {

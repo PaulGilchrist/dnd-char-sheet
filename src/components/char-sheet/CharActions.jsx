@@ -592,9 +592,11 @@ const CharActions = function CharActions({ playerStats, campaignName, exhaustion
                     };
                     const displayName = isMetamagic ? 'Empowered Spell' : action.name;
                     const displayDesc = isMetamagic ? getEmpoweredSpellDescription(action) : action.description;
+                    // Resolve 'ability' save DC placeholder to the caster's numeric spell save DC
+                    const badgeSaveDc = auto?.saveDc === 'ability' ? playerStats.spellAbilities?.saveDc : auto?.saveDc;
                     return <div key={action.name}>
                         <b className={isClickable ? "clickable" : ""} onClick={handleClick}>{displayName}:</b> <span dangerouslySetInnerHTML={{ __html: sanitizeHtml(displayDesc) }}></span>
-                        {hasAutomation(action) && auto?.type === 'save_attack' && auto?.saveDc && <span className="automation-badge"> DC {auto.saveDc} {auto.saveType}</span>}
+                        {hasAutomation(action) && auto?.type === 'save_attack' && badgeSaveDc && <span className="automation-badge"> DC {badgeSaveDc} {auto.saveType}</span>}
                         {hasAutomation(action) && auto?.type === 'healing_pool' && <span className="automation-badge"> Pool: {auto.pool} HP</span>}
                         {hasAutomation(action) && auto?.damage && <span className="automation-badge"> {auto.damage} {auto.damageType}</span>}
                     </div>

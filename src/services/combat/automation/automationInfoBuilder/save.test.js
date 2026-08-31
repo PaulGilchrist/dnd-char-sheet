@@ -63,9 +63,28 @@ describe('saveHandlers – save_attack', () => {
     it('resolves scaling damage and healing', () => {
         const damageResult = saveHandlers.save_attack(makeFeature({ type: 'save_attack', scaling: [{ level: 1, damage: '1d6' }], damage: 'base' }), { ...BASE_STATS, level: 1 })
         expect(damageResult.damage).toBe('1d6')
-        const healResult = saveHandlers.save_attack(makeFeature({ type: 'save_attack', healExpression: '2d8', healScaling: [{ level: 5, healExpression: '4d8' }] }), { ...BASE_STATS, level: 5 })
+        const healResult = saveHandlers.save_attack(makeFeature({ type: 'save_attack', healExpression: '2d8', healScaling: [{ level: 5, damage: '4d8' }] }), { ...BASE_STATS, level: 5 })
         expect(healResult.healExpression).toBe('4d8')
         expect(saveHandlers.save_attack(makeFeature({ type: 'save_attack', healExpression: '2d8' }), BASE_STATS).healExpression).toBe('2d8')
+    })
+
+    // CLA-208: classes.json stores scaling/healScaling as object maps (Land's Aid)
+    it('resolves object-map scaling damage and healing at lv20', () => {
+        const result = saveHandlers.save_attack(makeFeature({
+            type: 'save_attack', damage: '2d6', healExpression: '2d6',
+            scaling: { '10': '3d6', '14': '4d6' }, healScaling: { '10': '3d6', '14': '4d6' },
+        }), { ...BASE_STATS, level: 20 })
+        expect(result.damage).toBe('4d6')
+        expect(result.healExpression).toBe('4d6')
+    })
+
+    it('keeps base damage and healing below the first object-map scaling threshold', () => {
+        const result = saveHandlers.save_attack(makeFeature({
+            type: 'save_attack', damage: '2d6', healExpression: '2d6',
+            scaling: { '10': '3d6', '14': '4d6' }, healScaling: { '10': '3d6', '14': '4d6' },
+        }), { ...BASE_STATS, level: 3 })
+        expect(result.damage).toBe('2d6')
+        expect(result.healExpression).toBe('2d6')
     })
 
     it('handles hasOptions false explicitly', () => {

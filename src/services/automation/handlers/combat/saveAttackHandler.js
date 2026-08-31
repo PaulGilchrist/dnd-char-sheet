@@ -223,7 +223,12 @@ export async function handle(action, playerStats, campaignName, _mapName) {
                 } catch (error) { console.warn('[saveAttackHandler] Attacker position unavailable:', error); }
          }
 
-         const rangeFeet = getEmanationRange({ ...auto, shape: resolvedShape }, playerStats, playerStats.name, campaignName);
+         const rangeFeet = auto.range ? rangeToFeet(auto.range) : getEmanationRange({ ...auto, shape: resolvedShape }, playerStats, playerStats.name, campaignName);
+
+          const damageScalingEntry = resolveScaling(playerStats, auto.scaling);
+          const resolvedDamageExpressionForHealModal = damageScalingEntry?.damage || auto.damage || '';
+          const healScalingEntry = resolveScaling(playerStats, auto.healScaling);
+          const resolvedHealExpression = healScalingEntry?.damage || auto.healExpression || '';
 
           return {
               type: 'modal',
@@ -238,9 +243,9 @@ export async function handle(action, playerStats, campaignName, _mapName) {
                   featureName: action.name,
                   saveType: auto.saveType || 'CON',
                   rangeFeet,
-                  damageExpression: auto.damage || '',
+                  damageExpression: resolvedDamageExpressionForHealModal,
                   damageType: resolvedDamageType,
-                  healExpression: auto.healExpression,
+                  healExpression: resolvedHealExpression,
                   dcSuccess: dcSuccess === 0 ? 'none' : (dcSuccess === 0.5 ? 'half' : dcSuccess),
                   shape: resolvedShape,
                   attackerGridX: attackerPlayer?.gridX,
@@ -374,12 +379,12 @@ export async function handle(action, playerStats, campaignName, _mapName) {
 
     const dcSuccessDisplay = dcSuccess === 0 ? 'none' : (dcSuccess === 0.5 ? 'half' : dcSuccess);
 
-    return {
-        type: 'roll',
-        payload: {
-            rollType: 'damage',
-            name: action.name,
-            formula: auto.damage,
+        return {
+            type: 'roll',
+            payload: {
+                rollType: 'damage',
+                name: action.name,
+                formula: damageExpression,
             total: damageResult.total,
             rolls: damageResult.rolls,
             modifier: damageResult.modifier,

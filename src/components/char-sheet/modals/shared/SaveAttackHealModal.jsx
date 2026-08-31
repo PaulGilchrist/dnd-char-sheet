@@ -4,7 +4,8 @@ import { sendSavePrompt, sendSaveResult } from '../../../../services/combat/cond
 import { rollExpression } from '../../../../services/dice/diceRoller.js';
 import { addEntry } from '../../../../services/ui/logService.js';
 import utils from '../../../../services/ui/utils.js';
-import { applyHealingDirectly, logHealingToSSE } from '../../../../services/automation/common/healingRoll.js';
+import { logHealingToSSE } from '../../../../services/automation/common/healingRoll.js';
+import { applyHealingToTarget } from '../../../../services/rules/combat/applyHealing.js';
 import { applyDamageToTarget, computeDamageAfterEvasion, computeDamageAfterSave, hasEvasionForSave, normalizeSaveType } from '../../../../services/rules/combat/applyDamage.js';
 import AreaEffectTargetModalBase from './AreaEffectTargetModalBase.jsx';
 import { renderTargetList, logSaveEntry, persistAndNotify } from './AreaEffectTargetModalBase.utils.jsx';
@@ -26,7 +27,7 @@ function SaveAttackHealModal({ combatSummary, attackerName, attackerPos, saveDc,
 
             if (isNpc) {
                 const saveRoll = rollExpression('1d20');
-                const saveTotal = saveRoll?.total ?? 0;
+                const saveTotal = (saveRoll?.total ?? 0) + saveBonus;
                 const success = saveTotal >= saveDc;
 
                 const damageRoll = rollExpression(damageExpression);
@@ -203,11 +204,14 @@ function SaveAttackHealModal({ combatSummary, attackerName, attackerPos, saveDc,
         if (!rollResult) { ctx.setProcessing(false); return; }
 
         const healAmount = rollResult.total;
+        // Canonical HP source: combatSummary.currentHp for monsters, runtime currentHitPoints for players (modifyHitPoints)
+        const healResultObj = applyHealingToTarget(ctx.combatSummary, healedTarget, healAmount, campaignName);
+        if (!healResultObj) { ctx.setProcessing(false); return; }
+        const { newHp, actualHeal } = healResultObj;
         const targetCreature = ctx.combatSummary?.creatures?.find(c => c.name === healedTarget);
-        const targetMaxHp = targetCreature?.maxHp ?? 0;
-        const { newHp, maxHp, actualHeal } = applyHealingDirectly(
-            { name: healedTarget, hitPoints: targetMaxHp }, healedTarget, healAmount, campaignName, targetMaxHp
-        );
+        const maxHp = healResultObj.maxHp ?? targetCreature?.maxHp ?? newHp;
+
+        persistAndNotify(ctx.combatSummary, campaignName);
 
         logHealingToSSE(campaignName, { targetName: healedTarget, sourceName: featureName, actualHeal, newHp, maxHp });
 

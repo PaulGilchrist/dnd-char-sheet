@@ -19,5 +19,5 @@ export function applyHealingToTarget(combatSummary, targetName, healAmount, camp
         storage.set('combatSummary', combatSummary, campaignName);
     }
 
-    return { actualHeal: delta, oldHp, newHp };
+    return { actualHeal: delta, oldHp, newHp, maxHp: result.maxHp };
 }

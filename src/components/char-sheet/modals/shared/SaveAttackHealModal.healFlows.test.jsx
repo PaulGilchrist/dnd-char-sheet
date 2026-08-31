@@ -41,11 +41,16 @@ vi.mock('../../../../services/automation/common/healingRoll.js', () => ({
   logHealingToSSE: vi.fn(),
 }));
 
+vi.mock('../../../../services/rules/combat/applyHealing.js', () => ({
+  applyHealingToTarget: vi.fn(() => ({ newHp: 30, maxHp: 40, actualHeal: 10, oldHp: 20 })),
+}));
+
 // ── Re-import mocked modules ──
 
 import * as logService from '../../../../services/ui/logService.js';
 import * as diceRoller from '../../../../services/dice/diceRoller.js';
 import * as healingRoll from '../../../../services/automation/common/healingRoll.js';
+import * as applyHealing from '../../../../services/rules/combat/applyHealing.js';
 
 // ── Test fixtures ──
 
@@ -143,16 +148,17 @@ describe('SaveAttackHealModal — heal flows', () => {
   // ── Full heal execution ──
 
   it('applies healing, logs to SSE, and adds roll entry on successful heal', async () => {
-    const { getByRole } = render(<SaveAttackHealModal {...makeProps()} />);
+    const props = makeProps();
+    const { getByRole } = render(<SaveAttackHealModal {...props} />);
     await resolveToHealSelection(getByRole, ['Goblin A']);
     await selectFirstHealRadio();
     await clickHealButton();
-    expect(healingRoll.applyHealingDirectly).toHaveBeenCalledWith(
-      { name: 'Goblin A', hitPoints: 82 },
+    // Canonical heal path: combatSummary-aware (monster HP lives in combatSummary.currentHp)
+    expect(applyHealing.applyHealingToTarget).toHaveBeenCalledWith(
+      props.combatSummary,
       'Goblin A',
       10,
-      'test-campaign',
-      82
+      'test-campaign'
     );
     expect(healingRoll.logHealingToSSE).toHaveBeenCalledWith('test-campaign', {
       targetName: 'Goblin A',

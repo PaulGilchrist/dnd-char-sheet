@@ -12,9 +12,21 @@ function resolveUses(playerStats, usesSpec) {
 }
 
 function resolveScaling(playerStats, scaling) {
-    if (!scaling || !Array.isArray(scaling)) return null
+    if (!scaling) return null
+    let entries
+    if (Array.isArray(scaling)) {
+        entries = scaling
+    } else if (typeof scaling === 'object') {
+        // Object-map format used by classes.json data: {"10":"3d6","14":"4d6"}
+        entries = Object.entries(scaling)
+            .map(([level, damage]) => ({ level: parseInt(level, 10), damage: String(damage) }))
+            .filter(e => !isNaN(e.level))
+            .sort((a, b) => a.level - b.level)
+    } else {
+        return null
+    }
     let result = null
-    for (const entry of scaling) {
+    for (const entry of entries) {
         if (playerStats.level >= entry.level) {
             result = entry
         }

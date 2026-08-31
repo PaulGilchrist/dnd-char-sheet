@@ -154,6 +154,27 @@ describe('resolveScaling', () => {
     ]
     expect(resolveScaling(stats, scaling)).toEqual({ level: 3, value: 'mid' })
   })
+
+  // CLA-208: classes.json stores scaling as object maps, e.g. Land's Aid {"10":"3d6","14":"4d6"}
+  it('resolves object-map scaling to the highest level <= player level', () => {
+    expect(resolveScaling(makePlayerStats({ level: 20 }), { '10': '3d6', '14': '4d6' }))
+      .toEqual({ level: 14, damage: '4d6' })
+    expect(resolveScaling(makePlayerStats({ level: 12 }), { '10': '3d6', '14': '4d6' }))
+      .toEqual({ level: 10, damage: '3d6' })
+  })
+
+  it('returns null for object-map scaling when player level is below all thresholds', () => {
+    expect(resolveScaling(makePlayerStats({ level: 3 }), { '10': '3d6', '14': '4d6' })).toBe(null)
+  })
+
+  it('returns null for an empty object map', () => {
+    expect(resolveScaling(makePlayerStats({ level: 20 }), {})).toBe(null)
+  })
+
+  it('sorts unordered object-map keys before resolving', () => {
+    expect(resolveScaling(makePlayerStats({ level: 20 }), { '14': '4d6', '10': '3d6' }))
+      .toEqual({ level: 14, damage: '4d6' })
+  })
 })
 
 // ── getSaveDc ────────────────────────────────────────────────────
