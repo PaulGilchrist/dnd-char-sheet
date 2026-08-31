@@ -174,6 +174,56 @@ describe('spellResolution', () => {
   });
 
   /* ---------------------------------------------------------------- */
+  /*  CLA-212 — per-spell casting-ability override (LightBearer)     */
+  /* ---------------------------------------------------------------- */
+
+  describe('resolveSpellResolution — per-spell spellCastingAbility override (CLA-212 LightBearer)', () => {
+    // War_Cleric shape: 2024 Aasimar Light Domain Cleric lv6, WIS 9/-1, CHA 16/+3, PB +3.
+    const clericStats = makePlayerStats({
+      name: 'War_Cleric',
+      proficiency: 3,
+      abilities: [
+        { name: 'Wisdom', bonus: -1 },
+        { name: 'Charisma', bonus: 3 },
+      ],
+      spellAbilities: {
+        spellCastingAbility: 'Wisdom',
+        toHit: 2,
+        saveDc: 10,
+        modifier: -1,
+      },
+    });
+
+    it('resolves a Light cantrip carrying spellCastingAbility Charisma on Charisma math', () => {
+      const light = makeSpell({
+        name: 'Light',
+        level: 0,
+        attack_type: null,
+        dc: undefined,
+        damage: undefined,
+        spellCastingAbility: 'Charisma',
+      });
+
+      const result = resolveSpellResolution(light, {}, clericStats, 'test-campaign', null);
+
+      expect(result.cantripSpellAbility).toBe('Charisma');
+      expect(result.spellToHit).toBe(6); // CHA +3 + PB +3
+      expect(result.spellSaveDc).toBe(14); // 8 + CHA +3 + PB +3
+      expect(result.spellCastingMod).toBe(3);
+    });
+
+    it('falls back to the class ability when the spell carries no override', () => {
+      const light = makeSpell({ name: 'Light', level: 0, attack_type: null, dc: undefined, damage: undefined });
+
+      const result = resolveSpellResolution(light, {}, clericStats, 'test-campaign', null);
+
+      expect(result.cantripSpellAbility).toBe('Wisdom');
+      expect(result.spellToHit).toBe(2);
+      expect(result.spellSaveDc).toBe(10);
+    });
+  });
+
+  /* ---------------------------------------------------------------- */
   /*  resolveSpellResolution — buff blocking                           */
   /* ---------------------------------------------------------------- */
 

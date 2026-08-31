@@ -165,17 +165,58 @@ describe('spellCalc2024-automation', () => {
 
     // ── Automation: cantrip_spellcasting_ability ──
 
-    it('adds cantrip_spellcasting_ability cantrip even when not in spell list', () => {
-      const stats = makePlayerStats();
+    // CLA-212: production always has Light in the spells DB, so the
+    // full-spell-detail remap always runs for the granted cantrip.
+    // The fixture must include Light to exercise that path (allSpells=[] masked it).
+    it('adds cantrip_spellcasting_ability cantrip even when not in spell list, and its casting-ability override survives the spell-detail remap', () => {
+      const allSpells = [makeSpell('Light', 0), makeSpell('Fire Bolt', 0)];
+      const stats = makePlayerStats({
+        abilities: [
+          { name: 'Intelligence', baseScore: 16, featIncrease: 0, miscIncrease: 0, backgroundIncrease: 0, bonus: 3 },
+          { name: 'Charisma', baseScore: 16, featIncrease: 0, miscIncrease: 0, backgroundIncrease: 0, bonus: 3 },
+        ],
+      });
       stats.spells = ['Fire Bolt'];
       stats.automation = {
-        actions: [{ type: 'cantrip_spellcasting_ability', cantripName: 'Light', spellcastingAbility: 'Charisma' }],
+        passives: [{ type: 'cantrip_spellcasting_ability', name: 'LightBearer', cantripName: 'Light', spellcastingAbility: 'Charisma' }],
       };
 
-      const result = getSpellAbilities([], stats);
+      const result = getSpellAbilities(allSpells, stats);
 
       const light = result.spells.find(s => s.name === 'Light');
-      expect(light).toEqual({ name: 'Light', prepared: 'Always', spellCastingAbility: 'Charisma' });
+      expect(light).toBeDefined();
+      expect(light.level).toBe(0);
+      expect(light.prepared).toBe('Always');
+      expect(light.spellCastingAbility).toBe('Charisma');
+    });
+
+    it('LightBearer override survives the remap when Light is already in the spell list', () => {
+      const allSpells = [makeSpell('Light', 0), makeSpell('Bless', 1)];
+      const stats = makePlayerStats({
+        class: {
+          name: 'Cleric',
+          class_levels: [{ level: 6, spellcasting: { cantrips_known: 4, spell_slots: { '1': 4, '2': 3, '3': 3 } } }],
+          spell_casting_ability: 'Wisdom',
+        },
+        abilities: [
+          { name: 'Wisdom', baseScore: 9, featIncrease: 0, miscIncrease: 0, backgroundIncrease: 0, bonus: -1 },
+          { name: 'Charisma', baseScore: 16, featIncrease: 0, miscIncrease: 0, backgroundIncrease: 0, bonus: 3 },
+        ],
+        proficiency: 3,
+        spells: ['Light', 'Bless'],
+        automation: {
+          passives: [{ type: 'cantrip_spellcasting_ability', name: 'LightBearer', cantripName: 'Light', spellcastingAbility: 'Charisma' }],
+        },
+      });
+
+      const result = getSpellAbilities(allSpells, stats);
+
+      const light = result.spells.find(s => s.name === 'Light');
+      expect(light).toBeDefined();
+      expect(light.prepared).toBe('Always');
+      // Class ability stays Wisdom; only the Light cantrip is overridden to Charisma.
+      expect(result.spellCastingAbility).toBe('Wisdom');
+      expect(light.spellCastingAbility).toBe('Charisma');
     });
 
     // ── Mixed automation ──

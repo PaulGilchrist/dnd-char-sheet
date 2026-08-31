@@ -479,6 +479,11 @@ export function getSpellAbilities(allSpells, playerStats, playerSummary) {
                 if (spellDetail) {
                     const copy = cloneDeep(spellDetail);
                     copy.prepared = spellDetail.level === 0 ? 'Always' : spell.prepared;
+                    // Carry per-spell casting-ability overrides (e.g. LightBearer CHA-for-Light)
+                    // across the detail remap so cast resolution honours them.
+                    if (spell.spellCastingAbility) {
+                        copy.spellCastingAbility = spell.spellCastingAbility;
+                    }
                     return copy;
                 }
                 return cloneDeep(spell);
