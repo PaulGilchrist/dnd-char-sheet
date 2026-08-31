@@ -503,6 +503,36 @@ export function getSpellAbilities(allSpells, playerStats, playerSummary) {
                 return cloneDeep(spell);
             });
 
+            // CLA-234: Path of the Wild Heart — Animal Speaker (Beast Sense, Speak with
+            // Animals) and Nature Speaker (Commune with Nature) grant spells castable ONLY
+            // as Rituals, with Wisdom as the spellcasting ability ("Wisdom is your
+            // spellcasting ability for it"). Stamp the major's spell_casting_ability
+            // per-spell (CLA-212 carry pattern) plus _ritualOnly so the popup, the free-cast
+            // authorization (spellPreparationService.isFreeCastAuthorized) and cast resolution
+            // all honour it. Stamped BEFORE the slot-level filter below so the row survives
+            // even when the Barbarian slot table has no slot at this spell level.
+            if (playerStats.class?.major?.name === 'Path of the Wild Heart') {
+                const wildHeartAbility = playerStats.class.major.spell_casting_ability;
+                if (!wildHeartAbility) {
+                    console.error('[spellCalc2024] Path of the Wild Heart major is missing spell_casting_ability');
+                }
+                const wildHeartRitualFeatures = {
+                    'Commune with Nature': 'Nature Speaker',
+                    'Beast Sense': 'Animal Speaker',
+                    'Speak with Animals': 'Animal Speaker',
+                };
+                spellAbilities.spells.forEach(spell => {
+                    const ritualFeature = wildHeartRitualFeatures[spell.name];
+                    if (!ritualFeature) return;
+                    spell.casting_time = 'Ritual';
+                    spell._ritualOnly = true;
+                    spell._ritualFeature = ritualFeature;
+                    if (wildHeartAbility) {
+                        spell.spellCastingAbility = wildHeartAbility;
+                    }
+                });
+            }
+
             // CLA-231: Mystic Arcanum spells are slotless free casts (tracked by
             // mysticArcanumLevel{6-9} counters) — exempt them from the "no spell slots
             // at this level" filter. Warlock Pact Magic slots cap at lv5, so without
@@ -513,6 +543,10 @@ export function getSpellAbilities(allSpells, playerStats, playerSummary) {
                 const spellLevel = spell.level !== undefined ? spell.level : 0;
                 if (spellLevel === 0) return true;
                 if (arcanumNames.has(spell.name)) return true;
+                // CLA-234: ritual-only grants are castable without spell slots —
+                // never drop them for lacking a slot at their level (Nature Speaker lv10
+                // grants a lv5 spell while the Barbarian lv10 slot table has none).
+                if (spell._ritualOnly) return true;
                 let hasAnySlot = false;
                 for (let i = 1; i <= 9; i++) {
                     if ((spellAbilities[`spell_slots_level_${i}`] || 0) > 0) {
@@ -538,15 +572,9 @@ export function getSpellAbilities(allSpells, playerStats, playerSummary) {
             });
         }
 
-        // Path of the Wild Heart: Animal Speaker overrides casting_time to "Ritual" for Beast Sense and Speak with Animals
-        // Nature Speaker overrides casting_time to "Ritual" for Commune with Nature
-        if (playerStats.class?.major?.name === 'Path of the Wild Heart') {
-            spellAbilities.spells.forEach(spell => {
-                if (spell.name === 'Beast Sense' || spell.name === 'Speak with Animals' || spell.name === 'Commune with Nature') {
-                    spell.casting_time = 'Ritual';
-                }
-            });
-        }
+        // Path of the Wild Heart ritual overrides (casting_time 'Ritual' + _ritualOnly +
+        // Wisdom casting ability) are stamped earlier in this function, BEFORE the
+        // slot-level filter, so the spells survive and cast slotless (see CLA-234 block).
 
         // 2024 Wizards prepare a subset of their spellbook; track the limit so the sheet can toggle prepared status
         if (playerStats.class?.name === 'Wizard' && spellAbilities.prepared_spells != null) {

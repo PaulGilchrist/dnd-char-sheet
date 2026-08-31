@@ -12,6 +12,13 @@ function isFreeCastAuthorized(playerName, spellName, spellLevel, playerStats, ca
   const bewitchingFreeCast = getRuntimeValue(playerName, '_Bewitching_Magic_freeCast');
   if (bewitchingFreeCast && spellName === 'Misty Step') return true;
 
+  // CLA-234: Path of the Wild Heart ritual-only grants (Nature Speaker → Commune with
+  // Nature; Animal Speaker → Beast Sense / Speak with Animals). Spell entries are stamped
+  // _ritualOnly by spellCalc2024; the feature text carries no once-per-day limit, so the
+  // ritual cast is always authorized and never consumes a spell slot.
+  const spellEntry = playerStats?.spellAbilities?.spells?.find(s => s.name === spellName);
+  if (spellEntry?._ritualOnly) return true;
+
   const masteryLevel1 = getRuntimeValue(playerName, 'SpellMastery_level1', campaignName);
   const masteryLevel2 = getRuntimeValue(playerName, 'SpellMastery_level2', campaignName);
   if (spellName === masteryLevel1 && spellLevel === 1) return true;
@@ -557,6 +564,18 @@ export async function prepareSpellCast(spell, metaCtx, { playerName, playerStats
     decrementFreeCastResource(playerName, spell.name, spell.level, playerStats, campaignName);
     result.freeCastUsed = true;
     result.metaCtx.freeCastUsed = true;
+    // CLA-234: record ritual casts (Nature Speaker / Animal Speaker) explicitly —
+    // cast as a Ritual, no spell slot consumed.
+    if (spell._ritualOnly) {
+      addEntry(campaignName, {
+        type: 'ability_use',
+        characterName: playerName,
+        abilityName: spell._ritualFeature || 'Ritual Casting',
+        spellName: spell.name,
+        note: `Cast ${spell.name} as a Ritual — no spell slot consumed.`,
+        timestamp: Date.now(),
+      }).catch((e) => { console.error('[spellPreparationService:log-error]', e); });
+    }
   } else if (!result.metaCtx._psionicUsed) {
     const baseSlotKey = `spell_slots_level_${spell.level}`;
     let availableSlots = getRuntimeValue(playerName, baseSlotKey);

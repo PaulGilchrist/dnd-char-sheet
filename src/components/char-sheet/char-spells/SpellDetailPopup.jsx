@@ -131,6 +131,8 @@ function SpellDetailPopup({ spell, playerStats, campaignName, onClose, onCast, u
           <span><b>Range:</b> {spell.range || '—'}</span>
           <span><b>Duration:</b> {spell.duration || '—'}</span>
           {spell.school && <span><b>School:</b> {spell.school}</span>}
+          {/* CLA-234: per-spell casting-ability override (e.g. Nature Speaker — Wisdom) */}
+          {spell.spellCastingAbility && <span><b>Casting Ability:</b> {spell.spellCastingAbility}</span>}
           {spell.area_of_effect && <span><b>Area:</b> {spell.area_of_effect.type || spell.area_of_effect.shape}{spell.area_of_effect.size ? ` - ${spell.area_of_effect.size}` : ''}</span>}
            {!isCantrip && !showUpcastSelector && (
              <span><b>Slots Remaining:</b> {(() => {
@@ -266,7 +268,10 @@ function SpellDetailPopup({ spell, playerStats, campaignName, onClose, onCast, u
             <i className="fa-solid fa-times"></i> Close
           </button>
         </div>
-          {freeCastAuthorized && (
+          {freeCastAuthorized && spell._ritualOnly && (
+            <p className="spell-detail-free-cast"><i className="fa-solid fa-scroll"></i> Ritual Cast — cast as a Ritual, no spell slot consumed</p>
+          )}
+          {freeCastAuthorized && !spell._ritualOnly && (
             <p className="spell-detail-free-cast"><i className="fa-solid fa-bolt"></i> Free Cast — no spell slot consumed</p>
           )}
           {!canCast && !isCantrip && !freeCastAuthorized && (
