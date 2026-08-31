@@ -434,4 +434,27 @@ describe('CharSheet condition effects computation', () => {
     const { default: CharAbilities } = await import('./CharAbilities.jsx');
     expect(CharAbilities.mock.calls[0][0].exhaustionPenalty).toBe(0);
   });
+
+  // CLA-209 regression: hasPowerfulBuild must be forwarded to computeConditionEffects
+  // (arg 17) so the powerful_build_grapple_escape save modifier can apply there.
+  it('forwards hasPowerfulBuild=true to computeConditionEffects (CLA-209)', async () => {
+    const stats = createMockPlayerStats({
+      hasPowerfulBuild: true,
+      saveModifiers: [{ source: 'Powerful Build', target: 'ability_check', condition: 'powerful_build_grapple_escape', effect: 'advantage', abilities: ['STR'] }],
+    });
+    vi.mocked(rulesFactory.getPlayerStats).mockImplementation(() => Promise.resolve(stats));
+    mockStore.set('activeBuffs', []);
+    mockStore.set('activeConditions', ['grappled']);
+    const { computeConditionEffects } = await import('../../services/combat/conditions/conditionEffects.js');
+    computeConditionEffects.mockImplementation(() => ({ abilityCheckAdvantageAbilities: ['STR'] }));
+
+    render(<CharSheet {...createDefaultProps()} />);
+
+    await waitFor(() => {
+      expect(screen.getByTestId('char-sheet')).toBeInTheDocument();
+    });
+
+    expect(computeConditionEffects).toHaveBeenCalled();
+    expect(computeConditionEffects.mock.calls[0][16]).toBe(true);
+  });
 });

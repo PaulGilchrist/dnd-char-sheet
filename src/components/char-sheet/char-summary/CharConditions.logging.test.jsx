@@ -172,6 +172,49 @@ describe('CharConditions logging', () => {
         true
       );
     });
+
+    // CLA-209 regression: a Powerful Build grapple-escape roll must log BOTH dice
+    // with mode 'advantage' — on the primary roll entry AND the condition-save entry.
+    it('logs both dice with mode advantage for Powerful Build grapple escape (CLA-209)', async () => {
+      rollD20.mockReturnValueOnce(8).mockReturnValueOnce(14);
+      const ps = {
+        ...mockPlayerStats,
+        saveModifiers: [{ source: 'Powerful Build', target: 'ability_check', condition: 'powerful_build_grapple_escape', effect: 'advantage', abilities: ['STR'] }],
+      };
+      runtimeValues['activeConditions'] = ['grappled'];
+      runtimeValues['activeConditionMeta'] = { grappled: { dc: 13, ability: 'str' } };
+      render(<CharConditions {...defaultProps} playerStats={ps} />);
+
+      const grappledBtn = screen.getByText('Grappled DC 13');
+      await fireEvent.click(grappledBtn);
+
+      await waitFor(() => {
+        expect(rollD20).toHaveBeenCalledTimes(2);
+      });
+
+      expect(addEntry).toHaveBeenCalledWith(
+        'test-campaign',
+        expect.objectContaining({
+          rollType: 'save',
+          rolls: [8, 14],
+          mode: 'advantage',
+          dc: 13,
+          condition: 'Grappled',
+        })
+      );
+
+      expect(logConditionSave).toHaveBeenCalledWith(
+        'test-campaign',
+        'Test Character',
+        [8, 14],
+        expect.any(Number),
+        expect.anything(),
+        'Grappled',
+        'str',
+        13,
+        true
+      );
+    });
   });
 
   describe('popup display', () => {

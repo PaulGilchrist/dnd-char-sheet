@@ -440,6 +440,63 @@ describe('rules getPlayerStats', () => {
       expect(actionNames).toContain('Craft')
     })
 
+    // CLA-209 regression: the Powerful Build grapple-escape fix-up modifier must survive
+    // the final saveModifiers re-collection near the end of getPlayerStats.
+    it('retains Powerful Build grapple-escape save modifier after final saveModifiers collection (CLA-209)', async () => {
+      const summary = {
+        name: 'Goliath Test',
+        rules: '2024',
+        level: 5,
+        ...baseSummary2024,
+        race: {
+          name: 'Goliath',
+          traits: [{
+            name: 'Powerful Build',
+            automation: { type: 'conditional_advantage', target: 'ability_check', condition: 'grappled', effect: 'advantage', casting_time: 'passive' },
+          }],
+          languages: ['Common'],
+        },
+        class: { name: 'Fighter', major: {} },
+        actions: [],
+        bonusActions: [],
+        reactions: [],
+        specialActions: [],
+      }
+
+      const result = await rules.getPlayerStats([], [], [], [], [], summary)
+
+      expect(result.hasPowerfulBuild).toBe(true)
+      expect(result.sizeMultiplier).toBe(2)
+      const pbModifier = (result.saveModifiers || []).find(m => m.condition === 'powerful_build_grapple_escape')
+      expect(pbModifier).toEqual({
+        source: 'Powerful Build',
+        target: 'ability_check',
+        condition: 'powerful_build_grapple_escape',
+        effect: 'advantage',
+        abilities: ['STR'],
+      })
+    })
+
+    it('does not add Powerful Build save modifier for non-Powerful-Build races', async () => {
+      const summary = {
+        name: 'Human Test',
+        rules: '2024',
+        level: 5,
+        ...baseSummary2024,
+        race: { name: 'Human', traits: [], languages: ['Common'] },
+        class: { name: 'Fighter', major: {} },
+        actions: [],
+        bonusActions: [],
+        reactions: [],
+        specialActions: [],
+      }
+
+      const result = await rules.getPlayerStats([], [], [], [], [], summary)
+
+      expect(result.hasPowerfulBuild).toBeUndefined()
+      expect((result.saveModifiers || []).some(m => m.condition === 'powerful_build_grapple_escape')).toBe(false)
+    })
+
     it('handles string specialActions in 2024', async () => {
       const summary = {
         name: 'Test',

@@ -200,6 +200,17 @@ describe('logConditionSave', () => {
         expect(entry.condition).toBe('poisoned');
     });
 
+    // CLA-209: multi-dice roll array (advantage) must log both dice + mode 'advantage'
+    it('logs both dice with mode advantage when roll is passed as a multi-dice array (CLA-209)', () => {
+        logConditionSave(campaignName, 'Gortha', [8, 14], 3, '+3 STR', 'grappled', 'Strength', 13, true);
+
+        const entry = capturedEntry();
+        expect(entry.rolls).toEqual([8, 14]);
+        expect(entry.mode).toBe('advantage');
+        expect(entry.total).toBe(14);
+        expect(entry.success).toBe(true);
+    });
+
 });
 
 describe('logHpChange', () => {

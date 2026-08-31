@@ -202,6 +202,7 @@ export function createRollConditionSaveHandler({
 
         setConditionPopup(buildConditionPopup(r1, bonus, bonusDetail, getAbilityLabel(condition.ability), condition.label, condition.dc, success, rolls, rolls && rolls.length > 1, starryDragonFloor))
 
-        logConditionSave(campaignName, creatureName, r1, bonus, bonusDetail, condition.label, getAbilityLabel(condition.ability), condition.dc, success)
+        // Pass the full dice array so advantage rolls log both dice + mode 'advantage' (CLA-209)
+        logConditionSave(campaignName, creatureName, Array.isArray(rolls) && rolls.length > 1 ? rolls : r1, bonus, bonusDetail, condition.label, getAbilityLabel(condition.ability), condition.dc, success)
     }
 }

@@ -171,16 +171,6 @@ const rules = {
           playerStats.automation = collectAutomationFromFeatures(allFeatures, playerStats);
           mergeAutomationSpecialActions(playerStats);
         playerStats.saveModifiers = collectSaveModifiers(allFeatures);
-        // Add Powerful Build grapple escape advantage after saveModifiers is collected
-        if (playerStats.hasPowerfulBuild && Array.isArray(playerStats.saveModifiers)) {
-            playerStats.saveModifiers.push({
-                source: 'Powerful Build',
-                target: 'ability_check',
-                condition: 'powerful_build_grapple_escape',
-                effect: 'advantage',
-                abilities: ['STR'],
-            });
-        }
         playerStats.evasionEffects = getEvasionEffects(allFeatures);
       playerStats.automationConditionImmunities = getConditionImmunities(allFeatures);
        playerStats.automationConditionalImmunities = getConditionalImmunities(allFeatures);
@@ -457,6 +447,17 @@ const rules = {
       playerStats.specialActions = uniqBy(playerStats.specialActions, 'name').sort((a, b) => a.name.localeCompare(b.name));
       playerStats.characterAdvancement = uniqBy(playerStats.characterAdvancement, 'name').sort((a, b) => a.name.localeCompare(b.name));
       playerStats.saveModifiers = collectSaveModifiers(allFeatures);
+      // CLA-209: Add Powerful Build grapple escape advantage after the FINAL saveModifiers
+      // collection — any earlier push is clobbered by the re-collection above.
+      if (playerStats.hasPowerfulBuild && Array.isArray(playerStats.saveModifiers)) {
+          playerStats.saveModifiers.push({
+              source: 'Powerful Build',
+              target: 'ability_check',
+              condition: 'powerful_build_grapple_escape',
+              effect: 'advantage',
+              abilities: ['STR'],
+          });
+      }
 
   playerStats.allFeatures = allFeatures;
 
