@@ -145,32 +145,89 @@ describe('knowEnemyHandler', () => {
     });
 
     describe('target lookup', () => {
-        it('looks up monster data for combat target and includes immunities/resistances/vulnerabilities/condition immunities', async () => {
+        it('looks up monster data for combat target and includes immunities/resistances/vulnerabilities/condition immunities (2024 damage_* schema)', async () => {
             getRuntimeValue.mockReturnValue(3);
             getCombatContext.mockResolvedValue({});
-            getTargetFromAttacker.mockReturnValue({ name: 'Goblin' });
+            getTargetFromAttacker.mockReturnValue({ name: 'Adult Blue Dracolich' });
+            // Real monsters.json 2024-batch shape (only 118/605 monsters use damage_* keys)
             getMonsterData.mockResolvedValue({
-                name: 'Goblin',
-                damage_immunities: ['cold'],
-                damage_resistances: ['bludgeoning'],
-                damage_vulnerabilities: ['piercing'],
-                condition_immunities: ['poisoned'],
+                name: 'Adult Blue Dracolich',
+                damage_immunities: ['lightning', 'poison'],
+                damage_resistances: ['necrotic'],
+                damage_vulnerabilities: [],
+                condition_immunities: ['charmed', 'exhaustion', 'frightened', 'paralyzed', 'poisoned'],
+                resistances: null,
+                vulnerabilities: null,
             });
 
             const result = await handle(makeAction(), makePlayerStats(), 'test-campaign', 'test-map');
 
-            expect(getMonsterData).toHaveBeenCalledWith('Goblin', null);
-            expect(result.payload.description).toContain('Target: Goblin');
-            expect(result.payload.description).toContain('Immunities: cold');
-            expect(result.payload.description).toContain('Resistances: bludgeoning');
-            expect(result.payload.description).toContain('Vulnerabilities: piercing');
-            expect(result.payload.description).toContain('Condition Immunities: poisoned');
+            expect(getMonsterData).toHaveBeenCalledWith('Adult Blue Dracolich', null);
+            expect(result.payload.description).toContain('Target: Adult Blue Dracolich');
+            expect(result.payload.description).toContain('Immunities: lightning, poison');
+            expect(result.payload.description).toContain('Resistances: necrotic');
+            expect(result.payload.description).toContain('Condition Immunities: charmed, exhaustion, frightened, paralyzed, poisoned');
             expect(addEntry).toHaveBeenCalledWith('test-campaign', expect.objectContaining({
                 type: 'ability_use',
                 characterName: 'TestFighter',
                 abilityName: 'Know Enemy',
-                description: expect.stringContaining('Know Your Enemy used by TestFighter against Goblin'),
+                description: expect.stringContaining('Know Your Enemy used by TestFighter against Adult Blue Dracolich'),
             }));
+        });
+
+        it('reveals IRV for legacy-schema monsters storing immunities/resistances/vulnerabilities (CLA-207 Shadow shape)', async () => {
+            getRuntimeValue.mockReturnValue(3);
+            getCombatContext.mockResolvedValue({});
+            getTargetFromAttacker.mockReturnValue({ name: 'Shadow 1' });
+            // Real monsters.json "Shadow" entry — no damage_* keys at all;
+            // conditions and damage types are mixed inside `immunities`.
+            getMonsterData.mockResolvedValue({
+                name: 'Shadow',
+                immunities: ['Necrotic', 'Poison', 'Exhaustion', 'Frightened', 'Grappled',
+                    'Paralyzed', 'Petrified', 'Poisoned', 'Prone', 'Restrained', 'Unconscious'],
+                resistances: ['Acid', 'Cold', 'Fire', 'Lightning', 'Thunder'],
+                vulnerabilities: ['Radiant'],
+            });
+
+            const result = await handle(makeAction(), makePlayerStats(), 'test-campaign', 'test-map');
+
+            expect(result.payload.description).toContain('Target: Shadow 1');
+            expect(result.payload.description).toContain('Immunities: Necrotic, Poison');
+            expect(result.payload.description).toContain('Resistances: Acid, Cold, Fire, Lightning, Thunder');
+            expect(result.payload.description).toContain('Vulnerabilities: Radiant');
+            expect(result.payload.description).toContain('Condition Immunities: Exhaustion, Frightened, Grappled, Paralyzed, Petrified, Poisoned, Prone, Restrained, Unconscious');
+            expect(result.payload.description).not.toContain('No immunities, resistances, vulnerabilities, or condition immunities.');
+            expect(addEntry).toHaveBeenCalledWith('test-campaign', expect.objectContaining({
+                type: 'ability_use',
+                characterName: 'TestFighter',
+                abilityName: 'Know Enemy',
+                description: expect.stringContaining('Immunities: Necrotic, Poison'),
+            }));
+            expect(addEntry).toHaveBeenCalledWith('test-campaign', expect.objectContaining({
+                description: expect.stringContaining('Vulnerabilities: Radiant'),
+            }));
+        });
+
+        it('falls back to legacy immunities when damage_immunities key exists but is empty', async () => {
+            getRuntimeValue.mockReturnValue(3);
+            getCombatContext.mockResolvedValue({});
+            getTargetFromAttacker.mockReturnValue({ name: 'Draconic Spirit' });
+            // Real monsters.json "Draconic Spirit" — damage_* keys present but empty,
+            // legacy immunities populated with condition names.
+            getMonsterData.mockResolvedValue({
+                name: 'Draconic Spirit',
+                damage_immunities: [],
+                damage_resistances: ['acid', 'cold', 'fire', 'lightning', 'poison'],
+                damage_vulnerabilities: [],
+                condition_immunities: [],
+                immunities: ['charmed', 'frightened', 'poisoned'],
+            });
+
+            const result = await handle(makeAction(), makePlayerStats(), 'test-campaign', 'test-map');
+
+            expect(result.payload.description).toContain('Resistances: acid, cold, fire, lightning, poison');
+            expect(result.payload.description).toContain('Condition Immunities: charmed, frightened, poisoned');
+            expect(result.payload.description).not.toContain('No immunities, resistances, vulnerabilities, or condition immunities.');
         });
 
         it('handles target not in combat', async () => {
