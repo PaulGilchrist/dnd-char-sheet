@@ -503,9 +503,16 @@ export function getSpellAbilities(allSpells, playerStats, playerSummary) {
                 return cloneDeep(spell);
             });
 
+            // CLA-231: Mystic Arcanum spells are slotless free casts (tracked by
+            // mysticArcanumLevel{6-9} counters) — exempt them from the "no spell slots
+            // at this level" filter. Warlock Pact Magic slots cap at lv5, so without
+            // this exemption every selected arcanum is silently dropped from the sheet.
+            const arcanumNames = new Set(playerStats.class?.arcanums || []);
+
             spellAbilities.spells = spellAbilities.spells.filter(spell => {
                 const spellLevel = spell.level !== undefined ? spell.level : 0;
                 if (spellLevel === 0) return true;
+                if (arcanumNames.has(spell.name)) return true;
                 let hasAnySlot = false;
                 for (let i = 1; i <= 9; i++) {
                     if ((spellAbilities[`spell_slots_level_${i}`] || 0) > 0) {

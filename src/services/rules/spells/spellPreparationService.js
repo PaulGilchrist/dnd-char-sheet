@@ -33,13 +33,11 @@ function isFreeCastAuthorized(playerName, spellName, spellLevel, playerStats, ca
 
   const arcanums = playerStats?.class?.arcanums || [];
   if (arcanums.includes(spellName)) {
-    const arcanumLevels = [6, 7, 8, 9];
-    for (const level of arcanumLevels) {
-      const resourceKey = `mysticArcanumLevel${level}`;
-      const count = Number(getRuntimeValue(playerName, resourceKey) ?? 1);
-      if (count > 0) return true;
-    }
-    return false;
+    // CLA-231: the counter is keyed by the cast spell's own level — a lv7 arcanum
+    // consumes mysticArcanumLevel7, never a lower-level arcanum's counter.
+    if (spellLevel < 6 || spellLevel > 9) return false;
+    const count = Number(getRuntimeValue(playerName, `mysticArcanumLevel${spellLevel}`) ?? 1);
+    return count > 0;
   }
 
   const hasPhantasmalCreatures = playerStats?.automation?.passives?.some(p => p.type === 'phantasmal_creatures');
@@ -255,13 +253,12 @@ function isFreeCastAuthorized(playerName, spellName, spellLevel, playerStats, ca
 function decrementFreeCastResource(playerName, spellName, spellLevel, playerStats, campaignName) {
   const arcanums = playerStats?.class?.arcanums || [];
   if (arcanums.includes(spellName)) {
-    const arcanumLevels = [6, 7, 8, 9];
-    for (const level of arcanumLevels) {
-      const resourceKey = `mysticArcanumLevel${level}`;
+    // CLA-231: decrement the counter keyed by the cast spell's own level.
+    if (spellLevel >= 6 && spellLevel <= 9) {
+      const resourceKey = `mysticArcanumLevel${spellLevel}`;
       const count = Number(getRuntimeValue(playerName, resourceKey) ?? 1);
       if (count > 0) {
         setRuntimeValue(playerName, resourceKey, count - 1, campaignName);
-        break;
       }
     }
   }
@@ -355,13 +352,12 @@ function decrementFreeCastResource(playerName, spellName, spellLevel, playerStat
 function incrementFreeCastResource(playerName, spellName, spellLevel, playerStats, campaignName) {
   const arcanums = playerStats?.class?.arcanums || [];
   if (arcanums.includes(spellName)) {
-    const arcanumLevels = [6, 7, 8, 9];
-    for (const level of arcanumLevels) {
-      const resourceKey = `mysticArcanumLevel${level}`;
+    // CLA-231: increment the counter keyed by the spell's own level.
+    if (spellLevel >= 6 && spellLevel <= 9) {
+      const resourceKey = `mysticArcanumLevel${spellLevel}`;
       const count = Number(getRuntimeValue(playerName, resourceKey) ?? 1);
       if (count < 1) {
         setRuntimeValue(playerName, resourceKey, count + 1, campaignName);
-        break;
       }
     }
   }
