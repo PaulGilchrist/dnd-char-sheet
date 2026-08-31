@@ -44,6 +44,7 @@ vi.mock('../../../../hooks/combat/useMetamagic.js', () => ({
 
 vi.mock('../../../rules/combat/damageUtils.js', () => ({
     getCombatContext: vi.fn(),
+    getTargetFromAttacker: vi.fn(),
 }));
 
 vi.mock('../../../../services/character/classFeatures.js', () => ({

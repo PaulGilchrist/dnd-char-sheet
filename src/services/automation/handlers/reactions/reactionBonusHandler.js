@@ -3,7 +3,7 @@ import { addExpiration } from '../../../rules/effects/expirations.js';
 import { addEntry } from '../../../ui/logService.js';
 import { rollExpression } from '../../../dice/diceRoller.js';
 import { spendSorceryPoints, getCurrentSorceryPoints } from '../../../../hooks/combat/useMetamagic.js';
-import { getCombatContext } from '../../../rules/combat/damageUtils.js';
+import { getCombatContext, getTargetFromAttacker } from '../../../rules/combat/damageUtils.js';
 import { getClassFeatures } from '../../../../services/character/classFeatures.js';
 import { executeHandler } from '../../index.js';
 import { parseDurationRounds } from '../../../rules/effects/durationParser.js';
@@ -566,15 +566,26 @@ async function handleVeer(action, playerStats, campaignName) {
     };
 }
 
+// 2024 College of Dance data carries `resourceCost:'bardic_inspiration'` with NO
+// uses/usesMax/uses_expression metadata, so fall back to the tracked Bardic
+// Inspiration pool (mirrors the verified reactionDebuffHandler pattern).
+function resolveInspiringMovementUses(auto, playerStats) {
+    const usesKey = auto.resourceKey || 'bardicInspirationUses';
+    const dataMax = auto.uses_expression
+        ? evaluateUses(auto.uses_expression, playerStats)
+        : (auto.usesMax ?? auto.uses ?? 0);
+    const bardicMax = (auto.resourceCost === 'bardic_inspiration' && !dataMax)
+        ? (playerStats?._trackedResources?.bardicInspirationUses?.max ?? 0)
+        : 0;
+    return { usesMax: dataMax || bardicMax, usesKey };
+}
+
 async function handleInspiringMovement(action, playerStats, campaignName, _mapName) {
     const auto = action.automation;
 
-    const usesMax = auto.uses_expression
-        ? evaluateUses(auto.uses_expression, playerStats)
-        : (auto.usesMax ?? auto.uses ?? 0);
+    const { usesMax, usesKey } = resolveInspiringMovementUses(auto, playerStats);
 
     if (usesMax > 0) {
-        const usesKey = auto.resourceKey || 'bardicInspirationUses';
         const currentUses = Number(getRuntimeValue(playerStats.name, usesKey, campaignName) ?? usesMax);
         if (currentUses <= 0) {
             return {
@@ -626,21 +637,22 @@ async function handleInspiringMovement(action, playerStats, campaignName, _mapNa
             noOAs: !!auto.noOAs,
             allyRange: auto.allyRange || '30 ft',
             usesMax,
-            usesKey: auto.resourceKey || 'bardicInspirationUses',
+            usesKey,
         },
     };
 }
 
 export async function applyInspiringMovement(action, playerStats, campaignName, allyName, halfSpeed, noOAs) {
     const auto = action.automation;
-    const usesMax = auto.uses_expression
-        ? evaluateUses(auto.uses_expression, playerStats)
-        : (auto.usesMax ?? auto.uses ?? 0);
+    const { usesMax, usesKey } = resolveInspiringMovementUses(auto, playerStats);
 
+    let expenditureNote = '';
     if (usesMax > 0) {
-        const usesKey = auto.resourceKey || 'bardicInspirationUses';
         const currentUses = Number(getRuntimeValue(playerStats.name, usesKey, campaignName) ?? usesMax);
-        await setRuntimeValue(playerStats.name, usesKey, currentUses - 1, campaignName);
+        if (currentUses > 0) {
+            await setRuntimeValue(playerStats.name, usesKey, currentUses - 1, campaignName);
+            expenditureNote = ` Expended 1 Bardic Inspiration (${currentUses - 1} remaining).`;
+        }
     }
 
     setRuntimeValue(playerStats.name, 'inspiringMovementNoOA', true, campaignName);
@@ -669,12 +681,15 @@ export async function applyInspiringMovement(action, playerStats, campaignName, 
     if (noOAs) {
         description += `This movement does not provoke Opportunity Attacks.`;
     }
+    if (expenditureNote) {
+        description += expenditureNote;
+    }
 
     addEntry(campaignName, {
         type: 'ability_use',
         characterName: playerStats.name,
         abilityName: action.name,
-        description: `${playerStats.name} used ${action.name}.` + (allyName ? ` Ally: ${allyName}. Movement does not provoke Opportunity Attacks.` : ' Movement does not provoke Opportunity Attacks.'),
+        description: `${playerStats.name} used ${action.name}.` + (allyName ? ` Ally: ${allyName}. Movement does not provoke Opportunity Attacks.` : ' Movement does not provoke Opportunity Attacks.') + expenditureNote,
     }).catch((e) => { console.error("[reactionBonusHandler:log-error]", e); });
 
     const hasAgileStrikes = (playerStats.automation?.passives || []).some(
@@ -682,18 +697,25 @@ export async function applyInspiringMovement(action, playerStats, campaignName, 
     );
 
     if (hasAgileStrikes) {
-        const classLevel = (playerStats.class?.class_levels ?? []).find(cl => cl.level === playerStats.level);
-        const bardicDie = classLevel?.bardic_die || 6;
-        const agileStrikeAction = {
-            name: 'Agile Strikes',
-            automation: {
-                type: 'agile_strike',
-                bardicDie: bardicDie,
-            },
-        };
-        const strikeResult = await executeHandler(agileStrikeAction, playerStats, campaignName, null);
-        if (strikeResult && strikeResult.type === 'popup') {
-            return strikeResult;
+        // Agile Strikes is an enemy-hit-triggered unarmed strike — only chain it
+        // when the bard has a legitimately resolved enemy target. Its popup is
+        // appended so it can never shadow the Inspiring Movement result popup.
+        const cs = await getCombatContext(campaignName);
+        const strikeTarget = cs ? getTargetFromAttacker(cs, playerStats.name) : null;
+        if (strikeTarget?.name) {
+            const classLevel = (playerStats.class?.class_levels ?? []).find(cl => cl.level === playerStats.level);
+            const bardicDie = classLevel?.bardic_die || 6;
+            const agileStrikeAction = {
+                name: 'Agile Strikes',
+                automation: {
+                    type: 'agile_strike',
+                    bardicDie: bardicDie,
+                },
+            };
+            const strikeResult = await executeHandler(agileStrikeAction, playerStats, campaignName, null);
+            if (strikeResult && strikeResult.type === 'popup' && strikeResult.payload?.description) {
+                description += `<br/><br/>Agile Strikes: ${strikeResult.payload.description}`;
+            }
         }
     }
 

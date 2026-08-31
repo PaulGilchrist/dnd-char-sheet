@@ -9,6 +9,7 @@ import * as useRuntimeState from '../../../../hooks/runtime/useRuntimeState.js';
 import * as expirations from '../../../rules/effects/expirations.js';
 import * as logService from '../../../ui/logService.js';
 import * as damageUtils from '../../../rules/combat/damageUtils.js';
+import * as automationIndex from '../../index.js';
 
 // ── Mocks (hoisted) ────────────────────────────────────────────
 
@@ -37,6 +38,11 @@ vi.mock('../../../rules/combat/rangeValidation.js', () => ({
 
 vi.mock('../../../rules/combat/damageUtils.js', () => ({
   getCombatContext: vi.fn(),
+  getTargetFromAttacker: vi.fn(),
+}));
+
+vi.mock('../../index.js', () => ({
+  executeHandler: vi.fn(),
 }));
 
 // ── Constants & Helpers ────────────────────────────────────────
@@ -273,5 +279,143 @@ describe('applyInspiringMovement', () => {
     expect(result.payload.description).toContain('15 ft');
     expect(result.payload.description).toContain('Fighter');
     expect(result.payload.description).toContain('does not provoke Opportunity Attacks');
+  });
+});
+
+// ── CLA-199: bardic inspiration consumption + Agile Strikes popup ───
+
+function make2024Action(overrides = {}) {
+  return makeAction({
+    resourceCost: 'bardic_inspiration',
+    uses_expression: null,
+    usesMax: null,
+    uses: 0,
+    ...overrides,
+  });
+}
+
+function trackedBard(max = 5) {
+  return makePlayerStats({
+    name: 'Bard',
+    _trackedResources: { bardicInspirationUses: { current: max, max } },
+  });
+}
+
+function biCalls() {
+  return useRuntimeState.setRuntimeValue.mock.calls.filter(c => c[1] === 'bardicInspirationUses');
+}
+
+describe('CLA-199 — handleInspiringMovement resolves bardic uses from tracked resources', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    damageUtils.getCombatContext.mockResolvedValue(makeCombatSummary([
+      { name: 'HexWarlock', currentHp: 20, maxHp: 30, size: 'Medium', type: 'humanoid' },
+    ]));
+  });
+
+  it('opens ally picker when tracked Bardic Inspiration has uses (data has no uses metadata)', async () => {
+    useRuntimeState.getRuntimeValue.mockReturnValue(null);
+
+    const result = await handle(make2024Action(), trackedBard(5), campaignName, null);
+
+    expect(result.type).toBe('modal');
+    expect(result.payload.usesMax).toBe(5);
+    expect(result.payload.usesKey).toBe('bardicInspirationUses');
+  });
+
+  it('returns no-uses popup when bardic inspiration runtime is 0 (usesMax gated via _trackedResources)', async () => {
+    useRuntimeState.getRuntimeValue.mockReturnValue(0);
+
+    const result = await handle(make2024Action(), trackedBard(5), campaignName, null);
+
+    expect(result.type).toBe('popup');
+    expect(result.payload.description).toContain('no uses remaining');
+  });
+});
+
+describe('CLA-199 — applyInspiringMovement expends Bardic Inspiration', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    useRuntimeState.getRuntimeValue.mockReturnValue(null);
+    damageUtils.getCombatContext.mockResolvedValue(makeCombatSummary([]));
+  });
+
+  it('decrements bardicInspirationUses 5→4 when runtime key unset (defaults to tracked max)', async () => {
+    const result = await applyInspiringMovement(make2024Action(), trackedBard(5), campaignName, 'HexWarlock', 15, true);
+
+    expect(useRuntimeState.setRuntimeValue).toHaveBeenCalledWith(
+      'Bard', 'bardicInspirationUses', 4, campaignName
+    );
+    expect(logService.addEntry).toHaveBeenCalledWith(
+      campaignName,
+      expect.objectContaining({
+        type: 'ability_use',
+        description: expect.stringContaining('Expended 1 Bardic Inspiration (4 remaining)'),
+      })
+    );
+    expect(result.type).toBe('popup');
+    expect(result.payload.description).toContain('Expended 1 Bardic Inspiration');
+  });
+
+  it('consumes from live runtime value when set', async () => {
+    useRuntimeState.getRuntimeValue.mockReturnValue(3);
+
+    await applyInspiringMovement(make2024Action(), trackedBard(5), campaignName, 'HexWarlock', 15, true);
+
+    expect(useRuntimeState.setRuntimeValue).toHaveBeenCalledWith(
+      'Bard', 'bardicInspirationUses', 2, campaignName
+    );
+  });
+
+  it('never decrements below zero at 0 uses', async () => {
+    useRuntimeState.getRuntimeValue.mockReturnValue(0);
+
+    await applyInspiringMovement(make2024Action(), trackedBard(5), campaignName, 'HexWarlock', 15, true);
+
+    expect(biCalls()).toHaveLength(0);
+  });
+
+  it('does not consume when resourceCost is not bardic_inspiration', async () => {
+    await applyInspiringMovement(makeAction({ usesMax: null, uses: 0 }), trackedBard(5), campaignName, 'HexWarlock', 15, true);
+
+    expect(biCalls()).toHaveLength(0);
+  });
+});
+
+describe('CLA-199 — Agile Strikes chain does not hijack the Inspiring Movement popup', () => {
+  const agilePlayer = () => makePlayerStats({
+    name: 'Bard',
+    automation: { passives: [{ type: 'passive_rule', effect: 'agile_strike' }] },
+  });
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+    useRuntimeState.getRuntimeValue.mockReturnValue(5);
+    damageUtils.getCombatContext.mockResolvedValue(makeCombatSummary([]));
+  });
+
+  it('skips agile_strike entirely when no enemy target is resolved', async () => {
+    damageUtils.getTargetFromAttacker.mockReturnValue(null);
+
+    const result = await applyInspiringMovement(make2024Action(), agilePlayer(), campaignName, 'HexWarlock', 15, true);
+
+    expect(automationIndex.executeHandler).not.toHaveBeenCalled();
+    expect(result.payload.name).toBe('Inspiring Movement');
+    expect(result.payload.description).not.toContain('No target selected');
+  });
+
+  it('appends agile strike result but keeps the Inspiring Movement popup when a target exists', async () => {
+    damageUtils.getTargetFromAttacker.mockReturnValue({ name: 'Wight 1' });
+    automationIndex.executeHandler.mockResolvedValue({
+      type: 'popup',
+      payload: { type: 'automation_info', name: 'Agile Strikes', description: 'Hit for 5 Bludgeoning damage' },
+    });
+
+    const result = await applyInspiringMovement(make2024Action(), agilePlayer(), campaignName, 'HexWarlock', 15, true);
+
+    expect(automationIndex.executeHandler).toHaveBeenCalled();
+    expect(result.payload.name).toBe('Inspiring Movement');
+    expect(result.payload.description).toContain('HexWarlock');
+    expect(result.payload.description).toContain('Agile Strikes: Hit for 5 Bludgeoning damage');
   });
 });
