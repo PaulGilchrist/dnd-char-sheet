@@ -141,7 +141,7 @@ export async function buildAttackContextSync(attack, playerStats, campaignName, 
             let skipFrenzy = false;
             if (frenzyOncePerTurn) {
                 const usedRound = getRuntimeValue(playerName, '_frenzyUsedRound', campaignName);
-                const currentRound = getCurrentCombatRound();
+                const currentRound = getCurrentCombatRound(campaignName);
                 if (usedRound === currentRound) {
                     skipFrenzy = true;
                 }

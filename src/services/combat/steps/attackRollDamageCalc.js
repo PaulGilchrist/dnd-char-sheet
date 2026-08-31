@@ -120,7 +120,7 @@ export function buildSneakAttackStep() {
           formula += ` + ${sneakFormula} [Sneak Attack]`;
           total += result.total;
           rolls = [...rolls, ...result.rolls];
-          await setRuntimeValue(ctx.playerStats.name, '_SneakAttack_usedRound', getCurrentCombatRound(), ctx.campaignName);
+          await setRuntimeValue(ctx.playerStats.name, '_SneakAttack_usedRound', getCurrentCombatRound(ctx.campaignName), ctx.campaignName);
         }
       }
 

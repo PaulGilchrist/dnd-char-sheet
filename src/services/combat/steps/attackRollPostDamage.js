@@ -49,7 +49,7 @@ export function buildDamageTypeModifiersStep() {
       const dmgMods = ps.automation.passives.filter(a => a.type === 'damage_type_modifier' && a.trigger === 'unarmed_strike_hit');
       for (const mod of dmgMods) {
         const key = `_${mod.name.replace(/\s+/g, '_')}_usedRound`;
-        const round = getCurrentCombatRound();
+        const round = getCurrentCombatRound(ctx.campaignName);
         if (mod.oncePerTurn && getRuntimeValue(ps.name, key, ctx.campaignName) === round) continue;
         const stored = getRuntimeValue(ps.name, 'empoweredStrikesDamageType', ctx.campaignName);
         if (stored) { ctx.attack.damageType = stored; setRuntimeValue(ps.name, 'empoweredStrikesDamageType', null, ctx.campaignName); break; }
@@ -96,7 +96,7 @@ export function buildDamageTypeModifiersStep() {
       const riders = ps.automation.passives.filter(a => a.type === 'attack_rider' && a.trigger === 'unarmed_strike_hit' && a.chooseOne && a.options?.length > 0);
       for (const rider of riders) {
         const key = `_${rider.name.replace(/\s+/g, '_')}_usedRound`;
-        const round = getCurrentCombatRound();
+        const round = getCurrentCombatRound(ctx.campaignName);
         if (rider.oncePerTurn && getRuntimeValue(ps.name, key, ctx.campaignName) === round) continue;
         const stored = getRuntimeValue(ps.name, `_${rider.name.replace(/\s+/g, '_')}_selectedOption`, ctx.campaignName);
         if (stored) {

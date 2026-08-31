@@ -52,7 +52,7 @@ export function buildAutomationBonusesStep() {
       const frenzy = actions.filter(x => x.type === 'damage_bonus' && x.trigger === 'reckless_attack_hit_while_raging');
       if (frenzy.length > 0) {
         const used = getRuntimeValue(ctx.playerStats.name, '_frenzyUsedRound', ctx.campaignName);
-        const round = getCurrentCombatRound();
+        const round = getCurrentCombatRound(ctx.campaignName);
         if (used !== round && ctx.hit) {
           const buffs = getRuntimeValue(ctx.playerStats.name, 'activeBuffs', ctx.campaignName) || [];
           const isReckless = buffs.some(b => b.effect === 'advantage_attacks_advantage_against');
@@ -82,7 +82,7 @@ export function buildAutomationBonusesStep() {
       const df = actions.filter(x => x.type === 'damage_bonus' && x.trigger === 'first_hit_while_raging');
       if (df.length > 0) {
         const used = getRuntimeValue(ctx.playerStats.name, '_divineFuryUsedRound', ctx.campaignName);
-        const round = getCurrentCombatRound();
+        const round = getCurrentCombatRound(ctx.campaignName);
         if (used !== round) {
           const buffs = getRuntimeValue(ctx.playerStats.name, 'activeBuffs', ctx.campaignName) || [];
           const isRaging = buffs.some(b => b.damageBonusExpression);
@@ -185,7 +185,7 @@ export function buildWeaponHitBonusesStep() {
         }
 
         const usedKey = `_${bonus.name.replace(/\s+/g, '_')}_usedRound`;
-        const round = getCurrentCombatRound();
+        const round = getCurrentCombatRound(ctx.campaignName);
         if (bonus.oncePerTurn && getRuntimeValue(ctx.playerStats.name, usedKey, ctx.campaignName) === round) continue;
 
         if (bonus.uses_expression && bonus.recharge) {
@@ -295,7 +295,7 @@ export function buildCelestialRevelationStep() {
       if (!rider) return { data: {} };
 
       const usedKey = `_${rider.name.replace(/\s+/g, '_')}_usedRound`;
-      const round = getCurrentCombatRound();
+      const round = getCurrentCombatRound(ctx.campaignName);
       if (rider.oncePerTurn && getRuntimeValue(ctx.playerStats.name, usedKey, ctx.campaignName) === round) return { data: {} };
 
       const r = rollExpression(rider.damageExpression);

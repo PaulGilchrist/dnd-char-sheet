@@ -38,7 +38,7 @@ export default function useModalHandlers({
         const newTotal = total + bonusTotal;
         const newRolls = [...rolls, ...bonusRolls];
         const playerName = playerStats.name;
-        const currentRound = getCurrentCombatRound();
+        const currentRound = getCurrentCombatRound(campaignName);
         setRuntimeValue(playerName, '_divineFuryUsedRound', currentRound, campaignName);
         setModalState({ divineFuryChoice: null });
         setPendingDamage(null);
@@ -68,7 +68,7 @@ export default function useModalHandlers({
         const newTotal = total + bonusTotal;
         const newRolls = [...rolls, ...bonusRolls];
         if (oncePerTurnKey) {
-            setRuntimeValue(playerStats.name, oncePerTurnKey, getCurrentCombatRound(), campaignName);
+            setRuntimeValue(playerStats.name, oncePerTurnKey, getCurrentCombatRound(campaignName), campaignName);
         }
         setModalState({ damageTypeChoice: null });
         setPendingDamage(null);
@@ -97,7 +97,7 @@ export default function useModalHandlers({
         if (_damageTypeModifier) {
             attack.damageType = chosenType.toLowerCase();
             const usedKey = `_${_damageTypeModifier.name.replace(/\s+/g, '_')}_usedRound`;
-            setRuntimeValue(playerStats.name, usedKey, getCurrentCombatRound(), campaignName);
+            setRuntimeValue(playerStats.name, usedKey, getCurrentCombatRound(campaignName), campaignName);
         }
         const newFormula = formula.replace(/\[[^\]]+\]/, `[${chosenType.toLowerCase()}]`);
         setModalState({ damageTypeChoice: null });
@@ -114,7 +114,7 @@ export default function useModalHandlers({
         const { attack, formula, total, rolls, modifier, _damageTypeModifier } = pending;
         if (_damageTypeModifier) {
             const usedKey = `_${_damageTypeModifier.name.replace(/\s+/g, '_')}_usedRound`;
-            setRuntimeValue(playerStats.name, usedKey, getCurrentCombatRound(), campaignName);
+            setRuntimeValue(playerStats.name, usedKey, getCurrentCombatRound(campaignName), campaignName);
         }
         setModalState({ damageTypeChoice: null });
         setPendingDamage(null);
@@ -137,7 +137,7 @@ export default function useModalHandlers({
                     const newTotal = total + riderResult.total;
                     const newRolls = [...rolls, ...riderResult.rolls];
                     const usedKey = `_${_attackRider.name.replace(/\s+/g, '_')}_usedRound`;
-                    setRuntimeValue(playerStats.name, usedKey, getCurrentCombatRound(), campaignName);
+                    setRuntimeValue(playerStats.name, usedKey, getCurrentCombatRound(campaignName), campaignName);
                     setModalState({ damageTypeChoice: null });
                     setPendingDamage(null);
                     proceedWithDamage(attack, newFormula, newTotal, newRolls, rider);
@@ -159,7 +159,7 @@ export default function useModalHandlers({
         const { attack, formula, total, rolls, rider, _attackRider } = pending;
         if (_attackRider) {
             const usedKey = `_${_attackRider.name.replace(/\s+/g, '_')}_usedRound`;
-            setRuntimeValue(playerStats.name, usedKey, getCurrentCombatRound(), campaignName);
+            setRuntimeValue(playerStats.name, usedKey, getCurrentCombatRound(campaignName), campaignName);
         }
         setModalState({ damageTypeChoice: null });
         setPendingDamage(null);
