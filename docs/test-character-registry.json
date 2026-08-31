@@ -224,6 +224,21 @@
       "rules": "2024",
       "feats": [],
       "note": "CLA-216 test character, RECREATED 2026-08-31 via direct JSON after Admin cleanup deleted it (CLA-209 shape, non-empty major required). VERIFIED PASS for the Lucky (Halfling 2024) nat-1 auto reroll fix. Keep for Lucky retests; STR 12 check cell is .clickable idx matching ^\\+1$."
+    },
+    {
+      "name": "ArcaneTricksterTest",
+      "class": "Rogue",
+      "subclass": "Arcane Trickster",
+      "race": {
+        "name": "Halfling",
+        "subrace": {
+          "name": ""
+        }
+      },
+      "level": 3,
+      "rules": "2024",
+      "feats": [],
+      "note": "CLA-218 Mage Hand Legerdemain VERIFIED 2026-08-31 (fixed). 2024 Halfling Rogue lv3 Arcane Trickster, DEX 16 (+5), Expertise Sleight of Hand/Stealth (+7). Recreated directly via JSON (CLA-209 shape, non-empty major required). Drives the mage_hand_control Bonus Actions row (popup + ability_use log + mageHandControlled flag), Mage Hand cast popup Bonus Action, and gated DEX check advantage (turn-start clears flag). Keep lv3 Arcane Trickster for legerdemain/multi-automation row tests. Runtime+log cleared after run."
     }
   ],
   "monsters": [

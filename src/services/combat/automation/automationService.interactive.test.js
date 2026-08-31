@@ -42,3 +42,25 @@ describe('isInteractiveAutomation — post_cast_inspiring_smite (CLA-200)', () =
         expect(isInteractiveAutomation(makeFeature({ type: 'post_cast_smite_cover' }))).toBe(false)
     })
 })
+
+// CLA-218: Mage Hand Legerdemain's mage_hand_control half must mark the row
+// interactive so the feature row dispatches handleMageHandControl (popup +
+// ability_use log) instead of rendering inert text (CLA-179 family).
+describe('isInteractiveAutomation — mage_hand_control (CLA-218)', () => {
+    it('returns true for mage_hand_control automation type', () => {
+        expect(isInteractiveAutomation(makeFeature({ type: 'mage_hand_control' }))).toBe(true)
+    })
+
+    it('returns true when mage_hand_control sits behind a leading passive_rule + conditional_advantage', () => {
+        const feature = makeFeature([
+            { type: 'passive_rule', effect: 'mage_hand_legerdemain', casting_time: 'passive' },
+            { type: 'conditional_advantage', target: 'ability_check', condition: 'mage_hand_legerdemain', effect: 'advantage', abilities: ['DEX'] },
+            { type: 'mage_hand_control', range: '30_ft', action: 'bonus_action', casting_time: '1 bonus action' },
+        ])
+        expect(isInteractiveAutomation(feature)).toBe(true)
+    })
+
+    it('control: passive-only feature without mage_hand_control stays non-interactive', () => {
+        expect(isInteractiveAutomation(makeFeature({ type: 'passive_rule', effect: 'something_else' }))).toBe(false)
+    })
+})

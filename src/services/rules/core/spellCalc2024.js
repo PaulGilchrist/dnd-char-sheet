@@ -473,6 +473,11 @@ export function getSpellAbilities(allSpells, playerStats, playerSummary) {
             }
         }
 
+        // CLA-218: Mage Hand Legerdemain (Arcane Trickster lv3 feature) —
+        // Mage Hand is cast as a Bonus Action and its spectral hand is Invisible.
+        const hasMageHandLegerdemain = (playerStats.level || 0) >= 3
+            && (playerStats.class?.major?.name === 'Arcane Trickster' || playerStats.class?.subclass?.name === 'Arcane Trickster');
+
         if (spellAbilities.spells.length > 0) {
             spellAbilities.spells = spellAbilities.spells.map(spell => {
                 let spellDetail = allSpells.find((spellDetail) => spellDetail.name === spell.name);
@@ -483,6 +488,15 @@ export function getSpellAbilities(allSpells, playerStats, playerSummary) {
                     // across the detail remap so cast resolution honours them.
                     if (spell.spellCastingAbility) {
                         copy.spellCastingAbility = spell.spellCastingAbility;
+                    }
+                    if (hasMageHandLegerdemain && copy.name === 'Mage Hand') {
+                        // Bonus-action casting time + invisible hand markers (popup + cast path).
+                        copy.casting_time = 'Bonus Action';
+                        copy._mageHandLegerdemain = true;
+                        copy.description = [
+                            ...(Array.isArray(copy.description) ? copy.description : [copy.description]),
+                            '<p><em>Mage Hand Legerdemain: cast as a Bonus Action and make the spectral hand Invisible. You control it as a Bonus Action; while controlled, Dexterity (Sleight of Hand) checks through it have Advantage.</em></p>'
+                        ];
                     }
                     return copy;
                 }

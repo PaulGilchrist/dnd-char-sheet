@@ -685,4 +685,43 @@ describe('applyTurnStartEffects — additional effect types', () => {
       );
     });
   });
+
+  describe('mage_hand_legerdemain control flag clear (CLA-218)', () => {
+    it('clears mageHandControlled at start of the controller turn', async () => {
+      getRuntimeValue.mockImplementation((name, prop) => {
+        if (prop === 'mageHandControlled') return true;
+        if (prop === 'targetEffects') return [];
+        return null;
+      });
+
+      await applyTurnStartEffects('TestCharacter', {
+        turnStartEffects: [{ type: 'mage_hand_legerdemain', name: 'Mage Hand Legerdemain' }],
+      }, 'TestCampaign');
+
+      expect(setRuntimeValue).toHaveBeenCalledWith(
+        'TestCharacter',
+        'mageHandControlled',
+        false,
+        'TestCampaign',
+      );
+    });
+
+    it('does not write mageHandControlled when it was never set', async () => {
+      getRuntimeValue.mockImplementation((name, prop) => {
+        if (prop === 'targetEffects') return [];
+        return null;
+      });
+
+      await applyTurnStartEffects('TestCharacter', {
+        turnStartEffects: [{ type: 'mage_hand_legerdemain', name: 'Mage Hand Legerdemain' }],
+      }, 'TestCampaign');
+
+      expect(setRuntimeValue).not.toHaveBeenCalledWith(
+        'TestCharacter',
+        'mageHandControlled',
+        expect.anything(),
+        'TestCampaign',
+      );
+    });
+  });
 });

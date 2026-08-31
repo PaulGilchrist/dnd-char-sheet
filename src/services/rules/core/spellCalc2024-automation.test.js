@@ -341,5 +341,58 @@ describe('spellCalc2024-automation', () => {
 
       expect(result.spells.map(s => s.name)).not.toContain('Mind Sliver');
     });
+
+    // ── CLA-218: Mage Hand Legerdemain (Arcane Trickster lv3) ──
+
+    function makeArcaneTricksterStats(level) {
+      return makePlayerStats({
+        level,
+        class: {
+          name: 'Rogue',
+          major: { name: 'Arcane Trickster', spellcasting: { cantrips_known: 3, spells: [], spell_slots_level_1: 2 } },
+          class_levels: [],
+          spell_casting_ability: 'Intelligence',
+        },
+        spells: ['Mage Hand'],
+      });
+    }
+
+    it('overrides Mage Hand casting time to Bonus Action with legerdemain markers at lv3+ (CLA-218)', () => {
+      const mageHandDetail = { name: 'Mage Hand', level: 0, casting_time: 'Action', range: '30 feet', duration: '1 minute', description: ['<p>A spectral, floating hand appears.</p>'] };
+      const result = getSpellAbilities([mageHandDetail], makeArcaneTricksterStats(3));
+      const mageHand = result.spells.find(s => s.name === 'Mage Hand');
+      expect(mageHand).toBeDefined();
+      expect(mageHand.casting_time).toBe('Bonus Action');
+      expect(mageHand._mageHandLegerdemain).toBe(true);
+      expect(mageHand.description.join('')).toContain('Mage Hand Legerdemain');
+    });
+
+    it('does NOT override Mage Hand casting time below lv3 (CLA-218 control)', () => {
+      const mageHandDetail = { name: 'Mage Hand', level: 0, casting_time: 'Action', range: '30 feet', duration: '1 minute', description: ['<p>A spectral, floating hand appears.</p>'] };
+      const result = getSpellAbilities([mageHandDetail], makeArcaneTricksterStats(2));
+      const mageHand = result.spells.find(s => s.name === 'Mage Hand');
+      expect(mageHand).toBeDefined();
+      expect(mageHand.casting_time).toBe('Action');
+      expect(mageHand._mageHandLegerdemain).toBeUndefined();
+    });
+
+    it('does NOT override other spells or non-Arcane Trickster Mage Hands (CLA-218 control)', () => {
+      const mageHandDetail = { name: 'Mage Hand', level: 0, casting_time: 'Action', range: '30 feet', duration: '1 minute', description: ['<p>Hand.</p>'] };
+      const lightDetail = { name: 'Light', level: 0, casting_time: 'Action', range: 'Touch', duration: '1 hour', description: ['<p>Light.</p>'] };
+      const cl = { spellcasting: { cantrips_known: 3, spells: [{ name: 'Light', prepared: 'Always' }, { name: 'Mage Hand', prepared: 'Always' }], spell_slots_level_1: 2 } };
+      const wizardStats = makePlayerStats({
+        level: 3,
+        class: {
+          name: 'Wizard',
+          class_levels: [{ level: 1, ...cl }, { level: 2, ...cl }, { level: 3, ...cl }],
+          spell_casting_ability: 'Intelligence',
+        },
+        spells: ['Light', 'Mage Hand'],
+      });
+      const result = getSpellAbilities([mageHandDetail, lightDetail], wizardStats);
+      const mageHand = result.spells.find(s => s.name === 'Mage Hand');
+      expect(mageHand.casting_time).toBe('Action');
+      expect(mageHand._mageHandLegerdemain).toBeUndefined();
+    });
   });
 });

@@ -46,7 +46,16 @@ export function computeCharConditionEffects(playerSummary, playerStats, campaign
             });
         }
     }
-    const allSaveModifiers = [...(playerStats?.saveModifiers || []), ...stanceSaveModifiers, ...pfeagSaveAdvantage];
+    // CLA-218: Mage Hand Legerdemain — the conditional_advantage saveModifier
+    // (target ability_check, abilities DEX, condition mage_hand_legerdemain)
+    // only applies while the spectral hand is being controlled (bonus action;
+    // flag set by mageHandControlHandler, cleared at next-turn start by the
+    // mage_hand_legerdemain turn-start consumer). Without the control flag the
+    // modifier must be dropped — its condition matches no active condition, so
+    // saveModifierApplies would otherwise fall through to an unconditional pass.
+    const mageHandControlled = getRuntimeValue(playerStats?.name, 'mageHandControlled', campaignName) === true;
+    const allSaveModifiers = [...(playerStats?.saveModifiers || []), ...stanceSaveModifiers, ...pfeagSaveAdvantage]
+        .filter(m => m.condition !== 'mage_hand_legerdemain' || mageHandControlled);
     const allTargetEffects = getRuntimeValue('campaign', 'targetEffects', campaignName) ?? [];
     const myTargetEffects = allTargetEffects.filter(te => te.target === (playerSummary?.name));
     const isRaging = Array.isArray(activeBuffs) && activeBuffs.some(b => b.damageBonusExpression);

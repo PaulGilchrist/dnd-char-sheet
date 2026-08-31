@@ -60,7 +60,17 @@ export const categorizeFeatures = (items, categories, options = {}) => {
     let hasReaction = false;
     if (Array.isArray(item.automation) && item.automation.length > 0) {
       if (!castingTime) {
-        const firstAuto = item.automation.find(a => a?.casting_time);
+        // CLA-218: multi-automation features may declare 'passive' first
+        // (e.g. Mage Hand Legerdemain: [passive_rule, conditional_advantage,
+        // mage_hand_control/'1 bonus action']). Prefer the first ACTIONABLE
+        // casting time over a leading 'passive' so the row lands in the
+        // section where clicking it dispatches — mirrors the hasReaction
+        // multi-entry scan below (CLA-192 .some/multi-entry family).
+        const actionableAuto = item.automation.find(a => {
+          const ct = normalizeCastingTime(a?.casting_time || '');
+          return ct && ct !== 'passive';
+        });
+        const firstAuto = actionableAuto || item.automation.find(a => a?.casting_time);
         if (firstAuto) {
           castingTime = firstAuto.casting_time;
         }

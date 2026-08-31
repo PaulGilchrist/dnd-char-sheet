@@ -125,6 +125,17 @@ export async function applyTurnStartEffects(activeName, playerStats, campaignNam
             setRuntimeValue(activeName, 'baitAndSwitchBonus', null, campaignName);
             setRuntimeValue(activeName, 'baitAndSwitchSource', null, campaignName);
         }
+        if (effect.type === 'mage_hand_legerdemain') {
+            // CLA-218: Mage Hand Legerdemain — the collector (automation/
+            // turnStartEffects.js) pushed this with no consumer. Spectral-hand
+            // control lasts until the start of your next turn, so clear the
+            // mageHandControlled flag (set by mageHandControlHandler) which
+            // arms the Dexterity (Sleight of Hand) check advantage.
+            const controlled = getRuntimeValue(activeName, 'mageHandControlled', campaignName);
+            if (controlled) {
+                setRuntimeValue(activeName, 'mageHandControlled', false, campaignName);
+            }
+        }
         if (effect.type === 'supreme_sneak') {
             await applySupremeSneakTurnStart(activeName, playerStats, effect, campaignName);
         }

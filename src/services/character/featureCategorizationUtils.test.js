@@ -186,6 +186,36 @@ describe('featureCategorizationUtils', () => {
       expect(result.reactions[0].name).toBe('Reaction From Automation Array');
     });
 
+    it('prefers an actionable casting time over a leading passive in a multi-automation array — CLA-218', () => {
+      const items = [
+        makeFeature('Mage Hand Legerdemain', {
+          automation: [
+            { type: 'passive_rule', effect: 'mage_hand_legerdemain', casting_time: 'passive' },
+            { type: 'conditional_advantage', target: 'ability_check', condition: 'mage_hand_legerdemain', effect: 'advantage', abilities: ['DEX'] },
+            { type: 'mage_hand_control', range: '30_ft', action: 'bonus_action', casting_time: '1 bonus action' }
+          ]
+        })
+      ];
+      const result = categorizeFeatures(items, mockCategories);
+      expect(result.bonusActions).toHaveLength(1);
+      expect(result.bonusActions[0].name).toBe('Mage Hand Legerdemain');
+      expect(result.specialActions).toHaveLength(0);
+    });
+
+    it('keeps all-passive automation arrays in specialActions — CLA-218 regression guard', () => {
+      const items = [
+        makeFeature('Passive Duo', {
+          automation: [
+            { type: 'passive_rule', effect: 'a', casting_time: 'passive' },
+            { type: 'passive_rule', effect: 'b', casting_time: 'passive' }
+          ]
+        })
+      ];
+      const result = categorizeFeatures(items, mockCategories);
+      expect(result.specialActions).toHaveLength(1);
+      expect(result.bonusActions).toHaveLength(0);
+    });
+
     it('should categorize a mixed set of features into the correct categories', () => {
       const items = [
         makeFeature('Action Surge'),

@@ -3902,12 +3902,12 @@
       "id": "CLA-218",
       "name": "Mage Hand Legerdemain",
       "type": "classFeature",
-      "handler": "src/services/combat/automation/handlers/classFeatureHandler.js",
-      "router": "src/services/combat/automation/routers/classFeatureRouter.js",
-      "infoBuilder": "src/services/combat/automation/infoBuilders/classFeatureInfoBuilder.js",
-      "verified": "broken — see .opencode/plans/bug-cla-218-mage-hand-legerdemain.md",
+      "handler": "src/services/automation/handlers/class-fighter-rogue/mageHandControlHandler.js",
+      "router": "src/services/combat/automation/automationRouter.js (case mage_hand_control -> bonusActions)",
+      "infoBuilder": "src/services/combat/automation/automationInfoBuilder/core-handlers.js (mage_hand_control)",
+      "verified": "verified",
       "class": "Rogue",
-      "triggerConditions": "Automation type: undefined",
+      "triggerConditions": "Bonus Actions row click (mage_hand_control, 1 bonus action); Mage Hand cast (2024 spellCalc2024 detail override); turn-start mage_hand_legerdemain consumer clears control flag",
       "expectedBehavior": "When you cast Mage Hand, cast as Bonus Action, make spectral hand Invisible. Control as Bonus Action, make Dexterity (Sleight of Hand) checks through it."
     },
     {

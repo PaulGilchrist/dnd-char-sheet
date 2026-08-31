@@ -56,6 +56,10 @@ const INTERACTIVE_HANDLER_TYPES = new Set([
     // lastAttack=Divine Smite and opens the temp-HP distributor modal (shows a
     // friendly popup when invoked without a qualifying cast).
     'post_cast_inspiring_smite',
+    // CLA-218: Mage Hand Legerdemain's actionable half (automation[2]) —
+    // dispatched by executeHandler's multi-entry scan to handleMageHandControl
+    // (spectral-hand control popup + ability_use log).
+    'mage_hand_control',
 ]);
 
 const INTERACTIVE_PASSIVE_EFFECTS = new Set([
