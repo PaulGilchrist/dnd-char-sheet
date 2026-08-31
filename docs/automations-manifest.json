@@ -4227,9 +4227,9 @@
       "handler": "src/services/combat/automation/handlers/classFeatureHandler.js",
       "router": "src/services/combat/automation/routers/classFeatureRouter.js",
       "infoBuilder": "src/services/combat/automation/infoBuilders/classFeatureInfoBuilder.js",
-      "verified": "broken — see .opencode/plans/bug-cla-230-moonlight-step.md",
+      "verified": "verified",
       "class": "Druid",
-      "triggerConditions": "Automation type: undefined",
+      "triggerConditions": "Bonus Action; resource pool WIS mod; level 2+ spell slot conversion",
       "expectedBehavior": "As a Bonus Action, teleport up to 30 feet and have Advantage on the next attack roll. Uses equal to Wisdom modifier. Can restore uses by expending level 2+ spell slot."
     },
     {

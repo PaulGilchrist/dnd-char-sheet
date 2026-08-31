@@ -273,6 +273,55 @@ describe('tempTeleportHandler', () => {
             );
         });
 
+        it('CLA-230: replaces an existing same-source advantage te instead of stacking', async () => {
+            setupMoonlightStepMocks(0);
+            const existing = {
+                effect: 'next_attack_advantage',
+                target: PLAYER_NAME,
+                source: 'Moonlight Step',
+                value: null,
+                duration: 'until_end_of_turn',
+            };
+            getRuntimeValue.mockImplementation((name, key) => {
+                if (key === 'moonlightStepUses') return 0;
+                if (key === 'targetEffects') return [existing];
+                return null;
+            });
+
+            const moonlightAction = makeAction({ automation: { effect: 'moonlight_step_teleport' } });
+            await confirmTeleport(moonlightAction, makePlayerStats(), CAMPAIGN_NAME, false);
+
+            const writes = setRuntimeValue.mock.calls.filter(
+                c => c[0] === 'campaign' && c[1] === 'targetEffects'
+            );
+            const finalList = writes[writes.length - 1][2];
+            const matching = finalList.filter(
+                te => te.effect === 'next_attack_advantage' && te.target === PLAYER_NAME && te.source === 'Moonlight Step'
+            );
+            expect(matching).toHaveLength(1);
+        });
+
+        it('CLA-230: preserves unrelated te while replacing same-source advantage te', async () => {
+            setupMoonlightStepMocks(0);
+            const unrelated = { effect: 'blessed', target: PLAYER_NAME, source: 'Bless' };
+            const stale = { effect: 'next_attack_advantage', target: PLAYER_NAME, source: 'Moonlight Step' };
+            getRuntimeValue.mockImplementation((name, key) => {
+                if (key === 'moonlightStepUses') return 0;
+                if (key === 'targetEffects') return [unrelated, stale];
+                return null;
+            });
+
+            const moonlightAction = makeAction({ automation: { effect: 'moonlight_step_teleport' } });
+            await confirmTeleport(moonlightAction, makePlayerStats(), CAMPAIGN_NAME, false);
+
+            const writes = setRuntimeValue.mock.calls.filter(
+                c => c[0] === 'campaign' && c[1] === 'targetEffects'
+            );
+            const finalList = writes[writes.length - 1][2];
+            expect(finalList).toContainEqual(expect.objectContaining({ source: 'Bless' }));
+            expect(finalList.filter(te => te.source === 'Moonlight Step')).toHaveLength(1);
+        });
+
         it('adds Improved Shadow Step effects when passive exists', async () => {
             setupMoonlightStepMocks(0);
             const stats = makePlayerStats({

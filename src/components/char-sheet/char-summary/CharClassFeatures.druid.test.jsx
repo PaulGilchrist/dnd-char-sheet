@@ -1,7 +1,7 @@
 // @improved-by-ai
 // @cleaned-by-ai
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, screen } from '@testing-library/react';
+import { render, screen, fireEvent } from '@testing-library/react';
 import CharClassFeatures from './CharClassFeatures.jsx';
 import * as classFeatures from '../../../services/character/classFeatures.js';
 import * as runtimeState from '../../../hooks/runtime/useRuntimeState.js';
@@ -301,6 +301,23 @@ describe('DruidFeatures (via CharClassFeatures entry point)', () => {
       const stats = moonDruidStats(10);
       render(<CharClassFeatures playerStats={stats} campaignName={MOCK_CAMPAIGN} />);
       expect(screen.getByText(/Moonlight Step Uses:/).parentElement).toHaveTextContent(/3\/3/);
+    });
+
+    it('CLA-230: renders Restore Uses control that dispatches the moonlight-step-restore bus event', () => {
+      const stats = moonDruidStats(10);
+      render(<CharClassFeatures playerStats={stats} campaignName={MOCK_CAMPAIGN} />);
+      const btn = screen.getByRole('button', { name: /Restore Uses/i });
+      const handler = vi.fn();
+      window.addEventListener('moonlight-step-restore', handler);
+      fireEvent.click(btn);
+      window.removeEventListener('moonlight-step-restore', handler);
+      expect(handler).toHaveBeenCalledTimes(1);
+    });
+
+    it('CLA-230: hides Restore Uses below level 10', () => {
+      const stats = moonDruidStats(3);
+      render(<CharClassFeatures playerStats={stats} campaignName={MOCK_CAMPAIGN} />);
+      expect(screen.queryByRole('button', { name: /Restore Uses/i })).not.toBeInTheDocument();
     });
 
     it('uses minimum 1 when wisdom bonus is negative', () => {

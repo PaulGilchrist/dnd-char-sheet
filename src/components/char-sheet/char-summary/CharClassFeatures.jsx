@@ -209,6 +209,18 @@ const DruidFeatures = function DruidFeatures({ playerStats, campaignName }) {
                 {elementalFuryChoice && <span className="automation-badge"><i className="fa-solid fa-bolt"></i> Elemental Fury: {elementalFuryChoice}</span>}
                 {improvedElementalFuryChoice && <span className="automation-badge"><i className="fa-solid fa-bolt"></i> Improved Elemental Fury: {improvedElementalFuryChoice}</span>}
                 {isCircleOfTheMoon && <TrackedResourceInput label="Moonlight Step Uses" resourceKey="moonlightStepUses" playerName={playerStats.name} getMax={() => moonlightStepMax} deps={[playerStats]} campaignName={campaignName} playerStats={playerStats} />}
+                {isCircleOfTheMoon && playerStats.level >= 10 && (
+                    <div>
+                        <b
+                            className="clickable moonlight-step-restore-btn"
+                            role="button"
+                            title="Expend a level 2+ spell slot to regain 1 use of Moonlight Step"
+                            onClick={() => window.dispatchEvent(new CustomEvent('moonlight-step-restore'))}
+                        >
+                            <i className="fa-solid fa-moon"></i> Restore Uses
+                        </b>
+                    </div>
+                )}
                 {hasNaturalRecovery && (
                     <div>
                         <div><b>Natural Recovery:</b></div>

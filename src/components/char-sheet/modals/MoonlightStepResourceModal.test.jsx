@@ -9,7 +9,12 @@ vi.mock('../../../hooks/runtime/useRuntimeState.js', () => ({
   setRuntimeBatch: vi.fn(),
 }));
 
+vi.mock('../../../services/ui/logService.js', () => ({
+  addEntry: vi.fn(() => Promise.resolve()),
+}));
+
 import * as useRuntimeState from '../../../hooks/runtime/useRuntimeState.js';
+import { addEntry } from '../../../services/ui/logService.js';
 
 const makePlayerStats = (overrides = {}) => ({
   name: 'TestCleric',
@@ -178,6 +183,39 @@ describe('MoonlightStepResourceModal', () => {
       const updates = useRuntimeState.setRuntimeBatch.mock.calls[0][1];
       expect(updates.spell_slots_level_4).toBe(0);
       expect(updates.moonlightStepUses).toBe(2);
+    });
+
+    it('logs an ability_use entry when a slot is converted (CLA-230)', () => {
+      const onClose = vi.fn();
+      // Expends a level 2 slot (3 -> 2) and restores 1 use (1 -> 2 of max 2).
+      useRuntimeState.getRuntimeValue.mockImplementation((charKey, prop) => {
+        if (prop === 'moonlightStepUses') return '1';
+        return null;
+      });
+      render(<MoonlightStepResourceModal {...makeProps({ onClose })} />);
+      fireEvent.click(getConvertBtn());
+      expect(addEntry).toHaveBeenCalledWith(
+        'test-campaign',
+        expect.objectContaining({
+          type: 'ability_use',
+          characterName: 'TestCleric',
+          abilityName: 'Moonlight Step',
+          description: expect.stringContaining('expended a level 2 spell slot to restore 1 use of Moonlight Step (2/2)'),
+        })
+      );
+      expect(onClose).toHaveBeenCalledTimes(1);
+    });
+
+    it('does not spend a slot or log when no slot is available at the selected level', () => {
+      const stats = makePlayerStats({
+        spellAbilities: { ...makePlayerStats().spellAbilities, spell_slots_level_2: 0 },
+      });
+      const onClose = vi.fn();
+      render(<MoonlightStepResourceModal {...makeProps({ onClose, playerStatsOverrides: stats })} />);
+      fireEvent.click(getConvertBtn());
+      expect(useRuntimeState.setRuntimeBatch).not.toHaveBeenCalled();
+      expect(addEntry).not.toHaveBeenCalled();
+      expect(onClose).not.toHaveBeenCalled();
     });
   });
 

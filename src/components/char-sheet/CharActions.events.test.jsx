@@ -525,6 +525,67 @@ describe('CharActions window event listeners — integration behavior', () => {
   });
 });
 
+describe('CharActions moonlight-step-restore bus event — CLA-230', () => {
+  // Flat info shape as produced by automationInfoBuilder/resource.js and collected
+  // into playerStats.automation.actions.
+  const poolAction = {
+    type: 'resource_pool',
+    name: 'Moonlight Step',
+    description: 'Teleport 60 feet.',
+    resource: 'moonlightStepUses',
+    uses_expression: 'WIS modifier',
+    conversion: 'spell_slot_to_moonlight_step',
+    conversionRate: 'level_2_plus',
+  };
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+    localStorage.clear();
+    _syncedStore.clear();
+    globalThis.fetch = vi.fn().mockResolvedValue({ json: () => Promise.resolve([]) });
+  });
+
+  it('dispatches the resource_pool conversion automation when the bus event fires', async () => {
+    const { executeHandler } = await import('../../services/automation/index.js');
+    executeHandler.mockResolvedValue({
+      type: 'modal',
+      modalName: 'moonlightStepResource',
+      payload: { playerStats: createStats(), automation: poolAction.automation },
+    });
+
+    const stats = createStats({ automation: { actions: [poolAction], passives: [] } });
+    const wrapper = makeDefaultWrapper(vi.fn());
+    await renderWithWrapper(<CharActions playerStats={stats} />, wrapper);
+
+    dispatchCustomEvent('moonlight-step-restore');
+
+    await waitFor(() => {
+      expect(executeHandler).toHaveBeenCalled();
+    });
+    const dispatchedAction = executeHandler.mock.calls.find(
+      (c) => c[0]?.automation?.conversion === 'spell_slot_to_moonlight_step'
+    );
+    expect(dispatchedAction).toBeDefined();
+    expect(dispatchedAction[0].name).toBe('Moonlight Step');
+  });
+
+  it('is a no-op when the character has no spell_slot_to_moonlight_step automation', async () => {
+    const { executeHandler } = await import('../../services/automation/index.js');
+
+    const stats = createStats({ automation: { actions: [], passives: [] } });
+    const wrapper = makeDefaultWrapper(vi.fn());
+    await renderWithWrapper(<CharActions playerStats={stats} />, wrapper);
+
+    dispatchCustomEvent('moonlight-step-restore');
+
+    await act(async () => { await new Promise((r) => setTimeout(r, 0)); });
+    const matched = executeHandler.mock.calls.some(
+      (c) => c[0]?.automation?.conversion === 'spell_slot_to_moonlight_step'
+    );
+    expect(matched).toBe(false);
+  });
+});
+
 describe('CharActions event listeners — cleanup behavior', () => {
   beforeEach(() => {
     vi.clearAllMocks();

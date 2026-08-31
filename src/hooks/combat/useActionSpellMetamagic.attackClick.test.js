@@ -236,6 +236,53 @@ describe('useActionSpellMetamagic - handleSpellAttackClick', () => {
       const targetInfo = await getTargetInfo();
       expect(targetInfo).toBeNull();
     });
+
+    it('CLA-230: threads ctx.forcedMode into the metaCtx passed to executeSpellCast', async () => {
+      const spell = makeSpell();
+      const buildCtx = vi.fn(async () => ({ targetName: 'Zombie 1', forcedMode: 'advantage' }));
+      const props = makeHookProps({
+        playerStats: makeNonSorcererStats({ spellAbilities: { spells: [spell] } }),
+        buildCtx,
+      });
+      const { executeSpellCast } = await import(
+        '../../services/rules/spells/spellCastService.js'
+      );
+
+      const attack = { name: 'Fireball', spellLevel: 3, castingTime: '1 Action', area_of_effect: null };
+
+      const { result } = renderHook(() => useActionSpellMetamagic(props));
+
+      await act(async () => {
+        result.current.handleSpellAttackClick(attack);
+      });
+
+      expect(executeSpellCast).toHaveBeenCalled();
+      const metaCtxArg = executeSpellCast.mock.calls[0][1];
+      expect(metaCtxArg.forcedMode).toBe('advantage');
+    });
+
+    it('CLA-230: does not invent forcedMode when ctx has none', async () => {
+      const spell = makeSpell();
+      const buildCtx = vi.fn(async () => ({ targetName: 'Zombie 1' }));
+      const props = makeHookProps({
+        playerStats: makeNonSorcererStats({ spellAbilities: { spells: [spell] } }),
+        buildCtx,
+      });
+      const { executeSpellCast } = await import(
+        '../../services/rules/spells/spellCastService.js'
+      );
+
+      const attack = { name: 'Fireball', spellLevel: 3, castingTime: '1 Action', area_of_effect: null };
+
+      const { result } = renderHook(() => useActionSpellMetamagic(props));
+
+      await act(async () => {
+        result.current.handleSpellAttackClick(attack);
+      });
+
+      const metaCtxArg = executeSpellCast.mock.calls[0][1];
+      expect(metaCtxArg.forcedMode).toBeUndefined();
+    });
   });
 
   // ── Sorcerer path ─────────────────────────────────────────────────────────
@@ -584,6 +631,69 @@ describe('useActionSpellMetamagic - handleSpellAttackClick', () => {
       const getTargetInfo = executeSpellCast.mock.calls[0][2].getTargetInfo;
       const targetInfo = await getTargetInfo();
       expect(targetInfo).toBeNull();
+    });
+
+    it('CLA-230: threads ctx.forcedMode through the metamagic-resolved confirm cast', async () => {
+      const spell = makeSpell();
+      const buildCtx = vi.fn(async () => ({ targetName: 'Zombie 1', forcedMode: 'advantage' }));
+      const props = sorcererProps({ spellAbilities: { spells: [spell] }, buildCtx });
+      const { executeSpellCast } = await import(
+        '../../services/rules/spells/spellCastService.js'
+      );
+      const { isPsionicSpell, hasPsionicSorcery } = await import(
+        '../../services/rules/spells/metamagicRules.js'
+      );
+
+      isPsionicSpell.mockReturnValue(false);
+      hasPsionicSorcery.mockReturnValue(false);
+
+      const attack = { name: 'Fireball', spellLevel: 3, area_of_effect: null };
+
+      const { result } = renderHook(() => useActionSpellMetamagic(props));
+
+      await act(async () => {
+        result.current.handleSpellAttackClick(attack);
+      });
+
+      await act(async () => {
+        result.current.handleActionMetamagicConfirm({});
+      });
+
+      const metaCtxArg = executeSpellCast.mock.calls[0][1];
+      expect(metaCtxArg.forcedMode).toBe('advantage');
+    });
+
+    it('CLA-230: metamagic-provided forcedMode (e.g. innate sorcery) wins over ctx value', async () => {
+      const spell = makeSpell();
+      const buildCtx = vi.fn(async () => ({ targetName: 'Zombie 1', forcedMode: 'advantage' }));
+      const props = sorcererProps({ spellAbilities: { spells: [spell] }, buildCtx });
+      const { executeSpellCast } = await import(
+        '../../services/rules/spells/spellCastService.js'
+      );
+      const { isPsionicSpell, hasPsionicSorcery } = await import(
+        '../../services/rules/spells/metamagicRules.js'
+      );
+
+      isPsionicSpell.mockReturnValue(false);
+      hasPsionicSorcery.mockReturnValue(false);
+
+      const attack = { name: 'Fireball', spellLevel: 3, area_of_effect: null };
+
+      const { result } = renderHook(() => useActionSpellMetamagic(props));
+
+      await act(async () => {
+        result.current.handleSpellAttackClick(attack);
+      });
+
+      // Call the pending action directly — handleActionMetamagicConfirm builds its own
+      // metaCtx and never sets forcedMode, so this verifies the guard: an explicit
+      // forcedMode already in metaCtx (e.g. innate sorcery) must not be overwritten.
+      await act(async () => {
+        result.current.pendingActionMetamagic.action({ forcedMode: 'normal' });
+      });
+
+      const metaCtxArg = executeSpellCast.mock.calls[0][1];
+      expect(metaCtxArg.forcedMode).toBe('normal');
     });
 
     it('clears pendingActionMetamagic after confirm', async () => {

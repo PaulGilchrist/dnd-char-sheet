@@ -112,7 +112,12 @@ export async function confirmTeleport(action, playerStats, campaignName, useExte
             value: null,
             duration: 'until_end_of_turn',
         };
-        setRuntimeValue('campaign', 'targetEffects', [...storedEffects, newEffect], campaignName);
+        // CLA-230: replace any existing same-effect te instead of appending —
+        // repeat teleports must not stack "next attack" advantage markers.
+        const replacedEffects = storedEffects.filter(
+            te => !(te.effect === 'next_attack_advantage' && te.target === playerName && te.source === action.name)
+        );
+        setRuntimeValue('campaign', 'targetEffects', [...replacedEffects, newEffect], campaignName);
         addExpiration(playerName, playerName, [
             { type: 'remove_target_effect', effectKey: 'next_attack_advantage', source: action.name, target: playerName }
         ], campaignName, undefined, playerName);
@@ -183,7 +188,11 @@ export async function confirmTeleport(action, playerStats, campaignName, useExte
                         value: null,
                         duration: 'until_end_of_turn',
                     };
-                    setRuntimeValue('campaign', 'targetEffects', [...currentEffects, allyEffect], campaignName);
+                    // CLA-230: same dedupe lifecycle as the caster te — replace, never stack.
+                    const replacedAllyEffects = currentEffects.filter(
+                        te => !(te.effect === 'next_attack_advantage' && te.target === targetName && te.source === 'Shared Moonlight')
+                    );
+                    setRuntimeValue('campaign', 'targetEffects', [...replacedAllyEffects, allyEffect], campaignName);
                     addExpiration(playerName, targetName, [
                         { type: 'remove_target_effect', effectKey: 'next_attack_advantage', source: 'Shared Moonlight', target: targetName }
                     ], campaignName, undefined, playerName);

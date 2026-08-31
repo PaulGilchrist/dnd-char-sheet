@@ -107,6 +107,26 @@ export async function processAttackAfterResult(hit, isAutoMiss, targetName, char
             timestamp: Date.now(),
         }, campaignName);
 
+        // CLA-230: one-shot "next attack roll" advantage is consumed by the ONE
+        // attack that rolls (Moonlight Step / Shadow Step / Steady Aim / Blink).
+        // Strip the attacker's non-vex next_attack_advantage te once the roll
+        // resolves — hit OR miss both consume it; an auto-miss rolls no d20, so
+        // the advantage survives. Runs BEFORE the miss-effects block below so te
+        // granted by this same miss (Vex-style triggers) is not self-consumed.
+        // Vex te (vexTarget) is consumed separately below on a hit vs that target.
+        if (!finalAutoMiss) {
+            const attackerEffects = getRuntimeValue('campaign', 'targetEffects') || [];
+            const oneShotAdvantage = attackerEffects.filter(
+                te => te.effect === 'next_attack_advantage' && te.target === characterName && !te.vexTarget
+            );
+            if (oneShotAdvantage.length > 0) {
+                const clearedEffects = attackerEffects.filter(
+                    te => !(te.effect === 'next_attack_advantage' && te.target === characterName && !te.vexTarget)
+                );
+                setRuntimeValue('campaign', 'targetEffects', clearedEffects, campaignName);
+            }
+        }
+
         // Miss effects (vex, etc.)
         if (!finalHit && !finalAutoMiss && targetName && context?.playerStats?.automation?.passives) {
             const missEffects = context.playerStats.automation.passives.filter(

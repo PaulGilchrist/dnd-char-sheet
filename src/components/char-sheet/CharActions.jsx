@@ -240,6 +240,25 @@ const CharActions = function CharActions({ playerStats, campaignName, exhaustion
         onBuffsChange,
     });
 
+    // CLA-230: Moonlight Step pool-restore surface — the Druid summary tracker's
+    // "Restore Uses" row dispatches this bus event; dispatch the feature's
+    // resource_pool automation half via handleAutomationAction so resourcePoolHandler
+    // opens MoonlightStepResourceModal (converts a level 2+ spell slot into
+    // moonlightStepUses). The Bonus Actions "Moonlight Step:" row dispatches the
+    // teleport half (executeHandler picks automation[0]), so the conversion half
+    // otherwise has no reachable UI.
+    useEffect(() => {
+        const handleMoonlightStepRestore = () => {
+            const poolInfo = (playerStats.automation?.actions || []).find(
+                a => a.type === 'resource_pool' && a.conversion === 'spell_slot_to_moonlight_step'
+            );
+            if (!poolInfo) return;
+            handleAutomationAction({ name: poolInfo.name, description: poolInfo.description || '', automation: poolInfo });
+        };
+        window.addEventListener('moonlight-step-restore', handleMoonlightStepRestore);
+        return () => window.removeEventListener('moonlight-step-restore', handleMoonlightStepRestore);
+    }, [handleAutomationAction, playerStats]);
+
     // Base actions (Hide, Dodge, Grapple) extracted to hook
     const {
         handleHideAction,

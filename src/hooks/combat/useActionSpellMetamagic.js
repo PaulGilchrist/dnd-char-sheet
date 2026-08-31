@@ -257,7 +257,15 @@ export function useActionSpellMetamagic({
                 isUpcast: false,
                 freeCastAuthorized,
             });
-            const castResult = await executeSpellCast({ ...spell, name: attack.name, level: attack.spellLevel || 0 }, result.metaCtx, {
+            // CLA-230: thread ctx.forcedMode (conditionAttackMode advantage/disadvantage,
+            // e.g. Moonlight Step next-attack advantage) into the spell attack roll —
+            // previously only getTargetInfo().name survived, so spell attacks never saw it.
+            // handleNoSavePath spreads metaCtx into the attack roll ctx.
+            const attackCtx = await buildCtx(attack);
+            const castMetaCtx = attackCtx?.forcedMode && result.metaCtx?.forcedMode == null
+                ? { ...result.metaCtx, forcedMode: attackCtx.forcedMode }
+                : result.metaCtx;
+            const castResult = await executeSpellCast({ ...spell, name: attack.name, level: attack.spellLevel || 0 }, castMetaCtx, {
                 rollAttack,
                 rollDamage,
                 playerStats,
@@ -292,7 +300,14 @@ export function useActionSpellMetamagic({
             isPsionic: isPsionic && hasPsionic,
             psionicCost: isPsionic && hasPsionic ? (spell.level || 0) : 0,
             action: async (metaCtx) => {
-                const castResult = await executeSpellCast({ ...spell, level: spell.level || 0 }, metaCtx, {
+                // CLA-230: thread ctx.forcedMode through the metamagic-resolved cast too
+                // (metamagic never sets forcedMode itself — an existing metaCtx value wins,
+                // mirroring handleNoSavePath's innate-sorcery `!metaCtx?.forcedMode` gate).
+                const attackCtx = await buildCtx(attack);
+                const castMetaCtx = attackCtx?.forcedMode && metaCtx?.forcedMode == null
+                    ? { ...metaCtx, forcedMode: attackCtx.forcedMode }
+                    : metaCtx;
+                const castResult = await executeSpellCast({ ...spell, level: spell.level || 0 }, castMetaCtx, {
                     rollAttack,
                     rollDamage,
                     playerStats,

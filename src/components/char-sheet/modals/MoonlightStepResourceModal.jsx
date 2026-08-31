@@ -1,5 +1,6 @@
 import React from 'react'
 import { getRuntimeValue, setRuntimeBatch } from '../../../hooks/runtime/useRuntimeState.js'
+import { addEntry } from '../../../services/ui/logService.js'
 import './ResourcePoolModal.css'
 
 function MoonlightStepResourceModal({ playerStats, campaignName, automation, onClose }) {
@@ -52,6 +53,13 @@ function MoonlightStepResourceModal({ playerStats, campaignName, automation, onC
       moonlightStepUses: newUses,
     }
     setRuntimeBatch(name, updates, campaignName)
+    addEntry(campaignName, {
+      type: 'ability_use',
+      characterName: name,
+      abilityName: 'Moonlight Step',
+      description: `${name} expended a level ${selectedLevel} spell slot to restore 1 use of Moonlight Step (${newUses}/${maxUses}).`,
+      timestamp: Date.now(),
+    }).catch((e) => { console.error('[MoonlightStepResourceModal] Error logging conversion:', e) })
     onClose()
   }
 

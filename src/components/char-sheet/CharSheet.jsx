@@ -385,6 +385,10 @@ function CharSheetContent({
     const handleBuffsChange = () => { }
 
     const activeBuffs = useRuntimeValue(playerSummary?.name, 'activeBuffs', campaignName) ?? [];
+    // CLA-230: subscribe to campaign targetEffects so that a one-shot next_attack_advantage
+    // te consumed by attackPostProcessing after an attack roll recomputes
+    // conditionAttackMode immediately (no sheet remount needed for the next attack).
+    void useRuntimeValue('campaign', 'targetEffects', campaignName);
     const { conditionEffects, cannotAct, conditionAttackMode, isRaging, exhaustionPenalty } = computeCharConditionEffects(playerSummary, playerStats, campaignName, activeBuffs);
 
     const luckyAdvantageActive = useRuntimeValue(playerStats?.name, 'luckyAdvantageActive', campaignName);
