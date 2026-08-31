@@ -28,6 +28,7 @@ import AspectOfTheWildsModal from './AspectOfTheWildsModal.jsx';
 import ElfisLineageModal from './ElfisLineageModal.jsx';
 import GnomishLineageModal from './GnomishLineageModal.jsx';
 import FeyReinforcementsModal from './modals/FeyReinforcementsModal.jsx';
+import MistyWandererModal from './modals/MistyWandererModal.jsx';
 import FiendishLegacyModal from './modals/FiendishLegacyModal.jsx';
 
 function getEventDisplayLabel(eventType, eventData) {
@@ -63,6 +64,7 @@ function CharSpecialActionsModals({
     fiendishResilienceModal, setFiendishResilienceModal,
     multiResistanceModal, setMultiResistanceModal,
     stepsOfTheFeyTauntModal, setStepsOfTheFeyTauntModal,
+    mistyWandererModal, setMistyWandererModal,
     hurlThroughHellModal, setHurlThroughHellModal,
     clairvoyantCombatantModal, setClairvoyantCombatantModal,
     portentModal,
@@ -273,6 +275,12 @@ function CharSpecialActionsModals({
                 <StepsOfTheFeyTauntModal
                     {...stepsOfTheFeyTauntModal}
                     onClose={() => setStepsOfTheFeyTauntModal(null)}
+                />
+            )}
+            {mistyWandererModal && (
+                <MistyWandererModal
+                    {...mistyWandererModal}
+                    onClose={() => setMistyWandererModal(null)}
                 />
             )}
             {hurlThroughHellModal && (

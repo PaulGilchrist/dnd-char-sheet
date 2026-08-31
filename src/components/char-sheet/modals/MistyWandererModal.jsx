@@ -1,11 +1,30 @@
 import { useState } from 'react';
 import { confirmMistyWanderer } from '../../../services/automation/handlers/class-warlock/mistyWandererHandler.js';
+import { getCombatSummary } from '../../../services/encounters/combatData.js';
+import { getRuntimeValue } from '../../../hooks/runtime/useRuntimeState.js';
 import '../CharSheet.css';
+import './MistyWandererModal.css';
 
-function MistyWandererModal({ action, playerStats, campaignName, onClose }) {
+// CLA-229: populate the companion select from the live combatSummary — every
+// combatant except the caster is a candidate willing creature (gridless
+// encounters skip the 5-ft range check by app convention; mirrors the
+// ally-picker population used by CreatureSelectionModal/Invoke Duplicity).
+function getCompanionOptions(playerStats, campaignName) {
+    const combatSummary = getCombatSummary(campaignName);
+    const creatures = Array.isArray(combatSummary?.creatures) ? combatSummary.creatures : [];
+    return creatures.filter(c => c?.name && c.name !== playerStats?.name);
+}
+
+function MistyWandererModal({ action, playerStats, campaignName, usesMax, onClose }) {
     const [selectedAlly, setSelectedAlly] = useState(null);
     const [applied, setApplied] = useState(false);
     const [result, setResult] = useState(null);
+
+    const companions = getCompanionOptions(playerStats, campaignName);
+    const featureName = action?.name || 'Misty Wanderer';
+    const freeCastCountKey = `_${featureName.replace(/\s+/g, '_')}_freeCastCount`;
+    const max = usesMax || 1;
+    const remaining = Number(getRuntimeValue(playerStats?.name, freeCastCountKey, campaignName) ?? max);
 
     const handleConfirm = async () => {
         const res = await confirmMistyWanderer(action, playerStats, campaignName, !!selectedAlly, selectedAlly);
@@ -44,23 +63,20 @@ function MistyWandererModal({ action, playerStats, campaignName, onClose }) {
                 </div>
                 <div className="sp-body">
                     <p>Cast <strong>Misty Step</strong> — teleport up to 30 feet to an unoccupied space you can see.</p>
-                    <div style={{ marginTop: '12px' }}>
-                        <p style={{ marginBottom: '8px' }}>Bring a willing creature within 5 feet?</p>
+                    <p className="misty-wanderer-uses">Free casts remaining: {remaining} / {max}</p>
+                    <div className="misty-wanderer-companion">
+                        <p>Bring a willing creature within 5 feet?</p>
                         <select
+                            className="misty-wanderer-ally-select"
                             value={selectedAlly || ''}
                             onChange={e => setSelectedAlly(e.target.value || null)}
-                            style={{
-                                width: '100%',
-                                padding: '8px',
-                                borderRadius: '4px',
-                                border: '1px solid var(--color-link)',
-                                background: 'var(--background-color-header-inner)',
-                                color: 'var(--color-header-inner)',
-                            }}
                         >
                             <option value="">None</option>
+                            {companions.map(c => (
+                                <option key={c.name} value={c.name}>{c.name}</option>
+                            ))}
                         </select>
-                        <p style={{ marginTop: '8px', opacity: 0.8, fontSize: '0.9em' }}>
+                        <p className="misty-wanderer-hint">
                             The creature appears in an unoccupied space within 5 feet of your destination.
                         </p>
                     </div>

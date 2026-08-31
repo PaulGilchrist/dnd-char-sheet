@@ -683,7 +683,13 @@ export async function executeHandler(action, playerStats, campaignName, mapName,
             if (a.type === 'passive_rule') return PASSIVE_RULE_EFFECTS[a.effect];
             return (a.casting_time || a.action || a.trigger) && HANDLER_MAP[a.type];
         });
-        const selected = actionable.find(a => a.replacesWarMagic) || actionable[0];
+        const selected = actionable.find(a => a.replacesWarMagic)
+            // CLA-229: Misty Wanderer declares automation [free_spell, misty_wanderer].
+            // The free_spell half's consumption path lives on the spell row
+            // (spellPreparationService), so its automation[0] position must not
+            // shadow the companion-carry half — the row dispatches the modal.
+            || actionable.find(a => a.type === 'misty_wanderer')
+            || actionable[0];
         if (!selected) {
             return null;
         }

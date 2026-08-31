@@ -51,6 +51,7 @@ function CharSpecialActions({ playerStats, campaignName, cannotAct, characters, 
     const [fiendishLegacyModal, setFiendishLegacyModal] = useState(null);
     const [multiResistanceModal, setMultiResistanceModal] = useState(null);
     const [stepsOfTheFeyTauntModal, setStepsOfTheFeyTauntModal] = useState(null);
+    const [mistyWandererModal, setMistyWandererModal] = useState(null);
     const [hurlThroughHellModal, setHurlThroughHellModal] = useState(null);
     const [clairvoyantCombatantModal, setClairvoyantCombatantModal] = useState(null);
     const [portentModal, setPortentModal] = useState(null);
@@ -452,6 +453,9 @@ function CharSpecialActions({ playerStats, campaignName, cannotAct, characters, 
                 setQuiveringPalmModal(result.payload);
             } else if (result.modalName === 'stepsOfTheFeyTaunt') {
                 setStepsOfTheFeyTauntModal(result.payload);
+            } else if (result.modalName === 'mistyWanderer') {
+                // CLA-229: companion-carry picker for the Special Actions row.
+                setMistyWandererModal(result.payload);
             } else if (result.modalName === 'hurlThroughHell') {
                 setHurlThroughHellModal(result.payload);
             } else if (result.modalName === 'clairvoyantCombatant') {
@@ -699,6 +703,7 @@ function CharSpecialActions({ playerStats, campaignName, cannotAct, characters, 
                 fiendishResilienceModal={fiendishResilienceModal} setFiendishResilienceModal={setFiendishResilienceModal}
                 multiResistanceModal={multiResistanceModal} setMultiResistanceModal={setMultiResistanceModal}
                 stepsOfTheFeyTauntModal={stepsOfTheFeyTauntModal} setStepsOfTheFeyTauntModal={setStepsOfTheFeyTauntModal}
+                mistyWandererModal={mistyWandererModal} setMistyWandererModal={setMistyWandererModal}
                 hurlThroughHellModal={hurlThroughHellModal} setHurlThroughHellModal={setHurlThroughHellModal}
                 clairvoyantCombatantModal={clairvoyantCombatantModal} setClairvoyantCombatantModal={setClairvoyantCombatantModal}
                 portentModal={portentModal} setPortentModal={setPortentModal}

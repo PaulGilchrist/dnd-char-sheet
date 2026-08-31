@@ -1,0 +1,28 @@
+/* MistyWandererModal — scoped styles (CLA-229) */
+.misty-wanderer-companion {
+    margin-top: 12px;
+}
+
+.misty-wanderer-companion > p:first-child {
+    margin-bottom: 8px;
+}
+
+.misty-wanderer-ally-select {
+    width: 100%;
+    padding: 8px;
+    border-radius: 4px;
+    border: 1px solid var(--color-link);
+    background: var(--background-color-header-inner);
+    color: var(--color-header-inner);
+}
+
+.misty-wanderer-hint {
+    margin-top: 8px;
+    opacity: 0.8;
+    font-size: 0.9em;
+}
+
+.misty-wanderer-uses {
+    margin-top: 8px;
+    font-weight: bold;
+}

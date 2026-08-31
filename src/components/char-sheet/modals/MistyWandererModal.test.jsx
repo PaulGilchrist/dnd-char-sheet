@@ -10,6 +10,16 @@ vi.mock('../../../services/automation/handlers/class-warlock/mistyWandererHandle
   confirmMistyWanderer: vi.fn(),
 }));
 
+// CLA-229: companion select is populated from the live combatSummary.
+let mockCombatSummary = { creatures: [] };
+vi.mock('../../../services/encounters/combatData.js', () => ({
+  getCombatSummary: vi.fn(() => mockCombatSummary),
+}));
+
+vi.mock('../../../hooks/runtime/useRuntimeState.js', () => ({
+  getRuntimeValue: vi.fn(() => undefined),
+}));
+
 // ── Re-import mocked modules ──
 
 import { confirmMistyWanderer } from '../../../services/automation/handlers/class-warlock/mistyWandererHandler.js';
@@ -88,6 +98,29 @@ describe('MistyWandererModal', () => {
   // ── Ally selection ──
 
   describe('ally selection', () => {
+    // CLA-229: the companion select must be populated from combatSummary —
+    // previously it was hardcoded to <option value="">None</option> only,
+    // making the "bring one willing creature" half unreachable.
+    it('populates the companion select with combatants other than the caster', () => {
+      mockCombatSummary = {
+        creatures: [
+          { name: 'Warlock1', type: 'player' },
+          { name: 'HexWarlock', type: 'player' },
+          { name: 'Goblin Boss', type: 'monster' },
+        ],
+      };
+      render(<MistyWandererModal {...makeProps()} />);
+      const select = screen.getByRole('combobox');
+      const optionValues = Array.from(select.querySelectorAll('option')).map(o => o.value);
+      expect(optionValues).toEqual(['', 'HexWarlock', 'Goblin Boss']);
+      mockCombatSummary = { creatures: [] };
+    });
+
+    it('shows free casts remaining from the pool (CLA-229)', () => {
+      render(<MistyWandererModal {...makeProps({ usesMax: 3 })} />);
+      expect(screen.getByText(/Free casts remaining: 3 \/ 3/)).toBeInTheDocument();
+    });
+
     it('passes the selected ally name to confirmMistyWanderer when an ally is chosen', async () => {
       confirmMistyWanderer.mockResolvedValue(mockResult);
       render(<MistyWandererModal {...makeProps()} />);

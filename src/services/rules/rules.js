@@ -27,6 +27,7 @@ import {
     getEvasionEffects,
     getAllSaveProficiencies,
 } from '../combat/automation/automationService.js';
+import { reresolveAutomationUsesMax } from '../combat/automation/automationExpressions.js';
 import { loadFeatData, loadSkills, loadWildMagicSurgeTable } from '../ui/dataLoader.js';
 import { computeAllFeatBuffs } from '../character/featBuffService.js';
 
@@ -462,6 +463,12 @@ const rules = {
   playerStats.allFeatures = allFeatures;
 
   playerStats.abilities = await rules.getAbilities(playerStats, playerSummary);
+  // CLA-229: automation was collected at :171/:266 with abilities not yet
+  // computed, so uses_expression pools (Misty Wanderer, Steps of the Fey,
+  // every `uses_expression` free-cast family) baked usesMax at the min-1
+  // floor. Re-resolve those expressions now that ability bonuses exist.
+  // Runs after the CLA-209 saveModifiers push — order-independent.
+  reresolveAutomationUsesMax(playerStats);
   playerStats.hitPoints = rules.getHitPoints(playerStats, playerSummary);
   playerStats.carryingCapacity = rules.getCarryingCapacity(playerStats);
   playerStats.speed = applyElfisLineageSpeed(playerStats, playerSummary);

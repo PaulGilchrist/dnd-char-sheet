@@ -17,8 +17,13 @@ vi.mock('../../../combat/automation/automationExpressions.js', () => ({
     evaluateAutoExpression: vi.fn(),
 }));
 
+vi.mock('../../../ui/logService.js', () => ({
+    addEntry: vi.fn().mockResolvedValue(undefined),
+}));
+
 const { getRuntimeValue, setRuntimeValue } = await import('../../../../hooks/runtime/useRuntimeState.js');
 const { evaluateAutoExpression } = await import('../../../combat/automation/automationExpressions.js');
+const { addEntry } = await import('../../../ui/logService.js');
 
 function makeAction(overrides = {}) {
     return {
@@ -195,6 +200,47 @@ describe('mistyWandererHandler', () => {
 
             expect(result.payload.name).toBe('Custom Feature');
             expect(result.payload.description).toBe('Custom Feature: Cast Misty Step (1 remaining).');
+        });
+
+        // CLA-229: confirm must log consumption + teleport text, and carry the
+        // bringAlly clause in the campaign log.
+        it('logs ability_use with teleport text and pool consumption (CLA-229)', async () => {
+            getRuntimeValue.mockReturnValue(3);
+
+            await confirmMistyWanderer(makeAction(), makePlayerStats(), 'campaign', false, null);
+
+            expect(addEntry).toHaveBeenCalledTimes(1);
+            const [campaign, entry] = addEntry.mock.calls[0];
+            expect(campaign).toBe('campaign');
+            expect(entry.type).toBe('ability_use');
+            expect(entry.characterName).toBe('Test Character');
+            expect(entry.abilityName).toBe('Misty Wanderer');
+            expect(entry.description).toContain('Misty Step for free');
+            expect(entry.description).toContain('no spell slot consumed');
+            expect(entry.description).toContain('teleporting up to 30 feet');
+            expect(entry.description).toContain('2 of 3 free casts remaining');
+            expect(entry.freeCastsRemaining).toBe(2);
+            expect(entry.broughtAlly).toBeNull();
+        });
+
+        it('logs the bringAlly clause when a companion is brought (CLA-229)', async () => {
+            getRuntimeValue.mockReturnValue(3);
+
+            await confirmMistyWanderer(makeAction(), makePlayerStats(), 'campaign', true, 'HexWarlock');
+
+            const [campaign, entry] = addEntry.mock.calls[0];
+            expect(campaign).toBe('campaign');
+            expect(entry.description).toContain('Brought HexWarlock to an unoccupied space within 5 feet');
+            expect(entry.broughtAlly).toBe('HexWarlock');
+        });
+
+        it('does not log or consume when no free casts remain (CLA-229)', async () => {
+            getRuntimeValue.mockReturnValue(0);
+
+            await confirmMistyWanderer(makeAction(), makePlayerStats(), 'campaign', true, 'HexWarlock');
+
+            expect(addEntry).not.toHaveBeenCalled();
+            expect(setRuntimeValue).not.toHaveBeenCalled();
         });
     });
 });

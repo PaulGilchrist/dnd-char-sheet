@@ -140,6 +140,29 @@ function resolveDiceExpression(expression, playerStats, slotLevel) {
     return expr
 }
 
+// CLA-229: automation entries whose `uses_expression` references an ability
+// modifier ("WIS modifier_min_1") are resolved inside collectAutomationFromFeatures
+// (buildAttackInfo), which getPlayerStats runs BEFORE rules.getAbilities computes
+// ability `.bonus` — getAbilityModifier() reads `bonus ?? 0`, so the expression
+// evaluated with modifier 0 and the pool baked at its min-1 floor. Re-resolve
+// usesMax/uses here once abilities exist. Fixes the whole uses_expression
+// free-cast family (Misty Wanderer, Steps of the Fey, free_spell pools…).
+export function reresolveAutomationUsesMax(playerStats) {
+    const automation = playerStats?.automation
+    if (!automation) return
+    for (const entries of Object.values(automation)) {
+        if (!Array.isArray(entries)) continue
+        for (const entry of entries) {
+            if (!entry || !entry.uses_expression) continue
+            const resolved = evaluateAutoExpression(entry.uses_expression, playerStats)
+            if (typeof resolved === 'number' && !isNaN(resolved)) {
+                entry.usesMax = resolved
+                entry.uses = resolved
+            }
+        }
+    }
+}
+
 export function evaluateAutoExpression(expression, playerStats, prof, level, slotLevel) {
     if (!expression) return expression
     let expr = resolveDiceExpression(expression, playerStats, slotLevel)

@@ -4203,7 +4203,7 @@
       "handler": "src/services/combat/automation/handlers/classFeatureHandler.js",
       "router": "src/services/combat/automation/routers/classFeatureRouter.js",
       "infoBuilder": "src/services/combat/automation/infoBuilders/classFeatureInfoBuilder.js",
-      "verified": "broken — see .opencode/plans/bug-cla-229-misty-wanderer.md",
+      "verified": "verified",
       "class": "Ranger",
       "triggerConditions": "Automation type: undefined",
       "expectedBehavior": "Cast Misty Step without spell slot, uses = Wisdom modifier (minimum once). When casting Misty Step, bring one willing creature within 5 feet to an unoccupied space within 5 feet of your destination."

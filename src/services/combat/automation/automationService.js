@@ -63,6 +63,13 @@ const INTERACTIVE_HANDLER_TYPES = new Set([
     // CLA-226: row click dispatches CharSpecialActions' open-short-rest branch,
     // which opens the Short Rest modal hosting the prepared-spell swap UI.
     'memorize_spell',
+    // CLA-229: the Special Actions "Misty Wanderer:" row dispatches
+    // mistyWandererHandler, which opens MistyWandererModal (free Misty Step +
+    // willing-companion carry). NOTE: 'free_spell' is deliberately NOT added —
+    // free_spell entries consume their pool via the spell row
+    // (spellPreparationService); making those rows clickable would dispatch
+    // handleSpellCast on unrelated free-cast features.
+    'misty_wanderer',
 ]);
 
 const INTERACTIVE_PASSIVE_EFFECTS = new Set([

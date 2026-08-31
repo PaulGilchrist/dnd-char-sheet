@@ -1,5 +1,6 @@
 import { getRuntimeValue, setRuntimeValue } from '../../../../hooks/runtime/useRuntimeState.js';
 import { evaluateAutoExpression } from '../../../combat/automation/automationExpressions.js';
+import { addEntry } from '../../../ui/logService.js';
 
 export async function handle(action, playerStats, campaignName, _mapName) {
     const auto = action.automation;
@@ -59,9 +60,27 @@ export async function confirmMistyWanderer(action, playerStats, campaignName, br
 
     let description = `${featureName}: Cast Misty Step (${newCount} remaining).`;
 
+    // Range is "within 5 feet" of the caster; gridless encounters skip the
+    // range check by app convention (no positional source for the selection).
     if (bringAlly && allyName) {
         description += ` Brought ${allyName} to an unoccupied space within 5 feet of your destination.`;
     }
+
+    // Every automation use logs to the campaign log (CLA-229): consumption,
+    // teleport text, and the bringAlly clause.
+    let logDescription = `${playerName} casts Misty Step for free — no spell slot consumed — teleporting up to 30 feet to an unoccupied space they can see (${newCount} of ${usesMax} free casts remaining).`;
+    if (bringAlly && allyName) {
+        logDescription += ` Brought ${allyName} to an unoccupied space within 5 feet of the destination.`;
+    }
+    await addEntry(campaignName, {
+        type: 'ability_use',
+        characterName: playerName,
+        abilityName: featureName,
+        description: logDescription,
+        broughtAlly: bringAlly ? allyName : null,
+        freeCastsRemaining: newCount,
+        timestamp: Date.now(),
+    }).catch((e) => { console.error('[mistyWanderer] Error logging:', e); });
 
     return {
         type: 'popup',

@@ -10,6 +10,7 @@ import {
   resolveDiceExpression,
   getSuperiorityDieSize,
   getPsionicEnergyDieSize,
+  reresolveAutomationUsesMax,
 } from './automationExpressions.js'
 
 // ── Helpers ──────────────────────────────────────────────────────
@@ -528,5 +529,77 @@ describe('evaluateAutoExpression', () => {
   it('returns string when _min_ has negative minimum since regex requires digits only', () => {
     const stats = makePlayerStats()
     expect(evaluateAutoExpression('5_min_-3', stats)).toBe('5_min_-3')
+  })
+})
+
+// ── CLA-229: reresolveAutomationUsesMax ─────────────────────────
+// Automation with uses_expression is collected by getPlayerStats BEFORE
+// rules.getAbilities computes ability .bonus, so WIS-based pools baked at
+// the min-1 floor (usesMax 1 despite WIS +3). This pass re-resolves the
+// expressions once abilities exist — fixes the whole free-cast family.
+
+describe('reresolveAutomationUsesMax (CLA-229)', () => {
+  const wisPool = () => ({
+    type: 'free_spell',
+    name: 'Misty Wanderer',
+    spell: 'Misty Step',
+    uses: 1,
+    uses_expression: 'WIS modifier_min_1',
+    usesMax: 1,
+    recharge: 'long_rest',
+  })
+
+  it('re-resolves usesMax/uses to the WIS modifier once abilities exist', () => {
+    const stats = {
+      level: 15,
+      proficiency: 5,
+      abilities: [{ name: 'Wisdom', bonus: 3 }],
+      automation: { specialActions: [wisPool()] },
+    }
+    reresolveAutomationUsesMax(stats)
+    expect(stats.automation.specialActions[0].usesMax).toBe(3)
+    expect(stats.automation.specialActions[0].uses).toBe(3)
+  })
+
+  it('keeps the min-1 floor when the modifier is negative', () => {
+    const stats = {
+      level: 15,
+      proficiency: 5,
+      abilities: [{ name: 'Wisdom', bonus: -2 }],
+      automation: { specialActions: [wisPool()] },
+    }
+    reresolveAutomationUsesMax(stats)
+    expect(stats.automation.specialActions[0].usesMax).toBe(1)
+  })
+
+  it('re-resolves every uses_expression category (Steps of the Fey family)', () => {
+    const stats = {
+      level: 17,
+      proficiency: 6,
+      abilities: [{ name: 'Charisma', bonus: 4 }, { name: 'Wisdom', bonus: 3 }],
+      automation: {
+        bonusActions: [{ type: 'steps_of_the_fey', name: 'Steps of the Fey', uses: 1, uses_expression: 'CHA modifier_min_1', usesMax: 1 }],
+        actions: [{ type: 'free_spell', name: 'Other', uses: 1, uses_expression: 'WIS modifier_min_1', usesMax: 1 }],
+      },
+    }
+    reresolveAutomationUsesMax(stats)
+    expect(stats.automation.bonusActions[0].usesMax).toBe(4)
+    expect(stats.automation.actions[0].usesMax).toBe(3)
+  })
+
+  it('leaves entries without uses_expression untouched', () => {
+    const stats = {
+      level: 5,
+      abilities: [{ name: 'Wisdom', bonus: 3 }],
+      automation: { specialActions: [{ type: 'free_spell', name: 'Fey Magic', uses: 1, recharge: 'long_rest' }] },
+    }
+    reresolveAutomationUsesMax(stats)
+    expect(stats.automation.specialActions[0].uses).toBe(1)
+    expect(stats.automation.specialActions[0].usesMax).toBeUndefined()
+  })
+
+  it('is null-safe on missing automation', () => {
+    expect(() => reresolveAutomationUsesMax({})).not.toThrow()
+    expect(() => reresolveAutomationUsesMax(null)).not.toThrow()
   })
 })
