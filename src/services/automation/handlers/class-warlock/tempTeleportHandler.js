@@ -3,6 +3,7 @@ import { buildSaveDc, createSaveListener } from '../../common/savePrompt.js';
 import { resolveTarget } from '../../common/targetResolver.js';
 import { evaluateAutoExpression } from '../../../combat/automation/automationService.js';
 import { addEntry } from '../../../ui/logService.js';
+import { addExpiration } from '../../../rules/effects/expirationQueue.js';
 
 function getAvailableSpellSlotLevel(playerStats) {
     for (let lvl = 2; lvl <= 9; lvl++) {
@@ -112,6 +113,9 @@ export async function confirmTeleport(action, playerStats, campaignName, useExte
             duration: 'until_end_of_turn',
         };
         setRuntimeValue('campaign', 'targetEffects', [...storedEffects, newEffect], campaignName);
+        addExpiration(playerName, playerName, [
+            { type: 'remove_target_effect', effectKey: 'next_attack_advantage', source: action.name, target: playerName }
+        ], campaignName, undefined, playerName);
 
         if (auto.effect === 'moonlight_step_teleport') {
             const usesKey = 'moonlightStepUses';
@@ -137,6 +141,10 @@ export async function confirmTeleport(action, playerStats, campaignName, useExte
                     duration: 'until_start_of_next_turn',
                 };
                 setRuntimeValue('campaign', 'targetEffects', [...currentEffects, perceptionEffect], campaignName);
+                addExpiration(playerName, targetName, [
+                    { type: 'remove_target_effect', effectKey: 'disadvantage_perception_checks', source: 'Improved Shadow Step', target: targetName },
+                    { type: 'condition', condition: 'blinded' }
+                ], campaignName, undefined, playerName);
 
                 const saveDc = buildSaveDc({ saveDc: 'ability', saveAbility: 'WIS' }, playerStats);
                 const { promptId } = createSaveListener(campaignName, {
@@ -176,6 +184,9 @@ export async function confirmTeleport(action, playerStats, campaignName, useExte
                         duration: 'until_end_of_turn',
                     };
                     setRuntimeValue('campaign', 'targetEffects', [...currentEffects, allyEffect], campaignName);
+                    addExpiration(playerName, targetName, [
+                        { type: 'remove_target_effect', effectKey: 'next_attack_advantage', source: 'Shared Moonlight', target: targetName }
+                    ], campaignName, undefined, playerName);
                     description += ` Shared Moonlight: ${targetName} also gains Advantage on their next attack roll.`;
                 }
             }

@@ -68,6 +68,16 @@ function pushDisadvNextAttackBadge(badges, targetEffects, creatureName) {
     badges.push({ label: def.label, cls: 'effect-debuff', icon: def.icon, removable: true, removeAction: 'target_effect', effectType: 'disadvantage_next_attack', tooltip: `Disadvantage on its next attack roll (from ${effect.source || 'unknown'})` })
 }
 
+function pushPerceptionDisadvBadge(badges, targetEffects, creatureName) {
+    const effect = (targetEffects || []).find(te => {
+        const teTarget = Array.isArray(te.target) ? te.target[0] : te.target
+        return te.effect === 'disadvantage_perception_checks' && teTarget === creatureName
+    })
+    if (!effect) return
+    const def = getEffectDefinition('disadvantage_perception_checks')
+    badges.push({ label: def.label, cls: 'effect-debuff', icon: def.icon, removable: true, removeAction: 'target_effect', effectType: 'disadvantage_perception_checks', tooltip: `Disadvantage on Wisdom (Perception) checks (from ${effect.source || 'unknown'})` })
+}
+
 function ConditionEffectBadges({ conditions, targetEffects = [], creatureName, campaignName, allCreatures, hasTacticalShift, hasSpeedyOpportunityDisadvantage, hasSpeedyDifficultTerrainIgnore, isLocalhost, coronaDisadvantage, playerStats: _playerStats, characters: _characters, activeMapName: _activeMapName, onRollConditionSave }) {
     const condKeys = (conditions || []).map(c => c.key)
     const effects = computeConditionEffects(condKeys, [], targetEffects, false, false, false, false, null, false, false, false, false, false, false, false, false, false, false, false, false)
@@ -196,6 +206,7 @@ function ConditionEffectBadges({ conditions, targetEffects = [], creatureName, c
         badges.push({ label: 'Disadv Fire/Radiant', cls: 'effect-debuff', icon: 'fa-sun', removable: true, removeAction: 'corona_disadvantage' })
     }
     pushDisadvNextAttackBadge(badges, targetEffects, creatureName)
+    pushPerceptionDisadvBadge(badges, targetEffects, creatureName)
     const tauntingStepEffect = targetEffects?.find(te => te.effect === 'taunting_step' && te.target === creatureName)
     if (tauntingStepEffect) {
         badges.push({ label: 'Taunted', cls: 'effect-debuff', icon: 'fa-wand-sparkles', removable: true, removeAction: 'taunting_step', effectType: 'taunting_step', tooltip: `Disadvantage on attack rolls vs creatures other than ${tauntingStepEffect.source || 'you'}` })

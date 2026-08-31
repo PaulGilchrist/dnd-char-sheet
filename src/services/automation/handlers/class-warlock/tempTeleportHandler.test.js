@@ -32,12 +32,17 @@ vi.mock('../../../ui/logService.js', () => ({
     addEntry: vi.fn(() => Promise.resolve()),
 }));
 
+vi.mock('../../../rules/effects/expirationQueue.js', () => ({
+    addExpiration: vi.fn(),
+}));
+
 // ── Re-import after mocking ────────────────────────────────────
 
 import { getRuntimeValue, setRuntimeValue } from '../../../../hooks/runtime/useRuntimeState.js';
 import { resolveTarget } from '../../common/targetResolver.js';
 import { buildSaveDc } from '../../common/savePrompt.js';
 import { addEntry } from '../../../ui/logService.js';
+import { addExpiration } from '../../../rules/effects/expirationQueue.js';
 
 // ── Constants ──────────────────────────────────────────────────
 
@@ -484,6 +489,110 @@ describe('tempTeleportHandler', () => {
             expect(result.payload.type).toBe('automation_info');
             expect(result.payload.name).toBe('Shadow of Moil');
             expect(result.payload.automationType).toBe('teleport');
+        });
+    });
+
+    // CLA-191 regression: cloud effects must enqueue pendingExpirations so they
+    // clear at the start of the caster's next turn instead of persisting forever.
+    describe('CLA-191 expiration enforcement', () => {
+        function makeShadowStepStats() {
+            return makePlayerStats({
+                automation: { passives: [{ name: 'Improved Shadow Step' }] },
+            });
+        }
+
+        it('enqueues expiration for caster next_attack_advantage on shadow_step teleport', async () => {
+            setupMoonlightStepMocks(null);
+            const action = makeAction({ name: 'Shadow Step', automation: { effect: 'shadow_step_teleport' } });
+            await confirmTeleport(action, makePlayerStats(), CAMPAIGN_NAME, false);
+
+            expect(addExpiration).toHaveBeenCalledWith(
+                PLAYER_NAME,
+                PLAYER_NAME,
+                [{ type: 'remove_target_effect', effectKey: 'next_attack_advantage', source: 'Shadow Step', target: PLAYER_NAME }],
+                CAMPAIGN_NAME,
+                undefined,
+                PLAYER_NAME,
+            );
+        });
+
+        it('enqueues expiration for caster next_attack_advantage on moonlight_step teleport', async () => {
+            setupMoonlightStepMocks(2);
+            const action = makeAction({ name: 'Blink', automation: { effect: 'moonlight_step_teleport' } });
+            await confirmTeleport(action, makePlayerStats(), CAMPAIGN_NAME, false);
+
+            expect(addExpiration).toHaveBeenCalledWith(
+                PLAYER_NAME,
+                PLAYER_NAME,
+                [{ type: 'remove_target_effect', effectKey: 'next_attack_advantage', source: 'Blink', target: PLAYER_NAME }],
+                CAMPAIGN_NAME,
+                undefined,
+                PLAYER_NAME,
+            );
+        });
+
+        it('enqueues expirations for Improved Shadow Step perception te and blinded condition', async () => {
+            setupMoonlightStepMocks(null);
+            const action = makeAction({ name: 'Shadow Step', automation: { effect: 'shadow_step_teleport' } });
+            await confirmTeleport(action, makeShadowStepStats(), CAMPAIGN_NAME, false);
+
+            expect(addExpiration).toHaveBeenCalledWith(
+                PLAYER_NAME,
+                'Goblin',
+                [
+                    { type: 'remove_target_effect', effectKey: 'disadvantage_perception_checks', source: 'Improved Shadow Step', target: 'Goblin' },
+                    { type: 'condition', condition: 'blinded' },
+                ],
+                CAMPAIGN_NAME,
+                undefined,
+                PLAYER_NAME,
+            );
+        });
+
+        it('enqueues expiration for Shared Moonlight ally advantage te', async () => {
+            setupMoonlightStepMocks(2);
+            const stats = makePlayerStats({
+                automation: { passives: [{ name: 'Lunar Form' }] },
+            });
+            const action = makeAction({ name: 'Blink', automation: { effect: 'moonlight_step_teleport' } });
+            await confirmTeleport(action, stats, CAMPAIGN_NAME, false);
+
+            expect(addExpiration).toHaveBeenCalledWith(
+                PLAYER_NAME,
+                'Goblin',
+                [{ type: 'remove_target_effect', effectKey: 'next_attack_advantage', source: 'Shared Moonlight', target: 'Goblin' }],
+                CAMPAIGN_NAME,
+                undefined,
+                PLAYER_NAME,
+            );
+        });
+
+        it('applies Blinded on failed save with pending expiration already registered', async () => {
+            setupMoonlightStepMocks(null);
+            const action = makeAction({ name: 'Shadow Step', automation: { effect: 'shadow_step_teleport' } });
+            await confirmTeleport(action, makeShadowStepStats(), CAMPAIGN_NAME, false);
+
+            const expirationsBeforeSave = addExpiration.mock.calls.length;
+
+            window.dispatchEvent(new CustomEvent('save-result', {
+                detail: { promptId: 'test-id', success: false },
+            }));
+
+            expect(setRuntimeValue).toHaveBeenCalledWith(
+                'Goblin',
+                'activeConditions',
+                ['blinded'],
+                CAMPAIGN_NAME,
+            );
+            expect(addExpiration.mock.calls.length).toBe(expirationsBeforeSave);
+        });
+
+        it('does not enqueue expirations for basic teleport', async () => {
+            setupMoonlightStepMocks(null);
+            const action = makeAction();
+            await confirmTeleport(action, makePlayerStats(), CAMPAIGN_NAME, false);
+
+            expect(addExpiration).not.toHaveBeenCalled();
         });
     });
 
