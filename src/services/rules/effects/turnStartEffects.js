@@ -71,7 +71,11 @@ export async function applyTurnStartEffects(activeName, playerStats, campaignNam
             }
         }
         if (effect.type === 'condition_removal') {
-            const conditions = ensureArray(getRuntimeValue(activeName, 'activeConditions'), 'activeConditions');
+            // Null-safe read (mirrors applySteadyAimClearTurnStart): now that turn-start
+            // effects run for EVERY creature each round (BUG CLA-198), creatures that have
+            // never written activeConditions must skip removal instead of aborting the loop.
+            const storedConds = getRuntimeValue(activeName, 'activeConditions');
+            const conditions = Array.isArray(storedConds) ? storedConds : [];
             const removalConditions = new Set(effect.conditions.map(c => c.toLowerCase()));
             const filtered = conditions.filter(c => {
                 const condName = String(c).toLowerCase();
@@ -94,12 +98,19 @@ export async function applyTurnStartEffects(activeName, playerStats, campaignNam
             const key = `_radiantSoul_${activeName.replace(/\s+/g, '_')}_oncePerTurn`;
             setRuntimeValue(activeName, key, false, campaignName);
         }
-        await applyAuraDamage(activeName, playerStats, campaignName, characters, {
-            activeKey: 'innerRadianceActive',
-            damageValue: playerStats.proficiency || 0,
-            range: 10,
-            damageType: 'Radiant',
-        });
+        if (effect.type === 'inner_radiance_turn_start') {
+            // BUG CLA-198: gated on the effect type so it ticks exactly ONCE per
+            // invocation (previously it sat unconditionally in the loop and damaged
+            // every creature once per turnStartEffects entry). Modelled at the
+            // owner's turn boundary (the app has no turn-END consumer — same
+            // verified pattern as Holy Nimbus), gated by lastAppliedTurnStartCreature.
+            await applyAuraDamage(activeName, playerStats, campaignName, characters, {
+                activeKey: 'innerRadianceActive',
+                damageValue: playerStats.proficiency || 0,
+                range: 10,
+                damageType: 'Radiant',
+            });
+        }
         if (effect.type === 'dread_ambush_speed') {
             await applyDreadAmbushSpeedTurnStart(activeName, playerStats, effect, campaignName);
         }

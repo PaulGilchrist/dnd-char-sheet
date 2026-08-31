@@ -248,6 +248,25 @@ describe('clearExpirationEffects effect types (via clearAllExpirationEffects)', 
       );
     });
 
+    it('BUG CLA-198: clears innerRadianceActive when the Inner Radiance buff expires', () => {
+      const myList = [
+        { target: 'Human', effects: [{ type: 'remove_active_buff', buffName: 'Inner Radiance' }], appliedRound: 1 },
+      ];
+      getRuntimeValue.mockImplementation((name, key) => {
+        if (name === 'Human' && key === 'activeBuffs') return [
+          { name: 'Inner Radiance', effect: 'inner_radiance', duration: '1_minute' },
+        ];
+        if (key === KEY && name === 'Goblin') return myList;
+        if (key === KEY) return [];
+        return null;
+      });
+
+      clearAllExpirationEffects('Goblin', 'MyCampaign');
+
+      expect(setRuntimeValue).toHaveBeenCalledWith('Human', 'activeBuffs', [], 'MyCampaign');
+      expect(setRuntimeValue).toHaveBeenCalledWith('Human', 'innerRadianceActive', null, 'MyCampaign');
+    });
+
     it('removes haste buff without adding lethargy conditions', () => {
       const myList = [
         { target: 'Human', effects: [{ type: 'remove_active_buff', buffName: 'Haste' }], appliedRound: 1 },

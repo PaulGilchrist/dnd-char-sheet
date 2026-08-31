@@ -5,7 +5,6 @@ import { addEntry } from '../../../ui/logService.js';
 import { handle as handleBuff } from '../buffs/buffHandler.js';
 import { handle as handleCondition } from '../buffs/conditionHandler.js';
 import { handle as handleAttackRider } from '../combat/attackRiderHandler.js';
-import { applyAuraDamage } from '../../../rules/effects/expirations.js';
 
 const TRANSFORMATION_EFFECTS = {
     'Heavenly Wings': {
@@ -14,7 +13,7 @@ const TRANSFORMATION_EFFECTS = {
     },
     'Inner Radiance': {
         buffEffect: 'inner_radiance',
-        description: 'Searing light radiates from your eyes and mouth. You shed Bright Light in a 10-foot radius and Dim Light for an additional 10 feet.',
+        description: 'Searing light radiates from your eyes and mouth. You shed Bright Light in a 10-foot radius and Dim Light for an additional 10 feet. At the end of each of your turns, each creature within 10 feet takes Radiant damage equal to your Proficiency Bonus.',
     },
     'Necrotic Shroud': {
         buffEffect: 'necrotic_shroud',
@@ -163,13 +162,10 @@ export async function confirmCelestialRevelation(playerStats, chosenOption, camp
             popupDescriptions.push(riderResult.payload.description);
         }
     } else if (chosenOption === 'Inner Radiance') {
+        // BUG CLA-198: arm the aura only — the recurring Radiant tick is applied
+        // by applyTurnStartEffects (inner_radiance_turn_start) at the turn boundary,
+        // never as a burst at the activation moment.
         setRuntimeValue(playerStats.name, 'innerRadianceActive', true, campaignName);
-        await applyAuraDamage(playerStats.name, playerStats, campaignName, [], {
-            activeKey: 'innerRadianceActive',
-            damageValue: playerStats.proficiency || 0,
-            range: 10,
-            damageType: 'Radiant',
-        });
     } else if (chosenOption === 'Necrotic Shroud') {
         const conditionResult = await handleCondition({
             name: chosenOption,

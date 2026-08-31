@@ -76,7 +76,7 @@ function CharSummary({ playerStats, onDeleteCharacter, onEditCharacter, onUpload
     const unbreakableMajestyActive = useSyncedState(playerStats.name, 'unbreakableMajestyActive', null, campaignName);
     // Also subscribe to campaign-level cover refresh to catch changes from other characters
     const coverRefreshCampaign = useSyncedState('campaign', 'coverRefresh', 0, campaignName);
-    void [coverRefresh, bulwarkOfForceActive, naturesSanctuaryActive, bulwarkOfForceTargets, naturesSanctuaryCreatures, mantleOfMajestyActive, innerRadianceActive, unbreakableMajestyActive, coverRefreshCampaign];
+    void [coverRefresh, bulwarkOfForceActive, naturesSanctuaryActive, bulwarkOfForceTargets, naturesSanctuaryCreatures, mantleOfMajestyActive, unbreakableMajestyActive, coverRefreshCampaign];
 
     const { current: hasInspiration, update: setHasInspiration } = useTrackedResource(
         'hasInspiration',
@@ -459,6 +459,9 @@ function CharSummary({ playerStats, onDeleteCharacter, onEditCharacter, onUpload
 
                     {heroesFeastResistances.length > 0 && (
                          <CreatureBadge icon='fa-champagne-glasses' label="Heroes' Feast" cls='effect-buff' tooltip={`Heroes' Feast: Resistance to ${heroesFeastResistances.join(', ')}, Immune to ${heroesFeastConditionImmunities.map(c => c.charAt(0).toUpperCase() + c.slice(1)).join(', ')}, HP maximum increased by 2d10. Lasts 24 hours.`} />
+                    )}
+                    {innerRadianceActive && (
+                        <CreatureBadge icon='fa-sun' label='Inner Radiance' cls='effect-buff' tooltip='Inner Radiance: Bright Light 10 ft, Dim Light 10 ft more. At the end of each of your turns, each creature within 10 feet takes Radiant damage equal to your Proficiency Bonus.' />
                     )}
                 </div>
               </div>

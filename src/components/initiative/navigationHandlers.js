@@ -29,38 +29,40 @@ export function createNextCreatureHandler({
         const cs = combatSummaryRef.current
         if (!cs) return
         const { newActiveName, roundIncrement } = getNextCreatureName(cs, activeCreatureName)
-        if (!roundIncrement) {
-            storage.set('activeCreatureName', newActiveName, campaignName)
-            setActiveCreatureName(newActiveName)
-            return
-        }
-        const roundToSet = (roundRef.current ?? 1) + 1
+        // Round-wrap-only work: bump the round counter and clear per-round trackers.
+        const roundToSet = (roundRef.current ?? 1) + (roundIncrement ? 1 : 0)
         const updatedSummary = cloneDeep(cs)
-        updatedSummary.round = roundToSet
-        setCombatSummary(updatedSummary)
-        storage.set('activeCreatureName', newActiveName, campaignName)
-        setActiveCreatureName(newActiveName)
-        for (const creature of cs.creatures) {
-            clearPerRoundMajestyTrackers(creature.name, campaignName)
-            if (creature.type === 'player') {
-                setRuntimeValue(creature.name, '_cunningStrikeCostUsed', 0, campaignName)
-                setRuntimeValue(creature.name, '_CunningStrike_usedRound', null, campaignName)
-                setRuntimeValue(creature.name, '_Charge_Attack_usedRound', null, campaignName)
-                setRuntimeValue(creature.name, '_FastHands_usedRound', null, campaignName)
-                setRuntimeValue(creature.name, '_CunningAction_usedRound', null, campaignName)
-                setRuntimeValue(creature.name, '_Cleave_UsedRound', null, campaignName)
-                setRuntimeValue(creature.name, '_Nick_UsedRound', null, campaignName)
-                setRuntimeValue(creature.name, 'surgeUsedRound', null, campaignName)
-                setRuntimeValue(creature.name, 'illusoryRealityUsedRound', null, campaignName)
-                setRuntimeValue(creature.name, 'portentUsedThisTurn', null, campaignName)
-                setRuntimeValue(creature.name, 'psionicStrikeUsedThisTurn', null, campaignName)
-                setRuntimeValue(creature.name, '_BrutalStrike_usedRound', null, campaignName)
-                setRuntimeValue(creature.name, '_fortifiedHealth_usedRound', null, campaignName)
-                setRuntimeValue(creature.name, '_Shield_Bash_usedRound', null, campaignName)
-                setRuntimeValue(creature.name, 'piercerPunctureUsedThisTurn', null, campaignName)
+        if (roundIncrement) {
+            updatedSummary.round = roundToSet
+            setCombatSummary(updatedSummary)
+            for (const creature of cs.creatures) {
+                clearPerRoundMajestyTrackers(creature.name, campaignName)
+                if (creature.type === 'player') {
+                    setRuntimeValue(creature.name, '_cunningStrikeCostUsed', 0, campaignName)
+                    setRuntimeValue(creature.name, '_CunningStrike_usedRound', null, campaignName)
+                    setRuntimeValue(creature.name, '_Charge_Attack_usedRound', null, campaignName)
+                    setRuntimeValue(creature.name, '_FastHands_usedRound', null, campaignName)
+                    setRuntimeValue(creature.name, '_CunningAction_usedRound', null, campaignName)
+                    setRuntimeValue(creature.name, '_Cleave_UsedRound', null, campaignName)
+                    setRuntimeValue(creature.name, '_Nick_UsedRound', null, campaignName)
+                    setRuntimeValue(creature.name, 'surgeUsedRound', null, campaignName)
+                    setRuntimeValue(creature.name, 'illusoryRealityUsedRound', null, campaignName)
+                    setRuntimeValue(creature.name, 'portentUsedThisTurn', null, campaignName)
+                    setRuntimeValue(creature.name, 'psionicStrikeUsedThisTurn', null, campaignName)
+                    setRuntimeValue(creature.name, '_BrutalStrike_usedRound', null, campaignName)
+                    setRuntimeValue(creature.name, '_fortifiedHealth_usedRound', null, campaignName)
+                    setRuntimeValue(creature.name, '_Shield_Bash_usedRound', null, campaignName)
+                    setRuntimeValue(creature.name, 'piercerPunctureUsedThisTurn', null, campaignName)
+                }
             }
         }
+        storage.set('activeCreatureName', newActiveName, campaignName)
+        setActiveCreatureName(newActiveName)
         expireStaleEffects(campaignName, newActiveName)
+        // BUG CLA-198: turn-start effects must run for EVERY newly active creature, not just
+        // the round-wrap creature at index 0 — owner-centric auras (Inner Radiance) tick on the
+        // owner's own turn boundary. The round-scoped gate key keeps this to one application
+        // per creature per round (mirrors the SSE echo path in sseHandlers.js).
         const gateKey = turnStartGateKey(roundToSet, newActiveName)
         const shouldApply = lastAppliedTurnStartCreatureRef.current !== gateKey
         let finalSummary = updatedSummary
@@ -103,18 +105,17 @@ export function createPreviousCreatureHandler({
         const cs = combatSummaryRef.current
         if (!cs) return
         const { newActiveName, roundDecrement } = getPreviousCreatureName(cs, activeCreatureName)
-        if (!roundDecrement) {
-            storage.set('activeCreatureName', newActiveName, campaignName)
-            setActiveCreatureName(newActiveName)
-            return
-        }
-        const currentRound = roundRef.current ?? 1
-        if (currentRound <= 1) return
-        const roundToSet = currentRound - 1
+        if (roundDecrement && (roundRef.current ?? 1) <= 1) return
+        // Round-wrap-only work: decrement the round counter.
+        const roundToSet = (roundRef.current ?? 1) - (roundDecrement ? 1 : 0)
         const updatedSummary = cloneDeep(cs)
-        updatedSummary.round = roundToSet
-        setCombatSummary(updatedSummary)
+        if (roundDecrement) {
+            updatedSummary.round = roundToSet
+            setCombatSummary(updatedSummary)
+        }
         expireStaleEffects(campaignName, newActiveName)
+        // BUG CLA-198: mirror the next-handler — turn-start effects run on every
+        // turn step, deduped by the round-scoped gate key.
         const gateKey = turnStartGateKey(roundToSet, newActiveName)
         const shouldApply = lastAppliedTurnStartCreatureRef.current !== gateKey
         let finalSummary = updatedSummary

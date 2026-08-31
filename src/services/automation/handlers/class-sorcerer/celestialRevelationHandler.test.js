@@ -459,21 +459,19 @@ describe('celestialRevelationHandler', () => {
             );
         });
 
-        it('calls applyAuraDamage for Inner Radiance option', async () => {
+        it('BUG CLA-198: does NOT burst aura damage at activation for Inner Radiance option', async () => {
             runtimeState.getRuntimeValue.mockReturnValue(1);
 
             await confirmCelestialRevelation(makePlayerStats(), 'Inner Radiance', campaignName);
 
-            expect(expirations.applyAuraDamage).toHaveBeenCalledWith(
+            // The recurring tick is applied by applyTurnStartEffects at the turn
+            // boundary — activation must only arm the flag, never damage immediately.
+            expect(expirations.applyAuraDamage).not.toHaveBeenCalled();
+            expect(runtimeState.setRuntimeValue).toHaveBeenCalledWith(
                 playerName,
-                expect.any(Object),
-                campaignName,
-                [],
-                expect.objectContaining({
-                    activeKey: 'innerRadianceActive',
-                    damageType: 'Radiant',
-                    range: 10,
-                })
+                'innerRadianceActive',
+                true,
+                campaignName
             );
         });
     });

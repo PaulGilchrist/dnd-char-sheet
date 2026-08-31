@@ -128,7 +128,7 @@ describe('navigationHandlers.js', () => {
             expect(setActiveCreatureName).not.toHaveBeenCalled();
         });
 
-        it('should set the next creature without round increment when not at the last creature', () => {
+        it('BUG CLA-198: applies round-scoped turn start effects on NON-wrap steps, once per creature', async () => {
             initiativeService.getNextCreatureName.mockReturnValue({
                 newActiveName: 'Bob',
                 roundIncrement: false,
@@ -146,14 +146,33 @@ describe('navigationHandlers.js', () => {
                 setRuntimeStateTick,
             });
 
-            handler();
+            await handler();
 
             expect(setActiveCreatureName).toHaveBeenCalledWith('Bob');
             expect(storage.set).toHaveBeenCalledWith('activeCreatureName', 'Bob', campaignName);
-            expect(setCombatSummary).not.toHaveBeenCalled();
-            expect(expirations.expireStaleEffects).not.toHaveBeenCalled();
-            expect(runtimeState.setRuntimeValue).not.toHaveBeenCalled();
+            // Round does NOT increment on a non-wrap step
+            expect(storage.set).not.toHaveBeenCalledWith('combatSummary', expect.objectContaining({ round: 2 }), campaignName);
+            // Per-round trackers stay round-wrap-only
             expect(unbreakableMajesty.clearPerRoundMajestyTrackers).not.toHaveBeenCalled();
+            expect(runtimeState.setRuntimeValue).not.toHaveBeenCalledWith('Bob', '_cunningStrikeCostUsed', 0, campaignName);
+            // Turn-start effects DO fire for the newly active creature within the same round
+            expect(expirations.expireStaleEffects).toHaveBeenCalledWith(campaignName, 'Bob');
+            expect(lastAppliedTurnStartCreatureRef.current).toBe('1:Bob');
+            expect(runtimeState.setRuntimeValue).toHaveBeenCalledWith('__initiative__', 'lastAppliedTurnStartCreature', '1:Bob', campaignName);
+            expect(expirations.applyTurnStartEffects).toHaveBeenCalledWith('Bob', expect.any(Object), campaignName, baseCharacters);
+            expect(setRuntimeStateTick).toHaveBeenCalled();
+
+            // Re-advancing onto the same creature in the same round is gated — no double tick
+            vi.clearAllMocks();
+            initiativeService.getNextCreatureName.mockReturnValue({
+                newActiveName: 'Bob',
+                roundIncrement: false,
+            });
+
+            await handler();
+
+            expect(expirations.applyTurnStartEffects).not.toHaveBeenCalled();
+            expect(setRuntimeStateTick).not.toHaveBeenCalled();
         });
 
         it('should increment round when moving from last creature to first', async () => {
@@ -356,7 +375,7 @@ describe('navigationHandlers.js', () => {
             expect(setActiveCreatureName).not.toHaveBeenCalled();
         });
 
-        it('should set the previous creature without round decrement when not at the first creature', () => {
+        it('BUG CLA-198: applies round-scoped turn start effects on NON-wrap previous steps too', async () => {
             initiativeService.getPreviousCreatureName.mockReturnValue({
                 newActiveName: 'Alice',
                 roundDecrement: false,
@@ -375,12 +394,16 @@ describe('navigationHandlers.js', () => {
                 isPreviousDisabled: false,
             });
 
-            handler();
+            await handler();
 
             expect(setActiveCreatureName).toHaveBeenCalledWith('Alice');
             expect(storage.set).toHaveBeenCalledWith('activeCreatureName', 'Alice', campaignName);
-            expect(setCombatSummary).not.toHaveBeenCalled();
-            expect(expirations.expireStaleEffects).not.toHaveBeenCalled();
+            // Round does NOT decrement on a non-wrap step
+            expect(storage.set).not.toHaveBeenCalledWith('combatSummary', expect.objectContaining({ round: 0 }), campaignName);
+            // Turn-start effects fire for the newly active creature (round-scoped gate)
+            expect(expirations.expireStaleEffects).toHaveBeenCalledWith(campaignName, 'Alice');
+            expect(lastAppliedTurnStartCreatureRef.current).toBe('1:Alice');
+            expect(expirations.applyTurnStartEffects).toHaveBeenCalledWith('Alice', expect.any(Object), campaignName, baseCharacters);
         });
 
         it('should decrement round when moving from first to last creature', async () => {

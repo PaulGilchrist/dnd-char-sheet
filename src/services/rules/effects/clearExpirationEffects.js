@@ -148,6 +148,11 @@ export function clearExpirationEffects(effects, targetName, attackerName, campai
                         saveAdvantageAbilities: newSaveAdvantageAbilities,
                     }, campaignName);
                 }
+                if (effect.buffName === 'Inner Radiance') {
+                    // BUG CLA-198: stop the recurring radiant tick when the
+                    // 1-minute transformation buff expires.
+                    setRuntimeValue(targetName, 'innerRadianceActive', null, campaignName);
+                }
                 if (effect.buffName === 'Barkskin') {
                     const storedEffects = getRuntimeValue('campaign', 'targetEffects') || [];
                     const cleanedEffects = storedEffects.filter(te => te.effect !== 'barkskin');
