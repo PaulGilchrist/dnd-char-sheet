@@ -105,6 +105,9 @@
     min-width: 20px;
     text-align: center;
 }
+.short-rest-memorize-field {
+    margin-bottom: 8px;
+}
 
 /* Hand of Healing Modal */
 .healing-roll-details {

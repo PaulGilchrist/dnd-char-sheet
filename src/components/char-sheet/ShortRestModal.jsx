@@ -84,7 +84,9 @@ function ShortRestModal({ playerStats, campaignName, onClose, onComplete }) {
         });
     };
 
-    const hasMemorizeSpell = isWizard && (playerStats.automation?.passives ?? []).find(
+    // CLA-226: automationRouter routes memorize_spell into specialActions (automationRouter.js:589),
+    // matching the signature_spells gate pattern in restRules-shortRest.js — gate must read that bucket.
+    const hasMemorizeSpell = isWizard && (playerStats.automation?.specialActions ?? []).find(
         a => a.type === 'memorize_spell'
     );
     const [memorizeSpellMode, setMemorizeSpellMode] = React.useState(false);
@@ -95,7 +97,8 @@ function ShortRestModal({ playerStats, campaignName, onClose, onComplete }) {
     React.useEffect(() => {
         if (hasMemorizeSpell) {
             loadSpellData(playerStats).then(spells => {
-                setAllSpellbookSpells(spells || []);
+                // Spellbook offers Wizard-list spells only (mirrors spellValidation.js class filter).
+                setAllSpellbookSpells((spells || []).filter(s => (s.classes || []).includes('Wizard')));
             }).catch(() => setAllSpellbookSpells([]));
         }
     }, [hasMemorizeSpell, playerStats]);
@@ -119,6 +122,25 @@ function ShortRestModal({ playerStats, campaignName, onClose, onComplete }) {
         const preparedSet = new Set(preparedSpells);
         return allSpellbookSpells.filter(s => s.level >= 1 && !preparedSet.has(s.name));
     }, [allSpellbookSpells, preparedSpells]);
+
+    const handleMemorizeSwap = () => {
+        if (!memorizeSpellFrom || !memorizeSpellTo) return;
+        const newPrepared = preparedSpells.filter(n => n !== memorizeSpellFrom);
+        if (!newPrepared.includes(memorizeSpellTo)) {
+            newPrepared.push(memorizeSpellTo);
+        }
+        setRuntimeValue(playerStats.name, 'preparedSpells', newPrepared, campaignName);
+        addEntry(campaignName, {
+            type: 'ability_use',
+            characterName: playerStats.name,
+            abilityName: 'Memorize Spell',
+            description: `${playerStats.name} swapped prepared spell ${memorizeSpellFrom} for ${memorizeSpellTo} (short rest).`,
+            timestamp: Date.now(),
+        }).catch((e) => { console.error('[ShortRestModal] Error logging Memorize Spell swap:', e); });
+        setMemorizeSpellMode(false);
+        setMemorizeSpellFrom(null);
+        setMemorizeSpellTo(null);
+    };
 
     const hasFontOfInspiration = (playerStats.automation?.passives ?? []).some(p => p.type === 'font_of_inspiration');
     const bardicInspirationMax = (() => { const charisma = playerStats.abilities?.find(a => a.name === 'Charisma'); return charisma?.bonus || 0; })();
@@ -571,18 +593,18 @@ function ShortRestModal({ playerStats, campaignName, onClose, onComplete }) {
                                         <i className="fas fa-book-journal-whills"></i> Swap Prepared Spell
                                     </button>
                                   ) : (
-                                    <div>
-                                        <div style={{ marginBottom: '8px' }}>
-                                            <label>Remove prepared spell: </label>
-                                            <select className="char-btn" value={memorizeSpellFrom || ''} onChange={e => setMemorizeSpellFrom(e.target.value)}>
-                                                <option value="">-- Select spell to remove --</option>
-                                                {memorizeSpellFromOptions.map(s => (
-                                                    <option key={s.name} value={s.name}>{s.name} (level {s.level})</option>
-                                                ))}
-                                            </select>
-                                        </div>
-                                        <div style={{ marginBottom: '8px' }}>
-                                            <label>Add from spellbook: </label>
+                                     <div>
+                                         <div className="short-rest-memorize-field">
+                                             <label>Remove prepared spell: </label>
+                                             <select className="char-btn" value={memorizeSpellFrom || ''} onChange={e => setMemorizeSpellFrom(e.target.value)}>
+                                                 <option value="">-- Select spell to remove --</option>
+                                                 {memorizeSpellFromOptions.map(s => (
+                                                     <option key={s.name} value={s.name}>{s.name} (level {s.level})</option>
+                                                 ))}
+                                             </select>
+                                         </div>
+                                         <div className="short-rest-memorize-field">
+                                             <label>Add from spellbook: </label>
                                             <select className="char-btn" value={memorizeSpellTo || ''} onChange={e => setMemorizeSpellTo(e.target.value)}>
                                                 <option value="">-- Select spell to add --</option>
                                                 {memorizeSpellToOptions.map(s => (
@@ -591,17 +613,7 @@ function ShortRestModal({ playerStats, campaignName, onClose, onComplete }) {
                                             </select>
                                         </div>
                                         <div className="short-rest-dice-row">
-                                            <button className="char-btn" onClick={() => {
-                                                if (!memorizeSpellFrom || !memorizeSpellTo) return;
-                                                const newPrepared = preparedSpells.filter(n => n !== memorizeSpellFrom);
-                                                if (!newPrepared.includes(memorizeSpellTo)) {
-                                                    newPrepared.push(memorizeSpellTo);
-                                                }
-                                                setRuntimeValue(playerStats.name, 'preparedSpells', newPrepared, campaignName);
-                                                setMemorizeSpellMode(false);
-                                                setMemorizeSpellFrom(null);
-                                                setMemorizeSpellTo(null);
-                                            }} disabled={!memorizeSpellFrom || !memorizeSpellTo}>
+                                            <button className="char-btn" onClick={handleMemorizeSwap} disabled={!memorizeSpellFrom || !memorizeSpellTo}>
                                                 <i className="fas fa-check"></i> Swap Spell
                                             </button>
                                             <button className="char-btn" onClick={() => {

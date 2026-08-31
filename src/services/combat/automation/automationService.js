@@ -60,6 +60,9 @@ const INTERACTIVE_HANDLER_TYPES = new Set([
     // dispatched by executeHandler's multi-entry scan to handleMageHandControl
     // (spectral-hand control popup + ability_use log).
     'mage_hand_control',
+    // CLA-226: row click dispatches CharSpecialActions' open-short-rest branch,
+    // which opens the Short Rest modal hosting the prepared-spell swap UI.
+    'memorize_spell',
 ]);
 
 const INTERACTIVE_PASSIVE_EFFECTS = new Set([

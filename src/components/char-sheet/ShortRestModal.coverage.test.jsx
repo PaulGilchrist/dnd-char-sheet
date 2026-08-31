@@ -120,7 +120,7 @@ describe('ShortRestModal - Memorize Spell Swap', () => {
     it('shows swap button when memorize spell is available with prepared spells, and enters swap mode on click', () => {
       renderModal({
         class: { name: 'Wizard', major: { name: 'Wizard' } },
-        automation: { passives: [{ type: 'memorize_spell' }] },
+        automation: { specialActions: [{ type: 'memorize_spell', name: 'Memorize Spell', casting_time: 'passive', hasAutomation: true }] },
         spellAbilities: {
           spells: [
             { name: 'Fireball', prepared: 'Prepared', level: 3 },
@@ -137,7 +137,7 @@ describe('ShortRestModal - Memorize Spell Swap', () => {
     it('does not show memorize spell when no prepared spells', () => {
       renderModal({
         class: { name: 'Wizard', major: { name: 'Wizard' } },
-        automation: { passives: [{ type: 'memorize_spell' }] },
+        automation: { specialActions: [{ type: 'memorize_spell', name: 'Memorize Spell', casting_time: 'passive', hasAutomation: true }] },
         spellAbilities: {
           spells: [],
         },
@@ -150,14 +150,15 @@ describe('ShortRestModal - Memorize Spell Swap', () => {
     it('shows prepared spells in remove dropdown and non-prepared in add dropdown after spellbook loads', async () => {
       const { loadSpellData } = await import('../../services/ui/dataLoader.js');
       vi.mocked(loadSpellData).mockResolvedValueOnce([
-        { name: 'Fireball', level: 3 },
-        { name: 'Mage Armor', level: 1 },
-        { name: 'Shield', level: 1 },
+        { name: 'Fireball', level: 3, classes: ['Wizard'] },
+        { name: 'Mage Armor', level: 1, classes: ['Wizard'] },
+        { name: 'Shield', level: 1, classes: ['Wizard', 'Sorcerer'] },
+        { name: 'Cure Wounds', level: 1, classes: ['Cleric', 'Druid', 'Ranger'] },
       ]);
 
       renderModal({
         class: { name: 'Wizard', major: { name: 'Wizard' } },
-        automation: { passives: [{ type: 'memorize_spell' }] },
+        automation: { specialActions: [{ type: 'memorize_spell', name: 'Memorize Spell', casting_time: 'passive', hasAutomation: true }] },
         spellAbilities: {
           spells: [
             { name: 'Fireball', prepared: 'Prepared', level: 3 },
@@ -177,18 +178,20 @@ describe('ShortRestModal - Memorize Spell Swap', () => {
       expect(addOptions).toContain('Shield (level 1)');
       // Level 0 spells should be excluded
       expect(addOptions).not.toContain('True Strike (level 0)');
+      // CLA-226: spellbook offers Wizard-list spells only — non-Wizard spells excluded
+      expect(addOptions).not.toContain('Cure Wounds (level 1)');
     });
 
     it('does not show already-prepared spells in the add dropdown', async () => {
       const { loadSpellData } = await import('../../services/ui/dataLoader.js');
       vi.mocked(loadSpellData).mockResolvedValueOnce([
-        { name: 'Fireball', level: 3 },
-        { name: 'Mage Armor', level: 1 },
+        { name: 'Fireball', level: 3, classes: ['Wizard'] },
+        { name: 'Mage Armor', level: 1, classes: ['Wizard'] },
       ]);
 
       renderModal({
         class: { name: 'Wizard', major: { name: 'Wizard' } },
-        automation: { passives: [{ type: 'memorize_spell' }] },
+        automation: { specialActions: [{ type: 'memorize_spell', name: 'Memorize Spell', casting_time: 'passive', hasAutomation: true }] },
         spellAbilities: {
           spells: [
             { name: 'Fireball', prepared: 'Prepared', level: 3 },
@@ -206,13 +209,13 @@ describe('ShortRestModal - Memorize Spell Swap', () => {
     it('calls setRuntimeValue with updated preparedSpells when swap is executed', async () => {
       const { loadSpellData } = await import('../../services/ui/dataLoader.js');
       vi.mocked(loadSpellData).mockResolvedValueOnce([
-        { name: 'Fireball', level: 3 },
-        { name: 'Mage Armor', level: 1 },
+        { name: 'Fireball', level: 3, classes: ['Wizard'] },
+        { name: 'Mage Armor', level: 1, classes: ['Wizard'] },
       ]);
 
       renderModal({
         class: { name: 'Wizard', major: { name: 'Wizard' } },
-        automation: { passives: [{ type: 'memorize_spell' }] },
+        automation: { specialActions: [{ type: 'memorize_spell', name: 'Memorize Spell', casting_time: 'passive', hasAutomation: true }] },
         spellAbilities: {
           spells: [
             { name: 'Fireball', prepared: 'Prepared', level: 3 },
@@ -238,16 +241,51 @@ describe('ShortRestModal - Memorize Spell Swap', () => {
       expect(preparedCalls[0][2]).toEqual(['Mage Armor']);
     });
 
-    it('exits swap mode and clears selections when cancel is clicked, without calling setRuntimeValue', async () => {
+    it('writes a dedicated campaign-log entry (old to new spell names) when the swap executes', async () => {
       const { loadSpellData } = await import('../../services/ui/dataLoader.js');
       vi.mocked(loadSpellData).mockResolvedValueOnce([
-        { name: 'Fireball', level: 3 },
-        { name: 'Mage Armor', level: 1 },
+        { name: 'Fireball', level: 3, classes: ['Wizard'] },
+        { name: 'Mage Armor', level: 1, classes: ['Wizard'] },
       ]);
 
       renderModal({
         class: { name: 'Wizard', major: { name: 'Wizard' } },
-        automation: { passives: [{ type: 'memorize_spell' }] },
+        automation: { specialActions: [{ type: 'memorize_spell', name: 'Memorize Spell', casting_time: 'passive', hasAutomation: true }] },
+        spellAbilities: {
+          spells: [
+            { name: 'Fireball', prepared: 'Prepared', level: 3 },
+            { name: 'Mage Armor', prepared: 'Not Prepared', level: 1 },
+          ],
+        },
+      });
+      fireEvent.click(screen.getByText(/Swap Prepared Spell/));
+      await act(() => Promise.resolve());
+      fireEvent.change(screen.getByText(/Remove prepared spell:/).nextElementSibling, { target: { value: 'Fireball' } });
+      fireEvent.change(screen.getByText(/Add from spellbook:/).nextElementSibling, { target: { value: 'Mage Armor' } });
+      await act(() => Promise.resolve());
+      fireEvent.click(screen.getByText(/Swap Spell/));
+      await act(() => Promise.resolve());
+
+      const { addEntry } = await import('../../services/ui/logService.js');
+      const swapLogs = vi.mocked(addEntry).mock.calls.filter(
+        (call) => call[1]?.abilityName === 'Memorize Spell'
+      );
+      expect(swapLogs.length).toBe(1);
+      expect(swapLogs[0][1].type).toBe('ability_use');
+      expect(swapLogs[0][1].description).toContain('Fireball');
+      expect(swapLogs[0][1].description).toContain('Mage Armor');
+    });
+
+    it('exits swap mode and clears selections when cancel is clicked, without calling setRuntimeValue', async () => {
+      const { loadSpellData } = await import('../../services/ui/dataLoader.js');
+      vi.mocked(loadSpellData).mockResolvedValueOnce([
+        { name: 'Fireball', level: 3, classes: ['Wizard'] },
+        { name: 'Mage Armor', level: 1, classes: ['Wizard'] },
+      ]);
+
+      renderModal({
+        class: { name: 'Wizard', major: { name: 'Wizard' } },
+        automation: { specialActions: [{ type: 'memorize_spell', name: 'Memorize Spell', casting_time: 'passive', hasAutomation: true }] },
         spellAbilities: {
           spells: [
             { name: 'Fireball', prepared: 'Prepared', level: 3 },

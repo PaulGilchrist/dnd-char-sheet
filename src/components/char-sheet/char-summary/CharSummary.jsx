@@ -58,6 +58,13 @@ function CharSummary({ playerStats, onDeleteCharacter, onEditCharacter, onUpload
         return () => window.removeEventListener('initiative-rolled', handleInitiative);
     }, [playerStats.name, campaignName, setSurgeEffects]);
 
+    // CLA-226: Special Actions "Memorize Spell:" row opens the Short Rest swap UI.
+    React.useEffect(() => {
+        const handleOpenShortRest = () => setShowShortRest(true);
+        window.addEventListener('open-short-rest', handleOpenShortRest);
+        return () => window.removeEventListener('open-short-rest', handleOpenShortRest);
+    }, []);
+
     React.useEffect(() => {
         setDisplayXp(playerStats?.xp ?? 0);
     }, [playerStats?.xp]);

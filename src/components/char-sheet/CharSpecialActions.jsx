@@ -406,6 +406,11 @@ function CharSpecialActions({ playerStats, campaignName, cannotAct, characters, 
             handleBrewPoisonClick();
             return;
         }
+        if (auto?.type === 'memorize_spell') {
+            // CLA-226: the swap UI lives in the Short Rest modal — open it (CharSummary listens).
+            window.dispatchEvent(new CustomEvent('open-short-rest'));
+            return;
+        }
         const result = await executeHandler(action, playerStats, campaignName, mapName, characters);
         if (!result) return;
         if (result.type === 'modal') {

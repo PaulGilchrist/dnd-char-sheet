@@ -306,10 +306,20 @@ describe('ShortRestModal', () => {
     });
 
     describe('Memorize Spell', () => {
-      it('renders for Wizard with memorize_spell passive', () => {
+      // CLA-226: automationRouter routes memorize_spell into automation.specialActions
+      // (automationRouter.js:589 via core-handlers.js memorize_spell builder).
+      // Fixtures must mirror real router output — hand-crafted `passives` masked the bug.
+      const memorizeRouterOutput = {
+        type: 'memorize_spell',
+        name: 'Memorize Spell',
+        casting_time: 'passive',
+        hasAutomation: true,
+      };
+
+      it('renders for Wizard when router emits memorize_spell in specialActions', () => {
         renderModal({
           class: { name: 'Wizard', major: { name: 'Wizard' } },
-          automation: { passives: [{ type: 'memorize_spell' }] },
+          automation: { specialActions: [memorizeRouterOutput] },
         });
         expect(screen.getByText('Memorize Spell')).toBeInTheDocument();
       });
@@ -317,9 +327,17 @@ describe('ShortRestModal', () => {
       it('shows swap button when memorize spell is available', () => {
         renderModal({
           class: { name: 'Wizard', major: { name: 'Wizard' } },
-          automation: { passives: [{ type: 'memorize_spell' }] },
+          automation: { specialActions: [memorizeRouterOutput] },
         });
         expect(screen.getByText(/Swap Prepared Spell/)).toBeInTheDocument();
+      });
+
+      it('does NOT render from a passives-bucket entry (regression guard for CLA-226 gate bucket)', () => {
+        renderModal({
+          class: { name: 'Wizard', major: { name: 'Wizard' } },
+          automation: { passives: [memorizeRouterOutput] },
+        });
+        expect(screen.queryByText('Memorize Spell')).not.toBeInTheDocument();
       });
     });
 
