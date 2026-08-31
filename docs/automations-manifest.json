@@ -3857,7 +3857,7 @@
       "handler": "src/services/combat/automation/handlers/classFeatureHandler.js",
       "router": "src/services/combat/automation/routers/classFeatureRouter.js",
       "infoBuilder": "src/services/combat/automation/infoBuilders/classFeatureInfoBuilder.js",
-      "verified": "broken — see .opencode/plans/bug-cla-216-lucky.md",
+      "verified": "verified",
       "race": "Halfling",
       "triggerConditions": "Trigger: failed roll",
       "expectedBehavior": "When you roll a 1 on the d20 of a D20 Test, you can reroll the die, and you must use the new roll."

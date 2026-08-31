@@ -451,12 +451,12 @@ describe('computeConditionEffects — applied modifier effects', () => {
     expect(result.autoRerollCondition).toBe('favored_enemy');
   });
 
-  it('sets autoRerollForChecks for reroll effect on d20 target', () => {
-    const modifiers = [{ target: 'd20', effect: 'reroll', condition: 'halfling_lucky' }];
+  it('sets autoRerollForChecks and autoRerollForSaves for reroll effect on d20 target (CLA-216: a d20 Test covers checks and saves)', () => {
+    const modifiers = [{ target: 'd20', effect: 'reroll', condition: 'roll_equals_1' }];
     const result = computeConditionEffects([], modifiers);
-    expect(result.autoRerollForSaves).toBe(false);
     expect(result.autoRerollForChecks).toBe(true);
-    expect(result.autoRerollCondition).toBe('halfling_lucky');
+    expect(result.autoRerollForSaves).toBe(true);
+    expect(result.autoRerollCondition).toBe('roll_equals_1');
   });
 
   it('sets autoRerollBonus when bonusExpression is provided', () => {

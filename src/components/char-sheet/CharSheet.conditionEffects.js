@@ -70,14 +70,17 @@ export function computeCharConditionEffects(playerSummary, playerStats, campaign
         conditionEffects.autoRerollBonus = evaluateAutoExpression(conditionEffects.autoRerollBonus, playerStats);
     }
     if (playerStats) {
+        // Kill-switches for the once-per-rest reroll features must never disable the
+        // Halfling Lucky trait (autoRerollCondition 'roll_equals_1' — unlimited, passive).
+        const isHalflingLuckyReroll = conditionEffects.autoRerollCondition === 'roll_equals_1';
         const fanaticalFocusUsed = getRuntimeValue(playerStats.name, 'fanaticalFocusUsed', campaignName);
-        if (fanaticalFocusUsed && conditionEffects.autoRerollForSaves) {
+        if (fanaticalFocusUsed && conditionEffects.autoRerollForSaves && !isHalflingLuckyReroll) {
             conditionEffects.autoRerollForSaves = false;
             conditionEffects.autoRerollBonus = null;
         }
         const indomitableUses = Number(getRuntimeValue(playerStats.name, 'indomitableUses', campaignName) ?? 0);
         const indomitableMax = playerStats.level >= 17 ? 3 : playerStats.level >= 13 ? 2 : 1;
-        if (indomitableUses >= indomitableMax && conditionEffects.autoRerollForSaves) {
+        if (indomitableUses >= indomitableMax && conditionEffects.autoRerollForSaves && !isHalflingLuckyReroll) {
             conditionEffects.autoRerollForSaves = false;
             conditionEffects.autoRerollBonus = null;
         }

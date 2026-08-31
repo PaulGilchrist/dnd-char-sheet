@@ -46,10 +46,13 @@ export function createPlayerSaveDamageHandler(deps) {
         const indomitableUses = Number(getRuntimeValue(target.name, 'indomitableUses', campaignName) ?? 0);
         const indomitableMax = (targetChar?.computedStats?.level || 0) >= 17 ? 3 : (targetChar?.computedStats?.level || 0) >= 13 ? 2 : 1;
         let autoRerollForSaves = targetConditionEffects.autoRerollForSaves;
-        if (fanaticalFocusUsed && autoRerollForSaves) {
+        // Never disable the Halfling Lucky trait (roll_equals_1 is unlimited/passive;
+        // these kill-switches belong to the once-per-rest reroll features).
+        const isHalflingLuckyReroll = targetConditionEffects.autoRerollCondition === 'roll_equals_1';
+        if (fanaticalFocusUsed && autoRerollForSaves && !isHalflingLuckyReroll) {
             autoRerollForSaves = false;
         }
-        if (indomitableUses >= indomitableMax && autoRerollForSaves) {
+        if (indomitableUses >= indomitableMax && autoRerollForSaves && !isHalflingLuckyReroll) {
             autoRerollForSaves = false;
         }
         let autoRerollBonus = targetConditionEffects.autoRerollBonus;

@@ -15,15 +15,11 @@ export function computeD20Roll(characterName, campaignName, name, rollType, cont
     let effectiveD20Roll;
     let forcedMode = context?.forcedMode || 'normal';
 
-    // Halfling Lucky: automatic reroll on natural 1
+    // Halfling Lucky: automatic reroll when the FINAL resolved d20 shows a natural 1.
+    // Applied after all advantage/disadvantage resolution (forcedMode block + FT-049 target
+    // overrides) so the reroll value is never clobbered.
     let luckyRerolled = false;
     let luckyRerollValue = null;
-    const isLuckyReroll = context?.autoReroll && context?.autoRerollCondition === 'roll_equals_1' && effectiveD20Roll === 1;
-    if (isLuckyReroll) {
-        luckyRerollValue = rollD20();
-        effectiveD20Roll = luckyRerollValue;
-        luckyRerolled = true;
-    }
 
     // Cosmic Omen: apply global pending bonus to next d20 roll by anyone (not save rolls)
     let cosmicOmenAppliedBonus = 0;
@@ -149,6 +145,13 @@ export function computeD20Roll(characterName, campaignName, name, rollType, cont
                 }
             }
         }
+    }
+
+    // Halfling Lucky (auto_reroll / roll_equals_1): reroll the natural 1 and use the new roll.
+    if (context?.autoReroll && context?.autoRerollCondition === 'roll_equals_1' && effectiveD20Roll === 1) {
+        luckyRerollValue = rollD20();
+        effectiveD20Roll = luckyRerollValue;
+        luckyRerolled = true;
     }
 
     const effectiveBonus = bonus + cosmicOmenAppliedBonus + pendingSkillCheckAppliedBonus + sunderingBlowBonus + baneAttackPenalty + blessAttackBonus;

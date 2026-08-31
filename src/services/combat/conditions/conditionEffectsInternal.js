@@ -233,6 +233,13 @@ function applySaveModifiers(effects, modifiers, saveType, abilityName, isRaging 
         effects.autoRerollForSaves = true;
       } else if (mod.target === 'ability_check' || mod.target === 'check' || mod.target === 'd20') {
         effects.autoRerollForChecks = true;
+        // A 'd20' target is a full d20 Test (Halfling Lucky: "a 1 on the d20 of a d20 Test") —
+        // covers sheet saving throws too (autoRerollForAttack intentionally NOT set here:
+        // that flag renders the manual Boon-of-Combat-Prowess button, and the attack
+        // context has no auto-reroll consumer — see bug-cla-216 notes).
+        if (mod.target === 'd20') {
+          effects.autoRerollForSaves = true;
+        }
       } else if (mod.target === 'attack' || mod.target === 'attack_roll') {
         effects.autoRerollForAttack = true;
       }
