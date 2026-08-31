@@ -3,7 +3,7 @@
 // @cleaned-by-ai
 // @improved-by-ai
 // @cleaned-by-ai
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 
 /* ------------------------------------------------------------------ */
 /*  Mocks — all dependencies of execution/index.js                     */
@@ -472,6 +472,107 @@ describe('executeSpellCast — post-cast', () => {
       );
 
       expect(mockSetupSpellBreaker).not.toHaveBeenCalled();
+    });
+  });
+
+  /* ---------------------------------------------------------------- */
+  /*  Post-cast triggers — no-save path (CLA-200)                    */
+  /* ---------------------------------------------------------------- */
+
+  describe('no-save path post-cast triggers (CLA-200)', () => {
+    // Divine Smite has no `dc` in 2024 spells.json — it must take the no-save
+    // path (handleNoSavePath rolls the attack) AND still reach the post-cast
+    // trigger block. Before the fix, the no-dc branch early-returned and the
+    // Inspiring Smite auto-trigger was unreachable.
+    function makeDivineSmite() {
+      return makeSpell({
+        name: 'Divine Smite',
+        level: 1,
+        school: 'Evocation',
+        casting_time: 'Bonus Action',
+        dc: undefined,
+        attack_type: 'melee',
+        damage: { damage_type: 'Radiant', damage_at_slot_level: { 1: '2d8' } },
+      });
+    }
+
+    // The module-level vi.mock implementations persist across tests (the mock
+    // factory runs once per file), so restore the default falsy returns after
+    // each test here to avoid poisoning later describes (Sanctuary etc.).
+    afterEach(() => {
+      mockHandleNoSavePath.mockResolvedValue(null);
+      mockHandleSavePath.mockResolvedValue(null);
+    });
+
+    it('fires the post-cast triggers for a no-dc spell (Inspiring Smite reachable)', async () => {
+      resolveSpellDamageWithTypes.mockReturnValue({ formula: '2d8', primaryType: 'Radiant' });
+      computeRange.mockReturnValue({});
+      mockHandleNoSavePath.mockResolvedValue(null);
+
+      const result = await executeSpellCast(
+        makeDivineSmite(),
+        { ...makeMetaCtx(), slotLevel: 1 },
+        {
+          rollAttack: vi.fn(),
+          rollDamage: vi.fn(),
+          playerStats: makePlayerStats(),
+          getTargetInfo: async () => ({ name: 'Goblin' }),
+          campaignName: 'test-campaign',
+        },
+      );
+
+      expect(mockHandleNoSavePath).toHaveBeenCalled();
+      expect(mockHandleSavePath).not.toHaveBeenCalled();
+      expect(triggerInspiringSmite).toHaveBeenCalled();
+      expect(triggerPostCastRiderSaves).toHaveBeenCalled();
+      expect(triggerPostCastSelfHeals).toHaveBeenCalled();
+      expect(triggerPostCastAllyHeals).toHaveBeenCalled();
+      expect(triggerSmiteOfProtection).toHaveBeenCalled();
+      expect(result).toBeNull();
+    });
+
+    it('always falls through the no-save branch (handleNoSavePath resolves null/undefined)', async () => {
+      resolveSpellDamageWithTypes.mockReturnValue({ formula: '2d8', primaryType: 'Radiant' });
+      computeRange.mockReturnValue({});
+      mockHandleNoSavePath.mockResolvedValue(undefined);
+
+      const result = await executeSpellCast(
+        makeDivineSmite(),
+        { ...makeMetaCtx(), slotLevel: 1 },
+        {
+          rollAttack: vi.fn(),
+          rollDamage: vi.fn(),
+          playerStats: makePlayerStats(),
+          getTargetInfo: async () => ({ name: 'Goblin' }),
+          campaignName: 'test-campaign',
+        },
+      );
+
+      expect(mockHandleNoSavePath).toHaveBeenCalled();
+      expect(result).toBeNull();
+      expect(triggerInspiringSmite).toHaveBeenCalled();
+    });
+
+    it('skips post-cast triggers when a dc save path returns a handled result (dc spells unchanged)', async () => {
+      resolveSpellDamageWithTypes.mockReturnValue({ formula: '8d6', primaryType: 'Fire' });
+      computeRange.mockReturnValue({});
+      mockHandleSavePath.mockResolvedValue({ automationPopup: { type: 'popup' } });
+
+      await executeSpellCast(
+        makeSpell(),
+        makeMetaCtx(),
+        {
+          rollAttack: vi.fn(),
+          rollDamage: vi.fn(),
+          playerStats: makePlayerStats(),
+          getTargetInfo: async () => ({ name: 'Goblin' }),
+          campaignName: 'test-campaign',
+        },
+      );
+
+      expect(mockHandleSavePath).toHaveBeenCalled();
+      expect(mockHandleNoSavePath).not.toHaveBeenCalled();
+      expect(triggerInspiringSmite).not.toHaveBeenCalled();
     });
   });
 

@@ -52,6 +52,10 @@ const INTERACTIVE_HANDLER_TYPES = new Set([
     'gnomish_lineage',
     'fiendish_legacy',
     'fey_reinforcements',
+    // CLA-200: the row dispatches inspiringSmiteHandler, which gates on
+    // lastAttack=Divine Smite and opens the temp-HP distributor modal (shows a
+    // friendly popup when invoked without a qualifying cast).
+    'post_cast_inspiring_smite',
 ]);
 
 const INTERACTIVE_PASSIVE_EFFECTS = new Set([

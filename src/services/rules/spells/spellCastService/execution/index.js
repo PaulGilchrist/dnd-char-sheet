@@ -564,7 +564,12 @@ export async function executeSpellCast(spell, metaCtx, { rollAttack, rollDamage,
             overchannelFormula, overchannelActive, overchannelUseCount, rollAttack, rollDamage, formula, hasInvisible);
         if (savePathResult) return savePathResult;
     } else {
-        return await handleNoSavePath(spell, metaCtx, playerStats, campaignName, mapName, characters,
+        // CLA-200: no-save spells (e.g. Divine Smite — no `dc` in spells.json) must fall
+        // through to the post-cast trigger block below instead of early-returning.
+        // handleNoSavePath only ever resolves null/undefined, and the dc/no-dc
+        // branches are mutually exclusive, so the gated post-cast triggers
+        // (Inspiring Smite, Wild Magic Surge, Sanctuary break, etc.) run exactly once.
+        await handleNoSavePath(spell, metaCtx, playerStats, campaignName, mapName, characters,
             getTargetInfo, rollAttack, spellToHit, effectiveDamageType);
     }
 
