@@ -671,20 +671,24 @@ export async function executeHandler(action, playerStats, campaignName, mapName,
     let auto = action.automation;
 
     // Some features (e.g. Guarded Mind, Telekinetic Master) have an array of
-    // automation entries (passive resistance + active uses). Find the first
-    // actionable one: skip passive_rule entries (they have no runtime handler),
-    // and prefer entries with a registered handler.
+    // automation entries (passive resistance + active uses). Collect every
+    // actionable one: skip passive_rule entries without a runtime handler,
+    // keep entries with a registered handler. An entry flagged
+    // `replacesWarMagic` (e.g. Eldritch Knight lv18 Improved War Magic)
+    // supersedes the earlier half of the same feature (the lv7 cantrip half),
+    // so prefer it over the first actionable entry.
     if (Array.isArray(auto)) {
-        const actionable = auto.find(a => {
+        const actionable = auto.filter(a => {
             if (!a) return false;
             if (a.type === 'passive_rule') return PASSIVE_RULE_EFFECTS[a.effect];
             return (a.casting_time || a.action || a.trigger) && HANDLER_MAP[a.type];
         });
-        if (!actionable) {
+        const selected = actionable.find(a => a.replacesWarMagic) || actionable[0];
+        if (!selected) {
             return null;
         }
-        action = { ...action, automation: actionable };
-        auto = actionable;
+        action = { ...action, automation: selected };
+        auto = selected;
     }
 
     let handler;

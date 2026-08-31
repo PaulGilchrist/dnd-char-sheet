@@ -36,6 +36,12 @@ vi.mock('./handlers/spells/eyebiteHandler.js', () => ({
     payload: { saveDc: 17 },
   }),
 }));
+vi.mock('./handlers/class-fighter-rogue/warMagicCantripHandler.js', () => ({
+  handle: vi.fn().mockResolvedValue({ result: 'war_magic_cantrip' }),
+}));
+vi.mock('./handlers/class-fighter-rogue/warMagicSpellHandler.js', () => ({
+  handle: vi.fn().mockResolvedValue({ result: 'war_magic_spell' }),
+}));
 vi.mock('../../../shared/popupResponse.js', () => ({
   automationInfoPopup: vi.fn().mockReturnValue({ type: 'popup', payload: { type: 'automation_info', description: 'test' } }),
 }));
@@ -251,6 +257,43 @@ describe('executeHandler', () => {
 
       const nullAction = { name: 'Test', automation: [null, null] };
       expect(await executeHandler(nullAction, makePlayerStats(), campaignName, mapName)).toBeNull();
+    });
+
+    // CLA-192 regression: Eldritch Knight lv18 Improved War Magic declares
+    // automation [war_magic_cantrip, war_magic_spell(replacesWarMagic)].
+    // The spell half must dispatch so the row offers level 1-2 spells;
+    // previously automation[0] (the lv7 cantrip picker) always won.
+    it('dispatches the replacesWarMagic spell half over the cantrip half (CLA-192)', async () => {
+      const { handle: cantripHandle } = await import('./handlers/class-fighter-rogue/warMagicCantripHandler.js');
+      const { handle: spellHandle } = await import('./handlers/class-fighter-rogue/warMagicSpellHandler.js');
+
+      const action = {
+        name: 'Improved War Magic',
+        automation: [
+          { type: 'war_magic_cantrip', spellList: 'wizard_cantrips', action: 'action', casting_time: '1 action' },
+          { type: 'war_magic_spell', spellList: 'wizard_spells', maxSpellLevel: 2, action: 'action', casting_time: '1 action', replacesWarMagic: true },
+        ],
+      };
+
+      const result = await executeHandler(action, makePlayerStats(), campaignName, mapName);
+
+      expect(result).toEqual({ result: 'war_magic_spell' });
+      expect(spellHandle).toHaveBeenCalledTimes(1);
+      expect(cantripHandle).not.toHaveBeenCalled();
+    });
+
+    it('still dispatches the cantrip half for base War Magic without replacesWarMagic', async () => {
+      const { handle: cantripHandle } = await import('./handlers/class-fighter-rogue/warMagicCantripHandler.js');
+
+      const action = {
+        name: 'War Magic',
+        automation: { type: 'war_magic_cantrip', spellList: 'wizard_cantrips', action: 'action', casting_time: '1 action' },
+      };
+
+      const result = await executeHandler(action, makePlayerStats(), campaignName, mapName);
+
+      expect(result).toEqual({ result: 'war_magic_cantrip' });
+      expect(cantripHandle).toHaveBeenCalledTimes(1);
     });
   });
 

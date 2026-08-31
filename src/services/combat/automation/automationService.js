@@ -66,11 +66,18 @@ const INTERACTIVE_PASSIVE_EFFECTS = new Set([
 
 export function isInteractiveAutomation(feature) {
     if (!feature?.automation) return false;
-    const auto = Array.isArray(feature.automation) ? feature.automation[0] : feature.automation;
-    if (auto.type === 'passive_rule') {
-        return auto.effect && INTERACTIVE_PASSIVE_EFFECTS.has(auto.effect);
-    }
-    return INTERACTIVE_HANDLER_TYPES.has(auto.type);
+    const automations = Array.isArray(feature.automation) ? feature.automation : [feature.automation];
+    // A feature may declare multiple automation halves (e.g. Improved War
+    // Magic's [cantrip, spell] array). The row is interactive if ANY
+    // declared half has an interactive handler — this mirrors executeHandler,
+    // which dispatches the `replacesWarMagic` half when present.
+    return automations.some(auto => {
+        if (!auto) return false;
+        if (auto.type === 'passive_rule') {
+            return auto.effect && INTERACTIVE_PASSIVE_EFFECTS.has(auto.effect);
+        }
+        return INTERACTIVE_HANDLER_TYPES.has(auto.type);
+    });
 }
 
 export function getEvasionEffects(features) {
