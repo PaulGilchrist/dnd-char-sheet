@@ -29,7 +29,7 @@ export function createDiceRollHandlers(props, state) {
         const rerollBonus = props.autoRerollBonus || 0;
         setRerollResult({ roll: newRoll, total: newRoll + bonus + rerollBonus });
         setRerollUsed(true);
-        if (onReroll) onReroll();
+        if (onReroll) onReroll({ roll: newRoll, total: newRoll + bonus + rerollBonus });
     };
 
     const handleTacticalMind = async () => {

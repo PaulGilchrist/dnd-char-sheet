@@ -88,6 +88,24 @@ export function createGuardedMindHandler({ campaignName, current, guardedMindAva
   };
 }
 
+export function createIndomitableHandler({ campaignName, characters, activeMapName, current, indomitableAvailable, currentUses, maxUses, rerollBonus, setRerollUsedForSave, submitSaveResult }) {
+  return async () => {
+    if (!indomitableAvailable || !current) return;
+    setRerollUsedForSave(true);
+    const max = maxUses || 1;
+    if (currentUses >= max) return;
+    setRuntimeValue(current.targetName, 'indomitableUses', currentUses + 1, campaignName);
+    const result = await doReroll({ campaignName, characters, activeMapName, current, extraBonus: rerollBonus });
+    submitReroll(submitSaveResult, result, current, `(+${rerollBonus} Indomitable)`, 'indomitable_reroll', 'Indomitable', 'indomitable_hp_restore');
+    const saveLabel = (current.saveType || 'Save').toUpperCase();
+    addEntry(campaignName, {
+      type: 'ability_use', characterName: current.targetName, abilityName: 'Indomitable',
+      description: `${current.targetName} used Indomitable to reroll a failed ${saveLabel} saving throw (+${rerollBonus}). Uses used: ${currentUses + 1}/${max}.`,
+      timestamp: Date.now(),
+    }).catch((e) => { console.error('[SavePromptModal] Error logging Indomitable reroll:', e); });
+  };
+}
+
 export function createLivingLegendHandler({ campaignName, characters, activeMapName, current, livingLegendAvailable, setRerollUsedForSave, submitSaveResult }) {
   return async () => {
     if (!livingLegendAvailable || !current) return;

@@ -186,5 +186,6 @@ export const renderPopup = (popupHtml, setPopupHtml, isLocalhost, playerStats, c
         onSavageAttacker={popupHtml?.savageAttacker ? popupHandlers.onSavageAttacker : undefined}
         onAfterBiDefense={popupHandlers.onBiDefenseCombatSummary}
         onStrokeOfLuck={popupHandlers.onStrokeOfLuck}
+        onReroll={popupHtml?.autoReroll ? popupHandlers.onReroll : undefined}
     />;
 }

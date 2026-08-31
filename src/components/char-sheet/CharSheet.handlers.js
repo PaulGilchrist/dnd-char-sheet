@@ -8,20 +8,46 @@ import * as storageService from '../../services/ui/storage.js'
 import { addEntry } from '../../services/ui/logService.js'
 import { evaluateAutoExpression } from '../../services/combat/automation/automationExpressions.js'
 
-export function handleReroll(playerStats, campaignName, conditionEffects) {
-    if (playerStats) {
-        if (conditionEffects.autoRerollCondition === 'raging') {
-            setRuntimeValue(playerStats.name, 'fanaticalFocusUsed', true, campaignName);
-        } else if (conditionEffects.autoRerollCondition === 'disciplined_survivor') {
-            const currentFocus = Number(getRuntimeValue(playerStats.name, 'focusPoints', campaignName) ?? playerStats.focusPoints);
-            if (currentFocus <= 0) {
-                return;
-            }
-            setRuntimeValue(playerStats.name, 'focusPoints', currentFocus - 1, campaignName);
-        } else {
-            const current = Number(getRuntimeValue(playerStats.name, 'indomitableUses', campaignName) ?? 0);
-            setRuntimeValue(playerStats.name, 'indomitableUses', current + 1, campaignName);
+export function handleReroll(playerStats, campaignName, conditionEffects, rerollInfo) {
+    if (!playerStats) return;
+    const rerollBonus = conditionEffects.autoRerollBonus || 0;
+    const rollDetail = rerollInfo ? ` New d20 ${rerollInfo.roll}, total ${rerollInfo.total}.` : ''
+    if (conditionEffects.autoRerollCondition === 'raging') {
+        setRuntimeValue(playerStats.name, 'fanaticalFocusUsed', true, campaignName);
+        addEntry(campaignName, {
+            type: 'ability_use',
+            characterName: playerStats.name,
+            abilityName: 'Fanatical Focus',
+            description: `${playerStats.name} used Fanatical Focus to reroll a failed saving throw.${rollDetail}`,
+            timestamp: Date.now(),
+        }).catch((e) => { console.error('[CharSheet] Error logging Fanatical Focus reroll:', e); });
+    } else if (conditionEffects.autoRerollCondition === 'disciplined_survivor') {
+        const currentFocus = Number(getRuntimeValue(playerStats.name, 'focusPoints', campaignName) ?? playerStats.focusPoints);
+        if (currentFocus <= 0) {
+            return;
         }
+        setRuntimeValue(playerStats.name, 'focusPoints', currentFocus - 1, campaignName);
+        addEntry(campaignName, {
+            type: 'ability_use',
+            characterName: playerStats.name,
+            abilityName: 'Disciplined Survivor',
+            description: `${playerStats.name} used Disciplined Survivor (1 Focus Point) to reroll a failed saving throw.${rollDetail}`,
+            timestamp: Date.now(),
+        }).catch((e) => { console.error('[CharSheet] Error logging Disciplined Survivor reroll:', e); });
+    } else {
+        const current = Number(getRuntimeValue(playerStats.name, 'indomitableUses', campaignName) ?? 0);
+        const max = (playerStats.level || 0) >= 17 ? 3 : (playerStats.level || 0) >= 13 ? 2 : 1;
+        if (current >= max) {
+            return;
+        }
+        setRuntimeValue(playerStats.name, 'indomitableUses', current + 1, campaignName);
+        addEntry(campaignName, {
+            type: 'ability_use',
+            characterName: playerStats.name,
+            abilityName: 'Indomitable',
+            description: `${playerStats.name} used Indomitable to reroll a failed saving throw${rerollBonus ? ` (+${rerollBonus})` : ''}. Uses used: ${current + 1}/${max}.${rollDetail}`,
+            timestamp: Date.now(),
+        }).catch((e) => { console.error('[CharSheet] Error logging Indomitable reroll:', e); });
     }
 }
 

@@ -399,8 +399,8 @@ function CharSheetContent({
         conditionEffects.luckyDisadvantage = true;
     }
 
-    const handleRerollWrapped = React.useCallback(() => {
-        handleReroll(playerStats, campaignName, conditionEffects);
+    const handleRerollWrapped = React.useCallback((rerollInfo) => {
+        handleReroll(playerStats, campaignName, conditionEffects, rerollInfo);
     }, [playerStats, campaignName, conditionEffects]);
 
     const handleStrokeOfLuckWrapped = React.useCallback(() => {
@@ -514,6 +514,7 @@ function CharSheetContent({
         onSavageAttacker: handleSavageAttackerWrapped,
         onBiDefenseCombatSummary: handleBiDefenseCombatSummaryWrapped,
         onStrokeOfLuck: handleStrokeOfLuckWrapped,
+        onReroll: handleRerollWrapped,
     };
 
     return (<Provider value={value}>

@@ -16,7 +16,8 @@ import storage from '../../services/ui/storage.js';
 import './SavePromptModal.css';
 import { getPendingPopupSetter } from '../../services/combat/auras/pendingPopupRegistry.js';
 import { isCircleOfPowerActive } from '../../services/automation/handlers/buffs/circleOfPowerHandler.js';
-import { createFanaticalFocusHandler, createDisciplinedSurvivorHandler, createGuardedMindHandler, createLivingLegendHandler } from './savePromptHandlers.js';
+import { createFanaticalFocusHandler, createDisciplinedSurvivorHandler, createGuardedMindHandler, createLivingLegendHandler, createIndomitableHandler } from './savePromptHandlers.js';
+import { evaluateAutoExpression } from '../../services/combat/automation/automationService.js';
 
 function SavePromptModal({ campaignName, characters, activeMapName }) {
   const [prompts, setPrompts] = useState([]);
@@ -481,6 +482,19 @@ function SavePromptModal({ campaignName, characters, activeMapName }) {
   const isValidSaveType = current && validSaveTypes.includes(current.saveType);
   const guardedMindAvailable = !guardedMindUsed && guardedMindSpecialAction && isValidSaveType;
 
+  // Indomitable (Fighter lv9+): reroll a failed save with a +fighter level bonus,
+  // tracked via runtime `indomitableUses` (recharged on a Long Rest).
+  const targetSaveModifiersForIndomitable = targetCharacter?.saveModifiers || targetCharacter?.computedStats?.saveModifiers || [];
+  const indomitableModifier = targetSaveModifiersForIndomitable.find(
+    m => m.effect === 'reroll' && m.target === 'saving_throw' && (m.source === 'Indomitable' || /fighter_level/i.test(m.bonusExpression || ''))
+  );
+  const indomitableFeatureLevel = targetCharacter?.level ?? targetCharacter?.computedStats?.level ?? 0;
+  const indomitableMaxUses = indomitableFeatureLevel >= 17 ? 3 : indomitableFeatureLevel >= 13 ? 2 : 1;
+  const indomitableAvailable = !!indomitableModifier && indomitableUses < indomitableMaxUses;
+  const indomitableRerollBonus = indomitableModifier
+    ? (evaluateAutoExpression(indomitableModifier.bonusExpression || '0', { level: indomitableFeatureLevel }) || indomitableFeatureLevel)
+    : 0;
+
   const submitSaveResult = useCallback((saveData) => {
     const {
       promptId, targetName, success, roll, total, saveBonus, rawRolls, mode, bonusDetail,
@@ -557,6 +571,13 @@ function SavePromptModal({ campaignName, characters, activeMapName }) {
     await handler();
   }, [disciplinedSurvivorAvailable, currentFocusPoints, current, campaignName, submitSaveResult]);
 
+  const handleIndomitable = useCallback(async () => {
+    if (!indomitableAvailable || !current) return;
+    setRerollUsedForSave(true);
+    const handler = createIndomitableHandler({ campaignName, characters, activeMapName, current, indomitableAvailable, currentUses: indomitableUses, maxUses: indomitableMaxUses, rerollBonus: indomitableRerollBonus, setRerollUsedForSave, submitSaveResult });
+    await handler();
+  }, [indomitableAvailable, indomitableUses, indomitableMaxUses, indomitableRerollBonus, current, campaignName, characters, activeMapName, submitSaveResult]);
+
   const handleGuardedMind = useCallback(async () => {
     if (!guardedMindAvailable || !current) return;
     setRerollUsedForSave(true);
@@ -619,6 +640,11 @@ function SavePromptModal({ campaignName, characters, activeMapName }) {
                   {!current.result.success && !rerollUsedForSave && fanaticalFocusAvailable && (
                     <button className="sp-stroke-btn" onClick={handleFanaticalFocus} type="button">
                       <i className="fa-solid fa-rotate"></i> Reroll Save (+{rageDamageBonus})
+                    </button>
+                  )}
+                  {!current.result.success && !rerollUsedForSave && indomitableAvailable && (
+                    <button className="sp-stroke-btn" onClick={handleIndomitable} type="button">
+                      <i className="fa-solid fa-rotate"></i> Indomitable (+{indomitableRerollBonus})
                     </button>
                   )}
                   {!current.result.success && !rerollUsedForSave && disciplinedSurvivorAvailable && (
