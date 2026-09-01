@@ -4335,7 +4335,7 @@
       "handler": "src/services/combat/automation/handlers/classFeatureHandler.js",
       "router": "src/services/combat/automation/routers/classFeatureRouter.js",
       "infoBuilder": "src/services/combat/automation/infoBuilders/classFeatureInfoBuilder.js",
-      "verified": "broken — see .opencode/plans/bug-cla-237-natures-ward.md",
+      "verified": "verified",
       "class": "Druid",
       "triggerConditions": "Action: passive",
       "expectedBehavior": "Immune to Poisoned condition. Resistance to a damage type based on land choice: Arid=Fire, Polar=Cold, Temperate=Lightning, Tropical=Poison."

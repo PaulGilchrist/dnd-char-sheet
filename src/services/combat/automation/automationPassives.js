@@ -284,6 +284,13 @@ export function getDamageResistances(playerStats) {
                 resistances.push(chosenType);
             }
         }
+        if (passive.type === 'land_resistance' && passive.landMappings && typeof passive.landMappings === 'object') {
+            const runtimeLandType = getRuntimeValue(playerStats.name, '_circleOfTheLandType') || '';
+            const landType = (runtimeLandType || playerStats.class?.major?.type || playerStats.class?.subclass?.type || '').toLowerCase().trim();
+            if (landType && passive.landMappings[landType]) {
+                resistances.push(passive.landMappings[landType]);
+            }
+        }
     }
     return [...new Set(resistances)];
 }

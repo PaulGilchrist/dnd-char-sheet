@@ -163,7 +163,8 @@ const rulesFactory = {
                     console.error('rulesFactory.getPlayerStats: expected class object');
                     throw new Error('Expected class to be an object');
                 }
-                const landType = (classData.major?.type || classData.subclass?.type || '').toLowerCase().trim();
+                const runtimeLandType = getRuntimeValue(playerSummary.name, '_circleOfTheLandType', playerSummary.campaignName) || '';
+                const landType = (runtimeLandType || classData.major?.type || classData.subclass?.type || '').toLowerCase().trim();
                 return mappings[landType] ? [mappings[landType]] : [];
             });
         if (landResistances.length) {
