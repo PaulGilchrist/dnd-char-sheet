@@ -218,6 +218,120 @@ describe('healService', () => {
     })
   })
 
+  describe('SP-060 player HP resolution (runtime canonical, combatSummary stub maxHp:1)', () => {
+    function mockPlayerStubContext(targetName, currentHp = 1, maxHp = 1) {
+      vi.mocked(damageUtils.getCombatContext).mockResolvedValue({
+        creatures: [{ name: targetName, type: 'player', currentHp, maxHp }],
+      })
+    }
+
+    it('resolves player maxHp from runtime hitPoints, not combatSummary stub, and heals full deficit', async () => {
+      mockPlayerStubContext('Target')
+      vi.mocked(runtime.getRuntimeValue).mockImplementation((_char, key) => {
+        if (key === 'activeConditions' || key === 'targetEffects') return []
+        if (key === 'hitPoints') return 122
+        if (key === 'currentHitPoints') return 50
+        return undefined
+      })
+      mockHealingResult(70, 50, 120)
+
+      const dispatchEventSpy = vi.spyOn(window, 'dispatchEvent')
+      const result = await triggerHeal(makeSpell(), { targetName: 'Target' }, makePlayerStats(), CAMPAIGN, null)
+
+      expect(applyHealing.applyHealingToTarget).toHaveBeenCalledWith(
+        expect.any(Object),
+        'Target',
+        70,
+        CAMPAIGN,
+      )
+      expect(result.healAmount).toBe(70)
+      const popup = dispatchEventSpy.mock.calls.find(c => c[0]?.type === 'healing-popup')
+      expect(popup[0].detail.popupText).toContain('Regained 70 HP')
+      dispatchEventSpy.mockRestore()
+    })
+
+    it('logs hp_change with runtime-resolved maxHp for players', async () => {
+      mockPlayerStubContext('Target')
+      vi.mocked(runtime.getRuntimeValue).mockImplementation((_char, key) => {
+        if (key === 'activeConditions' || key === 'targetEffects') return []
+        if (key === 'hitPoints') return 122
+        if (key === 'currentHitPoints') return 50
+        return undefined
+      })
+      mockHealingResult(70, 50, 120)
+
+      await triggerHeal(makeSpell(), { targetName: 'Target' }, makePlayerStats(), CAMPAIGN, null)
+
+      const hpLog = logService.addEntry.mock.calls.find(call => call[1]?.type === 'hp_change')
+      expect(hpLog).toBeDefined()
+      expect(hpLog[1].delta).toBe(70)
+      expect(hpLog[1].maxHp).toBe(122)
+      expect(hpLog[1].currentHp).toBe(120)
+    })
+
+    it('shows "Already at full HP" popup (never negative) when runtime deficit is zero', async () => {
+      mockPlayerStubContext('Target')
+      vi.mocked(runtime.getRuntimeValue).mockImplementation((_char, key) => {
+        if (key === 'activeConditions' || key === 'targetEffects') return []
+        if (key === 'hitPoints') return 122
+        if (key === 'currentHitPoints') return 122
+        return undefined
+      })
+
+      const dispatchEventSpy = vi.spyOn(window, 'dispatchEvent')
+      const result = await triggerHeal(makeSpell(), { targetName: 'Target' }, makePlayerStats(), CAMPAIGN, null)
+
+      expect(applyHealing.applyHealingToTarget).not.toHaveBeenCalled()
+      expect(result.healAmount).toBe(0)
+      const popup = dispatchEventSpy.mock.calls.find(c => c[0]?.type === 'healing-popup')
+      expect(popup[0].detail.popupText).toContain('Already at full HP')
+      expect(popup[0].detail.popupText).not.toMatch(/-/g)
+      dispatchEventSpy.mockRestore()
+    })
+
+    it('caps player healing at runtime maxHp minus runtime current HP', async () => {
+      mockPlayerStubContext('Target')
+      vi.mocked(runtime.getRuntimeValue).mockImplementation((_char, key) => {
+        if (key === 'activeConditions' || key === 'targetEffects') return []
+        if (key === 'hitPoints') return 79
+        if (key === 'currentHitPoints') return 75
+        return undefined
+      })
+      mockHealingResult(4, 75, 79)
+
+      const result = await triggerHeal(makeSpell(), { targetName: 'Target' }, makePlayerStats(), CAMPAIGN, null)
+
+      expect(applyHealing.applyHealingToTarget).toHaveBeenCalledWith(
+        expect.any(Object),
+        'Target',
+        4,
+        CAMPAIGN,
+      )
+      expect(result.healAmount).toBe(4)
+    })
+
+    it('keeps monster healing path on combatSummary HP unchanged', async () => {
+      vi.mocked(damageUtils.getCombatContext).mockResolvedValue({
+        creatures: [{ name: 'Animated Rug of Smothering 1', type: 'npc', currentHp: 16, maxHp: 27 }],
+      })
+      vi.mocked(runtime.getRuntimeValue).mockImplementation((_char, key) => {
+        if (key === 'activeConditions' || key === 'targetEffects') return []
+        return undefined
+      })
+      mockHealingResult(11, 16, 27)
+
+      const result = await triggerHeal(makeSpell(), { targetName: 'Animated Rug of Smothering 1' }, makePlayerStats(), CAMPAIGN, null)
+
+      expect(applyHealing.applyHealingToTarget).toHaveBeenCalledWith(
+        expect.any(Object),
+        'Animated Rug of Smothering 1',
+        11,
+        CAMPAIGN,
+      )
+      expect(result.healAmount).toBe(11)
+    })
+  })
+
   describe('triggerHeal with status_effects from 2024 ruleset', () => {
     it('removes conditions listed in status_effects', async () => {
       vi.mocked(runtime.getRuntimeValue).mockReturnValue(['Blinded', 'Deafened', 'Poisoned', 'Charmed'])

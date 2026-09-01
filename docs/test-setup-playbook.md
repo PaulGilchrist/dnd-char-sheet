@@ -1067,3 +1067,9 @@ Monk self-targeting Hand of Healing: the initiative card Target dropdown EXCLUDE
 - `maneuvering_step_granted` expiration is creature-keyed on the caster — walk turns to the caster's next turn; change-data debounce ~10s, poll ≥12s.
 - Pending-prompt overlays stack — dismiss one at a time; `browser_handle_dialog` reports "none" when a `page.on('dialog')` listener already consumed them.
 - Damage-in-rider leg for Maneuvering Attack was already covered by MN-009's `attackRiderDieValue` path — popup "1d8+3 + 7 [slashing]" + `ability_use "…Rolled d8 for N. Added N to the damage roll."`.
+
+### Heal player HP via runtime keys / SP-060 (FIXED 2026-09-01)
+
+- MercyMonk JSON no longer exists in test-campaign — Heal repro targets any PC (FeyRanger works: opening sheet writes runtime `hitPoints:79`, initiative-card spinbutton writes `currentHitPoints`).
+- Heal row renders as `.clickable.left` in the Actions grid, NOT `td.spell-name.clickable`.
+- Capped-heal popup format: "Heal on <PC>: Regained <deficit> HP Also removed: <conditions>." — raw 70 caps at real deficit; log `hp_change isHealing:true formula:'70'`; 0-deficit says "Already at full HP".

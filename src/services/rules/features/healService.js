@@ -84,10 +84,15 @@ export async function triggerHeal(spell, { targetName }, playerStats, campaignNa
     const { totalBonus: bonusHeal, details: bonusDetails } = resolveHealingBonusesWithDetails(playerStats, playerStats.proficiency || 0, playerStats.level || 1, slotLevel, campaignName);
     healAmount += bonusHeal;
 
-    const maxHp = creature.maxHp || playerStats.hitPoints || 0;
+    const isPlayer = creature.type === 'player';
+    const maxHp = isPlayer
+        ? (getRuntimeValue(targetName, 'hitPoints', campaignName) ?? creature.maxHp)
+        : creature.maxHp;
     const storedHp = getRuntimeValue(targetName, 'currentHitPoints', campaignName);
-    const currentHp = storedHp != null && storedHp !== '' ? Number(storedHp) : (creature.currentHp ?? maxHp);
-    const actualHeal = Math.min(healAmount, maxHp - currentHp);
+    const currentHp = isPlayer
+        ? (storedHp != null && storedHp !== '' ? Number(storedHp) : (creature.currentHp ?? maxHp))
+        : (creature.currentHp ?? maxHp);
+    const actualHeal = Math.max(0, Math.min(healAmount, maxHp - currentHp));
 
     if (actualHeal > 0) {
         applyHealingToTarget(combatSummary, targetName, actualHeal, campaignName);
@@ -125,7 +130,7 @@ export async function triggerHeal(spell, { targetName }, playerStats, campaignNa
             healingName: spell.name,
             rollInfo: '',
             maximizeHealingDice: false,
-            popupText: `Heal on ${targetName}: Regained ${actualHeal} HP${conditionText}`,
+            popupText: `Heal on ${targetName}: ${actualHeal > 0 ? `Regained ${actualHeal} HP` : 'Already at full HP'}${conditionText}`,
         },
     }));
 
