@@ -140,7 +140,7 @@ describe('SavePromptModal — save bonus sources', () => {
       expect(screen.getByText(/Advantage/)).toBeInTheDocument();
     });
 
-    expect(rollD20).toHaveBeenCalledTimes(1);
+    expect(rollD20).toHaveBeenCalledTimes(2);
     expect(savePromptService.sendSaveResult).not.toHaveBeenCalled();
   });
 
@@ -148,7 +148,7 @@ describe('SavePromptModal — save bonus sources', () => {
 
   it.each`
     saveType                   | triggerTestId                        | expectAdvantage | expectDisadvantage | expectedRolls
-    ${'DEX'}                   | ${'subscriber-trigger-dex'}          | ${true}         | ${false}           | ${1}
+    ${'DEX'}                   | ${'subscriber-trigger-dex'}          | ${true}         | ${false}           | ${2}
     ${'CON'}                   | ${'subscriber-trigger'}              | ${false}        | ${false}           | ${1}
   `('grants advantage on $saveType saves when Dodge buff is active', async ({ saveType: _, triggerTestId, expectAdvantage, expectedRolls }) => {
     rollD20.mockReturnValueOnce(15).mockReturnValueOnce(18);
@@ -190,7 +190,7 @@ describe('SavePromptModal — save bonus sources', () => {
 
   it.each`
     triggerTestId                        | expectAdvantage | expectDisadvantage | expectedRolls
-    ${'subscriber-trigger'}              | ${true}         | ${false}           | ${1}
+    ${'subscriber-trigger'}              | ${true}         | ${false}           | ${2}
     ${'subscriber-trigger-disadvantage'} | ${false}        | ${true}            | ${2}
   `('grants advantage on all saves when Circle of Power is active (trigger: $triggerTestId)', async ({ triggerTestId, expectAdvantage, expectDisadvantage, expectedRolls }) => {
     rollD20.mockReturnValueOnce(15).mockReturnValueOnce(18);

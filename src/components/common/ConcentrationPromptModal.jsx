@@ -6,6 +6,7 @@ import Subscriber from './Subscriber.jsx';
 import { computeAuraBonus } from '../../services/combat/auras/auraOfProtection.js';
 import { getAbilitySaveBonus } from '../../services/combat/conditions/conditionUtils.js';
 import { hasSaveModifier } from '../../services/combat/conditions/conditionEffects.js';
+import { getHolyAuraSaveAdvantage } from './savePromptUtils.js';
 import { getCombatSummary } from '../../services/encounters/combatData.js';
 import './ConcentrationPromptModal.css';
 
@@ -55,7 +56,9 @@ function ConcentrationPromptModal({ campaignName, characters, activeMapName }) {
     const auraBonus = aura.bonus;
 
     const advantageSources = [];
-    const hasAdvantage = hasSaveModifier(saveModifiers, 'concentration_saving_throws', 'CON') ||
+    const holyAuraAdvantage = getHolyAuraSaveAdvantage(current, campaignName);
+    const hasAdvantage = holyAuraAdvantage ||
+      hasSaveModifier(saveModifiers, 'concentration_saving_throws', 'CON') ||
       (saveModifiers && saveModifiers.some(mod =>
         mod.target === 'saving_throw' &&
         mod.condition === 'concentration_spell_damage' &&
@@ -70,6 +73,9 @@ function ConcentrationPromptModal({ campaignName, characters, activeMapName }) {
           }
         }
       });
+    }
+    if (holyAuraAdvantage && !advantageSources.includes('Holy Aura')) {
+      advantageSources.push('Holy Aura');
     }
     const hasDisadvantage = (() => {
       if (!current.attackerName) return false;
@@ -184,16 +190,20 @@ function ConcentrationPromptModal({ campaignName, characters, activeMapName }) {
                   <p className="cnp-result-label">{current.result.success ? 'CONCENTRATION MAINTAINED' : 'CONCENTRATION BROKEN'}</p>
                   <p className="cnp-result-total">Total: <strong>{current.result.total}</strong> vs DC {current.dc}</p>
                   <div className="cnp-dice-row">
-                    {current.result.rawRolls && current.result.rawRolls.length === 2 ? (
+                    {current.result.rawRolls && current.result.rawRolls.length === 2 ? (() => {
+                      const [dieA, dieB] = current.result.rawRolls;
+                      const keepFirst = current.result.mode === 'advantage' ? dieA >= dieB : dieA <= dieB;
+                      return (
                       <>
-                        <span className={`cnp-die${current.result.rawRolls[0] <= current.result.rawRolls[1] ? ' cnp-die-selected' : ' cnp-die-discarded'}`}>
-                          d20: {current.result.rawRolls[0]} {current.result.rawRolls[0] <= current.result.rawRolls[1] ? '(kept)' : '(discarded)'}
+                        <span className={`cnp-die${keepFirst ? ' cnp-die-selected' : ' cnp-die-discarded'}`}>
+                          d20: {dieA} {keepFirst ? '(kept)' : '(discarded)'}
                         </span>
-                        <span className={`cnp-die${current.result.rawRolls[1] < current.result.rawRolls[0] ? ' cnp-die-selected' : ' cnp-die-discarded'}`}>
-                          d20: {current.result.rawRolls[1]} {current.result.rawRolls[1] < current.result.rawRolls[0] ? '(kept)' : '(discarded)'}
+                        <span className={`cnp-die${!keepFirst ? ' cnp-die-selected' : ' cnp-die-discarded'}`}>
+                          d20: {dieB} {!keepFirst ? '(kept)' : '(discarded)'}
                         </span>
                       </>
-                    ) : (
+                      );
+                    })() : (
                       <span className="cnp-die cnp-die-selected">d20: {current.result.roll}</span>
                     )}
                     {current.result.mode && current.result.mode !== 'normal' && (

@@ -3,13 +3,12 @@ import utils from '../../services/ui/utils.js';
 import { rollD20, rollExpression } from '../../services/dice/diceRoller.js';
 import { sendSaveResult, clearSavePrompt } from '../../services/combat/conditions/savePromptService.js';
 import Subscriber from './Subscriber.jsx';
-import { getSaveDisadvantage } from './savePromptUtils.js';
+import { getSaveDisadvantage, getHolyAuraSaveAdvantage, getHolyNimbusSaveAdvantage } from './savePromptUtils.js';
 import { computeAuraBonus } from '../../services/combat/auras/auraOfProtection.js';
 import { getAbilitySaveBonus } from '../../services/combat/conditions/conditionUtils.js';
 import { getRuntimeValue, setRuntimeValue } from '../../hooks/runtime/useRuntimeState.js';
 import { getPendingSavePrompt } from '../../services/combat/auras/pendingSaveRegistry.js';
 import { addEntry } from '../../services/ui/logService.js';
-import { getAllyList } from '../../hooks/useAllySelection.js';
 import { normalizeSaveType } from '../../services/rules/combat/applyDamage.js';
 import { getCombatSummary } from '../../services/encounters/combatData.js';
 import storage from '../../services/ui/storage.js';
@@ -215,53 +214,18 @@ function SavePromptModal({ campaignName, characters, activeMapName }) {
       }
     }
 
+    // Holy Aura: advantage on all saving throws for warded targets
+    if (!hasAdvantage && !hasDisadvantage && getHolyAuraSaveAdvantage(current, campaignName)) {
+      hasAdvantage = true;
+    }
+
     // Source-restricted save advantage (e.g. Holy Nimbus: advantage against Fiends/Undead for allies)
-    if (!hasAdvantage && !hasDisadvantage && current.attackerName) {
-      const targetName = current.targetName;
-      const attackerName = current.attackerName;
-      const combatSummary = getCombatSummary(campaignName);
-      const attackerCreature = combatSummary?.creatures?.find(c => utils.getName(c.name) === utils.getName(attackerName));
-      if (attackerCreature) {
-        const attackerType = (attackerCreature.monsterType || '').toLowerCase();
-        if (attackerType === 'fiend' || attackerType === 'undead') {
-          for (const character of (characters || [])) {
-            const charName = character.name;
-            const holyNimbusActive = getRuntimeValue(charName, 'holyNimbusActive', campaignName);
-            if (!holyNimbusActive) continue;
-            const allyList = getAllyList(charName);
-            if (allyList.includes(targetName)) {
-              hasAdvantage = true;
-              break;
-            }
-            if (allyList.length === 1) {
-              hasAdvantage = true;
-              break;
-            }
-          }
-          // Also check NPCs with Holy Nimbus
-          if (!hasAdvantage) {
-            for (const creature of (combatSummary?.creatures || [])) {
-              const creatureName = utils.getName(creature.name);
-              if (creature.type === 'player') continue;
-              const holyNimbusActive = getRuntimeValue(creatureName, 'holyNimbusActive', campaignName);
-              if (!holyNimbusActive) continue;
-              const allyList = getAllyList(creatureName);
-              if (allyList.includes(targetName)) {
-                hasAdvantage = true;
-                break;
-              }
-              if (allyList.length === 1) {
-                hasAdvantage = true;
-                break;
-              }
-            }
-          }
-        }
-      }
+    if (!hasAdvantage && !hasDisadvantage && getHolyNimbusSaveAdvantage(current, characters, campaignName)) {
+      hasAdvantage = true;
     }
 
     const roll1 = forceRollTo20Ref.current ? 20 : rollD20();
-    const roll2 = hasDisadvantage ? rollD20() : roll1;
+    const roll2 = (hasDisadvantage || hasAdvantage) ? rollD20() : roll1;
     const finalRoll = hasDisadvantage ? Math.min(roll1, roll2) : hasAdvantage ? Math.max(roll1, roll2) : roll1;
     let cosmicOmenAppliedBonus = 0;
     let cosmicOmenDetail = '';
@@ -447,6 +411,7 @@ function SavePromptModal({ campaignName, characters, activeMapName }) {
 
   const abilityLabel = current ? (current.saveType || '').toUpperCase() : '';
   const promptHasDisadvantage = current ? getSaveDisadvantage(current, campaignName) : false;
+  const promptHasAdvantage = current ? (!!current.advantage || getHolyAuraSaveAdvantage(current, campaignName)) : false;
   const queueCount = prompts.length;
   const hasResult = current?.result != null;
 
@@ -610,7 +575,7 @@ function SavePromptModal({ campaignName, characters, activeMapName }) {
               )}
             </div>
             <div className="sp-body">
-              <p><strong>{current.targetName}</strong> must make a <strong>{abilityLabel}</strong> saving throw.{current.advantage ? <span className="sp-advantage-badge"> (Advantage)</span> : ''}{promptHasDisadvantage ? <span className="sp-disadvantage-badge"> (Disadvantage)</span> : ''}</p>
+              <p><strong>{current.targetName}</strong> must make a <strong>{abilityLabel}</strong> saving throw.{promptHasAdvantage ? <span className="sp-advantage-badge"> (Advantage)</span> : ''}{promptHasDisadvantage ? <span className="sp-disadvantage-badge"> (Disadvantage)</span> : ''}</p>
               <p className="sp-dc">DC {current.saveDc}</p>
               {current.dcSuccess === 'half' && (() => {
                 const normalizedSaveType = normalizeSaveType(current.saveType);
@@ -636,7 +601,7 @@ function SavePromptModal({ campaignName, characters, activeMapName }) {
                 <div className={`sp-result ${current.result.success ? 'sp-result-success' : 'sp-result-fail'}`}>
                   <p className="sp-result-label">{current.result.success ? 'SAVE SUCCESS' : 'SAVE FAILURE'}</p>
                   <p className="sp-result-total">Total: <strong>{current.result.total}</strong> vs DC {current.saveDc}</p>
-                  <p className="sp-result-breakdown">d20 ({current.result.roll}) + {current.result.saveBonus}{current.result.bonusDetail ? ' ' + current.result.bonusDetail : ''}{current.result.mode === 'advantage' ? ' (Advantage)' : current.result.mode === 'disadvantage' ? ' (Disadvantage)' : ''}</p>
+                  <p className="sp-result-breakdown">d20 ({current.result.mode !== 'normal' && Array.isArray(current.result.rawRolls) && current.result.rawRolls.length === 2 ? `${current.result.rawRolls[0]}, ${current.result.rawRolls[1]}` : current.result.roll}) + {current.result.saveBonus}{current.result.bonusDetail ? ' ' + current.result.bonusDetail : ''}{current.result.mode === 'advantage' ? ' (Advantage)' : current.result.mode === 'disadvantage' ? ' (Disadvantage)' : ''}</p>
                   {!current.result.success && !rerollUsedForSave && fanaticalFocusAvailable && (
                     <button className="sp-stroke-btn" onClick={handleFanaticalFocus} type="button">
                       <i className="fa-solid fa-rotate"></i> Reroll Save (+{rageDamageBonus})

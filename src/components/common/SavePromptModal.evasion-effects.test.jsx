@@ -135,8 +135,8 @@ describe('SavePromptModal — Evasion Effects', () => {
       expect(screen.getByText(/Advantage/)).toBeInTheDocument();
     });
 
-    // Advantage means only one d20 is rolled (max of one roll)
-    expect(rollD20).toHaveBeenCalledTimes(1);
+    // Advantage rolls two d20s and keeps the highest
+    expect(rollD20).toHaveBeenCalledTimes(2);
   });
 
   // ── Cosmic Omen ──
