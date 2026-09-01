@@ -8,6 +8,7 @@ import SaveAttackAoeModal from './SaveAttackAoeModal.jsx';
 
 vi.mock('../../../../services/dice/diceRoller.js', () => ({
   rollExpression: vi.fn(() => ({ total: 10, rolls: [10], modifier: 0, formula: '1d20' })),
+  rollExpressionMaximized: vi.fn(() => ({ total: 10, rolls: [10], modifier: 0, formula: '1d20', maximized: true })),
 }));
 
 vi.mock('../../../../services/combat/automation/automationExpressions.js', () => ({

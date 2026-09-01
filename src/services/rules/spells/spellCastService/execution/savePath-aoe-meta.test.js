@@ -25,6 +25,8 @@ vi.mock('../../../../dice/diceRoller.js', () => ({
 
 vi.mock('../../postCastRiderService.js', () => ({
   triggerSoulstitchSpells: vi.fn(() => Promise.resolve()),
+  getEmpoweredEvocationFeatures: vi.fn(() => []),
+  getEmpoweredEvocationIntModifier: vi.fn(() => 0),
 }));
 
 vi.mock('../../../combat/rangeValidation.js', () => ({

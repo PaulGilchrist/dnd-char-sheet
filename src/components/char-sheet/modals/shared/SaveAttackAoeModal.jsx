@@ -1,5 +1,5 @@
 import React, { useState, useCallback, useEffect } from 'react';
-import { rollExpression } from '../../../../services/dice/diceRoller.js';
+import { rollExpression, rollExpressionMaximized } from '../../../../services/dice/diceRoller.js';
 import { resolveScaling } from '../../../../services/combat/automation/automationExpressions.js';
 import { getRuntimeValue, setRuntimeValue } from '../../../../hooks/runtime/useRuntimeState.js';
 import { sendSavePrompt } from '../../../../services/combat/conditions/savePromptService.js';
@@ -11,6 +11,7 @@ import { storeSpellLastAttack, addTargetResult } from '../../../../services/auto
 import CreatureSelectionModal from './CreatureSelectionModal.jsx';
 import AreaEffectTargetModalBase from './AreaEffectTargetModalBase.jsx';
 import { renderTargetList, persistAndNotify } from './AreaEffectTargetModalBase.utils.jsx';
+import { handleOverchannelSelfDamage } from '../../../../hooks/combat/handlers/handleOverchannelSelfDamage.js';
 
 function SaveAttackAoeModal({
     action,
@@ -26,6 +27,9 @@ function SaveAttackAoeModal({
     activeOverlay,
     metamagicCareful,
     metamagicHeighten,
+    overchannelActive = false,
+    overchannelUseCount = 0,
+    overchannelSpellLevel = 1,
     onClose,
 }) {
     const [summary, setSummary] = useState(null);
@@ -89,7 +93,7 @@ function SaveAttackAoeModal({
                 const saveRoll = (isHeightenTarget || hasRiderDisadvantage) ? Math.min(Math.floor(Math.random() * 20) + 1, Math.floor(Math.random() * 20) + 1) : Math.floor(Math.random() * 20) + 1;
                 const saveTotal = saveRoll + saveBonus;
                 const success = saveTotal >= saveDc;
-                const damageRoll = rollExpression(resolvedDamage);
+                const damageRoll = overchannelActive ? rollExpressionMaximized(resolvedDamage) : rollExpression(resolvedDamage);
                 const rawDamage = damageRoll?.total ?? 0;
                 const targetCreature = combatSummary.creatures.find(c => c.name === targetName);
                 const resistances = targetCreature?.resistances || [];
@@ -180,7 +184,7 @@ function SaveAttackAoeModal({
                     const promptId = `${Date.now()}-${Math.random().toString(36).slice(2, 9)}`;
                     const scalingEntry = resolveScaling(playerStats, action.automation?.scaling);
                     const resolvedDamage = scalingEntry?.damage || damage;
-                    const damageRoll = rollExpression(resolvedDamage);
+                    const damageRoll = overchannelActive ? rollExpressionMaximized(resolvedDamage) : rollExpression(resolvedDamage);
                     const rawDamage = damageRoll?.total ?? 0;
 
                     sendSavePrompt(campaignName, {
@@ -204,8 +208,16 @@ function SaveAttackAoeModal({
         }
 
         persistAndNotify(combatSummary, campaignName);
+
+        if (overchannelActive) {
+            await handleOverchannelSelfDamage(playerStats.name, campaignName,
+                { overchannelActive, overchannelUseCount, overchannelSpellLevel },
+                (entry) => { addEntry(campaignName, entry).catch((e) => { console.error('[SaveAttackAoeModal] Error logging overchannel self-damage:', e); }); },
+                characters);
+        }
+
         return { results, prompts };
-    }, [campaignName, action.name, action.automation?.scaling, playerStats, damage, damageType, dcSuccess, saveDc, saveType, isCarefulSpell, isCarefulAlly, heightenTarget]);
+    }, [campaignName, action.name, action.automation?.scaling, playerStats, damage, damageType, dcSuccess, saveDc, saveType, isCarefulSpell, isCarefulAlly, heightenTarget, overchannelActive, overchannelUseCount, overchannelSpellLevel]);
 
     const handleSaveResult = useCallback(async (event, ctx) => {
         const detail = event.detail;
@@ -229,7 +241,7 @@ function SaveAttackAoeModal({
 
         const scalingEntry = resolveScaling(playerStats, action.automation?.scaling);
         const resolvedDamage = scalingEntry?.damage || damage;
-        const damageRoll = rollExpression(resolvedDamage);
+        const damageRoll = overchannelActive ? rollExpressionMaximized(resolvedDamage) : rollExpression(resolvedDamage);
 
         if (finalDamage > 0) {
             addEntry(campaignName, {
@@ -311,7 +323,7 @@ function SaveAttackAoeModal({
             });
             setPendingPrompts(prev => prev.filter(p => p.promptId !== detail.promptId));
         }
-    }, [campaignName, damage, damageType, dcSuccess, action.name, action.automation?.scaling, playerStats, saveDc, saveType, pendingPrompts]);
+    }, [campaignName, damage, damageType, dcSuccess, action.name, action.automation?.scaling, playerStats, saveDc, saveType, pendingPrompts, overchannelActive]);
 
     useEffect(() => {
         if (pendingPrompts.length === 0) return;

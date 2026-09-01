@@ -3,6 +3,7 @@ import { triggerSoulstitchSpells } from '../../postCastRiderService.js';
 import { rangeToFeet } from '../../../combat/rangeValidation.js';
 import { getCombatContext } from '../../../combat/damageUtils.js';
 import { triggerViciousMockeryForGeneric } from '../../../features/viciousMockeryService.js';
+import { computeEmpoweredEvocation } from './damageCalculation.js';
 
 async function handleSavePath(spell, fullSpell, metaCtx, playerStats, campaignName, mapName, characters,
     getTargetInfo, getRuntimeValue, innateSorceryActive, effectiveDamageType, spellSaveDc,
@@ -21,7 +22,8 @@ async function handleSavePath(spell, fullSpell, metaCtx, playerStats, campaignNa
 
     if (isAreaShape) {
         return await handleAoE(spell, fullSpell, metaCtx, playerStats, campaignName, mapName, getTargetInfo, getRuntimeValue,
-            innateSorceryActive, effectiveDamageType, spellSaveDc, aoeShape, rangeToFeet, hasInvisible);
+            innateSorceryActive, effectiveDamageType, spellSaveDc, aoeShape, rangeToFeet, hasInvisible,
+            overchannelActive, overchannelUseCount);
     }
 
     return await handleSingleTargetSave(spell, fullSpell, metaCtx, playerStats, campaignName, mapName, characters,
@@ -30,7 +32,8 @@ async function handleSavePath(spell, fullSpell, metaCtx, playerStats, campaignNa
 }
 
 async function handleAoE(spell, fullSpell, metaCtx, playerStats, campaignName, mapName, getTargetInfo, getRuntimeValue,
-    innateSorceryActive, effectiveDamageType, spellSaveDc, aoeShape, rangeToFeet, hasInvisible) {
+    innateSorceryActive, effectiveDamageType, spellSaveDc, aoeShape, rangeToFeet, hasInvisible,
+    overchannelActive, overchannelUseCount) {
 
     const cs = getCombatContext(campaignName);
     const attackerTargetName = cs ? cs.creatures?.find(c => c.name === playerStats.name)?.targetName : null;
@@ -68,6 +71,11 @@ async function handleAoE(spell, fullSpell, metaCtx, playerStats, campaignName, m
     const automationEffects = fullSpell.automation?.effects;
     const isConditionOnlyAoe = !hasDamage && automationEffects?.fail?.length > 0;
 
+    // Mirror the single-target save formula builder: Empowered Evocation bonus + Overchannel maximize suffix
+    const { empEvocFormula } = computeEmpoweredEvocation(playerStats, fullSpell, damageExpression || null);
+    const damageFormula = empEvocFormula || damageExpression || '0';
+    const payloadDamage = overchannelActive ? `${damageFormula} [Overchannel Maximize]` : damageFormula;
+
     if (isConditionOnlyAoe) {
         const conditionNames = automationEffects.fail.map(e => e.condition || e.type).filter(Boolean);
         const includeCaster = fullSpell.name && fullSpell.name.toLowerCase() === 'grease';
@@ -104,7 +112,7 @@ async function handleAoE(spell, fullSpell, metaCtx, playerStats, campaignName, m
                 campaignName,
                 shape: aoeShape,
                 range: rangeFeet,
-                damage: damageExpression || '0',
+                damage: payloadDamage,
                 damageType: effectiveDamageType,
                 saveType: fullSpell.dc?.dc_type || spell.dc.dc_type || 'DEX',
                 saveDc: spellSaveDc + (innateSorceryActive ? 1 : 0),
@@ -115,6 +123,9 @@ async function handleAoE(spell, fullSpell, metaCtx, playerStats, campaignName, m
                 activeOverlay,
                 metamagicCareful: metaCtx?.metamagicCareful || false,
                 metamagicHeighten: hasInvisible || metaCtx?.metamagicHeighten,
+                overchannelActive: !!overchannelActive,
+                overchannelUseCount: overchannelUseCount || 0,
+                overchannelSpellLevel: slotLevel,
             },
         },
     };
