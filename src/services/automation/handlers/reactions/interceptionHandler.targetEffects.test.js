@@ -154,7 +154,7 @@ describe('interceptionHandler targetEffects', () => {
             await handle(action, ps, campaignName, mapName);
 
             expect(useRuntimeState.setRuntimeValue).toHaveBeenCalledWith(
-                playerName,
+                'campaign',
                 'targetEffects',
                 expect.arrayContaining([
                     expect.objectContaining({

@@ -6,6 +6,9 @@ import { getCombatContext } from '../../../rules/combat/damageUtils.js';
 import { applyHealingToTarget } from '../../../rules/combat/applyHealing.js';
 import { findLastAttack } from '../../common/damageRollback.js';
 import { rollExpression } from '../../../dice/diceRoller.js';
+import { addExpiration } from '../../../rules/effects/expirations.js';
+
+const USED_ROUND_KEY = 'interceptionUsedRound';
 
 export async function handle(action, playerStats, campaignName, _mapName) {
     const auto = action.automation;
@@ -51,7 +54,23 @@ export async function handle(action, playerStats, campaignName, _mapName) {
         }
     }
 
-    const storedEffects = [...getRuntimeValue(playerName, 'targetEffects') || []];
+    const combatSummary = await getCombatContext(campaignName);
+    if (!combatSummary) {
+        return makePopup(action, auto, baseDescription(action, attackerName, defenderName));
+    }
+
+    // Reaction consumption: one Reaction per round (spent until your next turn).
+    const currentRound = combatSummary.round || 1;
+    const usedMark = getRuntimeValue(playerName, USED_ROUND_KEY);
+    const sameTrigger = usedMark && usedMark.lastAttackTimestamp && attackEvent?.timestamp
+        && usedMark.lastAttackTimestamp === attackEvent.timestamp;
+    if (sameTrigger || (usedMark && usedMark.round === currentRound)) {
+        return makePopup(action, auto, `${featureName} has already been used this round — your Reaction is spent until your next turn.`);
+    }
+
+    // Campaign-scoped targetEffects: consumers (MonsterCardModal → conditionEffects
+    // targetDisadvantageCount) only read campaign-level targetEffects.
+    const storedEffects = [...getRuntimeValue('campaign', 'targetEffects') || []];
     const protectionEffect = {
         effect: 'protection',
         target: defenderName,
@@ -67,11 +86,12 @@ export async function handle(action, playerStats, campaignName, _mapName) {
     } else {
         storedEffects[existingIndex] = protectionEffect;
     }
-    await setRuntimeValue(playerName, 'targetEffects', storedEffects, campaignName);
+    await setRuntimeValue('campaign', 'targetEffects', storedEffects, campaignName);
 
-    const combatSummary = await getCombatContext(campaignName);
-    if (!combatSummary) {
-        return makePopup(action, auto, baseDescription(action, attackerName, defenderName));
+    if (defenderName) {
+        addExpiration(playerName, defenderName, [
+            { type: 'remove_target_effect', effectKey: 'protection', source: playerName, target: defenderName }
+        ], campaignName, 1);
     }
 
     const originalDamage = attackResult.totalDamage || 0;
@@ -101,6 +121,12 @@ export async function handle(action, playerStats, campaignName, _mapName) {
         applyHealingToTarget(combatSummary, defenderName, actualHeal, campaignName);
     }
 
+    await setRuntimeValue(playerName, USED_ROUND_KEY, {
+        round: currentRound,
+        activeCreature: combatSummary.activeCreatureName || attackerName,
+        lastAttackTimestamp: attackEvent?.timestamp || Date.now(),
+    }, campaignName);
+
     const description = baseDescription(action, attackerName, defenderName) + attackDetails(attackEvent, originalDamage, damageRoll, damageBonus, reductionAmount, reducedDamage, actualHeal);
 
     const result = {
@@ -117,7 +143,16 @@ export async function handle(action, playerStats, campaignName, _mapName) {
         type: 'ability_use',
         characterName: playerName,
         abilityName: featureName,
-        description: `${playerName} used ${featureName} to impose Disadvantage and reduce damage by ${reductionAmount} on ${attackerName}'s attack against ${defenderName}.`,
+        description: `${playerName} used ${featureName} (Reaction) to impose Disadvantage and reduce damage by ${reductionAmount} on ${attackerName}'s attack against ${defenderName}. ${defenderName} healed ${actualHeal} HP.`,
+        targetName: defenderName,
+        timestamp: Date.now(),
+    }).catch((e) => { console.error("[interception] Error:", e); });
+
+    addEntry(campaignName, {
+        type: 'ability_use',
+        characterName: playerName,
+        abilityName: featureName,
+        description: `${featureName}: Disadvantage imposed on attack rolls against ${defenderName} until the start of ${playerName}'s next turn.`,
         targetName: defenderName,
         timestamp: Date.now(),
     }).catch((e) => { console.error("[interception] Error:", e); });
