@@ -30,6 +30,7 @@ export {
 
 export {
     executeAttackRiderManeuver,
+    applyManeuveringAllyGrant,
 } from './executeAttackRider.js';
 
 export {

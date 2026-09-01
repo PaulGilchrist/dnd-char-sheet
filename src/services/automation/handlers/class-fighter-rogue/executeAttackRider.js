@@ -3,6 +3,8 @@ import { resolveTarget } from '../../common/targetResolver.js';
 import { buildSaveDc, createSaveListener } from '../../common/savePrompt.js';
 import { getCombatContext } from '../../../rules/combat/damageUtils.js';
 import { applyDamageToTarget } from '../../../rules/combat/applyDamage.js';
+import { addExpiration } from '../../../rules/effects/expirations.js';
+import { addEntry } from '../../../ui/logService.js';
 import { getManeuversForRules } from './combatSuperiorityQueries.js';
 import {
     checkSuperiorityDice,
@@ -14,6 +16,30 @@ import {
     buildManeuverSaveDescription,
 } from './combatSuperiorityUtils.js';
 import { validateSizeLimit } from './executeManeuver.js';
+
+export async function applyManeuveringAllyGrant(allyName, casterName, targetName, campaignName) {
+    const cs = await getCombatContext(campaignName);
+    const ally = cs?.creatures?.find(c => c.name === allyName);
+    const halfSpeed = Math.floor((ally?.speed || 30) / 2);
+
+    await setRuntimeValue(allyName, 'maneuveringStepGranted', true, campaignName);
+    await setRuntimeValue(allyName, 'maneuveringStepNoOA', true, campaignName);
+    await setRuntimeValue(allyName, 'maneuveringStepNoOASource', targetName || null, campaignName);
+    addExpiration(casterName, allyName, [
+        { type: 'maneuvering_step_granted' }
+    ], campaignName, undefined, casterName);
+
+    const description = `Maneuvering Attack: ${allyName} can move up to half their Speed (${halfSpeed} ft) using their Reaction without provoking Opportunity Attacks from ${targetName || 'the target'}.`;
+    await addEntry(campaignName, {
+        type: 'ability_use',
+        characterName: casterName,
+        abilityName: 'Maneuvering Attack',
+        description,
+        timestamp: Date.now(),
+    }).catch((e) => { console.error('[maneuveringAttack:grant-log-error]', e); });
+
+    return { halfSpeed, description };
+}
 
 export async function executeAttackRiderManeuver(action, playerStats, campaignName, maneuverName, attackInfo) {
     const auto = action.automation || {};
@@ -139,7 +165,7 @@ export async function executeAttackRiderManeuver(action, playerStats, campaignNa
     }
 
     if (maneuver.effect === 'ally_movement') {
-        description += ` An ally can use its Reaction to move up to half its Speed without provoking Opportunity Attacks.`;
+        description += ` Choose a willing ally: that ally can use its Reaction to move up to half its Speed without provoking Opportunity Attacks from ${targetName || 'the target'}.`;
     }
 
     if (maneuver.effect === 'secondary_damage') {

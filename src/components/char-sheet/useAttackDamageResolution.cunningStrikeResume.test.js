@@ -55,6 +55,7 @@ vi.mock('../../services/automation/handlers/class-fighter-rogue/combatSuperiorit
   getAttackRiderOptions: vi.fn(() => Promise.resolve([])),
   getAttackRiderOptionsByContext: vi.fn(() => Promise.resolve([])),
   executeAttackRiderManeuver: vi.fn(),
+  applyManeuveringAllyGrant: vi.fn(),
 }));
 
 vi.mock('../../services/combat/prompts/bardicInspirationPromptUtils.js', () => ({

@@ -346,6 +346,14 @@ describe('clearExpirationEffects effect types (via clearAllExpirationEffects)', 
         ],
       },
       {
+        type: 'maneuvering_step_granted',
+        checks: [
+          { key: 'maneuveringStepGranted', value: null },
+          { key: 'maneuveringStepNoOA', value: null },
+          { key: 'maneuveringStepNoOASource', value: null },
+        ],
+      },
+      {
         type: 'remove_bulwark_of_force',
         checks: [
           { key: 'bulwarkOfForceActive', value: null },

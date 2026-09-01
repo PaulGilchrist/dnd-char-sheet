@@ -41,6 +41,7 @@ vi.mock('../../services/rules/core/attackCalc.js', () => ({
 
 vi.mock('../../services/automation/handlers/class-fighter-rogue/combatSuperiorityHandler.js', () => ({
     executeAttackRiderManeuver: vi.fn(),
+    applyManeuveringAllyGrant: vi.fn(),
 }));
 
 vi.mock('../../services/rules/spells/postCastRiderService.js', () => ({

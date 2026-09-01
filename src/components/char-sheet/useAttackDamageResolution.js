@@ -3,7 +3,8 @@ import { rollExpression } from '../../services/dice/diceRoller.js';
 import { evaluateAutoExpression } from '../../services/combat/automation/automationService.js';
 import { addEntry } from '../../services/ui/logService.js';
 import { getEmpoweredEvocationFeatures, getEmpoweredEvocationIntModifier } from '../../services/rules/spells/postCastRiderService.js';
-import { executeAttackRiderManeuver as executeAttackRiderManeuverService } from '../../services/automation/handlers/class-fighter-rogue/combatSuperiorityHandler.js';
+import { executeAttackRiderManeuver as executeAttackRiderManeuverService, applyManeuveringAllyGrant } from '../../services/automation/handlers/class-fighter-rogue/combatSuperiorityHandler.js';
+import { getCombatContext } from '../../services/rules/combat/damageUtils.js';
 import { buildPipelineForAction } from '../../services/combat/steps/index.js';
 
 /**
@@ -380,7 +381,34 @@ export default function useAttackDamageResolution({
                     await addEntry(campaignName, entry).catch((e) => { console.error('[attackRiderManeuver:log-error]', e); });
                 }
             }
-            if (result?.type === 'popup') {
+            if (result?.type === 'popup' && maneuver?.effect === 'ally_movement') {
+                const grantTargetName = popupHtmlData?.targetName || attackInfo.targetName || null;
+                const cs = await getCombatContext(campaignName);
+                const allies = (cs?.creatures || [])
+                    .filter(c => c.name !== playerStats.name && c.type === 'player')
+                    .map(c => ({ name: c.name, currentHp: c.currentHp, maxHp: c.maxHp, type: c.type }));
+                if (allies.length > 0) {
+                    setModalState({ secondaryTargetModal: {
+                        title: 'Maneuvering Attack — Choose Ally',
+                        icon: 'fa-person-walking',
+                        targets: allies,
+                        confirmLabel: 'Grant Movement',
+                        confirmIcon: 'fa-person-walking',
+                        description: `Choose a willing creature within 30 feet who can see or hear you. That creature can use its Reaction to move up to half its Speed without provoking Opportunity Attacks from ${grantTargetName || 'the target'}.`,
+                        onTargetSelected: async (allyName) => {
+                            setModalState({ secondaryTargetModal: null });
+                            const grant = await applyManeuveringAllyGrant(allyName, playerStats.name, grantTargetName, campaignName);
+                            setPopupHtml({ type: 'automation_info', name: 'Maneuvering Attack', description: grant.description });
+                        },
+                        onSkip: () => {
+                            setModalState({ secondaryTargetModal: null });
+                            setPopupHtml({ ...result.payload, description: `${result.payload.description || ''} No ally received the movement grant.` });
+                        },
+                    } });
+                } else {
+                    setPopupHtml({ ...result.payload, description: `${result.payload.description || ''} No willing allies are within range to receive the movement grant.` });
+                }
+            } else if (result?.type === 'popup') {
                 setPopupHtml(result.payload);
             }
             if (result?.type === 'modal' && result.modalName === 'sweepingAttackTarget') {

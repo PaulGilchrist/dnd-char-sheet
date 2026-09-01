@@ -1059,3 +1059,11 @@ Monk self-targeting Hand of Healing: the initiative card Target dropdown EXCLUDE
 - **VERIFIED pattern (post-fix):** rider step pauses pipeline with `_pausedStep:'attackRiderManeuvers'` (PLURAL; `_modalType` is singular) BEFORE `rollBaseDamage` → rider service rolls+expends the superiority die once, returns `{dieValue, logEntries, popupHtml}` → `handleAttackRiderManeuverUse` defaults its 3-arg call signature (`currentRolls=[]`), stashes `attackRiderDieValue`, flushes `addEntry(logEntries)`, then **must** `await resumeAttackPipeline()` → `superiorityDieBonuses` step consumes the die key (second consumer `applySuperiorityDamageBonuses` no-ops after clear) → damage popup + hp_change.
 - Shared pause/resume gap REPAIRED on this modal path: use AND skip now resume; `resumeAttackPipeline` guard widened from `cunningStrike` only. Skipping without resume silently loses base damage.
 - Pre-existing console noise on every sheet attack — do NOT file: `buildSaveDc Spell "unknown"`, `_Vex_appliedTarget` wrong-characterKey errors.
+
+### Maneuvering Attack ally grant / MN-011 (FIXED 2026-09-01, feeds MN-012)
+
+- **GoliathFireGiant drifts back to Champion in JSON** — re-author `class.subclass`/`class.major.name='Battle Master'` directly, verify JSON after 15s.
+- Rider modal silently skips after page reload unless maneuvers cache is warmed: open + Cancel the "Combat Superiority:" picker first (cold-cache behavior in `getAvailableAttackRiderManeuvers`, not a regression).
+- `maneuvering_step_granted` expiration is creature-keyed on the caster — walk turns to the caster's next turn; change-data debounce ~10s, poll ≥12s.
+- Pending-prompt overlays stack — dismiss one at a time; `browser_handle_dialog` reports "none" when a `page.on('dialog')` listener already consumed them.
+- Damage-in-rider leg for Maneuvering Attack was already covered by MN-009's `attackRiderDieValue` path — popup "1d8+3 + 7 [slashing]" + `ability_use "…Rolled d8 for N. Added N to the damage roll."`.

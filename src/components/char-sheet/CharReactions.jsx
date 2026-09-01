@@ -204,6 +204,15 @@ function CharReactions({ playerStats, campaignName, cannotAct, mapName, characte
                         setPopupHtml(html);
                         return;
                     }
+                    const targetManeuveringNoOA = getRuntimeValue(target.name, 'maneuveringStepNoOA');
+                    if (targetManeuveringNoOA) {
+                        const grantSource = getRuntimeValue(target.name, 'maneuveringStepNoOASource');
+                        if (!grantSource || grantSource === playerStats.name) {
+                            const html = `<b>Opportunity Attack</b><br/>${target.name} was granted Maneuvering Attack movement and cannot be targeted by Opportunity Attacks from ${grantSource || playerStats.name} right now.`;
+                            setPopupHtml(html);
+                            return;
+                        }
+                    }
                     if (targetHasSpeedy) {
                         const html = `<b>Opportunity Attack</b><br/>${target.name} has Agile Movement — opportunity attacks against them have Disadvantage.`;
                         setPopupHtml(html);

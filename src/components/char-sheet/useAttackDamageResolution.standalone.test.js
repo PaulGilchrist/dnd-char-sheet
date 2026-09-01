@@ -18,6 +18,11 @@ vi.mock('../../services/rules/spells/postCastRiderService.js', () => ({
 
 vi.mock('../../services/automation/handlers/class-fighter-rogue/combatSuperiorityHandler.js', () => ({
     executeAttackRiderManeuver: vi.fn(),
+    applyManeuveringAllyGrant: vi.fn(),
+}));
+
+vi.mock('../../services/rules/combat/applyDamage.js', () => ({
+    applyDamageToTarget: vi.fn(),
 }));
 
 vi.mock('../../services/combat/steps/index.js', () => ({

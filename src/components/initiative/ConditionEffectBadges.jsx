@@ -78,6 +78,22 @@ function pushPerceptionDisadvBadge(badges, targetEffects, creatureName) {
     badges.push({ label: def.label, cls: 'effect-debuff', icon: def.icon, removable: true, removeAction: 'target_effect', effectType: 'disadvantage_perception_checks', tooltip: `Disadvantage on Wisdom (Perception) checks (from ${effect.source || 'unknown'})` })
 }
 
+function pushNoOAMoveBadges(badges, creatureName, campaignName, hasTacticalShift) {
+    if (!creatureName || !campaignName) return
+    const noOA = getRuntimeValue(creatureName, 'inspiringMovementNoOA', campaignName) || hasTacticalShift
+    if (noOA) {
+        badges.push({ label: 'Insp. Move', cls: 'effect-buff', icon: 'fa-person-walking', removable: true, removeAction: 'inspiring_move' })
+    }
+    pushManeuveringMoveBadge(badges, creatureName, campaignName)
+}
+
+function pushManeuveringMoveBadge(badges, creatureName, campaignName) {
+    if (!creatureName || !campaignName) return
+    if (!getRuntimeValue(creatureName, 'maneuveringStepNoOA', campaignName)) return
+    const maneuveringSource = getRuntimeValue(creatureName, 'maneuveringStepNoOASource', campaignName) || 'the attacker'
+    badges.push({ label: 'Mnv. Move', cls: 'effect-buff', icon: 'fa-person-walking', removable: true, removeAction: 'maneuvering_move', tooltip: `Can move up to half their Speed as a Reaction without provoking Opportunity Attacks from ${maneuveringSource}` })
+}
+
 function ConditionEffectBadges({ conditions, targetEffects = [], creatureName, campaignName, allCreatures, hasTacticalShift, hasSpeedyOpportunityDisadvantage, hasSpeedyDifficultTerrainIgnore, isLocalhost, coronaDisadvantage, playerStats: _playerStats, characters: _characters, activeMapName: _activeMapName, onRollConditionSave }) {
     const condKeys = (conditions || []).map(c => c.key)
     const effects = computeConditionEffects(condKeys, [], targetEffects, false, false, false, false, null, false, false, false, false, false, false, false, false, false, false, false, false)
@@ -188,10 +204,7 @@ function ConditionEffectBadges({ conditions, targetEffects = [], creatureName, c
     }
     if (effects.riderAttackBonus > 0) badges.push({ label: `+${effects.riderAttackBonus} to hit`, cls: 'effect-debuff', icon: 'fa-bullseye', removable: true, removeAction: 'target_effect', effectType: 'next_attack_bonus' })
     if (effects.riderCannotOpportunityAttack) badges.push({ label: 'No OA', cls: 'effect-debuff', icon: 'fa-ban', removable: true, removeAction: 'target_effect', effectType: 'no_opportunity_attacks' })
-    const noOA = getRuntimeValue(creatureName, 'inspiringMovementNoOA', campaignName) || hasTacticalShift
-    if (creatureName && campaignName && noOA) {
-        badges.push({ label: 'Insp. Move', cls: 'effect-buff', icon: 'fa-person-walking', removable: true, removeAction: 'inspiring_move' })
-    }
+    pushNoOAMoveBadges(badges, creatureName, campaignName, hasTacticalShift)
     const remarkableNoOA = getRuntimeValue(creatureName, 'remarkableAthleteNoOA', campaignName)
     if (creatureName && campaignName && remarkableNoOA) {
         badges.push({ label: 'No OA (Crit)', cls: 'effect-buff', icon: 'fa-ban', removable: true, removeAction: 'remarkable_no_oa' })
@@ -424,6 +437,11 @@ function ConditionEffectBadges({ conditions, targetEffects = [], creatureName, c
                 break
             case 'inspiring_move':
                 setRuntimeValue(creatureName, 'inspiringMovementNoOA', false, campaignName)
+                break
+            case 'maneuvering_move':
+                setRuntimeValue(creatureName, 'maneuveringStepGranted', null, campaignName)
+                setRuntimeValue(creatureName, 'maneuveringStepNoOA', null, campaignName)
+                setRuntimeValue(creatureName, 'maneuveringStepNoOASource', null, campaignName)
                 break
             case 'remarkable_no_oa':
                 setRuntimeValue(creatureName, 'remarkableAthleteNoOA', false, campaignName)

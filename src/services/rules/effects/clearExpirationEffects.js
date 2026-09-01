@@ -216,6 +216,12 @@ export function clearExpirationEffects(effects, targetName, attackerName, campai
                 setRuntimeValue(targetName, 'inspiringMovementGranted', null, campaignName);
                 break;
 
+            case 'maneuvering_step_granted':
+                setRuntimeValue(targetName, 'maneuveringStepGranted', null, campaignName);
+                setRuntimeValue(targetName, 'maneuveringStepNoOA', null, campaignName);
+                setRuntimeValue(targetName, 'maneuveringStepNoOASource', null, campaignName);
+                break;
+
             case 'remove_natures_sanctuary':
                 addEntry(campaignName, {
                     type: 'ability_use',
