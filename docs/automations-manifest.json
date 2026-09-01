@@ -3786,7 +3786,7 @@
       "handler": "src/services/combat/automation/handlers/spellHandler.js",
       "router": "src/services/combat/automation/routers/spellRouter.js",
       "infoBuilder": "src/services/combat/automation/infoBuilders/spellInfoBuilder.js",
-      "verified": "broken — see .opencode/plans/bug-sp-072-lesser-restoration.md",
+      "verified": "verified",
       "class": "Spell",
       "triggerConditions": "Action: bonus_action; Range: Touch",
       "expectedBehavior": "You touch a creature and end one condition on it: Blinded, Deafened, Paralyzed, or Poisoned."

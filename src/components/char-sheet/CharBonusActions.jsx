@@ -4,6 +4,7 @@ import MetamagicPopup from './popups/MetamagicPopup.jsx'
 import SpellDetailPopup from './char-spells/SpellDetailPopup.jsx'
 import HexAbilityModal from './modals/HexAbilityModal.jsx'
 import SecondaryTargetModal from './modals/shared/SecondaryTargetModal.jsx'
+import TargetSpellPopups from './char-spells/TargetSpellPopups.jsx'
 
 import { getCategories } from '../../services/character/featureCategories.js'
 import { sanitizeHtml } from '../../services/ui/sanitize.js';
@@ -136,7 +137,8 @@ function CharBonusActions({ playerStats, campaignName, exhaustionPenalty, condit
 
     const { castAction: bonusCastAction } = useSpellCastExecutor(rollAttack, rollDamage, playerStats, getTargetInfo, campaignName, mapName, characters, setPopupHtml, { innateSorceryActive: !!displaySaveDcBonus }, cachedBonusCastPosRef, setModalState);
 
-    const { pendingMetamagic, pendingBarkskin, pendingHealingWord, pendingSanctuary, gateMetamagic, handleConfirm, handleSkip, handleBarkskinConfirm, handleBarkskinSkip, handleHealingWordConfirm, handleHealingWordSkip, handleSanctuaryConfirm, handleSanctuarySkip } = useSpellMetamagicFlow(playerStats, campaignName, bonusCastAction, null, characters, setPopupHtml);
+    const { pendingMetamagic, pendingBarkskin, pendingHealingWord, pendingSanctuary, gateMetamagic, handleConfirm, handleSkip, handleBarkskinConfirm, handleBarkskinSkip, handleHealingWordConfirm, handleHealingWordSkip, handleSanctuaryConfirm, handleSanctuarySkip, pendingLesserRestoration, handleLesserRestorationConfirm, handleLesserRestorationSkip } = useSpellMetamagicFlow(playerStats, campaignName, bonusCastAction, null, characters, setPopupHtml);
+    const [pendingLesserRestorationTarget, setPendingLesserRestorationTarget] = useState(null);
     const { buildUpcastLevels } = useSpellUpcastFlow(playerStats, campaignName);
 
     const handleBonusSpellCast = React.useCallback(async (spell, metaCtx) => {
@@ -508,6 +510,17 @@ function CharBonusActions({ playerStats, campaignName, exhaustionPenalty, condit
                         description="Choose a creature within range. Until the spell ends, any creature who targets the warded creature with an attack roll or a damaging spell must succeed on a WIS save or lose the attack or spell. Does not protect from areas of effect. Spell ends if the warded creature makes an attack roll, casts a spell, or deals damage."
                         confirmLabel="Cast Sanctuary"
                         confirmIcon="fa-shield-halved"
+                    />
+                )}
+
+                {pendingLesserRestoration && (
+                    <TargetSpellPopups
+                        campaignName={campaignName}
+                        pendingLesserRestoration={pendingLesserRestoration}
+                        handleLesserRestorationConfirm={handleLesserRestorationConfirm}
+                        handleLesserRestorationSkip={handleLesserRestorationSkip}
+                        pendingLesserRestorationTarget={pendingLesserRestorationTarget}
+                        setPendingLesserRestorationTarget={setPendingLesserRestorationTarget}
                     />
                 )}
 
