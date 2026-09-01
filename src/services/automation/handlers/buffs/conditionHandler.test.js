@@ -173,6 +173,55 @@ describe('conditionHandler.handle', () => {
       expect(getAbilityModifier).not.toHaveBeenCalledWith(ps.abilities, 'WIS');
     });
 
+    it('CLA-238: Channel Divinity cost feature defaults DC ability to CHA', async () => {
+      const ps = makePlayerStats({ proficiency: 6 });
+      const action = makeAction({ saveType: 'STR', cost: '1 Channel Divinity' });
+
+      getAbilityModifier.mockImplementation((abilities, ability) => (ability === 'CHA' ? 5 : -1));
+
+      const result = await handle(action, ps, CAMPAIGN_NAME, null);
+
+      expect(result.payload.saveDc).toBe(19);
+      expect(getAbilityModifier).toHaveBeenCalledWith(ps.abilities, 'CHA');
+      expect(getAbilityModifier).not.toHaveBeenCalledWith(ps.abilities, 'WIS');
+    });
+
+    it('CLA-238: resourceCost channel_divinity feature defaults DC ability to CHA', async () => {
+      const ps = makePlayerStats({ proficiency: 6 });
+      const action = makeAction({ saveType: 'STR', resourceCost: 'channel_divinity' });
+
+      getAbilityModifier.mockImplementation((abilities, ability) => (ability === 'CHA' ? 5 : -1));
+
+      const result = await handle(action, ps, CAMPAIGN_NAME, null);
+
+      expect(result.payload.saveDc).toBe(19);
+      expect(getAbilityModifier).toHaveBeenCalledWith(ps.abilities, 'CHA');
+      expect(getAbilityModifier).not.toHaveBeenCalledWith(ps.abilities, 'WIS');
+    });
+
+    it('CLA-238: explicit saveAbility overrides CHA default for Channel Divinity features', async () => {
+      const ps = makePlayerStats({ proficiency: 6 });
+      const action = makeAction({ saveType: 'STR', cost: '1 Channel Divinity', saveAbility: 'CON' });
+
+      getAbilityModifier.mockImplementation((abilities, ability) => (ability === 'CHA' ? 5 : 2));
+
+      const result = await handle(action, ps, CAMPAIGN_NAME, null);
+
+      expect(result.payload.saveDc).toBe(16);
+    });
+
+    it('CLA-238: non-Channel-Divinity feature without cost still defaults DC ability to WIS', async () => {
+      const ps = makePlayerStats({ proficiency: 3 });
+      const action = makeAction({ saveDc: 'ability', saveType: 'STR' });
+
+      getAbilityModifier.mockImplementation((abilities, ability) => (ability === 'CHA' ? 5 : 2));
+
+      const result = await handle(action, ps, CAMPAIGN_NAME, null);
+
+      expect(result.payload.saveDc).toBe(13);
+      expect(getAbilityModifier).toHaveBeenCalledWith(ps.abilities, 'WIS');
+    });
+
     it('derives spell_save_dc from CHA when spellAbilities.saveDc is missing', async () => {
       const ps = makePlayerStats({ spellAbilities: {} });
       const action = makeAction({ saveDc: 'spell_save_dc' });

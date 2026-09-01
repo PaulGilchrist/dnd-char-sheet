@@ -10,10 +10,11 @@ import { loadMonsters } from '../../../ui/dataLoader.js';
 export async function handle(action, playerStats, campaignName, _mapName) {
     const auto = action.automation;
 
+    const isChannelDivinity = auto.resourceCost === 'channel_divinity' || /channel divinity/i.test(String(auto.cost || ''));
     const autoWithDefaults = {
         ...auto,
         saveDc: auto.saveDc || 'ability',
-        saveAbility: auto.saveAbility || 'WIS',
+        saveAbility: auto.saveAbility || (isChannelDivinity ? 'CHA' : 'WIS'),
     };
     const saveDc = buildSaveDc(autoWithDefaults, playerStats);
     const conditionName = auto.condition || 'frightened';
