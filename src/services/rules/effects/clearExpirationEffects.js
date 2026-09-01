@@ -217,6 +217,13 @@ export function clearExpirationEffects(effects, targetName, attackerName, campai
                 break;
 
             case 'remove_natures_sanctuary':
+                addEntry(campaignName, {
+                    type: 'ability_use',
+                    characterName: targetName,
+                    abilityName: "Nature's Sanctuary",
+                    description: `${targetName}'s Nature's Sanctuary expires as the 1 minute elapses. The spectral trees and vines dissolve.`,
+                    timestamp: Date.now(),
+                }).catch((e) => { console.error("[expirations] Error:", e); });
                 setRuntimeValue(targetName, 'naturesSanctuaryActive', null, campaignName);
                 setRuntimeValue(targetName, 'naturesSanctuaryMoves', null, campaignName);
                 setRuntimeValue(targetName, 'naturesSanctuaryRange', null, campaignName);

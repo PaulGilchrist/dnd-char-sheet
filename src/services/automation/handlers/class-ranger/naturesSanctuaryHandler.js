@@ -1,5 +1,6 @@
 import { getRuntimeValue, setRuntimeValue } from '../../../../hooks/runtime/useRuntimeState.js';
 import { addExpiration } from '../../../rules/effects/expirations.js';
+import { parseDurationRounds } from '../../../rules/effects/durationParser.js';
 import { rangeToFeet } from '../../../rules/combat/rangeValidation.js';
 import { addEntry } from '../../../ui/logService.js';
 import { getCombatContext } from '../../../rules/combat/damageUtils.js';
@@ -8,6 +9,12 @@ const SANCTUARY_KEY = 'naturesSanctuaryActive';
 const SANCTUARY_RANGE_KEY = 'naturesSanctuaryRange';
 const SANCTUARY_RESISTANCE_KEY = 'naturesSanctuaryResistance';
 const SANCTUARY_CREATURES_KEY = 'naturesSanctuaryCreatures';
+const SANCTUARY_MOVES_KEY = 'naturesSanctuaryMoves';
+const DEFAULT_DURATION_ROUNDS = 10; // 1 minute = 10 rounds
+
+function getMovesUsed(playerName, campaignName) {
+    return Number(getRuntimeValue(playerName, SANCTUARY_MOVES_KEY, campaignName) ?? 0);
+}
 
 export async function handle(action, playerStats, campaignName, _mapName) {
     const auto = action.automation;
@@ -58,10 +65,12 @@ export async function handle(action, playerStats, campaignName, _mapName) {
             .map(c => ({ name: c.name, type: c.type, currentHp: c.currentHp, maxHp: c.maxHp, size: c.size }))
         : [];
 
-    // Set up expiration for 1 minute (10 rounds)
+    // Set up expiration for 1 minute (10 rounds) — rounds MUST be passed or
+    // the queue treats it as Infinity and the sanctuary never expires (CLA-235).
+    const durationRounds = parseDurationRounds(auto.duration) || DEFAULT_DURATION_ROUNDS;
     addExpiration(playerName, playerName, [
         { type: 'remove_natures_sanctuary' }
-    ], campaignName);
+    ], campaignName, durationRounds);
 
     return {
         type: 'modal',
@@ -89,6 +98,21 @@ export async function handleMove(action, playerStats, campaignName, _mapName) {
                 type: 'automation_info',
                 name: action.name,
                 description: `${action.name} is not currently active.`,
+                automation: auto,
+            },
+        };
+    }
+
+    // Gate moves per duration (default 1 per sanctuary duration)
+    const maxMoves = auto.movesPerDuration ?? 1;
+    const movesUsed = getMovesUsed(playerName, campaignName);
+    if (movesUsed >= maxMoves) {
+        return {
+            type: 'popup',
+            payload: {
+                type: 'automation_info',
+                name: action.name,
+                description: `${action.name}: No sanctuary moves remaining (${movesUsed}/${maxMoves} used this duration).`,
                 automation: auto,
             },
         };
@@ -136,6 +160,9 @@ export async function activateNaturesSanctuary(action, playerStats, campaignName
     const rangeFt = rangeToFeet(auto.range || '120_ft') || 120;
     await setRuntimeValue(playerName, SANCTUARY_RANGE_KEY, rangeFt, campaignName);
 
+    // Reset the move counter for this duration (cleared on expiry via remove_natures_sanctuary)
+    await setRuntimeValue(playerName, SANCTUARY_MOVES_KEY, 0, campaignName);
+
     // Log the ability use
     await addEntry(campaignName, {
         type: 'ability_use',
@@ -161,6 +188,28 @@ export async function moveNaturesSanctuary(action, playerStats, campaignName, ta
     const auto = action.automation;
     const playerName = playerStats.name;
 
+    // Gate moves per duration (default 1 per sanctuary duration)
+    const maxMoves = auto.movesPerDuration ?? 1;
+    const movesUsed = getMovesUsed(playerName, campaignName);
+    if (movesUsed >= maxMoves) {
+        await addEntry(campaignName, {
+            type: 'ability_use',
+            characterName: playerName,
+            abilityName: action.name,
+            description: `${playerName} tried to move Nature's Sanctuary but has no moves remaining (${movesUsed}/${maxMoves} used this duration).`,
+            timestamp: Date.now(),
+        }).catch((e) => { console.error("[naturesSanctuaryMove] Error:", e); });
+        return {
+            type: 'popup',
+            payload: {
+                type: 'automation_info',
+                name: action.name,
+                description: `No sanctuary moves remaining (${movesUsed}/${maxMoves} used this duration). The cube cannot be moved again until the sanctuary is re-cast.`,
+                automation: auto,
+            },
+        };
+    }
+
     const finalTargets = targetNames || [];
     const existingCreatures = getRuntimeValue(playerName, SANCTUARY_CREATURES_KEY, campaignName) || [];
 
@@ -168,8 +217,9 @@ export async function moveNaturesSanctuary(action, playerStats, campaignName, ta
     const added = finalTargets.filter(name => !existingCreatures.includes(name));
     const removed = existingCreatures.filter(name => !finalTargets.includes(name));
 
-    // Update creature list
+    // Update creature list and consume one move
     await setRuntimeValue(playerName, SANCTUARY_CREATURES_KEY, finalTargets, campaignName);
+    await setRuntimeValue(playerName, SANCTUARY_MOVES_KEY, movesUsed + 1, campaignName);
 
     // Log the move with delta detail
     const moveRange = auto.moveRange || 60;

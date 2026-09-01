@@ -178,7 +178,25 @@ describe("Nature's Sanctuary Handler", () => {
         'Druid',
         [{ type: 'remove_natures_sanctuary' }],
         campaignName,
+        10,
       );
+    });
+
+    it('enqueues expiry with 10 rounds for a 1_minute duration (CLA-235)', async () => {
+      useRuntimeState.getRuntimeValue.mockImplementation((player, key) => {
+        if (key === 'wildShapeUses') return 3;
+        return null;
+      });
+
+      const action = makeAction();
+      const playerStats = makePlayerStats();
+
+      await handle(action, playerStats, campaignName, null);
+
+      const call = expirations.addExpiration.mock.calls[0];
+      // Rounds MUST be passed (5th arg) — Infinity means the sanctuary never expires
+      expect(call.length).toBeGreaterThanOrEqual(5);
+      expect(call[4]).toBe(10);
     });
 
     it.each([
@@ -247,6 +265,31 @@ describe("Nature's Sanctuary Handler", () => {
       expect(result.type).toBe('popup');
       expect(result.payload.description).toContain('not currently active');
     });
+
+    it('blocks the move modal when the per-duration moves are exhausted (CLA-235)', async () => {
+      useRuntimeState.getRuntimeValue.mockImplementation((player, key) => {
+        if (key === 'naturesSanctuaryActive') return true;
+        if (key === 'naturesSanctuaryMoves') return 1;
+        return null;
+      });
+
+      const result = await handleMove(makeMoveAction(), makePlayerStats(), campaignName, null);
+
+      expect(result.type).toBe('popup');
+      expect(result.payload.description).toContain('No sanctuary moves remaining (1/1 used');
+    });
+
+    it('move leg never re-enqueues or strips the expiration (CLA-235)', async () => {
+      useRuntimeState.getRuntimeValue.mockImplementation((player, key) => {
+        if (key === 'naturesSanctuaryActive') return true;
+        return null;
+      });
+
+      await handleMove(makeMoveAction(), makePlayerStats(), campaignName, null);
+      await moveNaturesSanctuary(makeMoveAction(), makePlayerStats(), campaignName, ['Goblin']);
+
+      expect(expirations.addExpiration).not.toHaveBeenCalled();
+    });
   });
 
   describe('activateNaturesSanctuary', () => {
@@ -287,6 +330,12 @@ describe("Nature's Sanctuary Handler", () => {
         'Druid',
         'naturesSanctuaryRange',
         120,
+        campaignName,
+      );
+      expect(useRuntimeState.setRuntimeValue).toHaveBeenCalledWith(
+        'Druid',
+        'naturesSanctuaryMoves',
+        0,
         campaignName,
       );
       expect(expirations.addExpiration).not.toHaveBeenCalled();
@@ -412,6 +461,57 @@ describe("Nature's Sanctuary Handler", () => {
         description: expect.stringContaining('No creatures added or removed'),
         timestamp: expect.any(Number),
       });
+    });
+
+    it('consumes a move counter on a successful move (CLA-235)', async () => {
+      const action = makeMoveAction();
+      const playerStats = makePlayerStats();
+
+      useRuntimeState.getRuntimeValue.mockImplementation((player, key) => {
+        if (key === 'naturesSanctuaryCreatures') return ['Goblin'];
+        if (key === 'naturesSanctuaryMoves') return 0;
+        return null;
+      });
+
+      const result = await moveNaturesSanctuary(action, playerStats, campaignName, ['Goblin', 'Wolf']);
+
+      expect(result.type).toBe('popup');
+      expect(result.payload.description).not.toContain('No sanctuary moves remaining');
+      expect(useRuntimeState.setRuntimeValue).toHaveBeenCalledWith(
+        'Druid',
+        'naturesSanctuaryMoves',
+        1,
+        campaignName,
+      );
+    });
+
+    it('blocks the second move after the per-duration move is spent and logs the block (CLA-235)', async () => {
+      const action = makeMoveAction();
+      const playerStats = makePlayerStats();
+
+      useRuntimeState.getRuntimeValue.mockImplementation((player, key) => {
+        if (key === 'naturesSanctuaryMoves') return 1;
+        if (key === 'naturesSanctuaryCreatures') return ['Goblin'];
+        return null;
+      });
+
+      const result = await moveNaturesSanctuary(action, playerStats, campaignName, ['Goblin', 'Wolf']);
+
+      expect(result.type).toBe('popup');
+      expect(result.payload.description).toContain('No sanctuary moves remaining (1/1 used');
+      // Creature list must NOT be updated when blocked
+      expect(useRuntimeState.setRuntimeValue).not.toHaveBeenCalledWith(
+        'Druid',
+        'naturesSanctuaryCreatures',
+        ['Goblin', 'Wolf'],
+        campaignName,
+      );
+      // The block is logged
+      expect(logService.addEntry).toHaveBeenCalledWith(campaignName, expect.objectContaining({
+        type: 'ability_use',
+        characterName: 'Druid',
+        description: expect.stringContaining('no moves remaining'),
+      }));
     });
 
     it('uses custom move range from automation config', async () => {
