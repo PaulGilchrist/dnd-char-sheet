@@ -5,7 +5,7 @@ function isOptionTarget(target) {
     return 'value' in target;
 }
 
-function SecondaryTargetModal({ title, targets, onTargetSelected, onSkip, featureDescription, description, confirmLabel, confirmIcon, showHp, showSize, hideConfirm }) {
+function SecondaryTargetModal({ title, targets, onTargetSelected, onSkip, featureDescription, description, confirmLabel, confirmIcon, showHp, showSize, hideConfirm, variantLabel, variantChecked, onVariantChange, variantDisabled }) {
     const [selected, setSelected] = useState(null);
 
     const iconClass = confirmIcon || 'fa-crosshairs';
@@ -71,6 +71,17 @@ function SecondaryTargetModal({ title, targets, onTargetSelected, onSkip, featur
                             );
                         })}
                     </div>
+                    {variantLabel && (
+                        <label className={`secondary-target-variant ${variantDisabled ? 'secondary-target-variant-disabled' : ''}`}>
+                            <input
+                                type="checkbox"
+                                checked={!!variantChecked}
+                                disabled={!!variantDisabled}
+                                onChange={(e) => onVariantChange?.(e.target.checked)}
+                            />
+                            {variantLabel}
+                        </label>
+                    )}
                     {featureDescription && (
                         <p className="secondary-target-note">{featureDescription}</p>
                     )}

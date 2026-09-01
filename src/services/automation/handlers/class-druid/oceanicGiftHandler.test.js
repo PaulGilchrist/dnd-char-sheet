@@ -614,6 +614,110 @@ describe('oceanicGiftHandler', () => {
         });
     });
 
+    describe('CLA-240 double-emanation variant', () => {
+        it('passes availableUses (current Wild Shape uses) into the modal payload', async () => {
+            getRuntimeValue.mockImplementation((name, key) => {
+                if (name === playerName && key === 'wildShapeUses') return 3;
+                return undefined;
+            });
+            loadCombatSummary.mockResolvedValue({ creatures: [makeAlly()] });
+            buildSaveDc.mockReturnValue(17);
+
+            const result = await handle(makeAction(), makePlayerStats(), campaignName);
+
+            expect(result.payload.availableUses).toBe(3);
+        });
+
+        it('blocks the double variant with a popup and spends nothing when only 1 use remains', async () => {
+            getRuntimeValue.mockImplementation((name, key) => {
+                if (name === playerName && key === 'wildShapeUses') return 1;
+                return undefined;
+            });
+
+            const result = await confirmOceanicGift(
+                makeAction(),
+                makePlayerStats(),
+                campaignName,
+                'AllyOne',
+                17,
+                3,
+                true,
+            );
+
+            expect(result.type).toBe('popup');
+            expect(result.payload.description).toContain('Not enough Wild Shape uses remaining');
+            expect(result.payload.description).toContain('2 uses required');
+            expect(setRuntimeValue).not.toHaveBeenCalledWith(playerName, 'wildShapeUses', 0, campaignName);
+            expect(setRuntimeValue).not.toHaveBeenCalledWith('AllyOne', 'wrathOfTheSeaActive', true, campaignName);
+        });
+
+        it('spends 2 uses and grants both druid and ally when 2 uses remain', async () => {
+            getRuntimeValue.mockImplementation((name, key) => {
+                if (name === playerName && key === 'wildShapeUses') return 2;
+                return undefined;
+            });
+
+            const result = await confirmOceanicGift(
+                makeAction(),
+                makePlayerStats(),
+                campaignName,
+                'AllyOne',
+                17,
+                3,
+                true,
+            );
+
+            expect(setRuntimeValue).toHaveBeenCalledWith(playerName, 'wildShapeUses', 0, campaignName);
+            expect(setRuntimeValue).toHaveBeenCalledWith('AllyOne', 'wrathOfTheSeaActive', true, campaignName);
+            expect(setRuntimeValue).toHaveBeenCalledWith(playerName, 'wrathOfTheSeaActive', true, campaignName);
+            expect(result.payload.description).toContain('You also gain the Emanation');
+            expect(addEntry).toHaveBeenCalledWith(campaignName, expect.objectContaining({
+                type: 'ability_use',
+                description: expect.stringContaining('both themselves and AllyOne'),
+            }));
+        });
+
+        it('sets wrathOfTheSeaDc and wrathOfTheSeaWisMod on the druid for the double variant', async () => {
+            getRuntimeValue.mockImplementation((name, key) => {
+                if (name === playerName && key === 'wildShapeUses') return 2;
+                return undefined;
+            });
+
+            await confirmOceanicGift(
+                makeAction(),
+                makePlayerStats(),
+                campaignName,
+                'AllyOne',
+                17,
+                3,
+                true,
+            );
+
+            expect(setRuntimeValue).toHaveBeenCalledWith(playerName, 'wrathOfTheSeaDc', 17, campaignName);
+            expect(setRuntimeValue).toHaveBeenCalledWith(playerName, 'wrathOfTheSeaWisMod', 3, campaignName);
+        });
+
+        it('does NOT write wrathOfTheSea keys on the druid for the verified single variant', async () => {
+            getRuntimeValue.mockImplementation((name, key) => {
+                if (name === playerName && key === 'wildShapeUses') return 2;
+                return undefined;
+            });
+
+            await confirmOceanicGift(
+                makeAction(),
+                makePlayerStats(),
+                campaignName,
+                'AllyOne',
+                17,
+                3,
+                false,
+            );
+
+            expect(setRuntimeValue).not.toHaveBeenCalledWith(playerName, 'wrathOfTheSeaActive', true, campaignName);
+            expect(setRuntimeValue).not.toHaveBeenCalledWith(playerName, 'wrathOfTheSeaDc', 17, campaignName);
+        });
+    });
+
     describe('clearOceanicGiftAllies', () => {
         it('clears oceanic gift allies by setting to null', () => {
             clearOceanicGiftAllies(playerName, campaignName);

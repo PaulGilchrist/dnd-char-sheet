@@ -223,6 +223,37 @@ describe('useCharActionsModalHandlers - oceanicGift', () => {
       expect(mockSetModalState).toHaveBeenCalledWith({ oceanicGiftTargetModal: null });
     });
 
+    it('dispatches doubleEmanation:true when the chooser toggle override is true (CLA-240)', async () => {
+      confirmOceanicGift.mockResolvedValue({ type: 'popup', payload: '<p>Gift!</p>' });
+      const modalState = {
+        oceanicGiftTargetModal: makeBaseModalData({ doubleEmanation: false }),
+      };
+      const handlers = getHandlers(modalState);
+      await handlers.handleOceanicGiftConfirm('Ally1', true);
+      expect(confirmOceanicGift).toHaveBeenCalledWith(
+        modalState.oceanicGiftTargetModal.action,
+        modalState.oceanicGiftTargetModal.playerStats,
+        modalState.oceanicGiftTargetModal.campaignName,
+        'Ally1',
+        13,
+        3,
+        true
+      );
+    });
+
+    it('keeps doubleEmanation:false when the toggle override is false or omitted', async () => {
+      confirmOceanicGift.mockResolvedValue({ type: 'popup', payload: '<p>Gift!</p>' });
+      const handlers = getHandlers({ oceanicGiftTargetModal: makeBaseModalData() });
+      await handlers.handleOceanicGiftConfirm('Ally1', false);
+      expect(confirmOceanicGift).toHaveBeenLastCalledWith(
+        expect.anything(), expect.anything(), expect.anything(), 'Ally1', 13, 3, false
+      );
+      await handlers.handleOceanicGiftConfirm('Ally1');
+      expect(confirmOceanicGift).toHaveBeenLastCalledWith(
+        expect.anything(), expect.anything(), expect.anything(), 'Ally1', 13, 3, false
+      );
+    });
+
     it('skips popup when confirmOceanicGift returns non-popup type but still clears modal', async () => {
       confirmOceanicGift.mockResolvedValue({ type: 'info', payload: 'Some info' });
       const handlers = getHandlers({

@@ -47,6 +47,22 @@
     opacity: 0.7;
 }
 
+.secondary-target-variant {
+    display: block;
+    margin-top: 10px;
+    cursor: pointer;
+    text-align: left;
+}
+
+.secondary-target-variant input[type="checkbox"] {
+    margin-right: 8px;
+}
+
+.secondary-target-variant.secondary-target-variant-disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
 .secondary-target-note {
     opacity: 0.7;
     font-size: 0.85em;

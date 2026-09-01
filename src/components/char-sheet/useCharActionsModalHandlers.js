@@ -406,12 +406,13 @@ export default function useCharActionsModalHandlers({
         }
     }
 
-    async function handleOceanicGiftConfirm(selectedAllyName) {
+    async function handleOceanicGiftConfirm(selectedAllyName, doubleOverride) {
         if (!modalState.oceanicGiftTargetModal) return;
         const { action, playerStats: ogPlayerStats, campaignName: ogCampaignName, spellSaveDc, wisMod, doubleEmanation } = modalState.oceanicGiftTargetModal;
         setModalState({ oceanicGiftTargetModal: null });
         if (!selectedAllyName) return;
-        const result = await confirmOceanicGift(action, ogPlayerStats, ogCampaignName, selectedAllyName, spellSaveDc, wisMod, doubleEmanation);
+        const isDouble = doubleOverride ?? doubleEmanation;
+        const result = await confirmOceanicGift(action, ogPlayerStats, ogCampaignName, selectedAllyName, spellSaveDc, wisMod, isDouble);
         if (!result) return;
         if (result.type === 'popup') {
             setPopupHtml(result.payload);

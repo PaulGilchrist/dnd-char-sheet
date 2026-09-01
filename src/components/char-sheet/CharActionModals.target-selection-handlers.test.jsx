@@ -293,7 +293,7 @@ describe('CharActionModals — target selection handler callbacks', () => {
         setModalState={vi.fn()}
       />);
       fireEvent.click(screen.getByTestId('secondary-target-Ally1'));
-      expect(handler).toHaveBeenCalledWith('Ally1');
+      expect(handler).toHaveBeenCalledWith('Ally1', false);
     });
 
     it('calls handleOceanicGiftConfirm with null on skip', () => {

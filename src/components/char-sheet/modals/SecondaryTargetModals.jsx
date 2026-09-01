@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import SecondaryTargetModal from './shared/SecondaryTargetModal.jsx';
 
 export default function SecondaryTargetModals({
@@ -28,6 +28,16 @@ export default function SecondaryTargetModals({
         destructiveStrideTargetModal,
         starryChaliceHealModal,
     } = mergedModalState;
+
+    const [oceanicDouble, setOceanicDouble] = useState(false);
+
+    useEffect(() => {
+        if (!oceanicGiftTargetModal) {
+            setOceanicDouble(false);
+        }
+    }, [oceanicGiftTargetModal]);
+
+    const oceanicIsDouble = oceanicDouble || !!oceanicGiftTargetModal?.doubleEmanation;
 
     if (!sweepingAttackTargetModal && !baitAndSwitchChoiceModal && !commanderStrikeChoiceModal && !rallyChoiceModal && !tricksterBlessingModal && !bardicInspirationTargetModal && !inspiringMovementAllyModal && !oceanicGiftTargetModal && !destructiveStrideTargetModal && !starryChaliceHealModal) {
         return null;
@@ -116,15 +126,19 @@ export default function SecondaryTargetModals({
             )}
             {oceanicGiftTargetModal && (
                 <SecondaryTargetModal
-                    title={oceanicGiftTargetModal.doubleEmanation ? "Oceanic Gift — Choose Ally (Self + Ally, 2 Wild Shape)" : "Oceanic Gift — Choose Ally"}
+                    title={oceanicIsDouble ? "Oceanic Gift — Choose Ally (Self + Ally, 2 Wild Shape)" : "Oceanic Gift — Choose Ally"}
                     targets={oceanicGiftTargetModal.creatureTargets}
                     confirmLabel="Grant Wrath of the Sea"
                     confirmIcon="fa-water"
-                    featureDescription={oceanicGiftTargetModal.doubleEmanation
+                    featureDescription={oceanicIsDouble
                         ? "Manifest the Emanation around both yourself and the chosen ally. Costs 2 Wild Shape uses."
                         : "Manifest the Emanation around one willing creature within 60 feet. Costs 1 Wild Shape."
                     }
-                    onTargetSelected={(targetName) => handleOceanicGiftConfirm(targetName)}
+                    variantLabel={!oceanicGiftTargetModal.doubleEmanation ? "Manifest around Self + Ally (costs 2 Wild Shape uses)" : undefined}
+                    variantChecked={oceanicDouble}
+                    onVariantChange={setOceanicDouble}
+                    variantDisabled={(oceanicGiftTargetModal.availableUses ?? 0) < 2}
+                    onTargetSelected={(targetName) => handleOceanicGiftConfirm(targetName, oceanicIsDouble)}
                     onSkip={() => handleOceanicGiftConfirm(null)}
                 />
             )}

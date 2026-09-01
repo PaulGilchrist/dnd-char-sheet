@@ -44,6 +44,7 @@ export async function handle(action, playerStats, campaignName, _mapName) {
             wisMod: playerStats.abilities?.find(a => a.name === 'Wisdom')?.bonus || 1,
             doubleEmanation: !!auto?.doubleEmanation,
             cost,
+            availableUses: currentWS,
         },
     };
 }
@@ -51,8 +52,21 @@ export async function handle(action, playerStats, campaignName, _mapName) {
 export async function confirmOceanicGift(action, playerStats, campaignName, selectedAllyName, spellSaveDc, wisMod, doubleEmanation) {
     const playerName = playerStats.name;
     const cost = doubleEmanation ? 2 : 1;
+    const currentWS = Number(getRuntimeValue(playerName, 'wildShapeUses', campaignName) ?? 0);
 
-    await setRuntimeValue(playerName, 'wildShapeUses', Number(getRuntimeValue(playerName, 'wildShapeUses', campaignName) ?? 0) - cost, campaignName);
+    if (doubleEmanation && currentWS < cost) {
+        return {
+            type: 'popup',
+            payload: {
+                type: 'automation_info',
+                name: action.name,
+                description: `${action.name}: Not enough Wild Shape uses remaining. ${cost} uses required.`,
+                automation: action.automation,
+            },
+        };
+    }
+
+    await setRuntimeValue(playerName, 'wildShapeUses', currentWS - cost, campaignName);
 
     if (selectedAllyName) {
         await setRuntimeValue(selectedAllyName, 'wrathOfTheSeaActive', true, campaignName);
@@ -71,6 +85,8 @@ export async function confirmOceanicGift(action, playerStats, campaignName, sele
 
     if (doubleEmanation) {
         await setRuntimeValue(playerName, 'wrathOfTheSeaActive', true, campaignName);
+        await setRuntimeValue(playerName, 'wrathOfTheSeaDc', spellSaveDc, campaignName);
+        await setRuntimeValue(playerName, 'wrathOfTheSeaWisMod', wisMod, campaignName);
 
         await addEntry(campaignName, {
             type: 'ability_use',
