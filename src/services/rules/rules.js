@@ -189,18 +189,26 @@ const rules = {
           });
       }
 
-      // Apply feat buffs to ability featIncrease before computing abilities
+      // Apply feat buffs to ability featIncrease before computing abilities.
+      // FT-047: the Edit wizard ALREADY persists feat ASIs into the stored
+      // featIncrease (useWizardFeatBuffs.js) — accumulating the recomputed
+      // increases on top double-applied them (Keen Mind INT 17→19). Reconcile
+      // idempotently: each ability's featIncrease becomes the MAX of the
+      // stored value and the total computed from feats[], so re-loading a
+      // saved character applies an ASI exactly once while characters whose
+      // JSON predates feat persistence still receive their computed increases.
       const featData = await loadFeatData(is2024(playerStats, playerSummary) ? '2024' : '5e');
       const featBuffs = computeAllFeatBuffs(playerStats, featData);
+      const computedFeatIncreases = {};
       featBuffs.abilityScoreIncreases.forEach(inc => {
           if (inc.name && inc.name !== 'any') {
-              const ability = playerStats.abilities.find(
-                  a => a.name.toLowerCase() === inc.name.toLowerCase()
-              );
-              if (ability) {
-                  ability.featIncrease = (ability.featIncrease || 0) + inc.amount;
-              }
+              const key = inc.name.toLowerCase();
+              computedFeatIncreases[key] = (computedFeatIncreases[key] || 0) + (typeof inc.amount === 'number' ? inc.amount : 1);
           }
+      });
+      playerStats.abilities.forEach(ability => {
+          const computed = computedFeatIncreases[String(ability.name).toLowerCase()] || 0;
+          ability.featIncrease = Math.max(ability.featIncrease || 0, computed);
       });
 
       // Apply all_skills proficiency feat buffs to skillProficiencies
@@ -317,9 +325,15 @@ const rules = {
                       playerStats.actions = [...playerStats.actions, featEntry];
                   } else if (featureCategories.bonusActions.includes(featFeature.name) && !playerStats.bonusActions.some(f => f.name === featFeature.name)) {
                       playerStats.bonusActions = [...playerStats.bonusActions, featEntry];
-                  } else if (featureCategories.reactions.includes(featFeature.name) && !playerStats.reactions.some(f => f.name === featFeature.name)) {
-                      playerStats.reactions = [...playerStats.reactions, featEntry];
-                   } else {
+                   } else if (featureCategories.reactions.includes(featFeature.name) && !playerStats.reactions.some(f => f.name === featFeature.name)) {
+                       playerStats.reactions = [...playerStats.reactions, featEntry];
+                    } else if (featFeature.isBonusAction && !playerStats.bonusActions.some(f => f.name === featFeature.name)) {
+                       // FT-047: bonus_action feat benefits without automation.casting_time
+                       // (e.g. Keen Mind "Quiet Study") were silently dropped by this
+                       // replace-only fallback. featBuffService tags them isBonusAction —
+                       // append them to Bonus Actions as informational no-roll rows.
+                       playerStats.bonusActions = [...playerStats.bonusActions, featEntry];
+                    } else {
                        const existingIndex = playerStats.specialActions.findIndex(f => f.name === featFeature.name);
                        if (existingIndex !== -1 && !playerStats.specialActions[existingIndex].description && featEntry.description) {
                            playerStats.specialActions = [...playerStats.specialActions.slice(0, existingIndex), featEntry, ...playerStats.specialActions.slice(existingIndex + 1)];
