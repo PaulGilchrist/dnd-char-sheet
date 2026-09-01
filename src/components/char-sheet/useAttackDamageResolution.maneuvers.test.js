@@ -308,6 +308,7 @@ describe('useAttackDamageResolution - attack rider maneuvers', () => {
         it('adds damage bonus when maneuver has damageBonus and result type is popup', async () => {
             executeAttackRiderManeuver.mockResolvedValue({
                 type: 'popup',
+                dieValue: 4,
                 payload: { hit: true },
             });
             rollExpression.mockReturnValue({ total: 4, rolls: [4], modifier: 0 });
@@ -328,6 +329,92 @@ describe('useAttackDamageResolution - attack rider maneuvers', () => {
 
             expect(result.formula).toContain('+ 4');
             expect(result.total).toBe(12);
+            expect(setRuntimeValue).toHaveBeenCalledWith('TestFighter', 'attackRiderDieValue', 4, 'test-campaign');
+        });
+
+        it('MN-009: does not crash when prompt passes only 3 args (undefined roll context)', async () => {
+            executeAttackRiderManeuver.mockResolvedValue({
+                type: 'popup',
+                dieValue: 6,
+                payload: { type: 'automation_info', name: 'Goading Attack', description: 'Goading Attack: Rolled d8 for 6. Added 6 to the damage roll.' },
+                logEntries: [{ type: 'ability_use', characterName: 'TestFighter', abilityName: 'Goading Attack', description: 'Goading Attack: Rolled d8 for 6. Added 6 to the damage roll.' }],
+            });
+
+            const { handleAttackRiderManeuverUse } = UseAttackDamageResolution();
+            const maneuver = { name: 'Goading Attack', damageBonus: true, dieExpression: 'superiority_die' };
+            const attack = { name: 'Shortsword', damage: '1d6+3', damageType: 'piercing' };
+            const popupHtmlData = { isMiss: false, hit: true, targetName: 'Goblin' };
+
+            const result = await handleAttackRiderManeuverUse(maneuver, attack, popupHtmlData);
+
+            expect(result).toEqual({ formula: null, total: 0, rolls: [] });
+            expect(setRuntimeValue).toHaveBeenCalledWith('TestFighter', 'attackRiderDieValue', 6, 'test-campaign');
+            expect(mockSetModalState).toHaveBeenCalledWith({ attackRiderManeuverPrompt: null });
+        });
+
+        it('MN-009: logs ability_use logEntries returned by the rider service', async () => {
+            const { addEntry } = await import('../../services/ui/logService.js');
+            executeAttackRiderManeuver.mockResolvedValue({
+                type: 'popup',
+                dieValue: 5,
+                payload: { type: 'automation_info', name: 'Goading Attack', description: 'Added 5 to the damage roll.' },
+                logEntries: [{ type: 'ability_use', characterName: 'TestFighter', abilityName: 'Goading Attack', description: 'Goading Attack: Rolled d8 for 5. Added 5 to the damage roll.' }],
+            });
+
+            const { handleAttackRiderManeuverUse } = UseAttackDamageResolution();
+            const maneuver = { name: 'Goading Attack', damageBonus: true };
+            const attack = { damageType: 'piercing' };
+
+            await handleAttackRiderManeuverUse(maneuver, attack, { isMiss: false });
+
+            expect(addEntry).toHaveBeenCalledWith('test-campaign', expect.objectContaining({
+                type: 'ability_use',
+                abilityName: 'Goading Attack',
+                description: expect.stringContaining('Added 5 to the damage roll.'),
+            }));
+        });
+
+        it('MN-009: resumes the paused attack pipeline after the rider resolves so base+die damage lands', async () => {
+            const resume = vi.fn(async (_ctx, ref) => { ref.current = null; });
+            const stashCtx = { attack: { name: 'Shortsword', damage: '1d6+3', damageType: 'piercing' }, hit: true, popupHtml: { hit: true }, campaignName: 'test-campaign' };
+            const resumeRef = { current: { pipelineStash: { pipeline: { resume }, ctx: stashCtx }, _pausedStep: 'attackRiderManeuvers' } };
+            executeAttackRiderManeuver.mockResolvedValue({
+                type: 'popup',
+                dieValue: 6,
+                payload: { type: 'automation_info', name: 'Goading Attack', description: 'Goading Attack.' },
+            });
+
+            const { handleAttackRiderManeuverUse } = UseAttackDamageResolution({ resumeRef });
+            const maneuver = { name: 'Goading Attack', damageBonus: true };
+            const attack = { damageType: 'piercing' };
+
+            await handleAttackRiderManeuverUse(maneuver, attack, { isMiss: false, hit: true, targetName: 'Goblin' });
+
+            expect(setRuntimeValue).toHaveBeenCalledWith('TestFighter', 'attackRiderDieValue', 6, 'test-campaign');
+            expect(resume).toHaveBeenCalledWith(stashCtx, resumeRef);
+        });
+
+        it('MN-009: skip resumes the paused pipeline so base damage lands', () => {
+            const resume = vi.fn(async (_ctx, ref) => { ref.current = null; });
+            const stashCtx = { hit: true };
+            const resumeRef = { current: { pipelineStash: { pipeline: { resume }, ctx: stashCtx }, _pausedStep: 'attackRiderManeuvers' } };
+
+            const { handleAttackRiderManeuverSkip } = UseAttackDamageResolution({ resumeRef });
+            handleAttackRiderManeuverSkip();
+
+            expect(mockSetModalState).toHaveBeenCalledWith({ attackRiderManeuverPrompt: null });
+            expect(resume).toHaveBeenCalled();
+        });
+
+        it('MN-009: skip does NOT resume when the attack missed (no damage on miss)', () => {
+            const resume = vi.fn();
+            const stashCtx = { hit: false };
+            const resumeRef = { current: { pipelineStash: { pipeline: { resume }, ctx: stashCtx }, _pausedStep: 'attackRiderManeuvers' } };
+
+            const { handleAttackRiderManeuverSkip } = UseAttackDamageResolution({ resumeRef });
+            handleAttackRiderManeuverSkip();
+
+            expect(resume).not.toHaveBeenCalled();
         });
 
         it('opens sweeping attack target modal when maneuver returns that type', async () => {

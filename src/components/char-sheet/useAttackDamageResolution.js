@@ -1,6 +1,7 @@
 import { getRuntimeValue, setRuntimeObject, setRuntimeValue } from '../../hooks/runtime/useRuntimeState.js';
 import { rollExpression } from '../../services/dice/diceRoller.js';
 import { evaluateAutoExpression } from '../../services/combat/automation/automationService.js';
+import { addEntry } from '../../services/ui/logService.js';
 import { getEmpoweredEvocationFeatures, getEmpoweredEvocationIntModifier } from '../../services/rules/spells/postCastRiderService.js';
 import { executeAttackRiderManeuver as executeAttackRiderManeuverService } from '../../services/automation/handlers/class-fighter-rogue/combatSuperiorityHandler.js';
 import { buildPipelineForAction } from '../../services/combat/steps/index.js';
@@ -283,7 +284,8 @@ export default function useAttackDamageResolution({
      * steps (sneak attack, damage application, etc.) execute normally.
      */
     const resumeAttackPipeline = async () => {
-        if (resumeRef.current?._pausedStep !== 'cunningStrike') return;
+        const pausedStep = resumeRef.current?._pausedStep;
+        if (pausedStep !== 'cunningStrike' && pausedStep !== 'attackRiderManeuvers') return;
         const stash = resumeRef.current?.pipelineStash;
         if (!stash) return;
         await stash.pipeline.resume(stash.ctx, resumeRef);
@@ -291,7 +293,7 @@ export default function useAttackDamageResolution({
         applyPauseState(resumeRef.current);
     };
 
-    const handleAttackRiderManeuverUse = async (maneuver, attack, popupHtmlData, currentFormula, currentTotal, currentRolls) => {
+    const handleAttackRiderManeuverUse = async (maneuver, attack, popupHtmlData, currentFormula = null, currentTotal = 0, currentRolls = []) => {
         const maneuverName = maneuver?.name || maneuver;
         const attackInfo = {
             weaponType: attack.weaponType,
@@ -331,8 +333,18 @@ export default function useAttackDamageResolution({
 
                 const dieDesc = `Precision Attack: Added ${dieValue} to the attack roll (${origD20} + ${origBonus} + ${dieValue} = ${newTotal}). ${newHit ? 'The attack now hits!' : 'The attack still misses.'}`;
 
+                const stash = resumeRef.current?.pipelineStash;
+                if (stash?.ctx) {
+                    stash.ctx.hit = newHit;
+                    stash.ctx.popupHtml = updatedPopup;
+                }
+
                 setModalState({ attackRiderManeuverPrompt: null });
                 setPopupHtml(updatedPopup);
+
+                if (newHit) {
+                    await resumeAttackPipeline();
+                }
 
                 return {
                     formula: updatedFormula,
@@ -349,24 +361,33 @@ export default function useAttackDamageResolution({
                 return { formula: updatedFormula, total: updatedTotal, rolls: updatedRolls, pendingOptions: true };
             }
 
-            if (result?.type === 'popup') {
-                if (maneuver?.damageBonus) {
-                    const dieRoll = rollExpression(maneuver.dieExpression || 'superiority_die');
-                    const dieValue = dieRoll?.total || evaluateAutoExpression(maneuver.dieExpression || 'superiority_die', playerStats);
-                    const dmgType = attack.damageType || 'same_as_weapon';
-                    updatedFormula += ` + ${dieValue} [${dmgType}]`;
-                    updatedTotal += dieValue;
-                    updatedRolls = [...updatedRolls, dieValue];
+            if (result?.type === 'popup' && maneuver?.damageBonus) {
+                const dieValue = Number(result.dieValue) || rollExpression(maneuver.dieExpression || 'superiority_die')?.total || evaluateAutoExpression(maneuver.dieExpression || 'superiority_die', playerStats);
+                const dmgType = attack.damageType || 'same_as_weapon';
+                if (dieValue > 0) {
+                    await setRuntimeValue(playerStats.name, 'attackRiderDieValue', dieValue, campaignName);
+                    if (updatedFormula != null) {
+                        updatedFormula += ` + ${dieValue} [${dmgType}]`;
+                        updatedTotal += dieValue;
+                        updatedRolls = [...updatedRolls, dieValue];
+                    }
                 }
             }
 
             setModalState({ attackRiderManeuverPrompt: null });
+            if (result?.logEntries?.length) {
+                for (const entry of result.logEntries) {
+                    await addEntry(campaignName, entry).catch((e) => { console.error('[attackRiderManeuver:log-error]', e); });
+                }
+            }
             if (result?.type === 'popup') {
                 setPopupHtml(result.payload);
             }
             if (result?.type === 'modal' && result.modalName === 'sweepingAttackTarget') {
                 setModalState({ sweepingAttackTargetModal: result.payload });
             }
+
+            await resumeAttackPipeline();
         }
 
         return { formula: updatedFormula, total: updatedTotal, rolls: updatedRolls };
@@ -374,6 +395,10 @@ export default function useAttackDamageResolution({
 
     const handleAttackRiderManeuverSkip = () => {
         setModalState({ attackRiderManeuverPrompt: null });
+        const stash = resumeRef.current?.pipelineStash;
+        if (resumeRef.current?._pausedStep === 'attackRiderManeuvers' && stash?.ctx?.hit !== false) {
+            resumeAttackPipeline();
+        }
     };
 
     const handleAttackRiderOptionSelect = async (optionName, modalPayload) => {

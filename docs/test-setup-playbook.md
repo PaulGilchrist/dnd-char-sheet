@@ -1053,3 +1053,9 @@ Monk self-targeting Hand of Healing: the initiative card Target dropdown EXCLUDE
 - Fiber probe variant that works: `.popup-overlay` has NO `spell` prop upward — walk DOWN the overlay fiber (`child`/`sibling` DFS) to find `SpellDetailPopup` props; walk UP from `td.spell-name` to reach `CharSpells`/`CharSheetContent` `playerStats`.
 - Fiendish Legacy Infernal fires `fire bolt` via the fiendish_legacy branch (`spellCalc2024.js:240`) WITHOUT a per-spell override (races.json Infernal option has no `spellcastingAbility`) — lineage cantrips resolve with the CLASS ability by current data design; that is NOT the CLA-243 defect and not fixable in the remap.
 - Spell log schema has no ability field for no-save/no-dc cantrips (`saveDC:null`, `damageFormula:null` is expected for Thaumaturgy) — absence of ability in the log is not evidence of wrong attribution.
+
+### Attack-rider maneuver damage resolution / MN-009 (FIXED 2026-09-01, feeds MN-011/012)
+
+- **VERIFIED pattern (post-fix):** rider step pauses pipeline with `_pausedStep:'attackRiderManeuvers'` (PLURAL; `_modalType` is singular) BEFORE `rollBaseDamage` → rider service rolls+expends the superiority die once, returns `{dieValue, logEntries, popupHtml}` → `handleAttackRiderManeuverUse` defaults its 3-arg call signature (`currentRolls=[]`), stashes `attackRiderDieValue`, flushes `addEntry(logEntries)`, then **must** `await resumeAttackPipeline()` → `superiorityDieBonuses` step consumes the die key (second consumer `applySuperiorityDamageBonuses` no-ops after clear) → damage popup + hp_change.
+- Shared pause/resume gap REPAIRED on this modal path: use AND skip now resume; `resumeAttackPipeline` guard widened from `cunningStrike` only. Skipping without resume silently loses base damage.
+- Pre-existing console noise on every sheet attack — do NOT file: `buildSaveDc Spell "unknown"`, `_Vex_appliedTarget` wrong-characterKey errors.

@@ -195,6 +195,7 @@ export async function executeAttackRiderManeuver(action, playerStats, campaignNa
 
         return {
             type: 'popup',
+            dieValue,
             payload: {
                 type: 'automation_info',
                 name: maneuver.name,
@@ -213,6 +214,7 @@ export async function executeAttackRiderManeuver(action, playerStats, campaignNa
 
     return {
         type: 'popup',
+        dieValue,
         payload: {
             type: 'automation_info',
             name: maneuver.name,

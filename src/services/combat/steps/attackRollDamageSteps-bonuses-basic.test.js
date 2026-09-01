@@ -465,6 +465,31 @@ describe('buildAttackRollDamageSteps - twoWeaponFighting, targetEffects, superio
         expect(result.data.formula).toBe('1d8+3 + 3 [piercing]');
       });
 
+      it('consumes attackRiderDieValue (MN-009 goading-style rider die)', async () => {
+        getRuntimeValue.mockImplementation((_key, prop, _campaign) => {
+          if (prop === 'attackRiderDieValue') return 6;
+          return null;
+        });
+
+        const ctx = makeCtx({
+          formula: '1d8+3',
+          total: 11,
+          rolls: [8, 3],
+          attack: { damageType: 'piercing' },
+        });
+        const result = await steps[9].handler(ctx);
+
+        expect(result.data.formula).toBe('1d8+3 + 6 [piercing]');
+        expect(result.data.total).toBe(17);
+        expect(result.data.rolls).toEqual([8, 3, 6]);
+        expect(setRuntimeValue).toHaveBeenCalledWith(
+          'TestChar',
+          'attackRiderDieValue',
+          null,
+          'test-campaign',
+        );
+      });
+
       it('consumes lungingAttackDieValue for melee attacks', async () => {
         getRuntimeValue.mockImplementation((_key, prop, _campaign) => {
           if (prop === 'lungingAttackDieValue') return 2;

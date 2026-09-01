@@ -227,6 +227,7 @@ export function buildSuperiorityDieBonusesStep() {
       consume('feintingAttackDieValue', defaultDmg);
       consume('bardicInspirationOffenseValue', 'Bardic Inspiration');
       consume('pendingRiposteDieValue', defaultDmg);
+      consume('attackRiderDieValue', defaultDmg);
 
       const isMelee = ctx.attack?.weaponType === 'melee' || ctx.attack?.weaponType === 'unarmed';
       if (isMelee) consume('lungingAttackDieValue', defaultDmg);

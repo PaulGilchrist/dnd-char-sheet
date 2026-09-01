@@ -179,6 +179,7 @@ describe('executeAttackRiderManeuver', () => {
         expect(result.payload.type).toBe('automation_info');
         expect(result.payload.description).toContain('Rolled');
         expect(result.payload.description).toContain('Added 4 to the damage roll');
+        expect(result.dieValue).toBe(4);
         expect(setRuntimeValue).toHaveBeenCalledWith('TestFighter', 'superiorityDice', 3, 'test-campaign');
     });
 

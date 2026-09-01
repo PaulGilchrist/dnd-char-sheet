@@ -40,5 +40,16 @@ export function applySuperiorityDamageBonuses(characterName, campaignName, formu
         setRuntimeValue(characterName, 'lungingAttackDieValue', null, campaignName);
     }
 
+    // Apply attack-rider maneuver superiority die damage bonus (Goading et al.)
+    const riderDieValue = getRuntimeValue(characterName, 'attackRiderDieValue');
+    if (riderDieValue && Number(riderDieValue) > 0) {
+        const riderVal = Number(riderDieValue);
+        const dmgType = context?.damageType || 'same_as_weapon';
+        newFormula += ` + ${riderVal} [${dmgType}]`;
+        newTotal += riderVal;
+        newRolls = [...newRolls, riderVal];
+        setRuntimeValue(characterName, 'attackRiderDieValue', null, campaignName);
+    }
+
     return { formula: newFormula, total: newTotal, rolls: newRolls };
 }
