@@ -7,6 +7,7 @@ import { useCombatSuperiorityModal } from '../../hooks/combat/useCombatSuperiori
 export default function useCharActionModals({
     playerStats, campaignName, mapName,
     popupHtml, setPopupHtml, rollDamage, rollAttack, buildCtx, buildCtxSync,
+    setTacticalMasterModal,
 }) {
     const [modalState, _setModalState] = useState({});
     const setModalState = useCallback((updates) => {
@@ -25,6 +26,7 @@ export default function useCharActionModals({
         popupHtml, setPopupHtml, rollDamage, buildCtx, buildCtxSync,
         setModalState, modalState,
         setPendingDamage,
+        setTacticalMasterModal,
         resumeRef: pipelineRef,
     });
 

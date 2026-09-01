@@ -85,6 +85,7 @@ const mockSetModalState = vi.fn((updates) => {
 
 const mockPendingDamageRef = { current: null };
 const mockSetPendingDamage = vi.fn();
+const mockSetTacticalMasterModal = vi.fn();
 
 function UseAttackDamageResolution(overrides = {}) {
     const deps = {
@@ -100,6 +101,7 @@ function UseAttackDamageResolution(overrides = {}) {
         setModalState: mockSetModalState,
         pendingDamage: mockPendingDamageRef.current,
         setPendingDamage: mockSetPendingDamage,
+        setTacticalMasterModal: mockSetTacticalMasterModal,
         resumeRef: mockPendingDamageRef,
         ...overrides,
     };
@@ -275,7 +277,7 @@ describe('useAttackDamageResolution - pipeline paused states', () => {
     });
 
     describe('tacticalMaster modal pause', () => {
-        it('sets tacticalMasterPending via setRuntimeObject when pipeline pauses', async () => {
+        it('updates the synced tacticalMasterModal mirror so the modal renders (WM-003)', async () => {
             const pausedCtx = {
                 _pausedStep: 'tacticalMaster',
                 _modalType: 'tacticalMaster',
@@ -293,12 +295,9 @@ describe('useAttackDamageResolution - pipeline paused states', () => {
             await tick();
 
             expect(buildPipelineForAction).toHaveBeenCalledWith(attack, mockPlayerStats);
-            expect(setRuntimeObject).toHaveBeenCalledWith(
-                'campaign',
-                { tacticalMasterPending: pausedCtx._modalProps },
-                'test-campaign',
-                true,
-            );
+            // Fix: the pause must update the synced mirror (renders TacticalMasterModal),
+            // NOT a skipSync setRuntimeObject that left the modal dead (never rendered).
+            expect(mockSetTacticalMasterModal).toHaveBeenCalledWith(pausedCtx._modalProps);
             expect(mockSetModalState).not.toHaveBeenCalled();
             expect(mockSetPendingDamage).not.toHaveBeenCalled();
         });

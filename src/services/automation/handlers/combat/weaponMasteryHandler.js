@@ -121,10 +121,38 @@ export async function applyMasteryEffect(masteryName, playerStats, campaignName,
         if (skip) return skip;
     }
 
-    // Check once-per-turn for Nick
+    // Nick: once per turn, writes a plain round number the row consumers
+    // (attackCalc2024 / CharBonusActions) compare against getCurrentCombatRound().
+    // It is a self-mode flag, so no targetEffect is written.
     if (mastery.oncePerTurn && masteryName === 'Nick') {
-        const skip = await checkOncePerTurn(masteryName, '_Nick_UsedRound', playerStats.name, campaignName);
-        if (skip) return skip;
+        const currentRound = getCurrentCombatRound(campaignName);
+        if (getRuntimeValue(playerStats.name, '_Nick_UsedRound', campaignName) === currentRound) {
+            return {
+                type: 'popup',
+                payload: {
+                    type: 'automation_info',
+                    name: 'Nick',
+                    description: `${playerStats.name} can use Nick only once per turn.`,
+                },
+            };
+        }
+        setRuntimeValue(playerStats.name, '_Nick_UsedRound', currentRound, campaignName);
+        addEntry(campaignName, {
+            type: 'ability_use',
+            characterName: playerStats.name,
+            abilityName: 'Nick',
+            description: `${playerStats.name} used Nick${targetName ? ` on ${targetName}` : ''} — Light weapon extra attack is now part of the Attack action.`,
+            targetName: targetName || null,
+        }).catch((e) => { console.error('[weaponMasteryHandler:log-error]', e); });
+        return {
+            type: 'popup',
+            payload: {
+                type: 'automation_info',
+                name: 'Nick',
+                description: buildMasteryDescription('Nick', targetName),
+                automation: { type: 'mastery_rider', masteries: ['Nick'] },
+            },
+        };
     }
 
     const storedEffects = getRuntimeValue('campaign', 'targetEffects') || [];
@@ -192,11 +220,6 @@ export async function applyMasteryEffect(masteryName, playerStats, campaignName,
     // Mark once-per-turn for Cleave
     if (mastery.oncePerTurn && masteryName === 'Cleave') {
         await markOncePerTurn(masteryName, '_Cleave_UsedRound', playerStats, campaignName);
-    }
-
-    // Mark once-per-turn for Nick
-    if (mastery.oncePerTurn && masteryName === 'Nick') {
-        await markOncePerTurn(masteryName, '_Nick_UsedRound', playerStats, campaignName);
     }
 
     const desc = buildMasteryDescription(masteryName, targetName);

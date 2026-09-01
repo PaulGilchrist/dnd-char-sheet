@@ -103,6 +103,11 @@ const CharActions = function CharActions({ playerStats, campaignName, exhaustion
         return await buildAttackContext(attack, playerStats, campaignName, mapName, conditionAttackMode, featRangeEffects || null);
     }, [playerStats, campaignName, mapName, conditionAttackMode, featRangeEffects]);
 
+    // Synced before useCharActionModals so its pause write can update this mirror
+    // and TacticalMasterModal renders (CLA-351 / WM-003). Keyed on the valid shared
+    // 'campaign' namespace (NOT campaignName) so the runtime store accepts the write.
+    const [tacticalMasterModal, setTacticalMasterModal] = useSyncedState('campaign', 'tacticalMasterPending', null, campaignName);
+
     const {
         pendingDamage,
         modalState,
@@ -135,6 +140,7 @@ const CharActions = function CharActions({ playerStats, campaignName, exhaustion
     } = useCharActionModals({
         playerStats, campaignName, mapName, conditionAttackMode, featRangeEffects,
         popupHtml, setPopupHtml, rollDamage, rollAttack, buildCtx, buildCtxSync,
+        setTacticalMasterModal,
     });
 
     const setModalState = React.useCallback((state) => {
@@ -148,7 +154,6 @@ const CharActions = function CharActions({ playerStats, campaignName, exhaustion
 
     const [showCleaveTargetSelection, setShowCleaveTargetSelection] = useSyncedState(campaignName, 'cleavePending', false, campaignName);
     const [cleaveSecondTargets, setCleaveSecondTargets] = useSyncedState(campaignName, 'cleaveSecondTargets', [], campaignName);
-    const [tacticalMasterModal, setTacticalMasterModal] = useSyncedState(campaignName, 'tacticalMasterPending', null, campaignName);
 
     // Event listeners extracted to hook
     useCharActionsEventListeners({
@@ -667,10 +672,11 @@ const CharActions = function CharActions({ playerStats, campaignName, exhaustion
                     baseMastery={tacticalMasterModal.baseMastery}
                     replaceOptions={tacticalMasterModal.replaceOptions}
                     targetName={tacticalMasterModal.targetName}
+                    isChoiceMode={tacticalMasterModal.isChoiceMode}
                     playerStats={playerStats}
                     campaignName={campaignName}
-                    onConfirm={handleTacticalMasterConfirm}
-                    onClose={handleTacticalMasterDismiss}
+                    onConfirm={async (chosenMastery) => { await handleTacticalMasterConfirm(chosenMastery); await resumeAttackPipeline(); }}
+                    onClose={async () => { handleTacticalMasterDismiss(); await resumeAttackPipeline(); }}
                 />
             )}
             {modalState.secondaryTargetModal && (

@@ -170,7 +170,7 @@ function CharBonusActions({ playerStats, campaignName, exhaustionPenalty, condit
         // Filter out Light weapon bonus action attack when Nick mastery has been used this turn
         if (attack.properties?.includes('Light') && is2024Rules) {
             const nickUsedKey = '_Nick_UsedRound';
-            const currentRound = getCurrentCombatRound();
+            const currentRound = getCurrentCombatRound(campaignName);
             const nickUsedRound = getRuntimeValue(playerStats.name, nickUsedKey, campaignName);
             if (nickUsedRound === currentRound) {
                 return false;

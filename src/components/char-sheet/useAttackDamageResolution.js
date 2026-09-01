@@ -1,4 +1,4 @@
-import { getRuntimeValue, setRuntimeObject, setRuntimeValue } from '../../hooks/runtime/useRuntimeState.js';
+import { getRuntimeValue, setRuntimeValue } from '../../hooks/runtime/useRuntimeState.js';
 import { rollExpression } from '../../services/dice/diceRoller.js';
 import { evaluateAutoExpression } from '../../services/combat/automation/automationService.js';
 import { addEntry } from '../../services/ui/logService.js';
@@ -143,6 +143,7 @@ export default function useAttackDamageResolution({
     popupHtml, setPopupHtml, rollDamage, buildCtx, buildCtxSync,
     setModalState, _modalState,
     setPendingDamage,
+    setTacticalMasterModal,
     resumeRef = { current: null },
 }) {
     let pendingCtxOverrides = {};
@@ -273,7 +274,10 @@ export default function useAttackDamageResolution({
             } else if (paused._modalType === 'secondaryTarget') {
                 setModalState({ secondaryTargetModal: paused._modalProps });
             } else if (paused._modalType === 'tacticalMaster') {
-                setRuntimeObject('campaign', { tacticalMasterPending: paused._modalProps }, campaignName, true);
+                // Route through the synced setter so the local mirror updates and
+                // TacticalMasterModal renders, while still persisting the same
+                // campaign.tacticalMasterPending key handleTacticalMasterConfirm reads.
+                setTacticalMasterModal?.(paused._modalProps);
             } else if (paused._modalType === 'shieldBash') {
                 setModalState({ shieldBashModal: paused._modalProps });
             }
@@ -286,7 +290,7 @@ export default function useAttackDamageResolution({
      */
     const resumeAttackPipeline = async () => {
         const pausedStep = resumeRef.current?._pausedStep;
-        if (pausedStep !== 'cunningStrike' && pausedStep !== 'attackRiderManeuvers') return;
+        if (pausedStep !== 'cunningStrike' && pausedStep !== 'attackRiderManeuvers' && pausedStep !== 'tacticalMaster') return;
         const stash = resumeRef.current?.pipelineStash;
         if (!stash) return;
         await stash.pipeline.resume(stash.ctx, resumeRef);

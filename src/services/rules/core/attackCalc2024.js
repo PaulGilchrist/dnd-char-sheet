@@ -267,7 +267,7 @@ export function getAttacks(allEquipment, allSpells, playerStats) {
                             const nickAvailable = collectWeaponMastery(offBaseName, playerStats);
                             const hasNick = nickAvailable.baseMastery === 'Nick' || (nickAvailable.extraMasteries || []).includes('Nick');
                             if (hasNick) {
-                                const currentRound = getCurrentCombatRound();
+                                const currentRound = getCurrentCombatRound(playerStats.campaignName);
                                 const nickUsedRound = getRuntimeValue(playerStats.name, '_Nick_UsedRound', playerStats.campaignName);
                                 if (nickUsedRound === currentRound) {
                                     actionType = 'Action';
