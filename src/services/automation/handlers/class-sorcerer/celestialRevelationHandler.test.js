@@ -10,6 +10,7 @@ import * as runtimeState from '../../../../hooks/runtime/useRuntimeState.js';
 import * as expirations from '../../../rules/effects/expirations.js';
 import * as buffToggle from '../../common/buffToggle.js';
 import * as logService from '../../../ui/logService.js';
+import * as conditionHandler from '../buffs/conditionHandler.js';
 
 vi.mock('../../../../hooks/runtime/useRuntimeState.js', () => ({
     getRuntimeValue: vi.fn(),
@@ -380,6 +381,26 @@ describe('celestialRevelationHandler', () => {
             expect(result.payload.conditionName).toBe('frightened');
             expect(result.payload.saveType).toBe('CHA');
             expect(result.payload.rangeFeet).toBe(10);
+        });
+
+        it('CLA-239: passes explicit saveAbility CHA to conditionHandler for Necrotic Shroud', async () => {
+            runtimeState.getRuntimeValue.mockReturnValue(1);
+
+            await confirmCelestialRevelation(
+                makePlayerStats({ level: 14, proficiency: 5 }),
+                'Necrotic Shroud',
+                campaignName
+            );
+
+            expect(conditionHandler.handle).toHaveBeenCalled();
+            const call = conditionHandler.handle.mock.calls.at(-1);
+            const auto = call[0].automation;
+            expect(auto.type).toBe('set_condition');
+            expect(auto.saveType).toBe('CHA');
+            expect(auto.saveAbility).toBe('CHA');
+            expect(auto.saveDc).toBe('ability');
+            expect(auto.duration).toBe('until_end_of_next_turn');
+            expect(call[3]).toBeNull();
         });
 
         it('uses player name for all runtime state and buff operations', async () => {

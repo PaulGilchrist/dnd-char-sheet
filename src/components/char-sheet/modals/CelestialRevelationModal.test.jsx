@@ -177,15 +177,17 @@ describe('CelestialRevelationModal', () => {
       await waitFor(() => {
         expect(onClose).toHaveBeenCalledTimes(1);
         expect(onSetConditionModal).toHaveBeenCalledWith({
-          type: 'setCondition',
-          name: 'Necrotic Shroud',
-          automation: {
-            type: 'set_condition',
-            saveType: 'CHA',
-            saveDc: 'ability',
-            condition: 'frightened',
-            range: '10 ft',
-            duration: 'until_end_of_next_turn',
+          setConditionModal: {
+            type: 'setCondition',
+            name: 'Necrotic Shroud',
+            automation: {
+              type: 'set_condition',
+              saveType: 'CHA',
+              saveDc: 'ability',
+              condition: 'frightened',
+              range: '10 ft',
+              duration: 'until_end_of_next_turn',
+            },
           },
         });
       });

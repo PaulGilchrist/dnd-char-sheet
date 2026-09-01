@@ -11,6 +11,7 @@ export async function handle(action, playerStats, campaignName, _mapName) {
     const auto = action.automation;
 
     const isChannelDivinity = auto.resourceCost === 'channel_divinity' || /channel divinity/i.test(String(auto.cost || ''));
+    const gatedByChannelDivinityCharges = isChannelDivinity || auto.type === 'channel_divinity';
     const autoWithDefaults = {
         ...auto,
         saveDc: auto.saveDc || 'ability',
@@ -30,7 +31,7 @@ export async function handle(action, playerStats, campaignName, _mapName) {
     const maxCharges = classLevel?.channel_divinity || classLevel?.class_specific?.channel_divinity_charges || 2;
     const currentCharges = storedCharges != null ? Number(storedCharges) : maxCharges;
 
-    if (currentCharges <= 0) {
+    if (gatedByChannelDivinityCharges && currentCharges <= 0) {
         return {
             type: 'popup',
             payload: {
@@ -80,7 +81,7 @@ export async function handle(action, playerStats, campaignName, _mapName) {
             campaignName,
             mapData,
             monsters,
-            channelDivinityCharges: currentCharges,
+            channelDivinityCharges: gatedByChannelDivinityCharges ? currentCharges : null,
             featureName: action.name,
             conditionName,
             additionalCondition,

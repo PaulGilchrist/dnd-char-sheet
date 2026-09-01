@@ -172,6 +172,7 @@ export async function confirmCelestialRevelation(playerStats, chosenOption, camp
             automation: {
                 type: 'set_condition',
                 saveType: 'CHA',
+                saveAbility: 'CHA',
                 saveDc: 'ability',
                 condition: 'frightened',
                 range: '10 ft',

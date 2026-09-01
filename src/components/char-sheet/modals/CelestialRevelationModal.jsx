@@ -18,7 +18,7 @@ function CelestialRevelationModal({ action: _action, playerStats, campaignName, 
         const res = await confirmCelestialRevelation(playerStats, selected, campaignName);
         if (res?.type === 'setCondition') {
             onClose();
-            onSetConditionModal(res.payload);
+            onSetConditionModal({ setConditionModal: res.payload });
             return;
         }
         setResult(res);
