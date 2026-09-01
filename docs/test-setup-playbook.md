@@ -1088,3 +1088,147 @@ Monk self-targeting Hand of Healing: the initiative card Target dropdown EXCLUDE
 - **PITFALL:** `actionPipeline` halts permanently at any step returning `{modal:true}` unless `resumeAttackPipeline` guard includes that step name — new modal-pausing steps REQUIRE widening the guard or downstream chain dies (attackRiderManeuvers + tacticalMaster now included; CLA-351 Tactical Master modal render was dead pre-WM-003 — feeds a future CLA-351 verification run).
 - `_Nick_UsedRound` consumers (`attackCalc2024.js`, `CharBonusActions.jsx`) read the runtime flag NON-reactively — BA row relabel/hide only re-evaluates on remount/navigation; cosmetic only.
 - `DEBUG_FORCE_CRIT` (`ui/utils.js`) is a legitimate feature flag — don't strip during debug-log cleanup.
+
+### Pact Magic / Warlock spell cast + slot accounting (CLA-245, 2026-09-01)
+
+- `spells[]` on the character file is the SINGLE store for BOTH cantrips and prepared spells (no `cantrips` key needed); tick via Edit-wizard Spells step after dismissing `.mi-skip`.
+- Casting a targeted spell opens a `.sp-overlay` CreatureSelectionModal (checkbox list + `.sp-roll-btn` 'Cast <Spell> (N)') EVEN when the initiative-card Target dropdown is set — probe overlays with `getComputedStyle` display (fixed-position elements have `offsetParent===null`, so offsetParent filters MISS them).
+- Slot consumption = runtime `spell_slots_level_<pactLevel>` only; slot widget pips per CharSpellSlotLevel.jsx: `''`=no slots at level, `inactive`=available, `active`=used. Warlock lv14 = 3xlv5 all-same-level confirmed UI+runtime.
+- Short Rest restores ALL pact slots via `restRules-shortRest.js:158` and logs 'Resources restored: Pact Magic'.
+- Charm Person log save-outcome text can be WRONG (claims SUCCESS on a FAILURE) — trust `.sp-overlay` popup + `saveResult-<name>` keys, not log prose.
+
+### Paladin's Smite / base free_spell pool (CLA-246, 2026-09-01)
+
+- Base Paladin lv2 `free_spell` (Divine Smite, uses 1, long_rest) — subclass-irrelevant; manifest paths stale. Chain: `spellCalc2024.js:278-288` ('Always' prepared row, spells[] may be empty) → `spellPreparationService.js:84-89` key `_Paladin's_Smite_freeCastCount` (straight apostrophe) → free branch :563-566 skips slot → `restRules-constants.js:172` long-rest reset.
+- Flow: EB Wight → card Target=Wight → sheet Divine Smite row → popup free line → Cast Spell auto-rolls melee → Done → damage popup. Free: slots unchanged + count->0; 2nd: no free line, slots -1; Long Rest -> key null + line back; 3rd free again.
+- PITFALL: pool consumed at CAST time even on miss; dismiss lingering `.popup-overlay` before Long Rest; free_spell row deliberately inert (`automationService.js:68-71`); no free-cast log text (popup+runtime = ground truth).
+
+### Parry reaction maneuver / MN-013 (VERIFIED PASS, 2026-09-01)
+
+- Parry (2024 maneuvers.json actionType:reaction, effect:damage_reduction) surfaces ONLY after Combat Superiority picker: BM Special Actions 'Combat Superiority:' -> tick Parry -> Confirm Selection -> Reactions-section 'Parry:' row (manifest maneuverHandler paths stale; real: maneuvers.js:49-69 -> automationRouter combat_superiority_reaction -> executeActionManeuvers.js executeReactionManeuver:327-413).
+- EB monster join -> card Target via native setter on card <select> -> avatar click .mc-overlay -> .mc-dice-link attack idx (idx 0 = initiative) -> HIT popup Done -> damage popup.
+- Parry click = rollback HEAL: runtime currentHitPoints += die + max(STR,DEX) mod (no picker, auto-max; NO ability_use log — CharReactions.jsx:252-256 drops result.logEntries). lv18 BM die d12 pool 6.
+- Relentless (lv15): FIRST maneuver of round FREE (pool unchanged + relentlessUsedRound); second maneuver same round spends pool — use 2 parries/round to prove decrement.
+- PITFALL: Parry heal POST can be clobbered by stale currentHitPoints flush if clicked <~2s after damage Done — re-poll server >=20s before judging. Reload returns to campaign-select (re-click campaign).
+
+### Pass Without Trace / custom-handler bypass / SP-085 (FAIL, 2026-09-01)
+
+- PASS-leg recipe that worked: cast via FeyRanger spell row (spell PERMANENTLY PREPARED via Edit-wizard Spells step); aura te `pass_without_trace_bonus` +10 lands on self; Stealth sheet cell visibly jumps (+10); Stealth roll logs bonus.
+- PITFALL (bug family): spells handled by a CUSTOM confirm handler (`useCustomHandlers.js:49`) can bypass `prepareSpellCast` entirely when `useSpellMetamagicGates.js:35` early-returns — symptom: effect lands BUT no slot consumed, no concentration tracking, no card badge, te `slotLevel` wrong. When verifying any spell whose effect works, STILL check slot number + concentration + badge before PASS.
+
+### Monk Focus double-spend / Heightened rename / CLA-247 (FAIL, 2026-09-01)
+
+- PITFALL: lv17 Monk sheet shows only 'Heightened Patient Defense:' row (classRules2024.js:150 lv10+ rename) — do not expect a plain 'Patient Defense:' row at high level.
+- PITFALL: one row-click on this feature DOUBLE-SPENDS Focus (sheet pre-spend useCharActionsAutomation.js:167-182 PLUS handler spend patientDefenseHandler.js:11-16; change-data ground truth 17->15). At FP=0 the sheet gate 'No Focus Points remaining.' blocks entirely, making plain-Disengage-only mode dead code. When verifying any FP-cost feature, read Focus pool before/after via change-data, never trust the popup cost text.
+- Focus pool settable via UI: FP tracker input (fill + Enter) — no direct JSON needed.
+
+### Peerless Athlete / Oath of Glory CD buff (CLA-248, 2026-09-01)
+
+- Peerless Athlete = Oath of GLORY lv3 (NOT Ancients); ElderPaladin lv20 converts via Edit step-7 chip + selectOption + Save + 15s (revert after — registry expects Ancients). Real handler `src/services/automation/handlers/class-cleric-paladin/peerlessAthleteHandler.js` (dispatched automation/index.js:406); manifest paths stale.
+- Row clickable WITHOUT being in `INTERACTIVE_HANDLER_TYPES` (specialActions prop carries automation) — probe `<b>` onclick before citing CLA-179 inert-row.
+- Spends `channelDivinityCharges` (max = channel_divinity for level), sets `peerlessAthleteActive` + activeBuffs + `peerless_athlete_end` expiration (expiryRounds 6 = '1 hour' model); popup-only, no ResourcePoolModal.
+- Verify advantage via skill-cell rolls: Athletics/Acrobatics popups 2 d20 + 'Adv (conditions)' + log mode:"advantage"; sibling skill = mode:"normal" control. Jump +10 ft prose-only (no consumer). PITFALL: Initiative re-roll wipes `peerlessAthleteActive` (Initiative.jsx:388).
+
+### Peerless Skill / failed-roll add-die auto_reroll (CLA-249, 2026-09-01)
+
+- Peerless Skill = Bard -> College of LORE lv14 (2024 classes.json majors[2].features[3]). Row lives in Reactions (auto_reroll + ct '1 reaction'); handler `autoRerollHandler.js:227-292`.
+- Pool truth = runtime `bardicInspirationUses` (data lacks bardic_inspiration_uses; handler falls back to proficiency=6 lv17 while sheet tracker shows max 5). Set baseline via sheet tracker click -> spinbutton fill -> Enter.
+- Flow: initiative-card Target=monster -> sheet dice link auto-rolls -> MISS popup -> corner-dismiss -> click 'Peerless Skill:' -> popup d20(x)+bonus -> d20(x+die)+bonus vs AC; die size from class_levels[].bardic_die; consumes 1 + ability_use log biDieRoll/biDieSize; nat-1 miss works too.
+- Gaps (accepted precedent families): re-click same trigger re-consumes (no per-trigger gate); miss->hit damage apply throws 'characters must be an array' (autoRerollHandler.js:388) — popup/log exact, HP unchanged.
+- Remove-EB-monster card: name lives in input value — scan `.creature-card input` values.
+
+### Perfect Focus initiative regain / CLA-250 (VERIFIED PASS, 2026-09-01)
+
+- Perfect Focus = BASE Monk lv15 passive_rule (2024 classes.json class_levels[14], focusPointsTarget:4/threshold:3); lv17 qualifies. Manifest classFeatureHandler paths stale — real consumer `useInitiativeEffects.js:396-414` on `initiative-rolled` (sheet mounted; fires from sheet Initiative cell via initiativeProcessing.js:44).
+- No-monster recipe: sheet 'Focus Points:' tracker click -> number input fill + Enter (2/0) -> trusted click 'Initiative:' -> 12s -> change-data focusPoints EXACTLY 4; FP>=4 control stays put.
+- PITFALL: initiativeProcessing.js:27 resets `uncannyMetabolismUsed:false` right before dispatch — the !uncanny guard is vacuous on sheet rolls; Perfect Focus writes NO log — change-data focusPoints is the sole evidence.
+
+### Persistent Rage / long-rest-gated regain row / CLA-251 (VERIFIED PASS, 2026-09-01)
+
+- Persistent Rage = base Barbarian lv15 passive_rule/persistent_rage (subclass-irrelevant); surfaced as CLICKABLE row via INTERACTIVE_PASSIVE_EFFECTS (automationService.js:80 -> persistentRageHandler.js, NOT an initiative listener — contrast CLA-250). Pool key `ragePoints`, gate key `persistentRageUsed` (both null = max, reset by Long Rest via restRules-constants.js:182).
+- To hit the long-rest-gate branch (not the at-max branch): SPEND a rage use FIRST (rage on->off does NOT refund; second 'Rage:' click while stance active just toggles 'Rage ended' free). Regain row -> popup 'Rage points restored to 5/5' + change-data + ability_use log; re-click same-day -> 'Already used. Requires a Long Rest'.
+- Long Rest instant, no modal; both keys null out. Full-round turn-walk: monster cards never match `.creature-name` textbox — walk until PC name matches; round-wrap shows transient empty active card.
+
+### Phantasmal Creatures / passive free-cast no-consumer / CLA-252 (FAIL, 2026-09-01)
+
+- Feature = Illusionist lv? passive (DivinationWizard PERMANENT lv20 Illusionist now, convert Evoker->Illusionist via step-7 selectOption+Save; major absent so no step-6 re-pick needed).
+- PITFALL (free-cast auth bug family): passive free-cast passives routed to `passives[]` (automationRouter.js:662) get SpellDetailPopup 'Free Cast' auth via spellPreparationService.js:50, BUT `decrementFreeCastResource` (:260) only scans actions/bonusActions/specialActions -> free-cast key NEVER decremented, no once-per-long-rest gate. Inert `<b>` row (not in INTERACTIVE_HANDLER_TYPES) + unregistered modalName = confirm handler unreachable. summonSpiritHandler.performSummon ignores `_phantasmalCreatures_list` so HP-halving (encounterToInitiative.js:77 / applyNpcMonsterData) only bites on EB-join paths -> spirits full HP.
+- When a free-cast spell reports 'Free Cast', ALWAYS probe change-data for the free-cast counter decrement + a repeat-cast to confirm the long-rest gate, and probe summoned-creature HP via Remove-NPC confirm text ('X has N HP' = ground truth).
+
+### Condition-stage -> Hand of Healing auto-cure / CLA-253 (VERIFIED PASS, 2026-09-01)
+
+- Physician's Touch = Warrior of MERCY major lv6 (2024 classes.json). Auto-cure path: self-target Hand of Healing (empty Target fallback) while self carries exactly ONE cureable condition (stage via own initiative-card Add -> Apply) -> modal auto-renders 'Condition Cleared - <cond> removed (Physician's Touch)' + activeConditions [] + broken log. Picker only when >1 condition (HandOfHealingModal.jsx:87-92/:128).
+- PITFALL: a full page-reload BETWEEN staging the condition and clicking the sheet row silently reverts the staged condition (runtime [], no broken log). Verify live with getRuntimeValue immediately before triggering; do NOT reload. Hand of Healing skips FP cost globally at lv11+ (Flurry of Healing and Harm, useCharActionsAutomation.js:170-172).
+
+### Piercer reroll TDZ crash / FT-061 (FAIL, 2026-09-01)
+
+- PITFALL: Piercer (piercing-hit damage-die reroll) reroll button renders + updates the POPUP display only; `handlePuncture` throws `ReferenceError: Cannot access 'targetName' before initialization` (TDZ — `targetName` used at CharSheet.handlers.js:159/160, const-destructured at :161). Consequence: rerolled die NEVER applied to HP, `piercerPunctureUsedThisTurn` never written (button re-offered same turn), no log. When verifying any reroll feat, confirm the rerolled value lands in HP (change-data currentHitPoints delta), not just the popup text.
+- Retest-ready char: FeyRanger lv15 has Piercer + Longbow equipped + Hunter's Mark prepared.
+
+### Poisoner ignore_resistance / FT-063 (VERIFIED PASS, 2026-09-01)
+
+- Poisoner (2024 feats.json, benefit `ignore_resistance`/damageTypes:['Poison']) has a REAL consumer: passive.js:54 -> automationRouter passives -> hasIgnoreResistance (automationPassives.js:238) -> handlePlainDamage.js:84 -> applyDamage.js:40 skips floor(dmg/2). Manifest featHandler paths stale.
+- PITFALL: EB target MUST be a `damage_resistances`-schema monster — encounterToInitiative.js:98 copies ONLY that key into combatSummary; `resistances`-schema monsters (e.g. Shadow) arrive with empty stub IRV so no halving control possible. Proven resistant target: **Duergar** (AC16 HP26, damage_resistances:['poison']).
+- Poison carrier = Poison Spray cantrip (no poison weapon in equipment.json). Recipe: Feats step tick Poisoner + Spells step tick Poison Spray + ASI combobox Dexterity + Save (JSON feats/featAbilityChoices ground truth 15s). Control: a non-feat caster same cantrip -> halves (26->13); feat-holder -> full (48->48). Verify HP delta, not popup.
+
+### Polymorph / beast-picker + temp-HP early-revert / SP-086 (VERIFIED PASS, 2026-09-01)
+
+- Polymorph = lv4 (2024 spells.json, WIS dc-none, conc 1h; Bard/Druid/Sorcerer/Wizard). Wild_Sage_Druid lv20 DC17 qualifies (wizard step-14 tick + Save + 15s). Manifest paths stale; real chain: spellGates.js:78 gatePolymorph -> SecondaryTargetModal 'Cast Polymorph (N)' -> automation/handlers/spells/polymorphHandler.js (shapechanger/0HP gates + createSaveListener WIS) -> popup polymorph_select -> PolymorphSelectionModal (actionLabel 'Transform', beasts filtered CR<=target CR=challenge_rating/PC level) -> polymorphService.confirmPolymorphTransform swaps combatSummary maxHp/ac/speed + tempHp=polymorphTempHp=beastHp + te + concentration + pendingExpirations.
+- Deterministic save-fail target: Animated Rug of Smothering (CR2 WIS-4). Cheap drain form: Crab CR0 HP3 AC11; one Divine Smite 15dmg drains temp + reverts (applyDamage.js:246-251 polymorphBuffer>0&&tempHp<=0 -> revertPolymorph). Damage popup shows combined real+temp pool.
+- PITFALL: beast picker with 80+ beasts + remote images can WEDGE Playwright MCP (fill/snapshot timeouts; page may land about:blank after recovery) — select form via evaluate `.click()` on item with `textContent.trim().startsWith('Crab')` (`/^Crab\b/` FAILS — no word boundary before 'CR 0'). Campaign te land at TOP-LEVEL change-data.targetEffects (not campaign['']). Caster concentration marker not cleared on revert (cosmetic).
+
+### Powerful Build grapple-escape advantage (CLA-254, VERIFIED PASS, 2026-09-01)
+
+- Same surface as CLA-209 (shared impl, no code re-stage needed): reuse persisted GoliathFireGiant. Initiative card Add -> Conditions -> Grappled + DC 13 (`getByRole('spinbutton',{name:'DC'})`) + Save=Strength -> Apply.
+- Card badge AND sheet badge `.char-conditions .creature-badge` BOTH roll 2-d20 mode:"advantage" (sheet path writes save + condition-save log pair); success clears grappled. No explicit 'condition cleared' log — badge absence + change-data activeConditions:[] is the ground truth. Carrying capacity prose-only.
+
+### Portent / long-rest dice + post-roll replace / CLA-255 (VERIFIED PASS, 2026-09-01)
+
+- Subclass name in 2024 classes.json is **Diviner** (not 'Divination'); Portent lv3, Greater Portent lv14 -> lv14+ rolls 3 dice (portentHandler.refreshPortentDice + restRules-longRest.js:486). Convert via step-6 (other class -> Wizard re-pick) + step-7 Diviner + Save + 15s.
+- Flow: sheet Long Rest (instant, no modal) writes change-data `portentDice` + nulls `portentUsedThisTurn` -> EB-join monster + initiative-card Target (attack MUST have targetName) -> attack -> Done -> dismiss damage popup -> click Special Actions 'Portent:' row -> `.portent-modal .portent-die-btn` -> substitution popup (Original d20 vs Portent d20), splices die (consumed-once, picker hides it), once-per-turn gate, re-arm on own next turn via Next-> (Initiative.jsx:399). ability_use log 'replaced d20 with N. Dice remaining: X'.
+- PITFALL: replace surfaces POST-roll (RAW says pre-roll) — PASS-subset per CLA-195/196. Sheet ability/skill '+N' cells route as SAVE prompts, never write campaign.lastAttack ('No recent D20 test found') — must use a real attack for Portent target. .sp-overlay/popups intercept Portent-row clicks — dismiss overlay corner first.
+
+### Potent Cantrip half-damage legs / CLA-256 (FAIL, 2026-09-01)
+
+- Feature = Evoker major lv6. DivinationWizard now PERMANENT Evoker lv20 + Fire Bolt + Mind Sliver prepared (step-7 selectOption('Evoker') works directly when class.major is null).
+- Save-success leg WORKS: save cantrips (2024 list has dc_success:'none') -> handleNpcSaveDamage.js:102 applies floor(roll/2) on save success, no extra effect (Mind Sliver 4d6=16->8 vs Archmage INT+5 DC17).
+- PITFALL (bug): attack-roll cantrip MISS leg broken — half taken from a bogus single-die stored pre-roll (`rolls:[1] total:0`) instead of the real `4d10+6` expression -> miss deals 0 HP despite the 'half damage on miss' popup + cantrip-miss-half-damage log. Always confirm HP delta on a MISS, not the popup.
+- Gotcha: `noSavePath` PRE-ROLLS damage BEFORE the attack d20 — a first-call Math.random patch hits the damage die not the attack. Fire Bolt miss popup = corner-click dismiss; hit popup = Done.
+
+### Potent Spellcasting / Blessed Strikes cantrip +WIS / CLA-257 (VERIFIED PASS, 2026-09-01)
+
+- In 2024 classes.json this is **Blessed Strikes = base Cleric lv7** (subclass-irrelevant, options Divine Strike|Potent Spellcasting). App models it as 2024 cantrip-damage +WIS (computeBlessedStrikes damageCalculation.js:41-72); manifest's bonus-action/+weapon wording is 5e Forge text with no consumer (prose-only). Any lv7+ Cleric qualifies — no domain convert needed.
+- Recipe: Divine_Cleric lv17 Trickery (WIS eff +3, DC17=8+3+6), Sacred Flame prepared; EB Gibbering Mouther (DEX-1 vs DC17 near-deterministic fail, HP52 survives). Pick option via Special Actions 'Blessed Strikes:' row -> .sp-overlay 'Potent Spellcasting' -> runtime _Blessed_Strikes_option (wiped by Admin Clear - REPICK before retest) -> cantrip damage cell 4d8->4d8+3, delta exactly +WIS. NPC auto-rolls save; damage log formula '+ 3 [Blessed Strikes]'.
+- Minor gap: Improved lv14 temp-HP .sp-overlay fires on EVERY failed-save cantrip hit even before option chosen (handleNpcSaveDamage.js:99-105 checks options list not chosen option); grant self -> 2xWIS tempHp.
+
+### Power Word Fortify multi-target temp HP split / SP-087 (VERIFIED PASS, 2026-09-01)
+
+- lv7 Bard/Cleric spell (automation.type power_word_fortify, maxTargets 6, tempHpExpression '120 + ((slot-7)*5)'). Divine_Cleric lv17 qualifies (1xlv7 slot). Prepare via Spells-step tick + Save+15s.
+- Flow: EB tick 'Select Goblin' x2 -> 'Join Encounter' TWICE (qty stepper unreliable, join singles) -> sheet spell row 'Cast Spell' -> `.sp-overlay` PowerWordFortifyModal: tick `.secondary-target-row` checkboxes + `.pwfm-amount-input`.fill each -> 'Fortify (N)'. No initiative Target dropdown needed (multi-target modal). Slot consumed at Cast Spell (before modal).
+- setTempHp (replace-if-higher) writes runtime tempHp for PCs AND EB monsters -> 50/40/30=120 exact, hp_change isTempHp:true logs. Cosmetic: log formula shows caster level not slot (total stays 120); no max-6 tick cap; powerWordFortifyService auto-split path is dead code (useSpellCastExecutor.js:76 is the live leg).
+
+### Power Word Heal / custom-branch slot bypass / SP-088 (FAIL, 2026-09-01)
+
+- Confirms + extends SP-085 bypass family: spells whose cast routes through a CUSTOM branch in `useSpellMetamagicGates.js` (here the 'Words of Creation — Choose Second Target' branch :37-80; also Power Word Heal's own power_word_heal path) call `onExecute` WITHOUT `prepareSpellCast` -> spell effect (full-heal HP->max, condition-end poisoned removed, Prone->powerWordHealStandPermission:true) all land EXACT but the spell SLOT is never consumed (spell_slots_level_9 1->1 verified >30s).
+- Retest checklist when a custom-handled spell effect works: ALWAYS probe the slot counter + a second cast before PASS. Reusable lv9 caster: Divine_Cleric lv17 (Power Word Heal permanently prepared, long-rest refills lv9).
+
+### Power Word Kill / Words-of-Creation branch / SP-089 (FAIL, 2026-09-01)
+
+- 2024 PWK classes: Bard/Sorcerer/Warlock/Wizard (Druid/Cleric NOT). DivinationWizard lv20 = only registry-valid lv9-slot caster. Both HP-branch legs EXACT: <=100 HP target ->0 threshold:dead no save (Wight 82->0); >100 HP -> 12d12 psychic (Archmage 170->99, roll 71). NO damage-roll log — hp_change delta is sole numeric truth.
+- CONFIRMS the 'Words of Creation' custom-branch bypass (useSpellMetamagicGates.js:37-79) also hits PWK: lv9 slot never consumed (spell_slots_level_9 1->1 across two casts; onExecute = raw executeSpellCast without prepareSpellCast).
+- Cast UI: PWK renders as `div.left.clickable` in Actions grid (NOT td.spell-name); the 'Words of Creation — Choose Second Target' .sp-overlay -> press SKIP for single-target (selecting a target there adds it as a SECOND victim). Result popup dismissed via overlay corner.
+
+### Power Word Stun / HP-branch spell / SP-090 (VERIFIED PASS, 2026-09-01)
+
+- 2024 lv8 Enchantment, 60ft, no concentration, classes Bard/Sorcerer/Warlock/Wizard, dc CON (recurring end-of-turn, NOT on cast). NOT in the Words-of-Creation slot-bypass branch (useSpellMetamagicGates.js:37 is Heal/Kill-only) -> normal prepareSpellCast consumes lv8 slot (DivinationWizard lv20 spell_slots_level_8 1->0; long-rest restores).
+- Chain: td.spell-name.clickable -> gateMetamagic (no gate) -> execution/index.js:246 -> powerWordStunService -> handlers/spells/powerWordStunHandler.js. <=150 HP -> activeConditions ['stunned']+activeConditionMeta.stunned{dc,ability:'con'}; >150 HP -> ['speed_zero']+addExpiration(expireOnCreatureName=caster).
+- Recipe: card Target=monster -> spell row -> Cast Spell (auto-info popup, no picker). End-of-turn CON save = clickable 'Stunned DC 17' initiative badge (createRollConditionSaveHandler), success clears. speed_zero expires when caster active again next round (isCreatureExpired needs currentRound>appliedRound — walk a full round). EB Wight 82 / Mouther 52 / Archmage 170 cover both branches.
+
+### Prayer of Healing / multi-target 2d8 / SP-091 (VERIFIED PASS, 2026-09-01)
+
+- lv2 2024 Cleric spell (automation.type prayer_of_healing). Live: independent 2d8-per-target through `.sp-overlay` max-5 picker (tick `.secondary-target-row` -> `.sp-roll-btn` 'Heal (N)'); lv2 slot consumed normally (no sp-088 bypass). RAW gaps accepted prose-only: gate `prayerOfHealing_lastUsedRound_<target>` is ROUND-only (massHealUtils.js:120-126; Long Rest does NOT clear it) and 'short-rest benefits' unmodelled.
+- PITFALL: after Admin Clear Change Data, App.jsx:69 re-seeds combatants with maxHp:1 stubs — click Initiative-view 'Clear' (accept confirm) to escape, and OPEN THE CASTER SHEET FIRST so setupCreatures confirmFn has runtime hitPoints. Wound PCs via trusted `fill()+press('Tab')` on `input[aria-label="<name] current HP"]` (fill+Enter can silently drop). PC recipients only; EB monsters heal 0 (bug-cla-208 family).
+
+## Pending GM-approved dedup (NOT YET EXECUTED — 2026-09-01)
+
+GM confirmed reducing test-campaign to ONE character per class. On next session DELETE via UI character sheet Delete button: **War_Cleric** (Cleric/Light lv6), **LightfootHalfling** (Fighter/Champion lv3), **ArcaneTricksterTest** (Rogue/Arcane Trickster lv3), **GoliathFireGiant** (Fighter/Battle Master lv5 — only Goliath; re-create via Edit-wizard Race step when a racial row needs it). KEEP: Divine_Cleric lv17, EvasiveFighter lv18, AasimarTest lv14 + one each Barbarian/Bard/Druid/Monk/Paladin/Ranger/Sorcerer/Warlock/Wizard (12 total). Remove deleted entries from docs/test-character-registry.json when done.
