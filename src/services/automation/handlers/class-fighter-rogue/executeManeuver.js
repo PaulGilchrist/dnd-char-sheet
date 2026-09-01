@@ -5,6 +5,7 @@ import { buildSaveDc, createSaveListener } from '../../common/savePrompt.js';
 import { getCurrentCombatRound } from '../../../../services/encounters/combatData.js';
 import { addExpiration } from '../../../rules/effects/expirations.js';
 import { getCombatContext } from '../../../rules/combat/damageUtils.js';
+import { applyDamageToTarget } from '../../../rules/combat/applyDamage.js';
 import {
     findManeuver,
     checkSuperiorityDice,
@@ -60,6 +61,22 @@ export async function executeManeuver(action, playerStats, campaignName, maneuve
 
     if (maneuver.damageBonus) {
         description += ` Added ${dieValue} to the damage roll.`;
+        // MN-012: attack riders used from the pending-prompt path
+        // ("Combat Superiority — Use Maneuver") have no pipeline consumer for
+        // the rolled die — apply it to the target directly (CLA-192 pattern:
+        // await applyDamageToTarget and let it log hp_change).
+        if (maneuver.actionType === 'attack_rider' && targetName) {
+            const lastAttack = await getRuntimeValue('campaign', 'lastAttack', campaignName);
+            if (lastAttack?.hit) {
+                const cs = await getCombatContext(campaignName);
+                const characters = getRuntimeValue('characters', 'characters', campaignName) || [];
+                const dmgType = lastAttack.damageType || maneuver.damageType || 'force';
+                const applyResult = await applyDamageToTarget(cs, targetName, dieValue, [dmgType], campaignName, characters, false, playerStats.name);
+                if (applyResult && applyResult.finalDamage > 0) {
+                    description += ` ${targetName} takes ${applyResult.finalDamage} ${dmgType} damage.`;
+                }
+            }
+        }
     }
 
     if (maneuver.saveType && targetName) {
