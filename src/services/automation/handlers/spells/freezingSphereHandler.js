@@ -1,4 +1,5 @@
 import { buildSaveDc } from '../../common/savePrompt.js';
+import { rangeToFeet } from '../../../rules/combat/rangeValidation.js';
 
 export async function handle(action, playerStats, campaignName, _mapName) {
     const auto = action.automation || {};
@@ -18,7 +19,7 @@ export async function handle(action, playerStats, campaignName, _mapName) {
         damageExpression = highestBelow != null ? damageAtSlotLevel[highestBelow] : '10d6';
     }
 
-    const range = auto.range ? 300 : 300;
+    const range = auto.range ? rangeToFeet(auto.range) : 300;
 
     return {
         type: 'modal',

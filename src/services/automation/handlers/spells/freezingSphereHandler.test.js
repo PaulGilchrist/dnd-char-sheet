@@ -280,17 +280,53 @@ describe('freezingSphereHandler.handle', () => {
       expect(result.payload.saveDc).toBe(15);
     });
 
-    it('uses buildSaveDc default of 10 when automation has no saveDc', async () => {
-      savePrompt.buildSaveDc.mockReturnValue(10);
+    it('resolves saveDc from automation saveDc "spell_save_dc" via buildSaveDc', async () => {
+      savePrompt.buildSaveDc.mockImplementation((auto, stats) =>
+        auto.saveDc === 'spell_save_dc' ? stats.spellAbilities.saveDc : 10,
+      );
 
       const result = await handle(
-        makeAction(),
+        makeAction({ saveDc: 'spell_save_dc' }),
         makePlayerStats(),
         campaignName,
         mapName,
       );
 
-      expect(result.payload.saveDc).toBe(10);
+      expect(savePrompt.buildSaveDc).toHaveBeenCalledWith(
+        expect.objectContaining({ saveDc: 'spell_save_dc' }),
+        expect.any(Object),
+      );
+      expect(result.payload.saveDc).toBe(16);
+    });
+  });
+
+  describe('caster spell save DC lock (SP-082)', () => {
+    it('2024 spells.json automation declares saveDc "spell_save_dc" for Freezing Sphere', async () => {
+      const spells = (await import('../../../../../public/data/2024/spells.json')).default;
+      const spell = spells.find((s) => s.name === "Otiluke's Freezing Sphere");
+
+      expect(spell.automation.saveDc).toBe('spell_save_dc');
+    });
+
+    it('payload saveDc equals playerStats.spellAbilities.saveDc with real buildSaveDc', async () => {
+      vi.resetModules();
+      vi.doMock('../../common/savePrompt.js', async () =>
+        vi.importActual('../../common/savePrompt.js'),
+      );
+      const { handle: realHandle } = await import('./freezingSphereHandler.js');
+      const spells = (await import('../../../../../public/data/2024/spells.json')).default;
+      const spell = spells.find((s) => s.name === "Otiluke's Freezing Sphere");
+
+      const result = await realHandle(
+        { name: spell.name, automation: spell.automation, spell: { level: 6 } },
+        makePlayerStats(),
+        campaignName,
+        mapName,
+      );
+
+      expect(result.payload.saveDc).toBe(16);
+      vi.doUnmock('../../common/savePrompt.js');
+      vi.resetModules();
     });
   });
 

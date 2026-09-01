@@ -9635,12 +9635,13 @@
             "dc_type": "CON",
             "dc_success": "half"
         },
-        "automation": {
-            "type": "freezing_sphere",
-            "saveType": "CON",
-            "range": "300 feet",
-            "casting_time": "1 action"
-        }
+  "automation": {
+    "type": "freezing_sphere",
+    "saveType": "CON",
+    "saveDc": "spell_save_dc",
+    "range": "300 feet",
+    "casting_time": "1 action"
+  }
     },
     {
         "index": "otilukes-resilient-sphere",
