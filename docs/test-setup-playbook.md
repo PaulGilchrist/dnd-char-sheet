@@ -1433,3 +1433,10 @@ GM confirmed reducing test-campaign to ONE character per class. On next session 
 - **CLA-109 supply-side gotcha:** before retesting EK riders, check `class.subclass.name` in `EvasiveFighter.json` — the 2024 Edit-wizard step-7 `selectOption('Eldritch Knight')` + ✓Save restores EK supply when `major` is already `null` (contrast CLA-271 where a populated stale `major` blocks it).
 - change-data is **nested** (`d['<Name>']._Eldritch_Strike_usedRound`), NOT flat `"<Name>.<key>"`.
 - A target select set pre-reload does NOT persist — re-set the initiative-card Target after every page reload or attacks roll "vs AC" against a stale/no target.
+
+### CLA-128 Expert Divination passive supply (FIXED 2026-09-02)
+
+- **Passive supply pattern (VERIFIED):** info-builder DISPATCH case in `automationInfoBuilder/core-handlers.js` (return `type`=automation type, `name`=feature.name, `casting_time`, `hasAutomation:true`) + router passives-only case in `automationRouter.js` (`result.passives.push(info)`, next to `save_proficiency` :523); gate consumer `spellCastService/execution/helpers.js:312` matches on `name`+`type`.
+- Post-cast passives fire **fire-and-forget** (`automation/index.js:611`, not awaited) — no popup appears for zero-regain casts (handler's "no eligible slots" popup is swallowed by the fire-and-forget return); ground truth is change-data slot counts + exactly one `ability_use` log per real regain.
+- Self-target no-dc spells (Augury) resolve with NO target popup — `Cast Spell` click auto-completes; only Touch-range (Mage Armor) opens `.sp-overlay` radio list.
+- 2024 Wizard subclass features live at `majors[].features[]` (Wizard has no `subclasses` key).

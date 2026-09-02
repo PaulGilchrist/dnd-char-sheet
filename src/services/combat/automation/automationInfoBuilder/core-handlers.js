@@ -570,6 +570,17 @@ export const coreHandlers = {
         }
     },
 
+    'expert_divination': (feature, _playerStats) => {
+        const auto = feature.automation
+        return {
+            type: 'expert_divination',
+            name: feature.name,
+            effect: 'expert_divination',
+            casting_time: auto.casting_time || 'passive',
+            hasAutomation: true
+        }
+    },
+
     'third_eye': (feature, _playerStats) => {
         const auto = feature.automation
         return {

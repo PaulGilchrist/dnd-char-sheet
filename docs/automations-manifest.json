@@ -2294,7 +2294,7 @@
       "handler": "src/services/combat/automation/handlers/classFeatureHandler.js",
       "router": "src/services/combat/automation/routers/classFeatureRouter.js",
       "infoBuilder": "src/services/combat/automation/infoBuilders/classFeatureInfoBuilder.js",
-      "verified": "broken \u2014 see .opencode/plans/bug-cla-128-expert-divination-passives-gate-never-populated.md",
+      "verified": "verified",
       "class": "Wizard",
       "triggerConditions": "Action: passive",
       "expectedBehavior": "When you cast a Divination spell using a level 2+ spell slot, you regain one expended spell slot. The slot must be lower than the slot you expended and can't be higher than level 5."

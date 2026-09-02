@@ -523,6 +523,9 @@ export function routeAutomation(info, auto, result) {
     case 'save_proficiency':
         result.passives.push(info)
         break
+    case 'expert_divination':
+        result.passives.push(info)
+        break
     case 'restore_balance':
         result.reactions.push(info)
         break
