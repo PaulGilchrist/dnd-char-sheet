@@ -507,6 +507,61 @@ describe('applyDamageToTarget', () => {
     });
   });
 
+  describe('Projected Ward recent-damage writer', () => {
+    it('records projectedWardDamage on a damaged non-warden player', async () => {
+      stubPlayerRuntime(73);
+      const player = createPlayerCreature('HexWarlock', { currentHp: 73 });
+      const cs = makeCombatSummary([player]);
+      await applyDamageToTarget(cs, 'HexWarlock', 13, ['Slashing'], 'TestCampaign', [createMinimalCharacter('HexWarlock')], false, 'Wight 1');
+      expect(setRuntimeValue).toHaveBeenCalledWith('HexWarlock', 'projectedWardDamage',
+        expect.objectContaining({ rawDamage: 13, damageType: 'Slashing', attackerName: 'Wight 1' }), 'TestCampaign');
+    });
+
+    it('does not record projectedWardDamage when the damaged player is an active warden (self-absorbed)', async () => {
+      stubPlayerRuntime(73);
+      getRuntimeValue.mockImplementation((key, subKey) => {
+        if (subKey === 'activeBuffs') return [];
+        if (subKey === 'arcaneWardActive') return true;
+        if (subKey === 'arcaneWardHp') return 0;
+        if (subKey === 'currentHitPoints') return 73;
+        if (subKey === 'activeConditions') return [];
+        return undefined;
+      });
+      const warden = createPlayerCreature('DivinationWizard', { currentHp: 73 });
+      const cs = makeCombatSummary([warden]);
+      await applyDamageToTarget(cs, 'DivinationWizard', 10, ['Necrotic'], 'TestCampaign', [createMinimalCharacter('DivinationWizard')], false, 'Wight 1');
+      expect(setRuntimeValue).not.toHaveBeenCalledWith('DivinationWizard', 'projectedWardDamage', expect.anything(), 'TestCampaign');
+    });
+
+    it('does not record projectedWardDamage for zero damage', async () => {
+      stubPlayerRuntime(73);
+      const player = createPlayerCreature('HexWarlock', { currentHp: 73 });
+      const cs = makeCombatSummary([player]);
+      await applyDamageToTarget(cs, 'HexWarlock', 0, ['Slashing'], 'TestCampaign', [createMinimalCharacter('HexWarlock')], false, 'Wight 1');
+      expect(setRuntimeValue).not.toHaveBeenCalledWith('HexWarlock', 'projectedWardDamage', expect.anything(), 'TestCampaign');
+    });
+
+    it('accumulates multi-part damage from the same attacker sequence', async () => {
+      const store = new Map([['HexWarlock.currentHitPoints', 73]]);
+      getRuntimeValue.mockImplementation((storeName, subKey) => store.get(`${storeName}.${subKey}`));
+      setRuntimeValue.mockImplementation((storeName, subKey, value) => { store.set(`${storeName}.${subKey}`, value); });
+      const player = createPlayerCreature('HexWarlock', { currentHp: 73 });
+      const cs = makeCombatSummary([player]);
+      await applyDamageToTarget(cs, 'HexWarlock', 7, ['Slashing'], 'TestCampaign', [createMinimalCharacter('HexWarlock')], false, 'Wight 1');
+      await applyDamageToTarget(cs, 'HexWarlock', 6, ['Necrotic'], 'TestCampaign', [createMinimalCharacter('HexWarlock')], false, 'Wight 1');
+      expect(store.get('HexWarlock.projectedWardDamage').rawDamage).toBe(13);
+      expect(store.get('HexWarlock.currentHitPoints')).toBe(60);
+    });
+
+    it('does not record projectedWardDamage on NPC targets', async () => {
+      stubNpcRuntime(55);
+      const npc = { ...createNpcCreature('Wight 1', 55, 55), type: 'npc' };
+      const cs = makeCombatSummary([npc]);
+      await applyDamageToTarget(cs, 'Wight 1', 12, ['Slashing'], 'TestCampaign', [createMinimalCharacter('Wight 1')], false, 'HexWarlock');
+      expect(setRuntimeValue).not.toHaveBeenCalledWith('Wight 1', 'projectedWardDamage', expect.anything(), 'TestCampaign');
+    });
+  });
+
   describe('logDamageApplication side effects', () => {
     it('logs hp_change entry via fetch with correct type and isHealing', async () => {
       stubNpcRuntime(10);

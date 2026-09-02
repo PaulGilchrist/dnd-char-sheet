@@ -1475,3 +1475,8 @@ GM confirmed reducing test-campaign to ONE character per class. On next session 
 - **FIX:** `abilityCalc2024.js getAbilities` restructured to two passes — Divine Order Thaumaturge (:41-51) + Primal Order Magician (:54-64) now read the COMPUTED Wisdom modifier from the function's own mapped results (was reading raw `playerStats.abilities` where `bonus` is undefined → `max(1,0)=1`). 5e `abilityCalc.js` has no order code (2024-only).
 - **TEST PITFALL:** prior Thaumaturge/Magician tests passed a precomputed `bonus` on RAW Wisdom entries, masking the bug — order-bonus tests MUST use raw shape (baseScore/backgroundIncrease only).
 - Wizard step-6 Primal Order combobox = `getByRole('combobox').nth(1)`; `✓Save` via textContent regex; Admin Clear confirm dialogs auto-accept via persistent `page.on('dialog')` listener (`handle_dialog` + `once` races).
+
+### CLA-266 Projected Ward recent-damage writer (FIXED 2026-09-02)
+
+- **FIX:** `applyDamage.js` player branch now writes `projectedWardDamage` `{rawDamage,damageType,attackerName,timestamp}` on the damaged NON-warden player (aggregates multi-part attacks via same-`attackerName` sequence detection), so `arcaneWardHandler.js:71` reaction finds recent damage → rollback-absorb. Cleared at turn start in `useInitiativeEffects.js` (same block that resets `actionSurgeUsedThisRound`). Mirrors `bastionOfLawLastAttackDamage` mechanism. Range via `isWithinRange` (gridless=true).
+- Proven full-absorb (13) + overflow (5-of-11) E2E; `ward_absorbed` + `ability_use` logs present.

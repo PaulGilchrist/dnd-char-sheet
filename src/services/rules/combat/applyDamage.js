@@ -313,6 +313,22 @@ const resResult = computeDamageAfterResistancesWithDetails(rawDamage, damageType
         }
     }
 
+    // Projected Ward: record recent damage on the damaged player so an Abjurer's
+    // reaction (arcaneWardHandler) can roll back-absorb it. Mirrors the
+    // bastionOfLawLastAttackDamage record mechanism (campaign lastAttack).
+    const damagedIsWarden = isPlayer && getRuntimeValue(creature.name, 'arcaneWardActive', campaignName);
+    if (isPlayer && actualDamageTaken > 0 && !damagedIsWarden) {
+        const prevRecord = getRuntimeValue(creature.name, 'projectedWardDamage', campaignName);
+        const sameSequence = isSecondary && prevRecord && attackerName && prevRecord.attackerName === attackerName;
+        const recordedDamage = actualDamageTaken + (sameSequence ? Number(prevRecord.rawDamage || 0) : 0);
+        setRuntimeValue(creature.name, 'projectedWardDamage', {
+            rawDamage: recordedDamage,
+            damageType: damageTypes[0] || null,
+            attackerName: attackerName || null,
+            timestamp: Date.now(),
+        }, campaignName);
+    }
+
     if (wardDamage > 0) {
         applyWardingBond(creature, combatSummary, campaignName, wardDamage);
       if (isPlayer) {

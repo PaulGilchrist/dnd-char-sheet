@@ -2,6 +2,9 @@ import { getRuntimeValue, setRuntimeValue } from '../../../../hooks/runtime/useR
 import { addEntry } from '../../../ui/logService.js';
 import { getCombatSummary } from '../../../encounters/combatData.js';
 import { getTargetFromAttacker } from '../../../rules/combat/damageUtils.js';
+import { isWithinRange } from '../../../rules/combat/rangeCheck.js';
+
+const PROJECTED_WARD_DAMAGE_KEY = 'projectedWardDamage';
 
 const ARCAN_WARD_KEY = 'arcaneWardHp';
 const ARCAN_WARD_ACTIVE_KEY = 'arcaneWardActive';
@@ -67,8 +70,22 @@ export async function handle(action, playerStats, campaignName, _mapName) {
         };
     }
 
+    const inRange = await isWithinRange(playerName, targetName, auto.range ?? 30);
+    if (!inRange) {
+        return {
+            type: 'popup',
+            payload: {
+                type: 'automation_info',
+                name: action.name,
+                automationType: auto.type,
+                description: `${action.name}: ${targetName} is out of range (${auto.range ?? 30} ft). Arcane Ward cannot project that far.`,
+                automation: auto,
+            },
+        };
+    }
+
     // Get the most recent single damage hit on the target
-    const latestDamage = getRuntimeValue(targetName, 'projectedWardDamage', campaignName);
+    const latestDamage = getRuntimeValue(targetName, PROJECTED_WARD_DAMAGE_KEY, campaignName);
     if (!latestDamage?.rawDamage || latestDamage.rawDamage <= 0) {
         return {
             type: 'popup',
@@ -92,11 +109,15 @@ export async function handle(action, playerStats, campaignName, _mapName) {
     if (targetHp != null) {
         const newTargetHp = Math.min(targetHp + absorbed, getRuntimeValue(targetName, 'maxHitPoints', campaignName) ?? targetHp + absorbed);
         await setRuntimeValue(targetName, 'currentHitPoints', newTargetHp, campaignName);
+    } else {
+        console.error(`[arcaneWardHandler] currentHitPoints not found for ${targetName}; rollback heal skipped`);
     }
 
     // Reduce ward HP
     if (absorbed > 0) {
         await setRuntimeValue(playerName, ARCAN_WARD_KEY, newWardHp, campaignName);
+        // Consume the damage record so the same hit can't be absorbed twice
+        await setRuntimeValue(targetName, PROJECTED_WARD_DAMAGE_KEY, null, campaignName);
     }
 
     // Log the reaction use

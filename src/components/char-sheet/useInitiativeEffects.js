@@ -20,8 +20,9 @@ export default function useInitiativeEffects(playerStats, campaignName, rollDama
 
             const updates = {};
 
-            // Reset Action Surge once-per-turn flag at the start of each turn
-            updates.actionSurgeUsedThisRound = null;
+            // Reset Action Surge once-per-turn flag + clear Projected Ward recent-damage
+            // record (projectedWardDamage) at the start of each new combat
+            updates.actionSurgeUsedThisRound = updates.projectedWardDamage = null;
 
             // Reset Psionic Strike once-per-turn flag on initiative (new combat)
             updates.psionicStrikeUsedThisTurn = null;

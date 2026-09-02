@@ -29,6 +29,12 @@ vi.mock('../../../rules/combat/damageUtils.js', () => ({
     getTargetFromAttacker: vi.fn(),
 }));
 
+vi.mock('../../../rules/combat/rangeCheck.js', () => ({
+    isWithinRange: vi.fn().mockResolvedValue(true),
+}));
+
+import { isWithinRange } from '../../../rules/combat/rangeCheck.js';
+
 const campaignName = 'test-campaign';
 
 function makeWizardStats(name, level, intBonus) {
@@ -183,6 +189,47 @@ describe('arcaneWardHandler', () => {
                 expect(result.payload.description).toContain('No recent damage detected');
                 expect(setRuntimeValue).not.toHaveBeenCalled();
                 expect(addEntry).not.toHaveBeenCalled();
+            });
+        });
+
+        describe('projected ward - out of range', () => {
+            it('returns info popup when target is out of range', async () => {
+                isWithinRange.mockResolvedValueOnce(false);
+                setMocks(
+                    wardRuntime('Goblin', 8, 13, { rawDamage: 7 }, 5, 10),
+                    combatContext('TestWizard', 'Goblin'),
+                    { name: 'Goblin' },
+                );
+
+                const result = await handle(
+                    { name: 'Projected Ward', automation: { type: 'projected_ward', range: 30 } },
+                    makeWizardStats('TestWizard', 6, 3),
+                    campaignName,
+                );
+
+                expect(result.type).toBe('popup');
+                expect(result.payload.description).toContain('out of range');
+                expect(setRuntimeValue).not.toHaveBeenCalled();
+                expect(addEntry).not.toHaveBeenCalled();
+            });
+        });
+
+        describe('projected ward - consumes damage record after absorbing', () => {
+            it('clears projectedWardDamage on target after absorbing', async () => {
+                setMocks(
+                    wardRuntime('Goblin', 10, 13, { rawDamage: 7 }, 5, 10),
+                    combatContext('TestWizard', 'Goblin'),
+                    { name: 'Goblin' },
+                );
+
+                await handle(
+                    { name: 'Projected Ward', automation: { type: 'projected_ward', range: 30 } },
+                    makeWizardStats('TestWizard', 6, 3),
+                    campaignName,
+                );
+
+                expect(setRuntimeValue).toHaveBeenCalledWith('TestWizard', 'arcaneWardHp', 3, campaignName);
+                expect(setRuntimeValue).toHaveBeenCalledWith('Goblin', 'projectedWardDamage', null, campaignName);
             });
         });
 

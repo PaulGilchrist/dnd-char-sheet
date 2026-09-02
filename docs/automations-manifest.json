@@ -4861,7 +4861,7 @@
       "handler": "src/services/combat/automation/handlers/classFeatureHandler.js",
       "router": "src/services/combat/automation/routers/classFeatureRouter.js",
       "infoBuilder": "src/services/combat/automation/infoBuilders/classFeatureInfoBuilder.js",
-      "verified": "broken \u2014 see .opencode/plans/bug-cla-266-projected-ward.md",
+      "verified": "verified",
       "class": "Wizard",
       "triggerConditions": "Action: 1 reaction; Range: 30",
       "expectedBehavior": "When a creature you can see within 30 feet takes damage, take Reaction to cause Arcane Ward to absorb damage. If ward reduced to 0 HP, warded creature takes remaining damage."
