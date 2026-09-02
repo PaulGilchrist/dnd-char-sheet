@@ -4540,7 +4540,7 @@
       "handler": "src/services/combat/automation/handlers/classFeatureHandler.js",
       "router": "src/services/combat/automation/routers/classFeatureRouter.js",
       "infoBuilder": "src/services/combat/automation/infoBuilders/classFeatureInfoBuilder.js",
-      "verified": "broken \u2014 see .opencode/plans/bug-cla-247-patient-defense.md",
+      "verified": "verified",
       "class": "Monk",
       "triggerConditions": "Trigger: after_attack_action; Action: 1 bonus action",
       "expectedBehavior": "Take Disengage as Bonus Action, or expend 1 Focus Point for Disengage + Dodge."

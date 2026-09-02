@@ -321,3 +321,70 @@ describe('patientDefenseHandler — automation config variations', () => {
         expect(result.payload.description).toContain('1 Focus Points remaining');
     });
 });
+
+// ── Tests: CLA-247 single FP writer ─────────────────────────────
+
+describe('patientDefenseHandler — CLA-247 single FP writer', () => {
+    beforeEach(() => {
+        vi.clearAllMocks();
+    });
+
+    it('focus mode spends exactly 1 FP once and popup arithmetic matches (17 → 16)', async () => {
+        setupRuntimeMocks({
+            'TestMonk:focusPoints:test-campaign': 17,
+            'TestMonk:tempHp:test-campaign': 0,
+        });
+
+        const action = makeAction({ name: 'Heightened Patient Defense' });
+        const playerStats = makePlayerStats(17, 17, 12);
+
+        const result = await handle(action, playerStats, campaignName);
+
+        const focusWrites = runtimeState.setRuntimeValue.mock.calls.filter(
+            call => call[1] === 'focusPoints',
+        );
+        expect(focusWrites).toHaveLength(1);
+        expect(focusWrites[0]).toEqual(['TestMonk', 'focusPoints', 16, campaignName]);
+        expect(result.payload.description).toContain('(16 Focus Points remaining)');
+    });
+
+    it('dispatches focus-points-updated after spending FP', async () => {
+        setupRuntimeMocks({
+            'TestMonk:focusPoints:test-campaign': 5,
+        });
+        const listener = vi.fn();
+        window.addEventListener('focus-points-updated', listener);
+
+        const action = makeAction();
+        const playerStats = makePlayerStats(2, 5);
+
+        await handle(action, playerStats, campaignName);
+
+        expect(listener).toHaveBeenCalledTimes(1);
+        window.removeEventListener('focus-points-updated', listener);
+    });
+
+    it('FP=0 reaches plain Disengage branch: logs Disengage, spends no FP, no Dodge', async () => {
+        setupRuntimeMocks({
+            'TestMonk:focusPoints:test-campaign': 0,
+        });
+
+        const action = makeAction({ name: 'Heightened Patient Defense' });
+        const playerStats = makePlayerStats(17, 17);
+
+        const result = await handle(action, playerStats, campaignName);
+
+        const focusWrites = runtimeState.setRuntimeValue.mock.calls.filter(
+            call => call[1] === 'focusPoints',
+        );
+        expect(focusWrites).toHaveLength(0);
+        expect(buffToggle.toggleBuff).not.toHaveBeenCalled();
+        expect(result.payload.description).toContain('Disengage as a bonus action');
+        expect(logService.addEntry).toHaveBeenCalledWith(campaignName, expect.objectContaining({
+            type: 'ability_use',
+            characterName: 'TestMonk',
+            abilityName: 'Heightened Patient Defense',
+            description: expect.stringContaining('Disengage as a bonus action'),
+        }));
+    });
+});

@@ -167,7 +167,10 @@ export default function useCharActionsAutomation({
         // Spend 1 focus point for monk Ki features before dispatching
         // Skip FP cost for Hand of Healing and Flurry of Blows when Flurry of Healing and Harm is active
         // Skip FP cost for Flurry of Blows when Cloak of Shadows (Shadow Flurry) is active
-        if (MONK_KI_FEATURES.includes(action.name)) {
+        // Skip pre-spend for 2024 patient_defense: patientDefenseHandler is the sole FP
+        // writer (focus mode spends 1 FP, plain Disengage spends none) — pre-spending here
+        // double-charged and blocked the plain-Disengage fallback (CLA-247)
+        if (MONK_KI_FEATURES.includes(action.name) && auto?.type !== 'patient_defense') {
             const skipFP = (HAS_FLURRY_HEALING_HARM && (action.name === 'Hand of Healing' || action.name === 'Flurry of Blows' || action.name === 'Heightened Flurry of Blows'))
                 || (cloakActive && (action.name === 'Flurry of Blows' || action.name === 'Heightened Flurry of Blows'));
             if (!skipFP) {

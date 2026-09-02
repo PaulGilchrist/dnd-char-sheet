@@ -305,6 +305,62 @@ describe('useCharActionsAutomation', () => {
                 );
             });
 
+            it('should NOT pre-spend FP for 2024 patient_defense actions (handler is sole FP writer)', async () => {
+                const grv = vi.fn((charKey, key, _cn) => {
+                    if (key === 'activeBuffs') return [];
+                    if (key === 'focusPoints') return 17;
+                    if (key === 'lastActionSpellCast') return null;
+                    return undefined;
+                });
+
+                for (const actionName of ['Patient Defense', 'Heightened Patient Defense']) {
+                    const action = {
+                        name: actionName,
+                        automation: { type: 'patient_defense', cost: { resource: 'focus_points', amount: 1 } },
+                    };
+                    const deps = createDeps({ getRuntimeValue: grv });
+                    const { handleAutomationAction } = getHandlers(deps);
+
+                    await handleAutomationAction(action);
+
+                    expect(deps.setRuntimeValue).not.toHaveBeenCalledWith(
+                        'TestFighter', 'focusPoints', expect.any(Number), campaignName
+                    );
+                    expect(deps.executeHandler).toHaveBeenCalledWith(
+                        action, basePlayerStats, campaignName, 'test-map', []
+                    );
+                }
+            });
+
+            it('should reach executeHandler for patient_defense at FP=0 (plain Disengage pass-through, no block)', async () => {
+                const grv = vi.fn((charKey, key, _cn) => {
+                    if (key === 'activeBuffs') return [];
+                    if (key === 'focusPoints') return 0;
+                    if (key === 'lastActionSpellCast') return null;
+                    return undefined;
+                });
+                const playerStats = { ...basePlayerStats, rules: '2024' };
+                const action = {
+                    name: 'Heightened Patient Defense',
+                    automation: { type: 'patient_defense', cost: { resource: 'focus_points', amount: 1 } },
+                };
+
+                const deps = createDeps({ getRuntimeValue: grv, playerStats });
+                const { handleAutomationAction } = getHandlers(deps);
+
+                await handleAutomationAction(action);
+
+                expect(deps.setPopupHtml).not.toHaveBeenCalledWith(
+                    expect.stringContaining('No Focus Points remaining.')
+                );
+                expect(deps.setRuntimeValue).not.toHaveBeenCalledWith(
+                    'TestFighter', 'focusPoints', expect.any(Number), campaignName
+                );
+                expect(deps.executeHandler).toHaveBeenCalledWith(
+                    action, playerStats, campaignName, 'test-map', []
+                );
+            });
+
             it('should skip FP spending for Flurry of Blows when Flurry of Healing and Harm is active', async () => {
                 const grv = vi.fn((charKey, key, _cn) => {
                     if (key === 'activeBuffs') return [];

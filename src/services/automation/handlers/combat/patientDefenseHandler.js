@@ -14,6 +14,7 @@ export async function handle(action, playerStats, campaignName) {
 
     if (currentFocus >= cost) {
         await setRuntimeValue(playerName, 'focusPoints', currentFocus - cost, campaignName);
+        window.dispatchEvent(new CustomEvent('focus-points-updated'));
 
         let description = `${playerName} used ${action.name}: Disengage and Dodge as a bonus action.`;
         let tempHpRoll = null;
