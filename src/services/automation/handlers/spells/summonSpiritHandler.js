@@ -76,9 +76,13 @@ function buildSpiritCreature(monster, displayName, casterName, initiativeValue, 
     const scale = auto.scale !== false;
 
     const ac = scale ? baseAc + slotLevel : baseAc;
-    const hp = scale
+    let hp = scale
         ? baseHp + (auto.hpPerLevelAbove || 0) * Math.max(0, slotLevel - (auto.baseLevel || slotLevel))
         : baseHp;
+    // CLA-252: the Phantasmal Creatures free (spectral) cast halves the summoned creature's HP.
+    if (options.halveHp) {
+        hp = Math.max(1, Math.floor(hp / 2));
+    }
 
     const spellSaveDc = getSpellSaveDc(playerStats);
     const spellAttackMod = getSpellAttackModifier(playerStats);
@@ -164,7 +168,18 @@ async function performSummon(action, playerStats, campaignName, variant) {
     const isSummonAberration = action.name === 'Summon Aberration';
     const noConcentration = !!auto.noConcentration || isSummonAberration;
     const initiativeValue = getCasterInitiativeValue(combatSummary, casterName);
-    const creature = buildSpiritCreature(monster, variant.name, casterName, initiativeValue, slotLevel, auto, playerStats, { noConcentration, warlockLevel: playerStats.level, chaModifier: (playerStats.abilities?.find(a => a.name === 'Charisma')?.bonus || 0) });
+
+    // CLA-252: a Phantasmal Creatures free cast (spellPreparationService stamps the spell)
+    // summons a spectral creature with halved HP; a normal slotted cast keeps full HP.
+    const phantasmalPassive = (playerStats.automation?.passives || []).find(p => p.type === 'phantasmal_creatures');
+    const isPhantasmalFreeCast = !!action.spell?._phantasmalCreatures;
+    const halveHp = isPhantasmalFreeCast && !!(phantasmalPassive?.halvesHp ?? action.spell?._phantasmalHalvesHp);
+
+    const creature = buildSpiritCreature(monster, variant.name, casterName, initiativeValue, slotLevel, auto, playerStats, { noConcentration, warlockLevel: playerStats.level, chaModifier: (playerStats.abilities?.find(a => a.name === 'Charisma')?.bonus || 0), halveHp });
+    if (isPhantasmalFreeCast) {
+        creature.phantasmal = true;
+        creature.spectral = true;
+    }
     combatSummary.creatures.push(creature);
 
     if (isSummonAberration) {
@@ -202,13 +217,15 @@ async function performSummon(action, playerStats, campaignName, variant) {
     window.dispatchEvent(new CustomEvent('initiative-rolled'));
 
     const summonLabel = auto.typeLabel || variant.name;
-    const logDescription = `${casterName} casts ${action.name} (slot level ${slotLevel}), summoning ${variant.name}.`;
+    const castLabel = isPhantasmalFreeCast
+        ? `${casterName} casts ${action.name} — Phantasmal Creatures free cast (spectral, half HP), summoning ${variant.name} (${creature.maxHp}/${creature.maxHp} HP).`
+        : `${casterName} casts ${action.name} (slot level ${slotLevel}), summoning ${variant.name} (${creature.maxHp}/${creature.maxHp} HP).`;
 
     await addEntry(campaignName, {
         type: 'summons',
         characterName: casterName,
         summonName: summonLabel,
-        description: logDescription,
+        description: castLabel,
         summonedCreatures: [creature.name],
         timestamp: Date.now(),
     }).catch((e) => { console.error("[summonSpiritHandler:log-error]", e); });
@@ -226,7 +243,7 @@ async function performSummon(action, playerStats, campaignName, variant) {
             type: 'summons',
             characterName: casterName,
             summonName: summonLabel,
-            description: logDescription,
+            description: castLabel,
             summonedCreatures: [creature.name],
             timestamp: Date.now(),
         }],

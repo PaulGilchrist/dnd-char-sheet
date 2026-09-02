@@ -314,10 +314,25 @@ describe('applyLongRest', () => {
         if (key === 'SignatureSpells_selection') return []
         return undefined
       })
-      const phantasmalStats = makeStats({ automation: { passives: [{ type: 'phantasmal_creatures' }] } })
+      // CLA-252: per-spell free-cast counters re-arm (null = available) on long rest
+      const phantasmalStats = makeStats({
+        automation: {
+          passives: [{
+            type: 'phantasmal_creatures',
+            name: 'Phantasmal Creatures',
+            freeCastSpells: ['Summon Beast', 'Summon Fey'],
+            usesMax: 1,
+            recharge: 'long_rest',
+            halvesHp: true,
+          }],
+        },
+      })
       await applyLongRest(phantasmalStats, CAMPAIGN)
       expect(setRuntimeValue).toHaveBeenCalledWith(
-        'Test Hero', '_Phantasmal_Creatures_freeCastCount', null, CAMPAIGN, true,
+        'Test Hero', '_Phantasmal_Creatures_Summon_Beast_freeCastCount', null, CAMPAIGN, true,
+      )
+      expect(setRuntimeValue).toHaveBeenCalledWith(
+        'Test Hero', '_Phantasmal_Creatures_Summon_Fey_freeCastCount', null, CAMPAIGN, true,
       )
       expect(setRuntimeValue).toHaveBeenCalledWith(
         'Test Hero', '_phantasmalCreatures_list', [], CAMPAIGN, true,

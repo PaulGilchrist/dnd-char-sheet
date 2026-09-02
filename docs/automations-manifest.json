@@ -4600,7 +4600,7 @@
       "handler": "src/services/combat/automation/handlers/classFeatureHandler.js",
       "router": "src/services/combat/automation/routers/classFeatureRouter.js",
       "infoBuilder": "src/services/combat/automation/infoBuilders/classFeatureInfoBuilder.js",
-      "verified": "broken \u2014 see .opencode/plans/bug-cla-252-phantasmal-creatures.md",
+      "verified": "verified",
       "class": "Wizard",
       "triggerConditions": "Action: passive",
       "expectedBehavior": "Always have Summon Beast and Summon Fey prepared. Whenever you cast either spell, you can change its school to Illusion (summoned creature appears spectral). Cast Illusion version of each without spell slot, but casting without slot halves creature's HP. Once per Long Rest."

@@ -17,6 +17,10 @@ function SpellDetailPopup({ spell, playerStats, campaignName, onClose, onCast, u
 
   const freeCastAuthorized = isFreeCastAuthorized(playerStats.name, spell.name, spell.level, playerStats, campaignName);
 
+  // CLA-252: Phantasmal Creatures free cast — spectral Illusion version, halved HP.
+  const phantasmalPassive = playerStats?.automation?.passives?.find(p => p.type === 'phantasmal_creatures');
+  const isPhantasmalFreeCast = freeCastAuthorized && !!phantasmalPassive && (phantasmalPassive.freeCastSpells || []).includes(spell.name);
+
   const _psionicSorceryAvailable = (() => {
     const isSorcerer = playerStats.class?.name === 'Sorcerer';
     if (!isSorcerer) return 0;
@@ -130,7 +134,7 @@ function SpellDetailPopup({ spell, playerStats, campaignName, onClose, onCast, u
           <span><b>Casting Time:</b> {spell.casting_time || '—'}</span>
           <span><b>Range:</b> {spell.range || '—'}</span>
           <span><b>Duration:</b> {spell.duration || '—'}</span>
-          {spell.school && <span><b>School:</b> {spell.school}</span>}
+          {spell.school && <span><b>School:</b> {isPhantasmalFreeCast ? 'Illusion (spectral)' : spell.school}</span>}
           {/* CLA-234: per-spell casting-ability override (e.g. Nature Speaker — Wisdom) */}
           {spell.spellCastingAbility && <span><b>Casting Ability:</b> {spell.spellCastingAbility}</span>}
           {spell.area_of_effect && <span><b>Area:</b> {spell.area_of_effect.type || spell.area_of_effect.shape}{spell.area_of_effect.size ? ` - ${spell.area_of_effect.size}` : ''}</span>}
@@ -273,6 +277,9 @@ function SpellDetailPopup({ spell, playerStats, campaignName, onClose, onCast, u
           )}
           {freeCastAuthorized && !spell._ritualOnly && (
             <p className="spell-detail-free-cast"><i className="fa-solid fa-bolt"></i> Free Cast — no spell slot consumed</p>
+          )}
+          {isPhantasmalFreeCast && (
+            <p className="spell-detail-free-cast"><i className="fa-solid fa-ghost"></i> Phantasmal Creatures free cast — spectral Illusion version, half HP</p>
           )}
           {!canCast && !isCantrip && !freeCastAuthorized && (
           <p className="spell-detail-no-slots">No spell slots available for this level.</p>

@@ -27,7 +27,7 @@ vi.mock('../../../services/ui/storage.js', () => ({
 }));
 
 vi.mock('../../../services/ui/logService.js', () => ({
-  addEntry: vi.fn(),
+  addEntry: vi.fn(() => Promise.resolve({})),
 }));
 
 vi.mock('./metamagicRules.js', () => ({
@@ -180,10 +180,21 @@ describe('prepareSpellCast — Phantasmal Creatures', () => {
     getCombatSummary.mockReturnValue(null);
   });
 
+  const phantasmalStats = () => makePlayerStats({
+    automation: {
+      passives: [{
+        type: 'phantasmal_creatures',
+        name: 'Phantasmal Creatures',
+        freeCastSpells: ['Summon Beast', 'Summon Fey'],
+        usesMax: 1,
+        recharge: 'long_rest',
+        halvesHp: true,
+      }],
+    },
+  });
+
   it('marks Summon Beast/Summon Fey with phantasmal properties when free cast', async () => {
-    const playerStats = makePlayerStats({
-      automation: { passives: [{ type: 'phantasmal_creatures' }] },
-    });
+    const playerStats = phantasmalStats();
 
     const spell = makeSpell({ name: 'Summon Beast', level: 2 });
     const result = await prepareSpellCast(spell, makeMetaCtx(), {
@@ -195,12 +206,11 @@ describe('prepareSpellCast — Phantasmal Creatures', () => {
 
     expect(result.modifiedSpell.school).toBe('Illusion');
     expect(result.modifiedSpell._phantasmalCreatures).toBe(true);
+    expect(result.modifiedSpell._phantasmalHalvesHp).toBe(true);
   });
 
   it('adds summoned creature to runtime list', async () => {
-    const playerStats = makePlayerStats({
-      automation: { passives: [{ type: 'phantasmal_creatures' }] },
-    });
+    const playerStats = phantasmalStats();
 
     const spell = makeSpell({ name: 'Summon Beast', level: 2 });
     await prepareSpellCast(spell, makeMetaCtx(), {
@@ -219,11 +229,9 @@ describe('prepareSpellCast — Phantasmal Creatures', () => {
   });
 
   it('adds Fey Spirit for Summon Fey', async () => {
-    const playerStats = makePlayerStats({
-      automation: { passives: [{ type: 'phantasmal_creatures' }] },
-    });
+    const playerStats = phantasmalStats();
 
-    const spell = makeSpell({ name: 'Summon Fey', level: 2 });
+    const spell = makeSpell({ name: 'Summon Fey', level: 4 });
     await prepareSpellCast(spell, makeMetaCtx(), {
       playerName: 'TestWizard',
       playerStats,
@@ -239,10 +247,42 @@ describe('prepareSpellCast — Phantasmal Creatures', () => {
     );
   });
 
-  it('does not mark non-summon spells', async () => {
-    const playerStats = makePlayerStats({
-      automation: { passives: [{ type: 'phantasmal_creatures' }] },
+  it('reads the creature list with campaignName (CLA-252 passthrough)', async () => {
+    const playerStats = phantasmalStats();
+
+    const spell = makeSpell({ name: 'Summon Fey', level: 4 });
+    await prepareSpellCast(spell, makeMetaCtx(), {
+      playerName: 'TestWizard',
+      playerStats,
+      campaignName: 'camp',
+      freeCastAuthorized: true,
     });
+
+    expect(getRuntimeValue).toHaveBeenCalledWith('TestWizard', '_phantasmalCreatures_list', 'camp');
+  });
+
+  it('consumes the per-spell free-cast counter on free cast (CLA-252)', async () => {
+    const playerStats = phantasmalStats();
+
+    const spell = makeSpell({ name: 'Summon Beast', level: 2 });
+    const result = await prepareSpellCast(spell, makeMetaCtx(), {
+      playerName: 'TestWizard',
+      playerStats,
+      campaignName: 'camp',
+      freeCastAuthorized: true,
+    });
+
+    expect(result.freeCastUsed).toBe(true);
+    expect(setRuntimeValue).toHaveBeenCalledWith(
+      'TestWizard',
+      '_Phantasmal_Creatures_Summon_Beast_freeCastCount',
+      0,
+      'camp',
+    );
+  });
+
+  it('does not mark non-summon spells', async () => {
+    const playerStats = phantasmalStats();
 
     const spell = makeSpell({ name: 'Fireball', level: 3 });
     const result = await prepareSpellCast(spell, makeMetaCtx(), {
@@ -253,6 +293,27 @@ describe('prepareSpellCast — Phantasmal Creatures', () => {
     });
 
     expect(result.modifiedSpell._phantasmalCreatures).toBeUndefined();
+  });
+
+  it('does not consume the free-cast counter on a slotted cast', async () => {
+    const playerStats = phantasmalStats();
+
+    getRuntimeValue.mockImplementation((_name, key) => (key === 'spell_slots_level_2' ? 3 : undefined));
+    const spell = makeSpell({ name: 'Summon Beast', level: 2 });
+    const result = await prepareSpellCast(spell, makeMetaCtx({ slotLevel: 2 }), {
+      playerName: 'TestWizard',
+      playerStats,
+      campaignName: 'camp',
+      freeCastAuthorized: false,
+    });
+
+    expect(result.slotConsumed).toBe(true);
+    expect(setRuntimeValue).not.toHaveBeenCalledWith(
+      'TestWizard',
+      '_Phantasmal_Creatures_Summon_Beast_freeCastCount',
+      expect.anything(),
+      'camp',
+    );
   });
 });
 

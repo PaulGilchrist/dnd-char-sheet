@@ -1451,3 +1451,10 @@ GM confirmed reducing test-campaign to ONE character per class. On next session 
 
 - **FIX:** sheet Ki pre-spend in `useCharActionsAutomation.js` now skips 2024 `auto.type === 'patient_defense'` (guard :173); `patientDefenseHandler.js` is the sole FP writer (CLA-277 pattern) and dispatches `focus-points-updated` after spending (mirror `elementalBurstHandler.js:22`) so the tracker updates live. 'Patient Defense' STAYS in `MONK_KI_FEATURES` — the 5e variant routes via `bonusAttacksHandler.js` which never writes FP, so a name-based removal would break 5e spending.
 - change-data FP is nested: `change-data['<Monk>'].focusPoints`, not flat-dotted. FP tracker edit: `getByRole('spinbutton').fill()` + Enter works; `locator.fill` via run_code_unsafe times out.
+
+### CLA-252 Phantasmal Creatures free-cast pipeline (FIXED 2026-09-02)
+
+- **FIX pattern:** spell-side free-cast repair, not modal invention. Per-spell gate `isFreeCastAuthorized` (null=available, 0=consumed); `decrementFreeCastResource` consumes + logs `ability_use`; `incrementFreeCastResource` rollbacks; stamp data-driven from passive's `freeCastSpells`/`halvesHp`; long-rest re-arm writes null = available (`restRules-longRest.js`).
+- **Root cause (reusable):** `setRuntimeValue` short-circuits reference-identical values — copy the array before mutating (`_phantasmalCreatures_list` Fey-append was silently dropped).
+- Free-cast summons spectral half-HP via `summonSpiritHandler.halveHp`; popup cites "Phantasmal Creatures free cast — spectral Illusion version, half HP"; slotted fallback = full HP + slot −1.
+- Inert feature row accepted for passive_rule surfaces (CLA-204 precedent).

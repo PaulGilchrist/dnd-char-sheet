@@ -47,14 +47,15 @@ function isFreeCastAuthorized(playerName, spellName, spellLevel, playerStats, ca
     return count > 0;
   }
 
-  const hasPhantasmalCreatures = playerStats?.automation?.passives?.some(p => p.type === 'phantasmal_creatures');
-  if (hasPhantasmalCreatures) {
-    const summonBeast = ['Summon Beast', 'Summon Fey'];
-    if (summonBeast.includes(spellName)) {
-      const freeCastCountKey = `_Phantasmal_Creatures_freeCastCount`;
-      const count = Number(getRuntimeValue(playerName, freeCastCountKey) ?? 1);
-      if (count > 0) return true;
-    }
+  // CLA-252: Phantasmal Creatures — one free cast PER SPELL per Long Rest. Keyed per spell;
+  // null counter means fresh (usesMax available); Long Rest resets the keys to null to re-arm.
+  const phantasmalPassive = playerStats?.automation?.passives?.find(p => p.type === 'phantasmal_creatures');
+  if (phantasmalPassive && (phantasmalPassive.freeCastSpells || []).includes(spellName)) {
+    const freeCastCountKey = `_Phantasmal_Creatures_${spellName.replace(/\s+/g, '_')}_freeCastCount`;
+    const usesMax = phantasmalPassive.usesMax ?? 1;
+    const stored = getRuntimeValue(playerName, freeCastCountKey, campaignName);
+    const count = stored != null ? Number(stored) : usesMax;
+    if (count > 0) return true;
   }
 
   const actions = playerStats?.automation?.actions || [];
@@ -258,6 +259,26 @@ function isFreeCastAuthorized(playerName, spellName, spellLevel, playerStats, ca
 }
 
 function decrementFreeCastResource(playerName, spellName, spellLevel, playerStats, campaignName) {
+  // CLA-252: phantasmal_creatures lives in passives[] — consume the per-spell free-cast counter.
+  const phantasmalPassive = playerStats?.automation?.passives?.find(p => p.type === 'phantasmal_creatures');
+  if (phantasmalPassive && (phantasmalPassive.freeCastSpells || []).includes(spellName)) {
+    const freeCastCountKey = `_Phantasmal_Creatures_${spellName.replace(/\s+/g, '_')}_freeCastCount`;
+    const usesMax = phantasmalPassive.usesMax ?? 1;
+    const stored = getRuntimeValue(playerName, freeCastCountKey, campaignName);
+    const count = stored != null ? Number(stored) : usesMax;
+    if (count > 0) {
+      setRuntimeValue(playerName, freeCastCountKey, count - 1, campaignName);
+      addEntry(campaignName, {
+        type: 'ability_use',
+        characterName: playerName,
+        abilityName: phantasmalPassive.name || 'Phantasmal Creatures',
+        spellName: spellName,
+        note: `Phantasmal Creatures free cast of ${spellName} — spectral, half HP, no spell slot consumed. ${count - 1} free cast${count - 1 === 1 ? '' : 's'} of ${spellName} remaining until your next Long Rest.`,
+        timestamp: Date.now(),
+      }).catch((e) => { console.error('[spellPreparationService:log-error]', e); });
+    }
+  }
+
   const arcanums = playerStats?.class?.arcanums || [];
   if (arcanums.includes(spellName)) {
     // CLA-231: decrement the counter keyed by the cast spell's own level.
@@ -357,6 +378,17 @@ function decrementFreeCastResource(playerName, spellName, spellLevel, playerStat
 }
 
 function incrementFreeCastResource(playerName, spellName, spellLevel, playerStats, campaignName) {
+  // CLA-252: rollback half of the per-spell Phantasmal Creatures free-cast counter.
+  const phantasmalPassive = playerStats?.automation?.passives?.find(p => p.type === 'phantasmal_creatures');
+  if (phantasmalPassive && (phantasmalPassive.freeCastSpells || []).includes(spellName)) {
+    const freeCastCountKey = `_Phantasmal_Creatures_${spellName.replace(/\s+/g, '_')}_freeCastCount`;
+    const usesMax = phantasmalPassive.usesMax ?? 1;
+    const stored = getRuntimeValue(playerName, freeCastCountKey, campaignName);
+    if (stored != null && Number(stored) < usesMax) {
+      setRuntimeValue(playerName, freeCastCountKey, Number(stored) + 1, campaignName);
+    }
+  }
+
   const arcanums = playerStats?.class?.arcanums || [];
   if (arcanums.includes(spellName)) {
     // CLA-231: increment the counter keyed by the spell's own level.
@@ -653,14 +685,19 @@ export async function prepareSpellCast(spell, metaCtx, { playerName, playerStats
     modifiedSpell.casting_time = '1 bonus action';
   }
 
-  const hasPhantasmalCreatures = playerStats.automation?.passives?.some(p => p.type === 'phantasmal_creatures');
-  const summonBeastOrFey = ['Summon Beast', 'Summon Fey'];
-  if (hasPhantasmalCreatures && freeCastAuthorized && summonBeastOrFey.includes(spell.name)) {
+  // CLA-252: free (spectral) casts change the school to Illusion and record the summoned
+  // creature so the summon path halves its HP. Pass campaignName so the list read/write
+  // targets the live campaign store (missing it silently no-oped later appends).
+  const phantasmalPassiveForStamp = playerStats.automation?.passives?.find(p => p.type === 'phantasmal_creatures');
+  if (phantasmalPassiveForStamp && freeCastAuthorized && (phantasmalPassiveForStamp.freeCastSpells || []).includes(spell.name)) {
     modifiedSpell.school = 'Illusion';
     modifiedSpell._phantasmalCreatures = true;
+    modifiedSpell._phantasmalHalvesHp = !!phantasmalPassiveForStamp.halvesHp;
     const summonCreatureName = spell.name === 'Summon Beast' ? 'Bestial Spirit' : 'Fey Spirit';
-    const existingCreatures = getRuntimeValue(playerName, '_phantasmalCreatures_list');
-    const creatureList = Array.isArray(existingCreatures) ? existingCreatures : [];
+    const existingCreatures = getRuntimeValue(playerName, '_phantasmalCreatures_list', campaignName);
+    // Copy before mutating: setRuntimeValue short-circuits identical references, so mutating
+    // the store array in place would never POST the append.
+    const creatureList = Array.isArray(existingCreatures) ? [...existingCreatures] : [];
     if (!creatureList.includes(summonCreatureName)) {
       creatureList.push(summonCreatureName);
       setRuntimeValue(playerName, '_phantasmalCreatures_list', creatureList, campaignName);

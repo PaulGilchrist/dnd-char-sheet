@@ -303,6 +303,66 @@ describe('summonSpiritHandler', () => {
             expect(added.actions[1].save_dc).toBe(13);
         });
 
+        describe('CLA-252 Phantasmal Creatures free cast', () => {
+            const phantasmalPlayerStats = {
+                ...mockPlayerStats,
+                automation: {
+                    passives: [{
+                        type: 'phantasmal_creatures',
+                        name: 'Phantasmal Creatures',
+                        freeCastSpells: ['Summon Beast', 'Summon Fey'],
+                        usesMax: 1,
+                        recharge: 'long_rest',
+                        halvesHp: true,
+                    }],
+                },
+            };
+
+            const freeCastAction = () => {
+                const action = makeAction({ metaCtx: { slotLevel: 2 } });
+                action.spell = { level: 2, school: 'Illusion', _phantasmalCreatures: true, _phantasmalHalvesHp: true };
+                return action;
+            };
+
+            it('halves the summoned spirit HP on the free-cast spectral version', async () => {
+                loadMonsters.mockResolvedValue(mockMonsters);
+                const combatSummary = getCombatSummary(mockCampaignName);
+
+                await confirmSummonSpirit(freeCastAction(), phantasmalPlayerStats, mockCampaignName, 'Bestial Spirit (Land)');
+
+                const added = combatSummary.creatures.find(c => c.name === 'Bestial Spirit (Land)');
+                expect(added.maxHp).toBe(15);
+                expect(added.currentHp).toBe(15);
+                expect(added.phantasmal).toBe(true);
+                expect(added.spectral).toBe(true);
+            });
+
+            it('keeps full HP on a normal slotted cast even with the passive present', async () => {
+                loadMonsters.mockResolvedValue(mockMonsters);
+                const combatSummary = getCombatSummary(mockCampaignName);
+
+                await confirmSummonSpirit(makeAction({ metaCtx: { slotLevel: 2 } }), phantasmalPlayerStats, mockCampaignName, 'Bestial Spirit (Land)');
+
+                const added = combatSummary.creatures.find(c => c.name === 'Bestial Spirit (Land)');
+                expect(added.maxHp).toBe(30);
+                expect(added.phantasmal).toBeUndefined();
+            });
+
+            it('logs the free cast with the trait citation and HP instead of a slot-level mislabel', async () => {
+                loadMonsters.mockResolvedValue(mockMonsters);
+
+                await confirmSummonSpirit(freeCastAction(), phantasmalPlayerStats, mockCampaignName, 'Bestial Spirit (Land)');
+
+                expect(addEntry).toHaveBeenCalledWith(mockCampaignName, expect.objectContaining({
+                    type: 'summons',
+                    description: expect.stringContaining('Phantasmal Creatures free cast (spectral, half HP)'),
+                }));
+                const logged = addEntry.mock.calls.find(c => c[1]?.type === 'summons');
+                expect(logged[1].description).not.toContain('slot level');
+                expect(logged[1].description).toContain('15/15 HP');
+            });
+        });
+
         it('returns a popup for an unknown variant', async () => {
             const result = await confirmSummonSpirit(makeAction(), mockPlayerStats, mockCampaignName, 'Unknown');
 

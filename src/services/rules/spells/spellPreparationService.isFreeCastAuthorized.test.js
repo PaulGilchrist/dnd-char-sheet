@@ -263,33 +263,79 @@ describe('isFreeCastAuthorized — Phantasmal Creatures', () => {
     getRuntimeValue.mockReturnValue(undefined);
   });
 
-  it('returns true for Summon Beast/Summon Fey with available count', async () => {
-    const playerStats = makePlayerStats({
-      automation: { passives: [{ type: 'phantasmal_creatures' }] },
-    });
-    getRuntimeValue.mockImplementation((_key1, key2) => {
-      if (key2 === '_Phantasmal_Creatures_freeCastCount') return 1;
-      return undefined;
-    });
+  const phantasmalStats = () => makePlayerStats({
+    automation: {
+      passives: [{
+        type: 'phantasmal_creatures',
+        name: 'Phantasmal Creatures',
+        freeCastSpells: ['Summon Beast', 'Summon Fey'],
+        usesMax: 1,
+        recharge: 'long_rest',
+        halvesHp: true,
+      }],
+    },
+  });
+
+  it('returns true for Summon Beast/Summon Fey when per-spell counter is fresh (null = available)', async () => {
+    const playerStats = phantasmalStats();
+    getRuntimeValue.mockReturnValue(undefined);
 
     const authorized1 = await isFreeCastAuthorized('TestWizard', 'Summon Beast', 2, playerStats, 'camp');
     expect(authorized1).toBe(true);
 
-    const authorized2 = await isFreeCastAuthorized('TestWizard', 'Summon Fey', 2, playerStats, 'camp');
+    const authorized2 = await isFreeCastAuthorized('TestWizard', 'Summon Fey', 4, playerStats, 'camp');
     expect(authorized2).toBe(true);
   });
 
-  it('returns false for non-summon spells with phantasmal creatures', async () => {
-    const playerStats = makePlayerStats({
-      automation: { passives: [{ type: 'phantasmal_creatures' }] },
-    });
+  it('returns false for Summon Beast once its per-spell counter is consumed (0)', async () => {
+    const playerStats = phantasmalStats();
     getRuntimeValue.mockImplementation((_key1, key2) => {
-      if (key2 === '_Phantasmal_Creatures_freeCastCount') return 1;
+      if (key2 === '_Phantasmal_Creatures_Summon_Beast_freeCastCount') return 0;
       return undefined;
     });
 
+    const authorized = await isFreeCastAuthorized('TestWizard', 'Summon Beast', 2, playerStats, 'camp');
+    expect(authorized).toBe(false);
+  });
+
+  it('consumed Summon Beast does not block Summon Fey (per-spell independence)', async () => {
+    const playerStats = phantasmalStats();
+    getRuntimeValue.mockImplementation((_key1, key2) => {
+      if (key2 === '_Phantasmal_Creatures_Summon_Beast_freeCastCount') return 0;
+      if (key2 === '_Phantasmal_Creatures_Summon_Fey_freeCastCount') return 1;
+      return undefined;
+    });
+
+    expect(await isFreeCastAuthorized('TestWizard', 'Summon Beast', 2, playerStats, 'camp')).toBe(false);
+    expect(await isFreeCastAuthorized('TestWizard', 'Summon Fey', 4, playerStats, 'camp')).toBe(true);
+  });
+
+  it('returns false for non-freeCastSpells spells with phantasmal creatures', async () => {
+    const playerStats = phantasmalStats();
+    getRuntimeValue.mockReturnValue(undefined);
+
     const authorized = await isFreeCastAuthorized('TestWizard', 'Fireball', 3, playerStats, 'camp');
     expect(authorized).toBe(false);
+  });
+
+  it('returns false without the phantasmal_creatures passive', async () => {
+    const playerStats = makePlayerStats({ automation: { passives: [] } });
+    getRuntimeValue.mockReturnValue(undefined);
+
+    const authorized = await isFreeCastAuthorized('TestWizard', 'Summon Beast', 2, playerStats, 'camp');
+    expect(authorized).toBe(false);
+  });
+
+  it('passes campaignName through to the runtime store read', async () => {
+    const playerStats = phantasmalStats();
+    getRuntimeValue.mockReturnValue(undefined);
+
+    await isFreeCastAuthorized('TestWizard', 'Summon Beast', 2, playerStats, 'camp');
+    expect(getRuntimeValue).toHaveBeenCalledWith(
+      'TestWizard',
+      '_Phantasmal_Creatures_Summon_Beast_freeCastCount',
+      'camp',
+    );
   });
 });
 

@@ -499,12 +499,11 @@ export async function applyLongRest(playerStats, campaignName) {
       setRuntimeValue(name, 'portentUsedThisTurn', null, campaignName, true)
     }
 
-    // Reset Phantasmal Creatures free cast on long rest
-    const hasPhantasmalCreatures = (playerStats.automation?.passives ?? []).some(
-      p => p.type === 'phantasmal_creatures'
-    )
-    if (hasPhantasmalCreatures) {
-      setRuntimeValue(name, '_Phantasmal_Creatures_freeCastCount', null, campaignName, true)
+    // Reset Phantasmal Creatures free casts on long rest (CLA-252: one free cast PER SPELL
+    // per long rest — reset each freeCastSpells counter to null; null = re-armed/available).
+    const phantasmalPassive = (playerStats.automation?.passives ?? []).find(p => p.type === 'phantasmal_creatures')
+    if (phantasmalPassive) {
+      (phantasmalPassive.freeCastSpells ?? []).forEach(spellName => setRuntimeValue(name, `_Phantasmal_Creatures_${spellName.replace(/\s+/g, '_')}_freeCastCount`, null, campaignName, true))
       setRuntimeValue(name, '_phantasmalCreatures_list', [], campaignName, true)
     }
 
