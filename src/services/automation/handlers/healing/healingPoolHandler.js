@@ -2,9 +2,42 @@ import { resolveHealingPoolExpression, evaluateAutoExpression } from '../../../c
 import { getCombatContext } from '../../../rules/combat/damageUtils.js'
 import { isWithinRange } from '../../../rules/combat/rangeCheck.js'
 import { rangeToFeet } from '../../../rules/combat/rangeValidation.js'
+import { getRuntimeValue } from '../../../../hooks/runtime/useRuntimeState.js'
+import { addEntry } from '../../../ui/logService.js'
+
+export function resolveChannelDivinityCharges(playerStats) {
+    const storedCharges = getRuntimeValue(playerStats.name, 'channelDivinityCharges')
+    const classLevel = playerStats.class?.class_levels?.[(playerStats.level || 1) - 1]
+    const maxCharges = classLevel?.channel_divinity || classLevel?.class_specific?.channel_divinity_charges || 2
+    const currentCharges = storedCharges != null ? Number(storedCharges) : maxCharges
+    return { currentCharges, maxCharges }
+}
 
 export async function handle(action, playerStats, campaignName, _mapName) {
     const auto = action.automation;
+
+    if (auto.resourceCost === 'channel_divinity') {
+        const { currentCharges } = resolveChannelDivinityCharges(playerStats)
+        if (currentCharges <= 0) {
+            addEntry(campaignName, {
+                type: 'ability_use',
+                characterName: playerStats.name,
+                abilityName: action.name,
+                description: `${playerStats.name} attempted to use ${action.name} but has no Channel Divinity charges remaining.`,
+                timestamp: Date.now(),
+            }).catch((e) => { console.error('[healingPoolHandler] Error:', e); });
+            return {
+                type: 'popup',
+                payload: {
+                    type: 'automation_info',
+                    name: action.name,
+                    automationType: auto.type,
+                    description: 'No Channel Divinity charges remaining.',
+                    automation: auto,
+                },
+            };
+        }
+    }
 
     const restoringTouchData = playerStats.specialActions?.find(
           f => f.name === 'Restoring Touch'

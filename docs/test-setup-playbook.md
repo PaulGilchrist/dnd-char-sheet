@@ -1463,3 +1463,9 @@ GM confirmed reducing test-campaign to ONE character per class. On next session 
 
 - Attack-roll cantrip MISS half-damage is WORKING on current HEAD: forced-miss Fire Bolt applied non-zero exact `floor(stored/2)` with full dice (`cantrip-miss-half-damage rolls:[1,1,1,1]`), popup + hp_change consistent. The old `rolls:[1] total:0` bug does not reproduce — `noSavePath.js:17-21` pre-roll already resolves level-scaled `4d10`.
 - **ADJACENT (CLA-279 family, separate row):** cantrip HIT damage resolves UNSCALED — `spellCastService/execution/index.js:135 resolveSpellDamageWithTypes(spell, spell.level || 1)` gives cantrip base `1d10` at lv20 (RAW 4d10); miss half is half-of-unscaled-4d10 and excludes modifier. File a fresh bug for cantrip scaling; do not reopen CLA-256.
+
+### CLA-261 Preserve Life Channel Divinity cost (FIXED 2026-09-02)
+
+- **FIX:** data-driven CD consume — `healingPoolHandler.js` gained `resolveChannelDivinityCharges()` + pre-open gate on `auto.resourceCost==='channel_divinity'` (refuses at 0 with popup + refusal log, mirrors `combatStanceHandler.js:142-161`); `HealingPoolModal.jsx` consumes exactly 1 charge per modal session (idempotent ref, first resource-consuming apply) + logs `ability_use`; `CharActionModals.jsx` passes `resourceCost` through. Only Preserve Life carries the flag — Lay on Hands unaffected (tested).
+- **PITFALL:** port 80 serves STALE `dist` — dev E2E MUST run on :5173 after source edits (bug reproduced on stale :80 but fixed on :5173).
+- `el.remove()` on `.popup-overlay` causes React removeChild crash — dismiss popups by clicking their content. Preserve Life self-bloodied works by setting the self HP tracker (modal reads runtime `currentHitPoints`, not combatSummary stub maxHp:1).

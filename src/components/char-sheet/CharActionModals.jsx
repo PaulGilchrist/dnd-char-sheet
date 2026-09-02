@@ -293,6 +293,7 @@ function CharActionModals({
                     restoringTouchConditions={mergedModalState.healingPoolModal.restoringTouchConditions}
                     maxDicePerUse={mergedModalState.healingPoolModal.maxDicePerUse}
                     creatureTargets={mergedModalState.healingPoolModal.creatureTargets}
+                    resourceCost={mergedModalState.healingPoolModal.resourceCost}
                     onClose={() => setModalState({ healingPoolModal: null })}
                 />
             )}

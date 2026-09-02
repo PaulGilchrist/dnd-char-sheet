@@ -8,6 +8,7 @@ import { applyHealingToTarget } from '../../../../services/rules/combat/applyHea
 import { CONDITIONS } from '../../../../services/combat/conditions/conditionUtils.js'
 import utils from '../../../../services/ui/utils.js'
 import SecondaryTargetModal from '../shared/SecondaryTargetModal.jsx'
+import { resolveChannelDivinityCharges } from '../../../../services/automation/handlers/healing/healingPoolHandler.js'
 import '../../CharSheet.css'
 
 function conditionMatches(c, targetCondition) {
@@ -32,7 +33,7 @@ function conditionLabel(name) {
     return name;
 }
 
-function HealingPoolModal({ playerStats, campaignName, name: featureName = 'Lay On Hands', poolMax: poolMaxProp = 0, _poolExpression, isDicePool = false, dieType = null, resourceKey: resourceKeyProp, alsoCures, cureCost, restoringTouchConditions, bloodiedOnly = false, maxDicePerUse: maxDicePerUseProp = '', creatureTargets, onClose }) {
+function HealingPoolModal({ playerStats, campaignName, name: featureName = 'Lay On Hands', poolMax: poolMaxProp = 0, _poolExpression, isDicePool = false, dieType = null, resourceKey: resourceKeyProp, alsoCures, cureCost, restoringTouchConditions, bloodiedOnly = false, maxDicePerUse: maxDicePerUseProp = '', creatureTargets, resourceCost = '', onClose }) {
     const layOnHandsPoolMax = 5 * (playerStats.level || 1);
     const effectivePoolMax = isDicePool ? poolMaxProp : layOnHandsPoolMax;
     const effectiveResourceKey = resourceKeyProp || (isDicePool ? featureName.toLowerCase().replace(/\s+/g, '') + 'Pool' : 'layOnHandsPool');
@@ -63,6 +64,29 @@ function HealingPoolModal({ playerStats, campaignName, name: featureName = 'Lay 
 
     const safePool = Number(poolRemaining) || 0;
     const safeMax = Number(poolMaxFromHook) || 0;
+
+    const channelDivinityConsumedRef = React.useRef(false);
+
+    const consumeChannelDivinity = () => {
+        if (resourceCost !== 'channel_divinity' || channelDivinityConsumedRef.current) return;
+        channelDivinityConsumedRef.current = true;
+
+        const { currentCharges, maxCharges } = resolveChannelDivinityCharges(playerStats);
+        if (currentCharges <= 0) {
+            console.error(`[HealingPoolModal] ${playerStats.name} has no Channel Divinity charges to expend for ${featureName}.`);
+            return;
+        }
+
+        const newCharges = currentCharges - 1;
+        setRuntimeValue(playerStats.name, 'channelDivinityCharges', newCharges, campaignName);
+        addEntry(campaignName, {
+            type: 'ability_use',
+            characterName: playerStats.name,
+            abilityName: featureName,
+            description: `${playerStats.name} expended 1 Channel Divinity to use ${featureName} (${newCharges}/${maxCharges} remaining).`,
+            timestamp: Date.now(),
+        }).catch((e) => { console.error("[HealingPoolModal] Channel Divinity log error:", e); });
+    };
 
     React.useEffect(() => {
         setLoading(true);
@@ -159,6 +183,7 @@ function HealingPoolModal({ playerStats, campaignName, name: featureName = 'Lay 
     const applyHeal = () => {
         const amount = Math.min(healAmount, safePool);
         if (amount <= 0) return;
+        consumeChannelDivinity();
         const newPool = safePool - amount;
         setPoolRemaining(newPool);
 
@@ -197,6 +222,7 @@ function HealingPoolModal({ playerStats, campaignName, name: featureName = 'Lay 
         if (safePool <= 0) return;
         if (effectiveMaxDicePerUse < Infinity && rolledFaces.length >= effectiveMaxDicePerUse) return;
 
+        consumeChannelDivinity();
         const roll = Math.floor(Math.random() * dieType) + 1;
         const newPool = safePool - 1;
         setPoolRemaining(newPool);
@@ -247,6 +273,7 @@ function HealingPoolModal({ playerStats, campaignName, name: featureName = 'Lay 
 
     const applyCure = (condition) => {
         if (safePool < cureCost) return;
+        consumeChannelDivinity();
         const newPool = safePool - cureCost;
         setPoolRemaining(newPool);
 
@@ -282,6 +309,7 @@ function HealingPoolModal({ playerStats, campaignName, name: featureName = 'Lay 
         if (selectedConditions.length === 0) return;
         const totalCost = selectedConditions.length * cureCost;
         if (safePool < totalCost) return;
+        consumeChannelDivinity();
         const newPool = safePool - totalCost;
         setPoolRemaining(newPool);
 

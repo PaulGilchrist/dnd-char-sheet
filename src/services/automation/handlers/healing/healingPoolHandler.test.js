@@ -6,6 +6,19 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { handle } from './healingPoolHandler.js';
 
+vi.mock('../../../../hooks/runtime/useRuntimeState.js', () => ({
+  getRuntimeValue: vi.fn(() => null),
+  setRuntimeValue: vi.fn(),
+  addStorageChangeListener: vi.fn(() => () => {}),
+}));
+
+vi.mock('../../../ui/logService.js', () => ({
+  addEntry: vi.fn(() => Promise.resolve()),
+}));
+
+import * as useRuntimeState from '../../../../hooks/runtime/useRuntimeState.js';
+import * as logService from '../../../ui/logService.js';
+
 // ── Helpers ──────────────────────────────────────────────────────
 
 const campaignName = 'TestCampaign';
@@ -109,6 +122,83 @@ describe('healingPoolHandler.handle', () => {
       );
 
       expect(result.payload.isDicePool).toBe(false);
+    });
+  });
+
+  describe('channel_divinity resourceCost gate', () => {
+    const preserveLifeAction = {
+      name: 'Preserve Life',
+      automation: {
+        type: 'healing_pool',
+        poolExpression: '5 * cleric_level',
+        pool: 85,
+        resourceKey: 'preserveLifePool',
+        resourceCost: 'channel_divinity',
+        bloodiedOnly: true,
+      },
+    };
+    const clericStats = {
+      name: 'Divine_Cleric',
+      level: 17,
+      class: { class_levels: Array.from({ length: 17 }, (_, i) => ({ level: i + 1, channel_divinity: i === 16 ? 3 : undefined })) },
+    };
+
+    it('returns the healing pool modal when Channel Divinity charges remain', async () => {
+      useRuntimeState.getRuntimeValue.mockImplementation((name, key) => {
+        if (key === 'channelDivinityCharges') return 3;
+        return null;
+      });
+
+      const result = await handle(preserveLifeAction, clericStats, campaignName, mapName);
+
+      expect(result.type).toBe('modal');
+      expect(result.payload.resourceCost).toBe('channel_divinity');
+    });
+
+    it('refuses with popup and logs when no Channel Divinity charges remain', async () => {
+      useRuntimeState.getRuntimeValue.mockImplementation((name, key) => {
+        if (key === 'channelDivinityCharges') return 0;
+        return null;
+      });
+
+      const result = await handle(preserveLifeAction, clericStats, campaignName, mapName);
+
+      expect(result.type).toBe('popup');
+      expect(result.payload.description).toBe('No Channel Divinity charges remaining.');
+      expect(logService.addEntry).toHaveBeenCalledWith(
+        campaignName,
+        expect.objectContaining({
+          type: 'ability_use',
+          characterName: 'Divine_Cleric',
+          abilityName: 'Preserve Life',
+        }),
+      );
+    });
+
+    it('does not gate non-channel-divinity healing_pool features at 0 charges', async () => {
+      useRuntimeState.getRuntimeValue.mockImplementation((name, key) => {
+        if (key === 'channelDivinityCharges') return 0;
+        return null;
+      });
+
+      const result = await handle(
+        makeAction({ poolExpression: '5 * paladin level', resourceKey: 'layOnHandsPool' }),
+        { name: 'ElderPaladin', level: 10 },
+        campaignName,
+        mapName,
+      );
+
+      expect(result.type).toBe('modal');
+      expect(result.payload.resourceCost).toBe('');
+      expect(logService.addEntry).not.toHaveBeenCalled();
+    });
+
+    it('defaults charges from class_levels when runtime key is unset', async () => {
+      useRuntimeState.getRuntimeValue.mockReturnValue(null);
+
+      const result = await handle(preserveLifeAction, clericStats, campaignName, mapName);
+
+      expect(result.type).toBe('modal');
     });
   });
 

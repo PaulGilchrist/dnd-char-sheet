@@ -4789,7 +4789,7 @@
       "handler": "src/services/combat/automation/handlers/classFeatureHandler.js",
       "router": "src/services/combat/automation/routers/classFeatureRouter.js",
       "infoBuilder": "src/services/combat/automation/infoBuilders/classFeatureInfoBuilder.js",
-      "verified": "broken \u2014 see .opencode/plans/bug-cla-261-preserve-life.md",
+      "verified": "verified",
       "class": "Cleric",
       "triggerConditions": "Action: action; Pool: 5 * cleric_level; Range: 30 ft",
       "expectedBehavior": "As a Action, you present your Holy Symbol and expend a use of your Channel Divinity to evoke healing energy that can restore a number of Hit Points equal to five times your Cleric level. Choose Bloodied creatures within 30 feet of yourself and divide those Hit Points among them."
