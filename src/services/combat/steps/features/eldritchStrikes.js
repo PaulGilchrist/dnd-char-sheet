@@ -14,7 +14,7 @@ export const eldritchStrikes = {
 
     for (const rider of riders) {
       const key = `_${rider.name.replace(/\s+/g, '_')}_usedRound`;
-      const round = getCurrentCombatRound();
+      const round = getCurrentCombatRound(ctx.campaignName);
       if (rider.oncePerTurn && getRuntimeValue(ctx.playerStats.name, key, ctx.campaignName) === round) continue;
 
       const cs = await getCombatContext(ctx.campaignName);

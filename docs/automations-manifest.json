@@ -2043,7 +2043,7 @@
       "handler": "src/services/combat/automation/handlers/classFeatureHandler.js",
       "router": "src/services/combat/automation/routers/classFeatureRouter.js",
       "infoBuilder": "src/services/combat/automation/infoBuilders/classFeatureInfoBuilder.js",
-      "verified": "broken \u2014 see .opencode/plans/bug-cla-109-eldritch-strike-never-rearms.md",
+      "verified": "verified",
       "class": "Fighter",
       "triggerConditions": "Trigger: weapon_attack_hit; Once per turn: yes",
       "expectedBehavior": "When you hit with a weapon attack, target has Disadvantage on next saving throw against your spell."
