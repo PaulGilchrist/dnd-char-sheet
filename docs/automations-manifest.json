@@ -4681,7 +4681,7 @@
       "handler": "src/services/combat/automation/handlers/classFeatureHandler.js",
       "router": "src/services/combat/automation/routers/classFeatureRouter.js",
       "infoBuilder": "src/services/combat/automation/infoBuilders/classFeatureInfoBuilder.js",
-      "verified": "broken \u2014 see .opencode/plans/bug-cla-256-potent-cantrip.md",
+      "verified": "verified",
       "class": "Wizard",
       "triggerConditions": "Action: passive",
       "expectedBehavior": "When you cast a cantrip at a creature and miss with attack roll or target succeeds on saving throw, the target takes half the cantrip's damage (if any) but suffers no additional effect."
