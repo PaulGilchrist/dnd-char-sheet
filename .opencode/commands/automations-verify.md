@@ -14,6 +14,18 @@ You are the primary agent verifying combat automations against `docs/automations
 
 This list exists because subagents kept giving up on fixable problems. Treat it as a floor, not a ceiling: when a subagent finds a new pitfall like these, it goes back into this list (see step 3f below) so the next subagent doesn't rediscover it the hard way.
 
+## Verdict rules (STRICT trichotomy — GM directive, 2026-09-02)
+
+Every subagent run must land on exactly one of PASS / FAIL / INCOMPLETE. There is no fourth bucket, and "incomplete" is NOT a soft landing for unimplemented features:
+
+1. **PASS** — the automation triggered and behaved exactly as specified (a documented PASS-subset is allowed only when the implemented core is exact and every gap is explicitly reported with grep/control evidence).
+2. **FAIL (bug)** — EITHER (a) it triggered but behaved wrong, OR (b) **it is not implemented at all**: dead/inert feature row, plumbing collected with zero consumers, click produces no popup/keys/logs, or a control probe shows the feature grants zero observable delta. Unimplemented = BUG, not incomplete. A half-hardcoded implementation that works but ignores rule gates (e.g. fires on successes, skips proficiency checks) = BUG too.
+3. **INCOMPLETE** — ONLY when the subagent genuinely cannot BUILD the scenario through existing UI even after exhausting the pitfalls checklist: the required monster/spell/state does not exist in any data file, the trigger state is physically unreachable in the app, or the expected behavior is so ambiguous it cannot be judged. It must name the ONE concrete thing that blocks setup — never "the feature seems unimplemented" (that is FAIL).
+
+If a run dies without a verdict (memory guard, crash, timeout), the row goes back to `"not verified"` and onto the queue for a fresh attempt — that is a failed attempt, not incomplete.
+
+If the manifest row's wording contradicts canonical PHB/app data and the GM supplies canonical wording, fix the row's `name`/`triggerConditions`/`expectedBehavior` in the manifest when recording the verdict, and cite the canonical text in the bug file.
+
 ## Support files (create if they don't exist)
 
 - `docs/test-setup-playbook.md` — accumulated known-good recipes ("how to build a 2024 Monk," "how to force a failed saving throw," "how to join an encounter with a specific monster") **and** the pitfalls list above. Grows over time as subagents succeed or get tripped up.
