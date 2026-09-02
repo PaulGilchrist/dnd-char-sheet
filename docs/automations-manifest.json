@@ -3334,7 +3334,7 @@
       "handler": "src/services/combat/automation/handlers/classFeatureHandler.js",
       "router": "src/services/combat/automation/routers/classFeatureRouter.js",
       "infoBuilder": "src/services/combat/automation/infoBuilders/classFeatureInfoBuilder.js",
-      "verified": "broken \u2014 see .opencode/plans/bug-cla-177-naturally-stealthy.md",
+      "verified": "verified",
       "race": "Halfling",
       "triggerConditions": "Passive: Always active",
       "expectedBehavior": "You can take the Hide action even when you are obscured only by a creature that is at least one size larger than you."

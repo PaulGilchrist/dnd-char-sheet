@@ -1440,3 +1440,9 @@ GM confirmed reducing test-campaign to ONE character per class. On next session 
 - Post-cast passives fire **fire-and-forget** (`automation/index.js:611`, not awaited) — no popup appears for zero-regain casts (handler's "no eligible slots" popup is swallowed by the fire-and-forget return); ground truth is change-data slot counts + exactly one `ability_use` log per real regain.
 - Self-target no-dc spells (Augury) resolve with NO target popup — `Cast Spell` click auto-completes; only Touch-range (Mage Armor) opens `.sp-overlay` radio list.
 - 2024 Wizard subclass features live at `majors[].features[]` (Wizard has no `subclasses` key).
+
+### CLA-177 Naturally Stealthy Hide consumer (FIXED 2026-09-02)
+
+- Hide consumer now lives in `useCharActionsBaseActions.js handleHideAction` (`findLargerObscuringCreature` + `hasNaturallyStealthy`), mirroring the Skulker branch; the turnStartEffects collector entry stays unreferenced (harmless). Gridless adjacency = `isWithinRange(name, other, 5)` → always true with no map ⇒ any live combatant one size larger qualifies; cited in popup + ability_use log.
+- Player size source: `playerStats.size` unset for PCs; race size at `playerStats.race.size` = `"Small (about 2-3 feet tall)"` — size matching must be prefix/case-insensitive. EB combatSummary creature `size` renders `''`; monsters.json via `getMonsterData(name, cs.creatures)` is the size ground truth (`stripTrailingNumber` handles "Ogre 1").
+- `.base-action-clickable` Hide auto-rolls; result popup stacks behind the roll popup — wait ~1.2s, dismiss corner-click to read. `/api/campaigns/<name>/log` array is newest-LAST (`slice(-N)` for recent tail — opposite of DOM order).

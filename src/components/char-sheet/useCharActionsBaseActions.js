@@ -1,4 +1,14 @@
 import { getTargetFromAttacker } from '../../services/rules/combat/damageUtils.js'
+import { hasNaturallyStealthy } from '../../services/combat/automation/automationPassives.js'
+import { isWithinRange } from '../../services/rules/combat/rangeCheck.js'
+
+const SIZE_ORDER = ['Tiny', 'Small', 'Medium', 'Large', 'Huge', 'Gargantuan'];
+
+function sizeIndexFor(size, fallbackIndex) {
+    const normalized = String(size || '').trim().toLowerCase();
+    const index = SIZE_ORDER.findIndex(s => normalized === s.toLowerCase() || normalized.startsWith(`${s.toLowerCase()} `));
+    return index === -1 ? fallbackIndex : index;
+}
 
 export default function useCharActionsBaseActions({
     cannotAct,
@@ -17,6 +27,28 @@ export default function useCharActionsBaseActions({
     loadCombatSummary,
     getMonsterData,
 }) {
+    async function findLargerObscuringCreature() {
+        const cs = await loadCombatSummary(campaignName);
+        const creatures = Array.isArray(cs?.creatures) ? cs.creatures : [];
+        const playerSizeIndex = sizeIndexFor(playerStats?.size || playerStats?.race?.size || 'Medium', 2);
+        for (const creature of creatures) {
+            if (!creature || creature.name === playerStats.name) continue;
+            if (creature.currentHp === 0) continue;
+            let sizeLabel = creature.size || '';
+            let sizeIndex = sizeIndexFor(sizeLabel, -1);
+            if (sizeIndex === -1) {
+                const monsterData = await getMonsterData(creature.name, creatures);
+                sizeLabel = monsterData?.size || '';
+                sizeIndex = sizeIndexFor(sizeLabel, -1);
+            }
+            if (sizeIndex < playerSizeIndex + 1) continue;
+            if (await isWithinRange(playerStats.name, creature.name, 5)) {
+                return { name: creature.name, size: SIZE_ORDER[sizeIndex] };
+            }
+        }
+        return null;
+    }
+
     async function handleHideAction() {
         if (cannotAct) return;
         const currentConditions = getRuntimeValue(playerStats.name, 'activeConditions', campaignName) || [];
@@ -66,6 +98,10 @@ export default function useCharActionsBaseActions({
             checkContext.forcedMode = 'advantage';
             skulkerFogOfWarApplied = true;
         }
+        let naturallyStealthyObscuredBy = null;
+        if (hasNaturallyStealthy(playerStats)) {
+            naturallyStealthyObscuredBy = await findLargerObscuringCreature();
+        }
         await rollSkillCheck('Stealth', stealthBonus, checkContext);
         await new Promise(resolve => setTimeout(resolve, 50));
         const lastAttackData = await getRuntimeValue('campaign', 'lastAttack', campaignName);
@@ -86,6 +122,11 @@ export default function useCharActionsBaseActions({
                 successDesc = `Hide successful! (Advantage from Skulker - Fog of War) (d20: ${d20Val} + ${stealthBonus} = ${rollTotal}) You gain the Invisible condition and advantage on Dexterity (Stealth) checks until you attack, take damage, or use Lesser Restoration to remove the condition.`;
                 successLog = `Stealth check: ${rollTotal} (Advantage from Skulker - Fog of War) (d20: ${d20Val} + ${stealthBonus}) vs DC ${dc} — Success. Gained Invisible condition and advantage on Stealth checks.`;
             }
+            if (naturallyStealthyObscuredBy) {
+                const obscurement = `${naturallyStealthyObscuredBy.name} (${naturallyStealthyObscuredBy.size}, at least one size larger)`;
+                successDesc = `Hide successful! (Naturally Stealthy - obscured by ${obscurement}) (d20: ${d20Val} + ${stealthBonus} = ${rollTotal}) You gain the Invisible condition and advantage on Dexterity (Stealth) checks until you attack, take damage, or use Lesser Restoration to remove the condition.`;
+                successLog = `Stealth check: ${rollTotal} (Naturally Stealthy - obscured by ${obscurement}) (d20: ${d20Val} + ${stealthBonus}) vs DC ${dc} — Success. Gained Invisible condition and advantage on Stealth checks.`;
+            }
             setPopupHtml({ type: 'automation_info', name: 'Hide', description: successDesc });
             await addEntry(campaignName, {
                 type: 'ability_use',
@@ -100,6 +141,11 @@ export default function useCharActionsBaseActions({
             if (skulkerFogOfWarApplied) {
                 failDesc = `Hide failed! (Advantage from Skulker - Fog of War) (d20: ${d20Val} + ${stealthBonus} = ${rollTotal}) You remain visible.`;
                 failLog = `Stealth check: ${rollTotal} (Advantage from Skulker - Fog of War) (d20: ${d20Val} + ${stealthBonus}) vs DC ${dc} — Failure. Did not gain the Invisible condition.`;
+            }
+            if (naturallyStealthyObscuredBy) {
+                const obscurement = `${naturallyStealthyObscuredBy.name} (${naturallyStealthyObscuredBy.size}, at least one size larger)`;
+                failDesc = `Hide failed! (Naturally Stealthy - obscured by ${obscurement}) (d20: ${d20Val} + ${stealthBonus} = ${rollTotal}) You remain visible.`;
+                failLog = `Stealth check: ${rollTotal} (Naturally Stealthy - obscured by ${obscurement}) (d20: ${d20Val} + ${stealthBonus}) vs DC ${dc} — Failure. Did not gain the Invisible condition.`;
             }
             setPopupHtml({ type: 'automation_info', name: 'Hide', description: failDesc });
             await addEntry(campaignName, {
