@@ -3,11 +3,122 @@ import { addEntry } from '../../../ui/logService.js';
 import { rollExpression } from '../../../dice/diceRoller.js';
 import { evaluateAutoExpression } from '../../../combat/automation/automationService.js';
 import { getCombatContext, getTargetFromAttacker } from '../../../rules/combat/damageUtils.js';
-import { loadCombatSummary } from '../../../encounters/combatData.js';
+import { loadCombatSummary, getCurrentCombatRound } from '../../../encounters/combatData.js';
 import { applyDamageToTarget } from '../../../rules/combat/applyDamage.js';
 import { buildSaveDc, createSaveListener } from '../../common/savePrompt.js';
 import storage from '../../../../services/ui/storage.js';
 import { addCondition } from '../../../../services/combat/conditions/conditionSaveService.js';
+import { findLastAttack } from '../../common/damageRollback.js';
+import { isWithinRange } from '../../../rules/combat/rangeCheck.js';
+
+const STRIKE_RANGE_FT = 30;
+
+function infoPopup(name, description, auto) {
+    return {
+        type: 'popup',
+        payload: {
+            type: 'automation_info',
+            name,
+            description,
+            automation: auto,
+        },
+    };
+}
+
+// CLA-273 trigger gate: Psionic Strike may only fire immediately after the
+// attacker themselves hit a target with a weapon attack and dealt damage
+// (mirrors the verified lastAttack latch in reactionDebuffHandler).
+async function checkTriggerGate(action, playerName, campaignName, targetName) {
+    const attackResult = await findLastAttack(campaignName);
+    const attackEvent = attackResult.attackEvent;
+    if (!attackEvent) {
+        return infoPopup(action.name, `${action.name} requires a weapon hit. No recent attack found — no Psionic Energy spent.`, action.automation);
+    }
+    if (attackEvent.attackerName !== playerName) {
+        return infoPopup(action.name, `${action.name} requires a weapon hit made by you. Last attack was made by ${attackEvent.attackerName || 'another creature'} — no Psionic Energy spent.`, action.automation);
+    }
+    if (attackEvent.rollType !== 'attack' || attackEvent.isCantrip || attackEvent.isUnarmedStrike) {
+        return infoPopup(action.name, `${action.name} requires a weapon attack — no Psionic Energy spent.`, action.automation);
+    }
+    if (attackEvent.hit !== true) {
+        return infoPopup(action.name, `${action.name} requires a weapon hit. Your last attack missed — no Psionic Energy spent.`, action.automation);
+    }
+    if (attackResult.totalDamage <= 0) {
+        return infoPopup(action.name, `${action.name} requires your attack to deal damage — no Psionic Energy spent.`, action.automation);
+    }
+    if (attackEvent.targetName !== targetName) {
+        return infoPopup(action.name, `${action.name} must target the creature you just hit (${attackEvent.targetName}) — no Psionic Energy spent.`, action.automation);
+    }
+    const inRange = await isWithinRange(playerName, targetName, STRIKE_RANGE_FT);
+    if (!inRange) {
+        return infoPopup(action.name, `${targetName} is out of ${STRIKE_RANGE_FT} feet — no Psionic Energy spent.`, action.automation);
+    }
+    return null;
+}
+
+async function resolveThrustChain(action, playerStats, campaignName, targetName) {
+    const thrustAutomation = (playerStats.automation?.reactions || []).find(r => r.type === 'telekinetic_thrust');
+    if (!thrustAutomation) return null;
+
+    // CLA-273: lv7 Telekinetic Adept's Thrust only chains after a Psionic
+    // Strike that actually dealt damage, and respects its own oncePerTurn latch.
+    const currentRound = getCurrentCombatRound(campaignName);
+    const thrustUsedRound = getRuntimeValue(playerStats.name, 'telekineticThrustUsedRound', campaignName);
+    if (thrustAutomation.oncePerTurn && thrustUsedRound != null && Number(thrustUsedRound) === currentRound) {
+        return null;
+    }
+    if (thrustAutomation.oncePerTurn) {
+        setRuntimeValue(playerStats.name, 'telekineticThrustUsedRound', currentRound, campaignName);
+    }
+
+    const saveType = thrustAutomation.saveType || 'STR';
+    const saveDc = buildSaveDc(thrustAutomation, playerStats);
+    const { promise } = createSaveListener(campaignName, {
+        targetName,
+        saveType,
+        saveDc,
+    });
+
+    await addEntry(campaignName, {
+        type: 'roll',
+        name: 'Telekinetic Adept',
+        characterName: playerStats.name,
+        rollType: 'save-damage',
+        targetName,
+        saveDc,
+        saveType,
+        description: `Telekinetic Adept — ${targetName} must make a ${saveType} saving throw (DC ${saveDc}).`,
+    }).catch((e) => { console.error("[psionicStrikeHandler:log-error]", e); });
+
+    const saveResult = await promise;
+    const success = saveResult.success;
+
+    if (success) {
+        return `${targetName} saved vs Telekinetic Adept (DC ${saveDc}).`;
+    }
+
+    const cs = await getCombatContext(campaignName);
+    if (cs?.creatures) {
+        const targetCreature = cs.creatures.find(c => c.name === targetName);
+        if (targetCreature) {
+            const proneAlready = targetCreature.conditions?.some(c => c.key === 'prone');
+            if (!proneAlready) {
+                const conditionDef = { key: 'prone', label: 'Prone' };
+                addCondition(cs, targetName, conditionDef, saveDc, saveType, getRuntimeValue, setRuntimeValue, campaignName, playerStats);
+                storage.set('combatSummary', cs, campaignName);
+            }
+        }
+    }
+    await addEntry(campaignName, {
+        type: 'ability_use',
+        characterName: playerStats.name,
+        abilityName: 'Telekinetic Thrust',
+        description: `${playerStats.name} pushed ${targetName} 10 feet away.`,
+        targetName: targetName,
+    }).catch((e) => { console.error("[psionicStrikeHandler:log-error]", e); });
+
+    return `${targetName} failed the ${saveType} save (DC ${saveDc}) — Prone + pushed 10ft.`;
+}
 
 export async function handle(action, playerStats, campaignName, _mapName) {
     const auto = action.automation;
@@ -17,31 +128,16 @@ export async function handle(action, playerStats, campaignName, _mapName) {
     const currentUses = Number(getRuntimeValue(playerName, usesKey, campaignName) ?? defaultMax);
 
     if (currentUses <= 0) {
-        return {
-            type: 'popup',
-            payload: {
-                type: 'automation_info',
-                name: action.name,
-                description: `${action.name}: No Psionic Energy remaining. Recharges on a Short or Long Rest.`,
-                automation: auto,
-            },
-        };
+        return infoPopup(action.name, `${action.name}: No Psionic Energy remaining. Recharges on a Short or Long Rest.`, auto);
     }
 
-    const oncePerTurn = auto.oncePerTurn;
-    if (oncePerTurn) {
-        const turnUsed = getRuntimeValue(playerName, 'psionicStrikeUsedThisTurn', campaignName);
-        const currentTurn = getRuntimeValue(playerName, 'currentTurn', campaignName) || 'unknown';
-        if (turnUsed && turnUsed === currentTurn) {
-            return {
-                type: 'popup',
-                payload: {
-                    type: 'automation_info',
-                    name: action.name,
-                    description: `${action.name}: Already used this turn. Once per turn.`,
-                    automation: auto,
-                },
-            };
+    // CLA-273: round-keyed once-per-turn latch (CLA-109 pattern) — replaces the
+    // never-written 'currentTurn'/'unknown' sentinel so later turns re-arm properly.
+    const currentRound = getCurrentCombatRound(campaignName);
+    if (auto.oncePerTurn) {
+        const usedRound = getRuntimeValue(playerName, 'psionicStrikeUsedThisTurn', campaignName);
+        if (usedRound != null && Number(usedRound) === currentRound) {
+            return infoPopup(action.name, `${action.name}: Already used this turn. Once per turn.`, auto);
         }
     }
 
@@ -50,16 +146,11 @@ export async function handle(action, playerStats, campaignName, _mapName) {
     const targetName = target?.name || null;
 
     if (!targetName) {
-        return {
-            type: 'popup',
-            payload: {
-                type: 'automation_info',
-                name: action.name,
-                description: `${action.name}: No target available. Select a creature in combat and try again.`,
-                automation: auto,
-            },
-        };
+        return infoPopup(action.name, `${action.name}: No target available. Select a creature in combat and try again.`, auto);
     }
+
+    const gateRefusal = await checkTriggerGate(action, playerName, campaignName, targetName);
+    if (gateRefusal) return gateRefusal;
 
     const psionicDieSize = evaluateAutoExpression('psionic_energy_die', playerStats);
     const dieRoll = rollExpression(`1d${psionicDieSize}`);
@@ -69,71 +160,21 @@ export async function handle(action, playerStats, campaignName, _mapName) {
 
     const combatSummary = await loadCombatSummary(campaignName);
     const characters = getRuntimeValue('characters', 'characters', campaignName) || [];
-    applyDamageToTarget(combatSummary, targetName, totalDamage, ['Force'], campaignName, characters, false, playerName);
+    await applyDamageToTarget(combatSummary, targetName, totalDamage, ['Force'], campaignName, characters, false, playerName);
 
     await setRuntimeValue(playerName, usesKey, currentUses - 1, campaignName);
 
-    if (oncePerTurn) {
-        const currentTurn = getRuntimeValue(playerName, 'currentTurn', campaignName) || 'unknown';
-        await setRuntimeValue(playerName, 'psionicStrikeUsedThisTurn', currentTurn, campaignName);
+    if (auto.oncePerTurn) {
+        await setRuntimeValue(playerName, 'psionicStrikeUsedThisTurn', currentRound, campaignName);
     }
 
-    let thrustResult = null;
-    const thrustAutomation = playerStats.automation?.reactions?.find(r => r.type === 'telekinetic_thrust');
-    if (thrustAutomation) {
-        const saveType = thrustAutomation.saveType || 'STR';
-        const saveDc = buildSaveDc(thrustAutomation, playerStats);
-        const { promise } = createSaveListener(campaignName, {
-            targetName,
-            saveType,
-            saveDc,
-        });
-
-        await addEntry(campaignName, {
-            type: 'roll',
-            name: 'Telekinetic Adept',
-            characterName: playerName,
-            rollType: 'save-damage',
-            targetName,
-            saveDc,
-            saveType,
-            description: `Telekinetic Adept — ${targetName} must make a ${saveType} saving throw (DC ${saveDc}).`,
-        }).catch((e) => { console.error("[psionicStrikeHandler:log-error]", e); });
-
-        const saveResult = await promise;
-        const success = saveResult.success;
-
-        if (success) {
-            thrustResult = `${targetName} saved vs Telekinetic Adept (DC ${saveDc}).`;
-        } else {
-            const cs = await getCombatContext(campaignName);
-            if (cs?.creatures) {
-                const targetCreature = cs.creatures.find(c => c.name === targetName);
-                if (targetCreature) {
-                    const proneAlready = targetCreature.conditions?.some(c => c.key === 'prone');
-                    if (!proneAlready) {
-                        const conditionDef = { key: 'prone', label: 'Prone' };
-                        addCondition(cs, targetName, conditionDef, saveDc, saveType, getRuntimeValue, setRuntimeValue, campaignName, playerStats);
-                        storage.set('combatSummary', cs, campaignName);
-                    }
-                }
-            }
-            thrustResult = `${targetName} failed the ${saveType} save (DC ${saveDc}) — Prone + pushed 10ft.`;
-            await addEntry(campaignName, {
-                type: 'ability_use',
-                characterName: playerName,
-                abilityName: 'Telekinetic Thrust',
-                description: `${playerName} pushed ${targetName} 10 feet away.`,
-                targetName: targetName,
-            }).catch((e) => { console.error("[psionicStrikeHandler:log-error]", e); });
-        }
-    }
+    const thrustResult = await resolveThrustChain(action, playerStats, campaignName, targetName);
 
     await addEntry(campaignName, {
         type: 'ability_use',
         characterName: playerName,
         abilityName: action.name,
-        description: `${playerName} used ${action.name} to deal ${totalDamage} Force damage to ${targetName} (Rolled ${psionicDieSize} for ${dieValue} + INT ${intMod}).`,
+        description: `${playerName} used ${action.name} to deal ${totalDamage} Force damage to ${targetName} (Rolled d${psionicDieSize}: ${dieValue} + INT ${intMod}).`,
     }).catch((e) => { console.error("[psionicStrikeHandler:log-error]", e); });
 
     await addEntry(campaignName, {
@@ -144,11 +185,11 @@ export async function handle(action, playerStats, campaignName, _mapName) {
         targetName,
         damageType: 'Force',
         total: totalDamage,
-        formula: `${psionicDieSize} + ${intMod}`,
+        formula: `1d${psionicDieSize} + ${intMod}`,
         rolls: [dieValue, intMod],
     }).catch((e) => { console.error("[psionicStrikeHandler:log-error]", e); });
 
-    let description = `${action.name}: Dealt <strong>${totalDamage}</strong> Force damage to ${targetName}. (Rolled ${psionicDieSize} for ${dieValue} + INT ${intMod}). Psionic Energy: ${currentUses - 1}/${defaultMax}.`;
+    let description = `${action.name}: Dealt <strong>${totalDamage}</strong> Force damage to ${targetName}. (Rolled d${psionicDieSize}: ${dieValue} + INT ${intMod}). Psionic Energy: ${currentUses - 1}/${defaultMax}.`;
     if (thrustResult) {
         description += `<br/><br/>${thrustResult}`;
     }

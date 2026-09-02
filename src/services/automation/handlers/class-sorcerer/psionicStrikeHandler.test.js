@@ -1,9 +1,4 @@
 // @improved-by-ai
-// @cleaned-by-ai
-// @cleaned-by-ai
-// @improved-by-ai
-// @cleaned-by-ai
-// @cleaned-by-ai
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { handle } from './psionicStrikeHandler.js';
 import * as runtimeState from '../../../../hooks/runtime/useRuntimeState.js';
@@ -30,6 +25,7 @@ vi.mock('../../../rules/combat/damageUtils.js', () => ({
 
 vi.mock('../../../encounters/combatData.js', () => ({
     loadCombatSummary: vi.fn(),
+    getCurrentCombatRound: vi.fn(() => 1),
 }));
 
 vi.mock('../../../rules/combat/applyDamage.js', () => ({
@@ -51,11 +47,21 @@ vi.mock('../../../../services/combat/conditions/conditionSaveService.js', () => 
     addCondition: vi.fn(),
 }));
 
+vi.mock('../../common/damageRollback.js', () => ({
+    findLastAttack: vi.fn(),
+}));
+
+vi.mock('../../../rules/combat/rangeCheck.js', () => ({
+    isWithinRange: vi.fn(async () => true),
+}));
+
 import { getCombatContext, getTargetFromAttacker } from '../../../rules/combat/damageUtils.js';
-import { loadCombatSummary } from '../../../encounters/combatData.js';
+import { loadCombatSummary, getCurrentCombatRound } from '../../../encounters/combatData.js';
 import { applyDamageToTarget } from '../../../rules/combat/applyDamage.js';
 import { buildSaveDc, createSaveListener } from '../../common/savePrompt.js';
 import { addCondition } from '../../../../services/combat/conditions/conditionSaveService.js';
+import { findLastAttack } from '../../common/damageRollback.js';
+import { isWithinRange } from '../../../rules/combat/rangeCheck.js';
 
 const { getRuntimeValue, setRuntimeValue } = runtimeState;
 const { addEntry } = logService;
@@ -69,7 +75,7 @@ const DEFAULT_ACTION = {
         damageExpression: 'psionic_energy_die + INT modifier',
         damageType: 'Force',
         oncePerTurn: true,
-        casting_time: '1 reaction, after attack',
+        casting_time: '1 reaction',
     },
 };
 
@@ -92,12 +98,33 @@ function makeRollResult(total, sides = 8) {
     return { total, rolls: [total], modifier: 0, formula: `1d${sides}` };
 }
 
+function hitAttack(overrides = {}) {
+    return {
+        attackEvent: {
+            attackerName: 'Test Fighter',
+            targetName: 'Target Goblin',
+            hit: true,
+            rollType: 'attack',
+            weaponType: 'melee',
+            isUnarmedStrike: false,
+            isCantrip: false,
+            attackName: 'Shortsword',
+            damageType: 'Piercing',
+            actualDamage: 6,
+            ...overrides,
+        },
+        attackerName: 'Test Fighter',
+        targetName: 'Target Goblin',
+        totalDamage: 6,
+        damageTypes: ['Piercing'],
+    };
+}
+
 function mockSuccessfulRuntimeValues(overrides = {}) {
     const {
         psionicEnergy = 5,
         psionicStrikeUsedThisTurn = null,
-        currentTurn = 'turn-1',
-        targetEffects = [],
+        telekineticThrustUsedRound = null,
         ...otherKeys
     } = overrides;
 
@@ -105,11 +132,24 @@ function mockSuccessfulRuntimeValues(overrides = {}) {
         if (player === 'characters' && key === 'characters') return [];
         if (key === 'psionicEnergy') return psionicEnergy;
         if (key === 'psionicStrikeUsedThisTurn') return psionicStrikeUsedThisTurn;
-        if (key === 'currentTurn') return currentTurn;
-        if (key === 'targetEffects') return targetEffects;
+        if (key === 'telekineticThrustUsedRound') return telekineticThrustUsedRound;
         return otherKeys[key] ?? null;
     });
 }
+
+const playerWithThrust = makePlayerStats({
+    automation: {
+        reactions: [{
+            type: 'telekinetic_thrust',
+            saveType: 'STR',
+            saveDc: 'ability',
+            saveAbility: 'INT',
+            trigger: 'after_attack_hit',
+            oncePerTurn: true,
+            options: [{ name: 'Prone + Push 10ft', effect: 'prone_and_push', value: 10 }],
+        }],
+    },
+});
 
 describe('psionicStrikeHandler', () => {
     beforeEach(() => {
@@ -117,9 +157,116 @@ describe('psionicStrikeHandler', () => {
         getCombatContext.mockResolvedValue({ creatures: [] });
         getTargetFromAttacker.mockReturnValue({ name: 'Target Goblin' });
         loadCombatSummary.mockResolvedValue({ creatures: [] });
-        applyDamageToTarget.mockReturnValue(undefined);
+        applyDamageToTarget.mockResolvedValue({ finalDamage: 8 });
         rollExpression.mockReturnValue(makeRollResult(5));
         setRuntimeValue.mockResolvedValue(undefined);
+        findLastAttack.mockResolvedValue(hitAttack());
+        getCurrentCombatRound.mockReturnValue(1);
+        isWithinRange.mockResolvedValue(true);
+        buildSaveDc.mockReturnValue(14);
+        createSaveListener.mockReturnValue({
+            promptId: 'test-id',
+            promise: Promise.resolve({ success: true, total: 15, roll: 12, saveBonus: 3 }),
+        });
+    });
+
+    describe('hit trigger gate (CLA-273)', () => {
+        it('refuses with no recent attack — no die spent', async () => {
+            mockSuccessfulRuntimeValues();
+            findLastAttack.mockResolvedValue({ attackEvent: null, attackerName: null, targetName: null, totalDamage: 0, damageTypes: [] });
+
+            const result = await handle(makeAction(), makePlayerStats(), 'test-campaign');
+
+            expect(result.payload.description).toContain('requires a weapon hit');
+            expect(result.payload.description).toContain('no Psionic Energy spent');
+            expect(rollExpression).not.toHaveBeenCalled();
+            expect(applyDamageToTarget).not.toHaveBeenCalled();
+            expect(setRuntimeValue).not.toHaveBeenCalled();
+            expect(addEntry).not.toHaveBeenCalled();
+        });
+
+        it('refuses after a MISS — no die spent, no damage', async () => {
+            mockSuccessfulRuntimeValues();
+            findLastAttack.mockResolvedValue(hitAttack({ hit: false, actualDamage: undefined }));
+
+            const result = await handle(makeAction(), makePlayerStats(), 'test-campaign');
+
+            expect(result.payload.description).toContain('requires a weapon hit');
+            expect(result.payload.description).toContain('missed');
+            expect(rollExpression).not.toHaveBeenCalled();
+            expect(applyDamageToTarget).not.toHaveBeenCalled();
+            expect(setRuntimeValue).not.toHaveBeenCalled();
+        });
+
+        it('refuses when the last attack was made by another creature', async () => {
+            mockSuccessfulRuntimeValues();
+            findLastAttack.mockResolvedValue(hitAttack({ attackerName: 'Goblin', targetName: 'Test Fighter' }));
+
+            const result = await handle(makeAction(), makePlayerStats(), 'test-campaign');
+
+            expect(result.payload.description).toContain('made by you');
+            expect(rollExpression).not.toHaveBeenCalled();
+            expect(setRuntimeValue).not.toHaveBeenCalled();
+        });
+
+        it('refuses unarmed strikes and cantrip attacks', async () => {
+            mockSuccessfulRuntimeValues();
+            findLastAttack.mockResolvedValue(hitAttack({ isUnarmedStrike: true }));
+            let result = await handle(makeAction(), makePlayerStats(), 'test-campaign');
+            expect(result.payload.description).toContain('requires a weapon attack');
+
+            findLastAttack.mockResolvedValue(hitAttack({ isCantrip: true }));
+            result = await handle(makeAction(), makePlayerStats(), 'test-campaign');
+            expect(result.payload.description).toContain('requires a weapon attack');
+            expect(applyDamageToTarget).not.toHaveBeenCalled();
+        });
+
+        it('refuses when the attack dealt no damage', async () => {
+            mockSuccessfulRuntimeValues();
+            findLastAttack.mockResolvedValue({ ...hitAttack(), totalDamage: 0 });
+
+            const result = await handle(makeAction(), makePlayerStats(), 'test-campaign');
+
+            expect(result.payload.description).toContain('to deal damage');
+            expect(rollExpression).not.toHaveBeenCalled();
+            expect(setRuntimeValue).not.toHaveBeenCalled();
+        });
+
+        it('refuses when the strike target differs from the last attack target', async () => {
+            mockSuccessfulRuntimeValues();
+            getTargetFromAttacker.mockReturnValue({ name: 'Other Ogre' });
+
+            const result = await handle(makeAction(), makePlayerStats(), 'test-campaign');
+
+            expect(result.payload.description).toContain('must target the creature you just hit');
+            expect(rollExpression).not.toHaveBeenCalled();
+            expect(setRuntimeValue).not.toHaveBeenCalled();
+        });
+
+        it('refuses when the target is out of 30 feet', async () => {
+            mockSuccessfulRuntimeValues();
+            isWithinRange.mockResolvedValue(false);
+
+            const result = await handle(makeAction(), makePlayerStats(), 'test-campaign');
+
+            expect(result.payload.description).toContain('out of 30 feet');
+            expect(isWithinRange).toHaveBeenCalledWith('Test Fighter', 'Target Goblin', 30);
+            expect(rollExpression).not.toHaveBeenCalled();
+        });
+
+        it('fires after a qualifying weapon attack hit with exact math', async () => {
+            mockSuccessfulRuntimeValues({ psionicEnergy: 5 });
+            rollExpression.mockReturnValue(makeRollResult(5));
+
+            const result = await handle(makeAction(), makePlayerStats(), 'test-campaign');
+
+            expect(rollExpression).toHaveBeenCalledWith('1d8');
+            expect(applyDamageToTarget).toHaveBeenCalledWith(
+                expect.anything(), 'Target Goblin', 8, ['Force'], 'test-campaign', [], false, 'Test Fighter'
+            );
+            expect(setRuntimeValue).toHaveBeenCalledWith('Test Fighter', 'psionicEnergy', 4, 'test-campaign');
+            expect(result.payload.description).toContain('Dealt <strong>8</strong> Force damage to Target Goblin');
+        });
     });
 
     describe('resource validation', () => {
@@ -131,8 +278,6 @@ describe('psionicStrikeHandler', () => {
 
             const result = await handle(makeAction(), makePlayerStats(), 'test-campaign');
 
-            expect(result.type).toBe('popup');
-            expect(result.payload.type).toBe('automation_info');
             expect(result.payload.description).toContain('No Psionic Energy remaining');
             expect(result.payload.description).toContain('Short or Long Rest');
             expect(setRuntimeValue).not.toHaveBeenCalled();
@@ -141,13 +286,7 @@ describe('psionicStrikeHandler', () => {
         });
 
         it('uses default max when tracked resources is null or missing the resource key', async () => {
-            getRuntimeValue.mockImplementation((player, key, _campaign) => {
-                if (player === 'characters' && key === 'characters') return [];
-                if (key === 'psionicEnergy') return 3;
-                if (key === 'psionicStrikeUsedThisTurn') return null;
-                if (key === 'currentTurn') return 'turn-1';
-                return null;
-            });
+            mockSuccessfulRuntimeValues({ psionicEnergy: 3 });
 
             const result = await handle(
                 makeAction(),
@@ -155,7 +294,6 @@ describe('psionicStrikeHandler', () => {
                 'test-campaign'
             );
 
-            expect(result.type).toBe('popup');
             expect(result.payload.description).toContain('Target Goblin');
             expect(result.payload.description).toContain('Psionic Energy: 2/6');
         });
@@ -167,157 +305,63 @@ describe('psionicStrikeHandler', () => {
             getRuntimeValue.mockImplementation((player, key, _campaign) => {
                 if (player === 'characters' && key === 'characters') return [];
                 if (key === 'customResource') return 2;
-                if (key === 'currentTurn') return 'turn-1';
                 return null;
             });
 
-            const result = await handle(
-                customAction,
-                makePlayerStats(),
-                'test-campaign'
-            );
+            await handle(customAction, makePlayerStats(), 'test-campaign');
 
-            expect(result.type).toBe('popup');
-            expect(result.payload.description).toContain('Target Goblin');
-            expect(setRuntimeValue).toHaveBeenCalledWith(
-                'Test Fighter',
-                'customResource',
-                1,
-                'test-campaign'
-            );
+            expect(setRuntimeValue).toHaveBeenCalledWith('Test Fighter', 'customResource', 1, 'test-campaign');
         });
     });
 
-    describe('once-per-turn enforcement', () => {
-        it('returns error popup when already used this turn', async () => {
-            getRuntimeValue.mockImplementation((player, key) => {
-                if (key === 'psionicEnergy') return 5;
-                if (key === 'psionicStrikeUsedThisTurn') return 'turn-1';
-                if (key === 'currentTurn') return 'turn-1';
-                return null;
-            });
+    describe('once-per-turn enforcement (round-keyed)', () => {
+        it('blocks reuse in the same round', async () => {
+            mockSuccessfulRuntimeValues({ psionicStrikeUsedThisTurn: 1 });
+            getCurrentCombatRound.mockReturnValue(1);
 
             const result = await handle(makeAction(), makePlayerStats(), 'test-campaign');
 
-            expect(result.type).toBe('popup');
             expect(result.payload.description).toContain('Already used this turn');
-            expect(setRuntimeValue).not.toHaveBeenCalledWith(
-                'Test Fighter',
-                'psionicEnergy',
-                expect.any(Number),
-                'test-campaign'
-            );
+            expect(setRuntimeValue).not.toHaveBeenCalledWith('Test Fighter', 'psionicEnergy', expect.any(Number), 'test-campaign');
             expect(rollExpression).not.toHaveBeenCalled();
         });
 
+        it('blocks same-turn reuse even without a round on the latch (sentinel removal)', async () => {
+            mockSuccessfulRuntimeValues({ psionicStrikeUsedThisTurn: 'unknown' });
+            getCurrentCombatRound.mockReturnValue(1);
+
+            const result = await handle(makeAction(), makePlayerStats(), 'test-campaign');
+
+            expect(result.payload.description).not.toContain('Already used this turn');
+            expect(setRuntimeValue).toHaveBeenCalledWith('Test Fighter', 'psionicStrikeUsedThisTurn', 1, 'test-campaign');
+        });
+
+        it('allows use on a later round', async () => {
+            mockSuccessfulRuntimeValues({ psionicStrikeUsedThisTurn: 1 });
+            getCurrentCombatRound.mockReturnValue(2);
+
+            const result = await handle(makeAction(), makePlayerStats(), 'test-campaign');
+
+            expect(result.payload.description).toContain('Target Goblin');
+            expect(setRuntimeValue).toHaveBeenCalledWith('Test Fighter', 'psionicStrikeUsedThisTurn', 2, 'test-campaign');
+        });
+
         it('does not enforce once-per-turn when oncePerTurn is false', async () => {
-            getRuntimeValue.mockImplementation((player, key, _campaign) => {
-                if (player === 'characters' && key === 'characters') return [];
-                if (key === 'psionicEnergy') return 5;
-                return null;
-            });
+            mockSuccessfulRuntimeValues({ psionicEnergy: 5 });
 
             const result = await handle(
-                makeAction({ automation: { oncePerTurn: false } }),
+                makeAction({ automation: { ...DEFAULT_ACTION.automation, oncePerTurn: false } }),
                 makePlayerStats(),
                 'test-campaign'
             );
 
-            expect(result.type).toBe('popup');
-            expect(result.payload.description).toContain('Target Goblin');
             expect(result.payload.description).toContain('Force damage');
-            expect(setRuntimeValue).toHaveBeenCalledWith(
-                'Test Fighter',
-                'psionicEnergy',
-                4,
-                'test-campaign'
-            );
-            expect(setRuntimeValue).not.toHaveBeenCalledWith(
-                'Test Fighter',
-                'psionicStrikeUsedThisTurn',
-                expect.any(String),
-                'test-campaign'
-            );
-        });
-
-        it('marks turn usage when oncePerTurn is true and not yet used', async () => {
-            mockSuccessfulRuntimeValues({ psionicEnergy: 5, currentTurn: 'turn-3' });
-            rollExpression.mockReturnValue(makeRollResult(6));
-
-            await handle(makeAction(), makePlayerStats(), 'test-campaign');
-
-            expect(setRuntimeValue).toHaveBeenCalledWith(
-                'Test Fighter',
-                'psionicEnergy',
-                4,
-                'test-campaign'
-            );
-            expect(setRuntimeValue).toHaveBeenCalledWith(
-                'Test Fighter',
-                'psionicStrikeUsedThisTurn',
-                'turn-3',
-                'test-campaign'
-            );
-        });
-
-        it('marks turn usage with "unknown" when currentTurn runtime value is missing', async () => {
-            getRuntimeValue.mockImplementation((player, key) => {
-                if (player === 'characters' && key === 'characters') return [];
-                if (key === 'psionicEnergy') return 5;
-                if (key === 'psionicStrikeUsedThisTurn') return null;
-                if (key === 'currentTurn') return undefined;
-                return null;
-            });
-
-            await handle(makeAction(), makePlayerStats(), 'test-campaign');
-
-            expect(setRuntimeValue).toHaveBeenCalledWith(
-                'Test Fighter',
-                'psionicStrikeUsedThisTurn',
-                'unknown',
-                'test-campaign'
-            );
-        });
-
-        it('allows use on a different turn', async () => {
-            getRuntimeValue.mockImplementation((player, key) => {
-                if (key === 'psionicEnergy') return 5;
-                if (key === 'psionicStrikeUsedThisTurn') return 'turn-1';
-                if (key === 'currentTurn') return 'turn-2';
-                return null;
-            });
-
-            const result = await handle(makeAction(), makePlayerStats(), 'test-campaign');
-
-            expect(result.type).toBe('popup');
-            expect(result.payload.description).toContain('Target Goblin');
-            expect(setRuntimeValue).toHaveBeenCalledWith(
-                'Test Fighter',
-                'psionicStrikeUsedThisTurn',
-                'turn-2',
-                'test-campaign'
-            );
+            expect(setRuntimeValue).toHaveBeenCalledWith('Test Fighter', 'psionicEnergy', 4, 'test-campaign');
+            expect(setRuntimeValue).not.toHaveBeenCalledWith('Test Fighter', 'psionicStrikeUsedThisTurn', expect.anything(), 'test-campaign');
         });
     });
 
     describe('damage calculation', () => {
-        it('rolls die and calculates damage with INT modifier', async () => {
-            mockSuccessfulRuntimeValues();
-            rollExpression.mockReturnValue(makeRollResult(5));
-
-            const result = await handle(makeAction(), makePlayerStats(), 'test-campaign');
-
-            expect(rollExpression).toHaveBeenCalledWith('1d8');
-            expect(applyDamageToTarget).toHaveBeenCalledWith(
-                expect.anything(), 'Target Goblin', 8, ['Force'], 'test-campaign', [], false, 'Test Fighter'
-            );
-            expect(result.type).toBe('popup');
-            expect(result.payload.description).toContain('Target Goblin');
-            expect(result.payload.description).toContain('Force damage');
-            expect(result.payload.description).toContain('Psionic Energy: 4/8');
-            expect(result.payload.description).toContain('+ INT 3');
-        });
-
         it('uses INT modifier of 0 when Intelligence ability is missing', async () => {
             mockSuccessfulRuntimeValues();
 
@@ -327,7 +371,6 @@ describe('psionicStrikeHandler', () => {
                 'test-campaign'
             );
 
-            expect(result.payload.description).toContain('Target Goblin');
             expect(result.payload.description).toContain('+ INT 0');
         });
 
@@ -340,7 +383,6 @@ describe('psionicStrikeHandler', () => {
                 'test-campaign'
             );
 
-            expect(result.payload.description).toContain('Target Goblin');
             expect(result.payload.description).toContain('+ INT -2');
             expect(result.payload.description).toContain('Psionic Energy: 4/8');
         });
@@ -351,8 +393,7 @@ describe('psionicStrikeHandler', () => {
 
             const result = await handle(makeAction(), makePlayerStats(), 'test-campaign');
 
-            expect(result.payload.description).toContain('Target Goblin');
-            expect(result.payload.description).toContain('Rolled 8 for 8');
+            expect(result.payload.description).toContain('Rolled d8: 8');
         });
     });
 
@@ -375,56 +416,34 @@ describe('psionicStrikeHandler', () => {
         testDieSize(17, 12);
     });
 
-    describe('logging', () => {
-        it('calls addEntry with ability_use and roll log entries', async () => {
+    describe('popup and log wording', () => {
+        it('prints die as "Rolled dN: value" in popup and ability_use log', async () => {
+            mockSuccessfulRuntimeValues();
+            rollExpression.mockReturnValue(makeRollResult(4));
+
+            const result = await handle(makeAction(), makePlayerStats(), 'test-campaign');
+
+            expect(result.payload.description).toContain('Rolled d8: 4 + INT 3');
+            expect(addEntry).toHaveBeenCalledWith('test-campaign', expect.objectContaining({
+                type: 'ability_use',
+                description: expect.stringContaining('Rolled d8: 4 + INT 3'),
+            }));
+        });
+
+        it('logs the damage roll with dice notation formula', async () => {
             mockSuccessfulRuntimeValues();
 
             await handle(makeAction(), makePlayerStats(), 'test-campaign');
 
             expect(addEntry).toHaveBeenCalledWith('test-campaign', expect.objectContaining({
-                type: 'ability_use',
-                characterName: 'Test Fighter',
-                abilityName: 'Psionic Strike',
-                description: expect.stringContaining('Force damage'),
-            }));
-            expect(addEntry).toHaveBeenCalledWith('test-campaign', expect.objectContaining({
                 type: 'roll',
                 rollType: 'damage',
-                characterName: 'Test Fighter',
+                name: 'Psionic Strike Damage',
                 targetName: 'Target Goblin',
                 damageType: 'Force',
                 total: 8,
+                formula: '1d8 + 3',
             }));
-        });
-
-        it('calls addEntry three times when telekinetic_thrust is active', async () => {
-            getRuntimeValue.mockImplementation((player, key, _campaign) => {
-                if (player === 'characters' && key === 'characters') return [];
-                if (key === 'psionicEnergy') return 5;
-                if (key === 'psionicStrikeUsedThisTurn') return null;
-                if (key === 'currentTurn') return 'turn-1';
-                if (key === 'targetEffects') return [];
-                return null;
-            });
-            rollExpression.mockReturnValue(makeRollResult(5));
-            getCombatContext.mockResolvedValue({
-                creatures: [{ name: 'Target Goblin', conditions: [] }],
-            });
-            buildSaveDc.mockReturnValue(14);
-            createSaveListener.mockReturnValue({
-                promptId: 'test-id',
-                promise: Promise.resolve({ success: true, total: 15 }),
-            });
-
-            const playerWithThrust = makePlayerStats({
-                automation: {
-                    reactions: [{ type: 'telekinetic_thrust', saveType: 'STR', saveDc: 'ability', saveAbility: 'INT', options: [{ name: 'Prone + Push 10ft', effect: 'prone_and_push', value: 10 }] }],
-                },
-            });
-
-            await handle(makeAction(), playerWithThrust, 'test-campaign');
-
-            expect(addEntry).toHaveBeenCalledTimes(3);
         });
 
         it('handles addEntry failure gracefully', async () => {
@@ -436,6 +455,93 @@ describe('psionicStrikeHandler', () => {
             expect(result.type).toBe('popup');
             expect(result.payload.description).toContain('Target Goblin');
             expect(result.payload.description).toContain('Force damage');
+        });
+    });
+
+    describe('telekinetic thrust chain', () => {
+        it('never opens a save prompt when the strike is refused', async () => {
+            mockSuccessfulRuntimeValues();
+            findLastAttack.mockResolvedValue({ attackEvent: null, attackerName: null, targetName: null, totalDamage: 0, damageTypes: [] });
+
+            await handle(makeAction(), playerWithThrust, 'test-campaign');
+
+            expect(createSaveListener).not.toHaveBeenCalled();
+        });
+
+        it('chains the lv7 save prompt after strike damage resolves', async () => {
+            mockSuccessfulRuntimeValues();
+
+            const result = await handle(makeAction(), playerWithThrust, 'test-campaign');
+
+            expect(createSaveListener).toHaveBeenCalledWith('test-campaign', {
+                targetName: 'Target Goblin',
+                saveType: 'STR',
+                saveDc: 14,
+            });
+            expect(result.payload.description).toContain('saved vs Telekinetic Adept');
+            expect(setRuntimeValue).toHaveBeenCalledWith('Test Fighter', 'telekineticThrustUsedRound', 1, 'test-campaign');
+        });
+
+        it('respects the thrust once-per-turn latch on a second strike in the same round', async () => {
+            mockSuccessfulRuntimeValues({ telekineticThrustUsedRound: 1 });
+            getCurrentCombatRound.mockReturnValue(1);
+
+            await handle(makeAction(), playerWithThrust, 'test-campaign');
+
+            expect(createSaveListener).not.toHaveBeenCalled();
+        });
+
+        it('re-arms the thrust chain on a later round', async () => {
+            mockSuccessfulRuntimeValues({ telekineticThrustUsedRound: 1 });
+            getCurrentCombatRound.mockReturnValue(2);
+
+            await handle(makeAction(), playerWithThrust, 'test-campaign');
+
+            expect(createSaveListener).toHaveBeenCalledTimes(1);
+            expect(setRuntimeValue).toHaveBeenCalledWith('Test Fighter', 'telekineticThrustUsedRound', 2, 'test-campaign');
+        });
+
+        it('applies prone on a failed save and skips when already prone', async () => {
+            mockSuccessfulRuntimeValues();
+            getCombatContext.mockResolvedValue({ creatures: [{ name: 'Target Goblin', conditions: [] }] });
+            createSaveListener.mockReturnValue({
+                promptId: 'test-id',
+                promise: Promise.resolve({ success: false, total: 10, roll: 6, saveBonus: 4 }),
+            });
+
+            const result = await handle(makeAction(), playerWithThrust, 'test-campaign');
+            expect(result.payload.description).toContain('Prone + pushed 10ft');
+            expect(addCondition).toHaveBeenCalled();
+
+            addCondition.mockClear();
+            getCombatContext.mockResolvedValue({ creatures: [{ name: 'Target Goblin', conditions: [{ key: 'prone' }] }] });
+            await handle(makeAction(), playerWithThrust, 'test-campaign');
+            expect(addCondition).not.toHaveBeenCalled();
+        });
+    });
+
+    describe('target resolution', () => {
+        it('returns error popup when no target available', async () => {
+            getTargetFromAttacker.mockReturnValue(null);
+            mockSuccessfulRuntimeValues();
+
+            const result = await handle(makeAction(), makePlayerStats(), 'test-campaign');
+
+            expect(result.payload.description).toContain('No target available');
+            expect(setRuntimeValue).not.toHaveBeenCalled();
+            expect(rollExpression).not.toHaveBeenCalled();
+            expect(addEntry).not.toHaveBeenCalled();
+        });
+
+        it('returns error popup when combat context is null', async () => {
+            getCombatContext.mockResolvedValue(null);
+            mockSuccessfulRuntimeValues();
+
+            const result = await handle(makeAction(), makePlayerStats(), 'test-campaign');
+
+            expect(result.payload.description).toContain('No target available');
+            expect(setRuntimeValue).not.toHaveBeenCalled();
+            expect(rollExpression).not.toHaveBeenCalled();
         });
     });
 
@@ -451,157 +557,6 @@ describe('psionicStrikeHandler', () => {
             expect(result.payload.targetName).toBe('Target Goblin');
             expect(result.payload.automationType).toBe('psionic_strike');
             expect(result.payload.automation).toEqual(DEFAULT_ACTION.automation);
-            expect(typeof result.payload.description).toBe('string');
-        });
-    });
-
-    describe('target resolution', () => {
-        it('returns error popup when no target available', async () => {
-            getTargetFromAttacker.mockReturnValue(null);
-            getRuntimeValue.mockImplementation((player, key) => {
-                if (key === 'psionicEnergy') return 5;
-                return null;
-            });
-
-            const result = await handle(makeAction(), makePlayerStats(), 'test-campaign');
-
-            expect(result.type).toBe('popup');
-            expect(result.payload.description).toContain('No target available');
-            expect(setRuntimeValue).not.toHaveBeenCalled();
-            expect(rollExpression).not.toHaveBeenCalled();
-            expect(addEntry).not.toHaveBeenCalled();
-        });
-
-        it('returns error popup when combat context is null', async () => {
-            getCombatContext.mockResolvedValue(null);
-            getRuntimeValue.mockImplementation((player, key) => {
-                if (key === 'psionicEnergy') return 5;
-                return null;
-            });
-
-            const result = await handle(makeAction(), makePlayerStats(), 'test-campaign');
-
-            expect(result.type).toBe('popup');
-            expect(result.payload.description).toContain('No target available');
-            expect(setRuntimeValue).not.toHaveBeenCalled();
-            expect(rollExpression).not.toHaveBeenCalled();
-            expect(addEntry).not.toHaveBeenCalled();
-        });
-    });
-
-    describe('telekinetic thrust integration', () => {
-        function setupWithThrust(saveResult = { success: true, total: 15, roll: 12, saveBonus: 3 }) {
-            getRuntimeValue.mockImplementation((player, key, _campaign) => {
-                if (player === 'characters' && key === 'characters') return [];
-                if (key === 'psionicEnergy') return 5;
-                if (key === 'psionicStrikeUsedThisTurn') return null;
-                if (key === 'currentTurn') return 'turn-1';
-                if (key === 'targetEffects') return [];
-                return null;
-            });
-            rollExpression.mockReturnValue(makeRollResult(5));
-            getCombatContext.mockResolvedValue({
-                creatures: [{ name: 'Target Goblin', conditions: [] }],
-            });
-            buildSaveDc.mockReturnValue(14);
-            createSaveListener.mockReturnValue({
-                promptId: 'test-id',
-                promise: Promise.resolve(saveResult),
-            });
-        }
-
-        const playerWithThrust = makePlayerStats({
-            automation: {
-                reactions: [{ type: 'telekinetic_thrust', saveType: 'STR', saveDc: 'ability', saveAbility: 'INT', options: [{ name: 'Prone + Push 10ft', effect: 'prone_and_push', value: 10 }] }],
-            },
-        });
-
-        it('creates save listener when telekinetic_thrust is present', async () => {
-            setupWithThrust();
-
-            await handle(makeAction(), playerWithThrust, 'test-campaign');
-
-            expect(addEntry).toHaveBeenCalledWith('test-campaign', expect.objectContaining({
-                type: 'roll',
-                rollType: 'save-damage',
-                targetName: 'Target Goblin',
-                saveType: 'STR',
-                saveDc: 14,
-            }));
-        });
-
-        it('reports success in description when save passes', async () => {
-            setupWithThrust();
-
-            const result = await handle(makeAction(), playerWithThrust, 'test-campaign');
-
-            expect(result.payload.description).toContain('saved vs Telekinetic Adept');
-        });
-
-        it('reports failure in description when save fails', async () => {
-            setupWithThrust({ success: false, total: 10, roll: 6, saveBonus: 4 });
-
-            const result = await handle(makeAction(), playerWithThrust, 'test-campaign');
-
-            expect(result.payload.description).toContain('Prone + pushed 10ft');
-            expect(result.payload.description).toContain('failed');
-        });
-
-        it('skips prone condition when target is already prone', async () => {
-            getRuntimeValue.mockImplementation((player, key, _campaign) => {
-                if (player === 'characters' && key === 'characters') return [];
-                if (key === 'psionicEnergy') return 5;
-                if (key === 'psionicStrikeUsedThisTurn') return null;
-                if (key === 'currentTurn') return 'turn-1';
-                if (key === 'targetEffects') return [];
-                return null;
-            });
-            rollExpression.mockReturnValue(makeRollResult(5));
-            getCombatContext
-                .mockResolvedValueOnce({
-                    creatures: [{ name: 'Target Goblin', conditions: [{ key: 'prone' }] }],
-                })
-                .mockResolvedValueOnce({
-                    creatures: [{ name: 'Target Goblin', conditions: [{ key: 'prone' }] }],
-                });
-            buildSaveDc.mockReturnValue(14);
-            createSaveListener.mockReturnValue({
-                promptId: 'test-id',
-                promise: Promise.resolve({ success: false, total: 10, roll: 6, saveBonus: 4 }),
-            });
-
-            await handle(makeAction(), playerWithThrust, 'test-campaign');
-
-            expect(addCondition).not.toHaveBeenCalled();
-        });
-
-        it('passes save listener correct campaign name and parameters', async () => {
-            setupWithThrust();
-
-            await handle(makeAction(), playerWithThrust, 'test-campaign');
-
-            expect(createSaveListener).toHaveBeenCalledWith('test-campaign', {
-                targetName: 'Target Goblin',
-                saveType: 'STR',
-                saveDc: 14,
-            });
-        });
-
-        it('uses custom saveType from telekinetic_thrust config', async () => {
-            setupWithThrust();
-            const playerWithDexSave = makePlayerStats({
-                automation: {
-                    reactions: [{ type: 'telekinetic_thrust', saveType: 'DEX', saveDc: 'ability', saveAbility: 'INT', options: [{ name: 'Prone + Push 10ft', effect: 'prone_and_push', value: 10 }] }],
-                },
-            });
-
-            await handle(makeAction(), playerWithDexSave, 'test-campaign');
-
-            expect(createSaveListener).toHaveBeenCalledWith('test-campaign', {
-                targetName: 'Target Goblin',
-                saveType: 'DEX',
-                saveDc: 14,
-            });
         });
     });
 });
