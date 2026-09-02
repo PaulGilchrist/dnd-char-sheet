@@ -1,278 +1,722 @@
-- generic [ref=f7e16]:
-  - navigation [ref=f7e17]:
-    - generic [ref=f7e18]: test-campaign
-    - generic [ref=f7e20]: AasimarTest
-    - button "Campaigns" [ref=f7e23] [cursor=pointer]
-    - generic [ref=f7e25]:
-      - generic [ref=f7e26]: Characters
-      - generic [ref=f7e27]:
-        - button "Add Character" [ref=f7e28] [cursor=pointer]
-        - button "AasimarTest" [ref=f7e30] [cursor=pointer]
-        - button "Disciplined_Monk" [ref=f7e31] [cursor=pointer]
-        - button "DivinationWizard" [ref=f7e32] [cursor=pointer]
-        - button "Divine_Cleric" [ref=f7e33] [cursor=pointer]
-        - button "DraconicDragon" [ref=f7e34] [cursor=pointer]
-        - button "DraconicSorcerer" [ref=f7e35] [cursor=pointer]
-        - button "ElderPaladin" [ref=f7e36] [cursor=pointer]
-        - button "EvasiveFighter" [ref=f7e37] [cursor=pointer]
-        - button "FeyRanger" [ref=f7e38] [cursor=pointer]
-        - button "GlobeWizard" [ref=f7e39] [cursor=pointer]
-        - button "GoliathFireGiant" [ref=f7e40] [cursor=pointer]
-        - button "HeroesFeastBard" [ref=f7e41] [cursor=pointer]
-        - button "HexWarlock" [ref=f7e42] [cursor=pointer]
-        - button "HunterRanger" [ref=f7e43] [cursor=pointer]
-        - button "IllusionWizard" [ref=f7e44] [cursor=pointer]
-        - button "KeenElf" [ref=f7e45] [cursor=pointer]
-        - button "LightfootHalfling" [ref=f7e46] [cursor=pointer]
-        - button "MercyMonk" [ref=f7e47] [cursor=pointer]
-        - button "War_Cleric" [ref=f7e48] [cursor=pointer]
-        - button "Wild_Sage_Druid" [ref=f7e49] [cursor=pointer]
-    - button "Encounters" [ref=f7e50] [cursor=pointer]
-    - button "Factions" [ref=f7e52] [cursor=pointer]
-    - button "Initiative" [ref=f7e54] [cursor=pointer]
-    - button "Log" [ref=f7e56] [cursor=pointer]
-    - button "Maps" [ref=f7e58] [cursor=pointer]
-    - button "NPCs" [ref=f7e60] [cursor=pointer]
-    - button "Notes" [ref=f7e62] [cursor=pointer]
-    - button "Quests" [ref=f7e64] [cursor=pointer]
-    - button "Rules" [ref=f7e66] [cursor=pointer]
-    - button "Settlements" [ref=f7e69] [cursor=pointer]
-    - button "Admin" [ref=f7e72] [cursor=pointer]
-    - generic [ref=f7e74]:
-      - button "d4" [ref=f7e75] [cursor=pointer]:
-        - img [ref=f7e76]:
-          - generic [ref=f7e78]: "4"
-      - button "d6" [ref=f7e80] [cursor=pointer]
-      - button "d8" [ref=f7e83] [cursor=pointer]:
-        - img [ref=f7e84]:
-          - generic [ref=f7e86]: "8"
-      - button "d10" [ref=f7e88] [cursor=pointer]:
-        - img [ref=f7e89]:
-          - generic [ref=f7e91]: "10"
-      - button "d12" [ref=f7e93] [cursor=pointer]:
-        - img [ref=f7e94]:
-          - generic [ref=f7e96]: "12"
-      - button "d20" [ref=f7e98] [cursor=pointer]
-      - button "d100" [ref=f7e101] [cursor=pointer]:
-        - img [ref=f7e102]:
-          - generic [ref=f7e105]: "%"
-  - generic [ref=f7e107]:
-    - generic [ref=f7e108]:
-      - generic [ref=f7e109]:
-        - button "A" [ref=f7e110] [cursor=pointer]
-        - generic [ref=f7e112]:
-          - generic [ref=f7e113]:
-            - generic [ref=f7e114]: AasimarTest
-            - generic [ref=f7e115]:
-              - button "Edit" [ref=f7e116] [cursor=pointer]
-              - button "Delete" [ref=f7e118] [cursor=pointer]
-              - button "Upload" [ref=f7e119] [cursor=pointer]
-              - button "Download" [ref=f7e121] [cursor=pointer]
-              - button "Short Rest" [ref=f7e123] [cursor=pointer]
-              - button "Long Rest" [ref=f7e125] [cursor=pointer]
-          - generic [ref=f7e127]: Aasimar, Rogue (assassin), Level 14 (milestone), Neutral Good
-      - generic [ref=f7e128]:
-        - generic [ref=f7e129]:
-          - generic [ref=f7e130] [cursor=pointer]: "Armor Class: 12"
-          - generic [ref=f7e131]: "Hit Points: 101/101 (cur/max)"
-          - text: "Speed:"
-          - generic [ref=f7e133]: 30 ft.
-          - generic [ref=f7e134] [cursor=pointer]: "Gold: 10"
-        - generic [ref=f7e135]:
-          - text: "Proficiency: +5"
-          - generic [ref=f7e136] [cursor=pointer]: "Initiative: +2"
-          - text: "Inspiration:"
-          - checkbox [ref=f7e137]
-          - generic [ref=f7e138]: "Background: Acolyte"
-          - generic [ref=f7e140]:
-            - text: "Feats:"
-            - generic [ref=f7e141]: Magic Initiate
-          - generic "Manage allies" [ref=f7e142] [cursor=pointer]: Allies (1)
-        - generic [ref=f7e144]:
-          - generic [ref=f7e145] [cursor=pointer]:
-            - generic [ref=f7e146]: "Short Rest Hit Dice:"
-            - text: 14/14 (cur/max)
-          - generic [ref=f7e147]:
-            - 'generic "Supreme Sneak: Available at Rogue level 9 — activate from Actions section" [ref=f7e148]': Supreme Sneak
-            - generic [ref=f7e150]: "Sneak Attack Damage: +7d6"
-      - generic [ref=f7e151]:
-        - text: "Resistances: Necrotic"
-        - generic [ref=f7e152]: ", Radiant"
-      - generic [ref=f7e153]: "Senses: Darkvision 60 ft., Passive Insight 16, Passive Investigation 10, Passive Perception 11"
-      - generic [ref=f7e154]: "Proficiencies: Disguise Kit, Finesse Martial Weapons, Light Armor, Light Martial Weapons, Poisoner's Kit, Simple Weapons, Thieves' Tools, Calligrapher's Supplies, Thieves' Tools"
-      - generic [ref=f7e155]: "Languages: Common, Thieves' Cant"
-    - generic [ref=f7e156]:
-      - generic [ref=f7e157]: Abilities
-      - generic [ref=f7e158]:
-        - generic [ref=f7e159]: Name
-        - generic [ref=f7e160]: Score
-        - generic [ref=f7e161]: Bonus
-        - generic [ref=f7e162]: Save
-        - generic [ref=f7e163]: Skills
-      - generic [ref=f7e164]:
-        - generic [ref=f7e165] [cursor=pointer]: Strength
-        - generic [ref=f7e166]: "10"
-        - generic [ref=f7e167] [cursor=pointer]: "+0"
-        - generic [ref=f7e168] [cursor=pointer]: "+0"
-        - generic [ref=f7e169]: Athletics (+0)
-      - generic [ref=f7e172]:
-        - generic [ref=f7e173] [cursor=pointer]: Dexterity
-        - generic [ref=f7e174]: "14"
-        - generic [ref=f7e175] [cursor=pointer]: "+2"
-        - generic [ref=f7e176] [cursor=pointer]: "+7"
-        - generic [ref=f7e177]:
-          - generic [ref=f7e178]:
-            - generic [ref=f7e179] [cursor=pointer]: Acrobatics (+2)
-            - text: ","
-          - generic [ref=f7e180]:
-            - generic [ref=f7e181] [cursor=pointer]: Sleight of Hand (+2)
-            - text: ","
-          - generic [ref=f7e182]: Stealth (+2)
-      - generic [ref=f7e184]:
-        - generic [ref=f7e185] [cursor=pointer]: Constitution
-        - generic [ref=f7e186]: "14"
-        - generic [ref=f7e187] [cursor=pointer]: "+2"
-        - generic [ref=f7e188] [cursor=pointer]: "+2"
-      - generic [ref=f7e190]:
-        - generic [ref=f7e191] [cursor=pointer]: Intelligence
-        - generic [ref=f7e192]: "11"
-        - generic [ref=f7e193] [cursor=pointer]: "+0"
-        - generic [ref=f7e194] [cursor=pointer]: "+5"
-        - generic [ref=f7e195]:
-          - generic [ref=f7e196]:
-            - generic [ref=f7e197] [cursor=pointer]: Arcana (+0)
-            - text: ","
-          - generic [ref=f7e198]:
-            - generic [ref=f7e199] [cursor=pointer]: History (+0)
-            - text: ","
-          - generic [ref=f7e200]:
-            - generic [ref=f7e201] [cursor=pointer]: Investigation (+0)
-            - text: ","
-          - generic [ref=f7e202]:
-            - generic [ref=f7e203] [cursor=pointer]: Nature (+0)
-            - text: ","
-          - generic [ref=f7e204]: Religion (+5)
-      - generic [ref=f7e206]:
-        - generic [ref=f7e207] [cursor=pointer]: Wisdom
-        - generic [ref=f7e208]: "13"
-        - generic [ref=f7e209] [cursor=pointer]: "+1"
-        - generic [ref=f7e210] [cursor=pointer]: "+1"
-        - generic [ref=f7e211]:
-          - generic [ref=f7e212]:
-            - generic [ref=f7e213] [cursor=pointer]: Animal Handling (+1)
-            - text: ","
-          - generic [ref=f7e214]:
-            - generic [ref=f7e215] [cursor=pointer]: Insight (+6)
-            - text: ","
-          - generic [ref=f7e216]:
-            - generic [ref=f7e217] [cursor=pointer]: Medicine (+1)
-            - text: ","
-          - generic [ref=f7e218]:
-            - generic [ref=f7e219] [cursor=pointer]: Perception (+1)
-            - text: ","
-          - generic [ref=f7e220]: Survival (+1)
-      - generic [ref=f7e222]:
-        - generic [ref=f7e223] [cursor=pointer]: Charisma
-        - generic [ref=f7e224]: "17"
-        - generic [ref=f7e225] [cursor=pointer]: "+3"
-        - generic [ref=f7e226] [cursor=pointer]: "+3"
-        - generic [ref=f7e227]:
-          - generic [ref=f7e228]:
-            - generic [ref=f7e229] [cursor=pointer]: Deception (+3)
-            - text: ","
-          - generic [ref=f7e230]:
-            - generic [ref=f7e231] [cursor=pointer]: Intimidation (+3)
-            - text: ","
-          - generic [ref=f7e232]:
-            - generic [ref=f7e233] [cursor=pointer]: Performance (+3)
-            - text: ","
-          - generic [ref=f7e234]: Persuasion (+3)
-    - generic [ref=f7e236]:
-      - generic [ref=f7e237]:
-        - generic [ref=f7e238]: Actions
-        - generic [ref=f7e239]:
-          - generic [ref=f7e240]: Name
-          - generic [ref=f7e241]: Level
-          - generic [ref=f7e242]: Range
-          - generic [ref=f7e243]: Hit
-          - generic [ref=f7e244]: Damage
-          - generic [ref=f7e245]: Type
-          - generic [ref=f7e246]: Mastery
-          - generic [ref=f7e247] [cursor=pointer]: Shortsword
-          - generic [ref=f7e249]: 5 ft.
-          - generic [ref=f7e250] [cursor=pointer]: "+7"
-          - generic [ref=f7e251] [cursor=pointer]: 1d6+2
-          - generic [ref=f7e252]: Piercing
-          - generic [ref=f7e253] [cursor=pointer]: Vex
-        - generic [ref=f7e255]:
-          - generic [ref=f7e256] [cursor=pointer]: "Healing Hands:"
-          - text: As a Action, you touch a creature and roll a number of d4s equal to your Proficiency Bonus. The creature regains a number of Hit Points equal to the total rolled. Once you use this trait, you can't use it again until you finish a Long Rest.
-        - generic [ref=f7e257]: "Base Actions: Attack, Cast a Spell, Dash, Disengage, Dodge, Grapple, Help, Hide, Improvise, Ready, Search, Shove, Use an Object"
-      - generic [ref=f7e258]:
-        - generic [ref=f7e259]: Bonus Actions
-        - generic [ref=f7e260]:
-          - generic [ref=f7e261]:
-            - generic [ref=f7e262] [cursor=pointer]: "Celestial Revelation:"
-            - text: "When you reach character level 3, you can transform as a Bonus Action using one of the options below (choose the option each time you transform). The transformation lasts for 1 minute or until you end it (no action required). Once you transform, you can't do so again until you finish a Long Rest. Once on each of your turns before the transformation ends, you can deal extra damage to one target when you deal damage to it with an attack or a spell. The extra damage equals your Proficiency Bonus, and the extra damage's type is either Necrotic for Necrotic Shroud or Radiant for Heavenly Wings and Inner Radiance. Here are the transformation options:"
-          - generic [ref=f7e263]:
-            - generic [ref=f7e264] [cursor=pointer]: "Cunning Action:"
-            - text: "On your turn, you can take one of the following actions as a Bonus Action: Dash, Disengage, or Hide."
-          - generic [ref=f7e265]:
-            - generic [ref=f7e266] [cursor=pointer]: "Steady Aim:"
-            - text: As a Bonus Action, you give yourself Advantage on your next attack roll on the current turn. You can use this feature only if you haven't moved during this turn, and after you use it, your Speed is 0 until the end of the current turn.
-    - generic [ref=f7e267]:
-      - generic [ref=f7e268]: Reactions
-      - generic [ref=f7e269]:
-        - generic [ref=f7e270] [cursor=pointer]: "Uncanny Dodge:"
-        - text: When an attacker that you can see hits you with an attack roll, you can take a Reaction to halve the attack's damage against you (round down).
-      - generic [ref=f7e271]:
-        - generic [ref=f7e272] [cursor=pointer]: "Opportunity Attack:"
-        - text: Can attack creature that moves out of your reach
-    - generic [ref=f7e273]:
-      - generic [ref=f7e274]: Inventory
-      - generic [ref=f7e275]:
-        - generic [ref=f7e276]: "Equipped:"
-        - text: Shortsword
-    - generic [ref=f7e277]:
-      - generic [ref=f7e278]: Special Actions
-      - generic [ref=f7e279]:
-        - generic [ref=f7e280]: "Assassin's Tools:"
-        - text: Gain Disguise Kit and Poisoner's Kit, proficiency with them.
-      - generic [ref=f7e281]:
-        - generic [ref=f7e282]: "Assassinate:"
-        - text: "Initiative: Advantage on Initiative rolls. Surprising Strikes: During first round of each combat, Advantage on attack rolls against any creature that hasn't taken a turn. If Sneak Attack hits any target during that round, target takes extra damage equal to your Rogue level."
-      - generic [ref=f7e283]:
-        - generic [ref=f7e284]: "Cunning Strike:"
-        - text: "When you deal Sneak Attack damage, you can add one of the following Cunning Strike effects (each has a die cost - number of Sneak Attack damage dice you must forgo): Poison (Cost: 1d6). Add toxin, target makes Constitution save or has Poisoned condition for 1 minute (repeats save each turn). Must have Poisoner's Kit. Trip (Cost: 1d6). Large or smaller target makes Dexterity save or has Prone condition. Withdraw (Cost: 1d6). Immediately after attack, move up to half Speed without provoking Opportunity Attacks."
-      - generic [ref=f7e285]:
-        - generic [ref=f7e286]: "Devious Strikes:"
-        - text: "New Cunning Strike options: Daze (Cost: 2d6). Target makes Constitution save or on next turn can only do one of: move or take action or Bonus Action. Knock Out (Cost: 6d6). Target makes Constitution save or has Unconscious condition for 1 minute (repeats save at end of each turn). Obscure (Cost: 3d6). Target makes Dexterity save or has Blinded condition until end of its next turn."
-      - generic [ref=f7e287]:
-        - generic [ref=f7e288]: "Envenom Weapons:"
-        - text: When using Poison option of Cunning Strike, target also takes 2d6 Poison damage on failed save. This damage ignores Resistance to Poison damage.
-      - generic [ref=f7e289]:
-        - generic [ref=f7e290]: "Evasion:"
-        - text: When you're subjected to an effect that allows a Dexterity saving throw to take only half damage, you take no damage if you succeed and only half damage if you fail. Can't use if Incapacitated.
-      - generic [ref=f7e291]:
-        - generic [ref=f7e292]: "Improved Cunning Strike:"
-        - text: You can use up to two Cunning Strike effects when you deal Sneak Attack damage, paying the die cost for each effect.
-      - generic [ref=f7e293]:
-        - generic [ref=f7e294]: "Infiltration Expertise:"
-        - text: "Masterful Mimicry: unerringly mimic another person's speech, handwriting, or both if studied for 1 hour. Roving Aim: Speed not reduced to 0 by Steady Aim."
-      - generic [ref=f7e295]:
-        - generic [ref=f7e296]: "Reliable Talent:"
-        - text: Whenever you make an ability check that uses one of your skill or tool proficiencies, you can treat a d20 roll of 9 or lower as a 10.
-      - generic [ref=f7e297]:
-        - generic [ref=f7e298]: "Sneak Attack:"
-        - text: You know how to strike subtly and exploit a foe's distraction. Once per turn, you can deal an extra 1d6 damage to one creature you hit with an attack roll if you have Advantage on the roll and the attack uses a Finesse or a Ranged weapon. The extra damage's type is the same as the weapon's type. You don't need Advantage on the attack roll if at least one of your allies is within 5 feet of the target, the ally doesn't have the Incapacitated condition, and you don't have Disadvantage on the attack roll. The extra damage increases as you gain Rogue levels.
-      - generic [ref=f7e299]:
-        - generic [ref=f7e300] [cursor=pointer]: "Weapon Mastery:"
-        - text: Your training with weapons allows you to use the mastery properties of two kinds of weapons of your choice with which you have proficiency. Whenever you finish a Long Rest, you can change the kinds of weapons you chose.
-    - generic [ref=f7e302]:
-      - generic [ref=f7e303]: Character Advancement
-      - generic [ref=f7e304]:
-        - generic [ref=f7e305]: "Expertise:"
-        - text: You gain Expertise in two more of your skill proficiencies of your choice.
-      - generic [ref=f7e306]:
-        - generic [ref=f7e307]: "LightBearer:"
-        - text: You know the Light cantrip. Charisma is your spellcasting ability for it.
+- generic [ref=f4e6]:
+  - navigation [ref=f4e7]:
+    - generic [ref=f4e8]: test-campaign
+    - generic [ref=f4e10]: Initiative
+    - button "Campaigns" [ref=f4e13] [cursor=pointer]
+    - generic [ref=f4e15]:
+      - generic [ref=f4e16]: Characters
+      - generic [ref=f4e17]:
+        - button "Add Character" [ref=f4e18] [cursor=pointer]
+        - button "AasimarTest" [ref=f4e20] [cursor=pointer]
+        - button "AberrantSorcerer" [ref=f4e21] [cursor=pointer]
+        - button "ArcaneTricksterTest" [ref=f4e22] [cursor=pointer]
+        - button "Disciplined_Monk" [ref=f4e23] [cursor=pointer]
+        - button "DivinationWizard" [ref=f4e24] [cursor=pointer]
+        - button "Divine_Cleric" [ref=f4e25] [cursor=pointer]
+        - button "DraconicDragon" [ref=f4e26] [cursor=pointer]
+        - button "DraconicSorcerer" [ref=f4e27] [cursor=pointer]
+        - button "ElderPaladin" [ref=f4e28] [cursor=pointer]
+        - button "EvasiveFighter" [ref=f4e29] [cursor=pointer]
+        - button "FeyRanger" [ref=f4e30] [cursor=pointer]
+        - button "GoliathFireGiant" [ref=f4e31] [cursor=pointer]
+        - button "HeroesFeastBard" [ref=f4e32] [cursor=pointer]
+        - button "HexWarlock" [ref=f4e33] [cursor=pointer]
+        - button "LightfootHalfling" [ref=f4e34] [cursor=pointer]
+        - button "War_Cleric" [ref=f4e35] [cursor=pointer]
+        - button "Wild_Sage_Druid" [ref=f4e36] [cursor=pointer]
+    - button "Encounters" [ref=f4e37] [cursor=pointer]
+    - button "Factions" [ref=f4e39] [cursor=pointer]
+    - button "Initiative" [ref=f4e41] [cursor=pointer]
+    - button "Log" [ref=f4e43] [cursor=pointer]
+    - button "Maps" [ref=f4e45] [cursor=pointer]
+    - button "NPCs" [ref=f4e47] [cursor=pointer]
+    - button "Notes" [ref=f4e49] [cursor=pointer]
+    - button "Quests" [ref=f4e51] [cursor=pointer]
+    - button "Rules" [ref=f4e53] [cursor=pointer]
+    - button "Settlements" [ref=f4e56] [cursor=pointer]
+    - button "Admin" [ref=f4e59] [cursor=pointer]
+    - generic [ref=f4e61]:
+      - button "d4" [ref=f4e62] [cursor=pointer]:
+        - img [ref=f4e63]:
+          - generic [ref=f4e65]: "4"
+      - button "d6" [ref=f4e67] [cursor=pointer]
+      - button "d8" [ref=f4e70] [cursor=pointer]:
+        - img [ref=f4e71]:
+          - generic [ref=f4e73]: "8"
+      - button "d10" [ref=f4e75] [cursor=pointer]:
+        - img [ref=f4e76]:
+          - generic [ref=f4e78]: "10"
+      - button "d12" [ref=f4e80] [cursor=pointer]:
+        - img [ref=f4e81]:
+          - generic [ref=f4e83]: "12"
+      - button "d20" [ref=f4e85] [cursor=pointer]
+      - button "d100" [ref=f4e88] [cursor=pointer]:
+        - img [ref=f4e89]:
+          - generic [ref=f4e92]: "%"
+  - generic [ref=f4e564]:
+    - heading "Initiative (round 4)" [level=4] [ref=f4e565]
+    - generic [ref=f4e566]:
+      - generic [ref=f4e567] [cursor=pointer]:
+        - button "Remove NPC" [ref=f4e568]
+        - img "Unicorn 1" [ref=f4e573]
+        - textbox [ref=f4e576]: Unicorn 1
+        - generic [ref=f4e581]:
+          - generic [ref=f4e582]: HP
+          - spinbutton "Unicorn 1 current HP" [ref=f4e583]: "97"
+          - generic [ref=f4e584]: /
+          - spinbutton "Unicorn 1 max HP" [ref=f4e585]: "97"
+        - generic [ref=f4e586]:
+          - text: Initiative
+          - spinbutton "Init" [ref=f4e587]: "28"
+        - generic [ref=f4e588]:
+          - text: Target
+          - combobox [ref=f4e589]:
+            - option "— No Target —" [selected]
+            - option "Ogre Zombie 1"
+            - option "AasimarTest"
+            - option "AberrantSorcerer"
+            - option "ArcaneTricksterTest"
+            - option "Disciplined_Monk"
+            - option "DivinationWizard"
+            - option "Divine_Cleric"
+            - option "DraconicDragon"
+            - option "DraconicSorcerer"
+            - option "ElderPaladin"
+            - option "EvasiveFighter"
+            - option "FeyRanger"
+            - option "GoliathFireGiant"
+            - option "HeroesFeastBard"
+            - option "HexWarlock"
+            - option "LightfootHalfling"
+            - option "War_Cleric"
+            - option "Wild_Sage_Druid"
+        - button "Add condition, effect, or concentration to Unicorn 1" [ref=f4e591]: Add
+      - generic [ref=f4e593] [cursor=pointer]:
+        - button "Remove NPC" [ref=f4e594]
+        - img "Ogre Zombie 1" [ref=f4e599]
+        - textbox [active] [ref=f4e602]: Ogre Zombie 1
+        - generic [ref=f4e607]:
+          - generic [ref=f4e608]: HP
+          - spinbutton "Ogre Zombie 1 current HP" [ref=f4e609]: "24"
+          - generic [ref=f4e610]: /
+          - spinbutton "Ogre Zombie 1 max HP" [ref=f4e611]: "85"
+        - generic [ref=f4e612]:
+          - text: Initiative
+          - spinbutton "Init" [ref=f4e613]: "10"
+        - generic [ref=f4e614]:
+          - text: Target
+          - combobox [ref=f4e615]:
+            - option "— No Target —" [selected]
+            - option "Unicorn 1"
+            - option "AasimarTest"
+            - option "AberrantSorcerer"
+            - option "ArcaneTricksterTest"
+            - option "Disciplined_Monk"
+            - option "DivinationWizard"
+            - option "Divine_Cleric"
+            - option "DraconicDragon"
+            - option "DraconicSorcerer"
+            - option "ElderPaladin"
+            - option "EvasiveFighter"
+            - option "FeyRanger"
+            - option "GoliathFireGiant"
+            - option "HeroesFeastBard"
+            - option "HexWarlock"
+            - option "LightfootHalfling"
+            - option "War_Cleric"
+            - option "Wild_Sage_Druid"
+        - button "Add condition, effect, or concentration to Ogre Zombie 1" [ref=f4e617]: Add
+      - generic [ref=f4e619] [cursor=pointer]:
+        - button "A" [ref=f4e621]
+        - generic [ref=f4e623]: AasimarTest
+        - generic [ref=f4e628]:
+          - generic [ref=f4e629]: HP
+          - spinbutton "AasimarTest current HP" [ref=f4e630]: "101"
+          - generic [ref=f4e631]: /
+          - generic [ref=f4e632]: "101"
+        - generic [ref=f4e633]:
+          - text: Initiative
+          - spinbutton "Init" [ref=f4e634]
+        - generic [ref=f4e635]:
+          - text: Target
+          - combobox [ref=f4e636]:
+            - option "— No Target —" [selected]
+            - option "Unicorn 1"
+            - option "Ogre Zombie 1"
+            - option "AberrantSorcerer"
+            - option "ArcaneTricksterTest"
+            - option "Disciplined_Monk"
+            - option "DivinationWizard"
+            - option "Divine_Cleric"
+            - option "DraconicDragon"
+            - option "DraconicSorcerer"
+            - option "ElderPaladin"
+            - option "EvasiveFighter"
+            - option "FeyRanger"
+            - option "GoliathFireGiant"
+            - option "HeroesFeastBard"
+            - option "HexWarlock"
+            - option "LightfootHalfling"
+            - option "War_Cleric"
+            - option "Wild_Sage_Druid"
+        - button "Add condition, effect, or concentration to AasimarTest" [ref=f4e638]: Add
+      - generic [ref=f4e640] [cursor=pointer]:
+        - button "A" [ref=f4e642]
+        - generic [ref=f4e644]: AberrantSorcerer
+        - generic [ref=f4e649]:
+          - generic [ref=f4e650]: HP
+          - spinbutton "AberrantSorcerer current HP" [ref=f4e651]: "20"
+          - generic [ref=f4e652]: /
+          - generic [ref=f4e653]: "20"
+        - generic [ref=f4e654]:
+          - text: Initiative
+          - spinbutton "Init" [ref=f4e655]
+        - generic [ref=f4e656]:
+          - text: Target
+          - combobox [ref=f4e657]:
+            - option "— No Target —" [selected]
+            - option "Unicorn 1"
+            - option "Ogre Zombie 1"
+            - option "AasimarTest"
+            - option "ArcaneTricksterTest"
+            - option "Disciplined_Monk"
+            - option "DivinationWizard"
+            - option "Divine_Cleric"
+            - option "DraconicDragon"
+            - option "DraconicSorcerer"
+            - option "ElderPaladin"
+            - option "EvasiveFighter"
+            - option "FeyRanger"
+            - option "GoliathFireGiant"
+            - option "HeroesFeastBard"
+            - option "HexWarlock"
+            - option "LightfootHalfling"
+            - option "War_Cleric"
+            - option "Wild_Sage_Druid"
+        - button "Add condition, effect, or concentration to AberrantSorcerer" [ref=f4e659]: Add
+      - generic [ref=f4e661] [cursor=pointer]:
+        - button "A" [ref=f4e663]
+        - generic [ref=f4e665]: ArcaneTricksterTest
+        - generic [ref=f4e670]:
+          - generic [ref=f4e671]: HP
+          - spinbutton "ArcaneTricksterTest current HP" [ref=f4e672]: "24"
+          - generic [ref=f4e673]: /
+          - generic [ref=f4e674]: "24"
+        - generic [ref=f4e675]:
+          - text: Initiative
+          - spinbutton "Init" [ref=f4e676]
+        - generic [ref=f4e677]:
+          - text: Target
+          - combobox [ref=f4e678]:
+            - option "— No Target —" [selected]
+            - option "Unicorn 1"
+            - option "Ogre Zombie 1"
+            - option "AasimarTest"
+            - option "AberrantSorcerer"
+            - option "Disciplined_Monk"
+            - option "DivinationWizard"
+            - option "Divine_Cleric"
+            - option "DraconicDragon"
+            - option "DraconicSorcerer"
+            - option "ElderPaladin"
+            - option "EvasiveFighter"
+            - option "FeyRanger"
+            - option "GoliathFireGiant"
+            - option "HeroesFeastBard"
+            - option "HexWarlock"
+            - option "LightfootHalfling"
+            - option "War_Cleric"
+            - option "Wild_Sage_Druid"
+        - button "Add condition, effect, or concentration to ArcaneTricksterTest" [ref=f4e680]: Add
+      - generic [ref=f4e682] [cursor=pointer]:
+        - button "D" [ref=f4e684]
+        - generic [ref=f4e686]: Disciplined_Monk
+        - generic [ref=f4e691]:
+          - generic [ref=f4e692]: HP
+          - spinbutton "Disciplined_Monk current HP" [ref=f4e693]: "122"
+          - generic [ref=f4e694]: /
+          - generic [ref=f4e695]: "122"
+        - generic [ref=f4e696]:
+          - text: Initiative
+          - spinbutton "Init" [ref=f4e697]
+        - generic [ref=f4e698]:
+          - text: Target
+          - combobox [ref=f4e699]:
+            - option "— No Target —" [selected]
+            - option "Unicorn 1"
+            - option "Ogre Zombie 1"
+            - option "AasimarTest"
+            - option "AberrantSorcerer"
+            - option "ArcaneTricksterTest"
+            - option "DivinationWizard"
+            - option "Divine_Cleric"
+            - option "DraconicDragon"
+            - option "DraconicSorcerer"
+            - option "ElderPaladin"
+            - option "EvasiveFighter"
+            - option "FeyRanger"
+            - option "GoliathFireGiant"
+            - option "HeroesFeastBard"
+            - option "HexWarlock"
+            - option "LightfootHalfling"
+            - option "War_Cleric"
+            - option "Wild_Sage_Druid"
+        - button "Add condition, effect, or concentration to Disciplined_Monk" [ref=f4e701]: Add
+      - generic [ref=f4e703] [cursor=pointer]:
+        - button "D" [ref=f4e705]
+        - generic [ref=f4e707]: DivinationWizard
+        - generic [ref=f4e712]:
+          - generic [ref=f4e713]: HP
+          - spinbutton "DivinationWizard current HP" [ref=f4e714]: "82"
+          - generic [ref=f4e715]: /
+          - generic [ref=f4e716]: "82"
+        - generic [ref=f4e717]:
+          - text: Initiative
+          - spinbutton "Init" [ref=f4e718]
+        - generic [ref=f4e719]:
+          - text: Target
+          - combobox [ref=f4e720]:
+            - option "— No Target —" [selected]
+            - option "Unicorn 1"
+            - option "Ogre Zombie 1"
+            - option "AasimarTest"
+            - option "AberrantSorcerer"
+            - option "ArcaneTricksterTest"
+            - option "Disciplined_Monk"
+            - option "Divine_Cleric"
+            - option "DraconicDragon"
+            - option "DraconicSorcerer"
+            - option "ElderPaladin"
+            - option "EvasiveFighter"
+            - option "FeyRanger"
+            - option "GoliathFireGiant"
+            - option "HeroesFeastBard"
+            - option "HexWarlock"
+            - option "LightfootHalfling"
+            - option "War_Cleric"
+            - option "Wild_Sage_Druid"
+        - button "Add condition, effect, or concentration to DivinationWizard" [ref=f4e722]: Add
+      - generic [ref=f4e724] [cursor=pointer]:
+        - button "D" [ref=f4e726]
+        - generic [ref=f4e728]: Divine_Cleric
+        - generic [ref=f4e733]:
+          - generic [ref=f4e734]: HP
+          - spinbutton "Divine_Cleric current HP" [ref=f4e735]: "122"
+          - generic [ref=f4e736]: /
+          - generic [ref=f4e737]: "122"
+        - generic [ref=f4e738]:
+          - text: Initiative
+          - spinbutton "Init" [ref=f4e739]
+        - generic [ref=f4e740]:
+          - text: Target
+          - combobox [ref=f4e741]:
+            - option "— No Target —" [selected]
+            - option "Unicorn 1"
+            - option "Ogre Zombie 1"
+            - option "AasimarTest"
+            - option "AberrantSorcerer"
+            - option "ArcaneTricksterTest"
+            - option "Disciplined_Monk"
+            - option "DivinationWizard"
+            - option "DraconicDragon"
+            - option "DraconicSorcerer"
+            - option "ElderPaladin"
+            - option "EvasiveFighter"
+            - option "FeyRanger"
+            - option "GoliathFireGiant"
+            - option "HeroesFeastBard"
+            - option "HexWarlock"
+            - option "LightfootHalfling"
+            - option "War_Cleric"
+            - option "Wild_Sage_Druid"
+        - button "Add condition, effect, or concentration to Divine_Cleric" [ref=f4e743]: Add
+      - generic [ref=f4e745] [cursor=pointer]:
+        - button "D" [ref=f4e747]
+        - generic [ref=f4e749]: DraconicDragon
+        - generic [ref=f4e754]:
+          - generic [ref=f4e755]: HP
+          - spinbutton "DraconicDragon current HP" [ref=f4e756]: "165"
+          - generic [ref=f4e757]: /
+          - generic [ref=f4e758]: "165"
+        - generic [ref=f4e759]:
+          - text: Initiative
+          - spinbutton "Init" [ref=f4e760]
+        - generic [ref=f4e761]:
+          - text: Target
+          - combobox [ref=f4e762]:
+            - option "— No Target —" [selected]
+            - option "Unicorn 1"
+            - option "Ogre Zombie 1"
+            - option "AasimarTest"
+            - option "AberrantSorcerer"
+            - option "ArcaneTricksterTest"
+            - option "Disciplined_Monk"
+            - option "DivinationWizard"
+            - option "Divine_Cleric"
+            - option "DraconicSorcerer"
+            - option "ElderPaladin"
+            - option "EvasiveFighter"
+            - option "FeyRanger"
+            - option "GoliathFireGiant"
+            - option "HeroesFeastBard"
+            - option "HexWarlock"
+            - option "LightfootHalfling"
+            - option "War_Cleric"
+            - option "Wild_Sage_Druid"
+        - button "Add condition, effect, or concentration to DraconicDragon" [ref=f4e764]: Add
+      - generic [ref=f4e766] [cursor=pointer]:
+        - button "D" [ref=f4e768]
+        - generic [ref=f4e770]: DraconicSorcerer
+        - generic [ref=f4e775]:
+          - generic [ref=f4e776]: HP
+          - spinbutton "DraconicSorcerer current HP" [ref=f4e777]: "44"
+          - generic [ref=f4e778]: /
+          - generic [ref=f4e779]: "44"
+        - generic [ref=f4e780]:
+          - text: Initiative
+          - spinbutton "Init" [ref=f4e781]
+        - generic [ref=f4e782]:
+          - text: Target
+          - combobox [ref=f4e783]:
+            - option "— No Target —" [selected]
+            - option "Unicorn 1"
+            - option "Ogre Zombie 1"
+            - option "AasimarTest"
+            - option "AberrantSorcerer"
+            - option "ArcaneTricksterTest"
+            - option "Disciplined_Monk"
+            - option "DivinationWizard"
+            - option "Divine_Cleric"
+            - option "DraconicDragon"
+            - option "ElderPaladin"
+            - option "EvasiveFighter"
+            - option "FeyRanger"
+            - option "GoliathFireGiant"
+            - option "HeroesFeastBard"
+            - option "HexWarlock"
+            - option "LightfootHalfling"
+            - option "War_Cleric"
+            - option "Wild_Sage_Druid"
+        - button "Add condition, effect, or concentration to DraconicSorcerer" [ref=f4e785]: Add
+      - generic [ref=f4e787] [cursor=pointer]:
+        - button "E" [ref=f4e789]
+        - generic [ref=f4e791]: ElderPaladin
+        - generic [ref=f4e796]:
+          - generic [ref=f4e797]: HP
+          - spinbutton "ElderPaladin current HP" [ref=f4e798]: "224"
+          - generic [ref=f4e799]: /
+          - generic [ref=f4e800]: "224"
+        - generic [ref=f4e801]:
+          - text: Initiative
+          - spinbutton "Init" [ref=f4e802]
+        - generic [ref=f4e803]:
+          - text: Target
+          - combobox [ref=f4e804]:
+            - option "— No Target —" [selected]
+            - option "Unicorn 1"
+            - option "Ogre Zombie 1"
+            - option "AasimarTest"
+            - option "AberrantSorcerer"
+            - option "ArcaneTricksterTest"
+            - option "Disciplined_Monk"
+            - option "DivinationWizard"
+            - option "Divine_Cleric"
+            - option "DraconicDragon"
+            - option "DraconicSorcerer"
+            - option "EvasiveFighter"
+            - option "FeyRanger"
+            - option "GoliathFireGiant"
+            - option "HeroesFeastBard"
+            - option "HexWarlock"
+            - option "LightfootHalfling"
+            - option "War_Cleric"
+            - option "Wild_Sage_Druid"
+        - button "Add condition, effect, or concentration to ElderPaladin" [ref=f4e806]: Add
+      - generic [ref=f4e808] [cursor=pointer]:
+        - button "E" [ref=f4e810]
+        - generic [ref=f4e812]: EvasiveFighter
+        - generic [ref=f4e817]:
+          - generic [ref=f4e818]: HP
+          - spinbutton "EvasiveFighter current HP" [ref=f4e819]: "94"
+          - generic [ref=f4e820]: /
+          - generic [ref=f4e821]: "94"
+        - generic [ref=f4e822]:
+          - text: Initiative
+          - spinbutton "Init" [ref=f4e823]
+        - generic [ref=f4e824]:
+          - text: Target
+          - combobox [ref=f4e825]:
+            - option "— No Target —" [selected]
+            - option "Unicorn 1"
+            - option "Ogre Zombie 1"
+            - option "AasimarTest"
+            - option "AberrantSorcerer"
+            - option "ArcaneTricksterTest"
+            - option "Disciplined_Monk"
+            - option "DivinationWizard"
+            - option "Divine_Cleric"
+            - option "DraconicDragon"
+            - option "DraconicSorcerer"
+            - option "ElderPaladin"
+            - option "FeyRanger"
+            - option "GoliathFireGiant"
+            - option "HeroesFeastBard"
+            - option "HexWarlock"
+            - option "LightfootHalfling"
+            - option "War_Cleric"
+            - option "Wild_Sage_Druid"
+        - generic [ref=f4e826]:
+          - generic [ref=f4e827]:
+            - 'generic "Inspiring Movement: the creature does not provoke opportunity attacks when moving." [ref=f4e828]': Insp. Move
+            - button "Remove effect" [ref=f4e830]
+          - button "Add condition, effect, or concentration to EvasiveFighter" [ref=f4e832]: Add
+      - generic [ref=f4e834] [cursor=pointer]:
+        - button "F" [ref=f4e836]
+        - generic [ref=f4e838]: FeyRanger
+        - generic [ref=f4e843]:
+          - generic [ref=f4e844]: HP
+          - spinbutton "FeyRanger current HP" [ref=f4e845]: "89"
+          - generic [ref=f4e846]: /
+          - generic [ref=f4e847]: "89"
+        - generic [ref=f4e848]:
+          - text: Initiative
+          - spinbutton "Init" [ref=f4e849]
+        - generic [ref=f4e850]:
+          - text: Target
+          - combobox [ref=f4e851]:
+            - option "— No Target —" [selected]
+            - option "Unicorn 1"
+            - option "Ogre Zombie 1"
+            - option "AasimarTest"
+            - option "AberrantSorcerer"
+            - option "ArcaneTricksterTest"
+            - option "Disciplined_Monk"
+            - option "DivinationWizard"
+            - option "Divine_Cleric"
+            - option "DraconicDragon"
+            - option "DraconicSorcerer"
+            - option "ElderPaladin"
+            - option "EvasiveFighter"
+            - option "GoliathFireGiant"
+            - option "HeroesFeastBard"
+            - option "HexWarlock"
+            - option "LightfootHalfling"
+            - option "War_Cleric"
+            - option "Wild_Sage_Druid"
+        - button "Add condition, effect, or concentration to FeyRanger" [ref=f4e853]: Add
+      - generic [ref=f4e855] [cursor=pointer]:
+        - button "G" [ref=f4e857]
+        - generic [ref=f4e859]: GoliathFireGiant
+        - generic [ref=f4e864]:
+          - generic [ref=f4e865]: HP
+          - spinbutton "GoliathFireGiant current HP" [ref=f4e866]: "49"
+          - generic [ref=f4e867]: /
+          - generic [ref=f4e868]: "49"
+        - generic [ref=f4e869]:
+          - text: Initiative
+          - spinbutton "Init" [ref=f4e870]
+        - generic [ref=f4e871]:
+          - text: Target
+          - combobox [ref=f4e872]:
+            - option "— No Target —" [selected]
+            - option "Unicorn 1"
+            - option "Ogre Zombie 1"
+            - option "AasimarTest"
+            - option "AberrantSorcerer"
+            - option "ArcaneTricksterTest"
+            - option "Disciplined_Monk"
+            - option "DivinationWizard"
+            - option "Divine_Cleric"
+            - option "DraconicDragon"
+            - option "DraconicSorcerer"
+            - option "ElderPaladin"
+            - option "EvasiveFighter"
+            - option "FeyRanger"
+            - option "HeroesFeastBard"
+            - option "HexWarlock"
+            - option "LightfootHalfling"
+            - option "War_Cleric"
+            - option "Wild_Sage_Druid"
+        - generic [ref=f4e873]:
+          - generic [ref=f4e874]:
+            - 'generic "Inspiring Movement: the creature does not provoke opportunity attacks when moving." [ref=f4e875]': Insp. Move
+            - button "Remove effect" [ref=f4e877]
+          - button "Add condition, effect, or concentration to GoliathFireGiant" [ref=f4e879]: Add
+      - generic [ref=f4e881] [cursor=pointer]:
+        - button "H" [ref=f4e883]
+        - generic [ref=f4e885]: HeroesFeastBard
+        - generic [ref=f4e890]:
+          - generic [ref=f4e891]: HP
+          - spinbutton "HeroesFeastBard current HP" [ref=f4e892]: "139"
+          - generic [ref=f4e893]: /
+          - generic [ref=f4e894]: "139"
+        - generic [ref=f4e895]:
+          - text: Initiative
+          - spinbutton "Init" [ref=f4e896]
+        - generic [ref=f4e897]:
+          - text: Target
+          - combobox [ref=f4e898]:
+            - option "— No Target —" [selected]
+            - option "Unicorn 1"
+            - option "Ogre Zombie 1"
+            - option "AasimarTest"
+            - option "AberrantSorcerer"
+            - option "ArcaneTricksterTest"
+            - option "Disciplined_Monk"
+            - option "DivinationWizard"
+            - option "Divine_Cleric"
+            - option "DraconicDragon"
+            - option "DraconicSorcerer"
+            - option "ElderPaladin"
+            - option "EvasiveFighter"
+            - option "FeyRanger"
+            - option "GoliathFireGiant"
+            - option "HexWarlock"
+            - option "LightfootHalfling"
+            - option "War_Cleric"
+            - option "Wild_Sage_Druid"
+        - button "Add condition, effect, or concentration to HeroesFeastBard" [ref=f4e900]: Add
+      - generic [ref=f4e902] [cursor=pointer]:
+        - button "H" [ref=f4e904]
+        - generic [ref=f4e906]: HexWarlock
+        - generic [ref=f4e911]:
+          - generic [ref=f4e912]: HP
+          - spinbutton "HexWarlock current HP" [ref=f4e913]: "73"
+          - generic [ref=f4e914]: /
+          - generic [ref=f4e915]: "73"
+        - generic [ref=f4e916]:
+          - text: Initiative
+          - spinbutton "Init" [ref=f4e917]
+        - generic [ref=f4e918]:
+          - text: Target
+          - combobox [ref=f4e919]:
+            - option "— No Target —"
+            - option "Unicorn 1"
+            - option "Ogre Zombie 1" [selected]
+            - option "AasimarTest"
+            - option "AberrantSorcerer"
+            - option "ArcaneTricksterTest"
+            - option "Disciplined_Monk"
+            - option "DivinationWizard"
+            - option "Divine_Cleric"
+            - option "DraconicDragon"
+            - option "DraconicSorcerer"
+            - option "ElderPaladin"
+            - option "EvasiveFighter"
+            - option "FeyRanger"
+            - option "GoliathFireGiant"
+            - option "HeroesFeastBard"
+            - option "LightfootHalfling"
+            - option "War_Cleric"
+            - option "Wild_Sage_Druid"
+        - button "Add condition, effect, or concentration to HexWarlock" [ref=f4e921]: Add
+      - generic [ref=f4e923] [cursor=pointer]:
+        - button "L" [ref=f4e925]
+        - generic [ref=f4e927]: LightfootHalfling
+        - generic [ref=f4e932]:
+          - generic [ref=f4e933]: HP
+          - spinbutton "LightfootHalfling current HP" [ref=f4e934]: "28"
+          - generic [ref=f4e935]: /
+          - generic [ref=f4e936]: "28"
+        - generic [ref=f4e937]:
+          - text: Initiative
+          - spinbutton "Init" [ref=f4e938]
+        - generic [ref=f4e939]:
+          - text: Target
+          - combobox [ref=f4e940]:
+            - option "— No Target —" [selected]
+            - option "Unicorn 1"
+            - option "Ogre Zombie 1"
+            - option "AasimarTest"
+            - option "AberrantSorcerer"
+            - option "ArcaneTricksterTest"
+            - option "Disciplined_Monk"
+            - option "DivinationWizard"
+            - option "Divine_Cleric"
+            - option "DraconicDragon"
+            - option "DraconicSorcerer"
+            - option "ElderPaladin"
+            - option "EvasiveFighter"
+            - option "FeyRanger"
+            - option "GoliathFireGiant"
+            - option "HeroesFeastBard"
+            - option "HexWarlock"
+            - option "War_Cleric"
+            - option "Wild_Sage_Druid"
+        - button "Add condition, effect, or concentration to LightfootHalfling" [ref=f4e942]: Add
+      - generic [ref=f4e944] [cursor=pointer]:
+        - button "W" [ref=f4e946]
+        - generic [ref=f4e948]: War_Cleric
+        - generic [ref=f4e953]:
+          - generic [ref=f4e954]: HP
+          - spinbutton "War_Cleric current HP" [ref=f4e955]: "45"
+          - generic [ref=f4e956]: /
+          - generic [ref=f4e957]: "45"
+        - generic [ref=f4e958]:
+          - text: Initiative
+          - spinbutton "Init" [ref=f4e959]
+        - generic [ref=f4e960]:
+          - text: Target
+          - combobox [ref=f4e961]:
+            - option "— No Target —" [selected]
+            - option "Unicorn 1"
+            - option "Ogre Zombie 1"
+            - option "AasimarTest"
+            - option "AberrantSorcerer"
+            - option "ArcaneTricksterTest"
+            - option "Disciplined_Monk"
+            - option "DivinationWizard"
+            - option "Divine_Cleric"
+            - option "DraconicDragon"
+            - option "DraconicSorcerer"
+            - option "ElderPaladin"
+            - option "EvasiveFighter"
+            - option "FeyRanger"
+            - option "GoliathFireGiant"
+            - option "HeroesFeastBard"
+            - option "HexWarlock"
+            - option "LightfootHalfling"
+            - option "Wild_Sage_Druid"
+        - button "Add condition, effect, or concentration to War_Cleric" [ref=f4e963]: Add
+      - generic [ref=f4e965] [cursor=pointer]:
+        - button "W" [ref=f4e967]
+        - generic [ref=f4e969]: Wild_Sage_Druid
+        - generic [ref=f4e974]:
+          - generic [ref=f4e975]: HP
+          - spinbutton "Wild_Sage_Druid current HP" [ref=f4e976]: "143"
+          - generic [ref=f4e977]: /
+          - generic [ref=f4e978]: "143"
+        - generic [ref=f4e979]:
+          - text: Initiative
+          - spinbutton "Init" [ref=f4e980]
+        - generic [ref=f4e981]:
+          - text: Target
+          - combobox [ref=f4e982]:
+            - option "— No Target —" [selected]
+            - option "Unicorn 1"
+            - option "Ogre Zombie 1"
+            - option "AasimarTest"
+            - option "AberrantSorcerer"
+            - option "ArcaneTricksterTest"
+            - option "Disciplined_Monk"
+            - option "DivinationWizard"
+            - option "Divine_Cleric"
+            - option "DraconicDragon"
+            - option "DraconicSorcerer"
+            - option "ElderPaladin"
+            - option "EvasiveFighter"
+            - option "FeyRanger"
+            - option "GoliathFireGiant"
+            - option "HeroesFeastBard"
+            - option "HexWarlock"
+            - option "LightfootHalfling"
+            - option "War_Cleric"
+        - button "Add condition, effect, or concentration to Wild_Sage_Druid" [ref=f4e984]: Add
+    - generic [ref=f4e986]:
+      - button "Clear" [ref=f4e987] [cursor=pointer]
+      - button "+ NPC" [ref=f4e988] [cursor=pointer]
+      - button "← Prev" [ref=f4e989] [cursor=pointer]
+      - button "Next →" [ref=f4e990] [cursor=pointer]
+    - generic [ref=f4e991]:
+      - generic [ref=f4e992]: Loot
+      - button "Generate Loot" [ref=f4e994] [cursor=pointer]

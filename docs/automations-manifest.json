@@ -260,7 +260,7 @@
       "handler": "src/services/combat/automation/handlers/classFeatureHandler.js",
       "router": "src/services/combat/automation/routers/classFeatureRouter.js",
       "infoBuilder": "src/services/combat/automation/infoBuilders/classFeatureInfoBuilder.js",
-      "verified": "not verified",
+      "verified": "verified",
       "class": "Druid",
       "triggerConditions": "verified",
       "expectedBehavior": "The size of the Emanation created by your Wrath of the Sea increases to 10 feet. In addition, you gain a Swim Speed equal to your Speed."
@@ -1840,7 +1840,7 @@
       "handler": "src/services/combat/automation/handlers/spellHandler.js",
       "router": "src/services/combat/automation/routers/spellRouter.js",
       "infoBuilder": "src/services/combat/automation/infoBuilders/spellInfoBuilder.js",
-      "verified": "not verified",
+      "verified": "broken \u2014 see .opencode/plans/bug-sp-037-dominate-person.md",
       "class": "Spell",
       "triggerConditions": "",
       "expectedBehavior": "One Humanoid you can see within range must succeed on a Wisdom saving throw or have the Charmed condition for the duration. The target has Advantage on the save if you or your allies are fighting it. Whenever the target takes damage, it repeats the save, ending the spell on itself on a success. You have a telepathic link with the Charmed target while the two of you are on the same plane of existence. On your turn, you can use this link to issue commands to the target (no action required), such as \"Attack that creature,\" \"Move over there,\" or \"Fetch that object.\" The target does its best to obey on its turn. If it completes an order and doesn't receive further direction from you, it acts and moves as it likes, focusing on protecting itself. You can command the target to take a Reaction but must take your own Reaction to do so."
@@ -2043,7 +2043,7 @@
       "handler": "src/services/combat/automation/handlers/classFeatureHandler.js",
       "router": "src/services/combat/automation/routers/classFeatureRouter.js",
       "infoBuilder": "src/services/combat/automation/infoBuilders/classFeatureInfoBuilder.js",
-      "verified": "not verified",
+      "verified": "broken \u2014 see .opencode/plans/bug-cla-109-eldritch-strike-never-rearms.md",
       "class": "Fighter",
       "triggerConditions": "Trigger: weapon_attack_hit; Once per turn: yes",
       "expectedBehavior": "When you hit with a weapon attack, target has Disadvantage on next saving throw against your spell."
@@ -2294,7 +2294,7 @@
       "handler": "src/services/combat/automation/handlers/classFeatureHandler.js",
       "router": "src/services/combat/automation/routers/classFeatureRouter.js",
       "infoBuilder": "src/services/combat/automation/infoBuilders/classFeatureInfoBuilder.js",
-      "verified": "not verified",
+      "verified": "broken \u2014 see .opencode/plans/bug-cla-128-expert-divination-passives-gate-never-populated.md",
       "class": "Wizard",
       "triggerConditions": "Action: passive",
       "expectedBehavior": "When you cast a Divination spell using a level 2+ spell slot, you regain one expended spell slot. The slot must be lower than the slot you expended and can't be higher than level 5."
@@ -2403,7 +2403,7 @@
       "handler": "src/services/combat/automation/handlers/spellHandler.js",
       "router": "src/services/combat/automation/routers/spellRouter.js",
       "infoBuilder": "src/services/combat/automation/infoBuilders/spellInfoBuilder.js",
-      "verified": "not verified",
+      "verified": "broken \u2014 see .opencode/plans/bug-sp-045-fear-wrong-save-dc.md",
       "class": "Spell",
       "triggerConditions": "Range: Self (30-foot Cone); Duration: Concentration, up to 1 minute",
       "expectedBehavior": "Each creature in a 30-foot Cone must succeed on a Wisdom saving throw or drop whatever it is holding and have the Frightened condition for the duration. A Frightened creature takes the Dash action and moves away from you by the safest route on each of its turns unless there is nowhere to move. If the creature ends its turn in a space where it doesn't have line of sight to you, the creature makes a Wisdom saving throw. On a successful save, the spell ends on that creature."
@@ -3238,7 +3238,7 @@
       "handler": "src/services/combat/automation/handlers/spellHandler.js",
       "router": "src/services/combat/automation/routers/spellRouter.js",
       "infoBuilder": "src/services/combat/automation/infoBuilders/spellInfoBuilder.js",
-      "verified": "not verified",
+      "verified": "broken \u2014 see .opencode/plans/bug-sp-066-hold-person-repeat-save-wrong-ability.md",
       "class": "Spell",
       "triggerConditions": "Duration: Concentration, up to 1 minute",
       "expectedBehavior": "Choose a Humanoid that you can see within range. The target must succeed on a Wisdom saving throw or have the Paralyzed condition for the duration. At the end of each of its turns, the target repeats the save, ending the spell on itself on a success."
@@ -4969,7 +4969,7 @@
       "handler": "src/services/combat/automation/handlers/classFeatureHandler.js",
       "router": "src/services/combat/automation/routers/classFeatureRouter.js",
       "infoBuilder": "src/services/combat/automation/infoBuilders/classFeatureInfoBuilder.js",
-      "verified": "not verified",
+      "verified": "broken \u2014 see .opencode/plans/bug-cla-271-psionic-sorcery-double-cost-slot-consumed.md",
       "class": "Sorcerer",
       "triggerConditions": "Automation type: psionic_sorcery",
       "expectedBehavior": "When you cast any level 1+ spell from Psionic Spells feature, cast by expending spell slot normally or spending Sorcery Points equal to spell's level. If cast using Sorcery Points, no Verbal or Somatic components, no Material components unless consumed or have cost."
@@ -4981,7 +4981,7 @@
       "handler": "src/services/combat/automation/handlers/classFeatureHandler.js",
       "router": "src/services/combat/automation/routers/classFeatureRouter.js",
       "infoBuilder": "src/services/combat/automation/infoBuilders/classFeatureInfoBuilder.js",
-      "verified": "not verified",
+      "verified": "broken \u2014 see .opencode/plans/bug-cla-272-evards-black-tentacles-typo-uncastable.md",
       "class": "Sorcerer",
       "triggerConditions": "Automation type: psionic_spells_list",
       "expectedBehavior": "Level 3: Arms of Hadar, Calm Emotions, Detect Thoughts, Dissonant Whispers, Mind Sliver. Level 5: Hunger of Hadar, Sending. Level 7: Evard's Black Tentacles, Summon Aberration. Level 9: Rary's Telepathic Bond, Telekinesis."
@@ -4993,7 +4993,7 @@
       "handler": "src/services/combat/automation/handlers/classFeatureHandler.js",
       "router": "src/services/combat/automation/routers/classFeatureRouter.js",
       "infoBuilder": "src/services/combat/automation/infoBuilders/classFeatureInfoBuilder.js",
-      "verified": "not verified",
+      "verified": "broken \u2014 see .opencode/plans/bug-cla-273-psionic-strike-fires-without-hit-gate.md",
       "class": "Fighter",
       "triggerConditions": "Action: 1 reaction",
       "expectedBehavior": "Psionic Strike. You can propel your weapons with psionic force. Once on each of your turns, immediately after you hit a target within 30 feet of yourself with an attack and deal damage to it with a weapon, you can expend one Psionic Energy Die, rolling it and dealing Force damage to the target equal to the number rolled plus your Intelligence modifier."
@@ -5005,7 +5005,7 @@
       "handler": "src/services/combat/automation/handlers/classFeatureHandler.js",
       "router": "src/services/combat/automation/routers/classFeatureRouter.js",
       "infoBuilder": "src/services/combat/automation/infoBuilders/classFeatureInfoBuilder.js",
-      "verified": "not verified",
+      "verified": "broken \u2014 see .opencode/plans/bug-cla-274-psychic-blades-no-gating.md",
       "class": "Rogue",
       "triggerConditions": "Action: bonus_action; Uses: psionic_energy_die",
       "expectedBehavior": "Manifest shimmering blades of psychic energy. When you take Attack action or make Opportunity Attack, manifest Psychic Blade in free hand. Simple Melee, 1d6 Psychic + ability modifier, Finesse, Thrown (60/120), Mastery: Vex (doesn't count against Weapon Mastery). Vanishes after hit/miss. After attacking, can make melee or ranged attack with second psychic blade as Bonus Action (1d4 damage)."
@@ -5017,7 +5017,7 @@
       "handler": "src/services/combat/automation/handlers/classFeatureHandler.js",
       "router": "src/services/combat/automation/routers/classFeatureRouter.js",
       "infoBuilder": "src/services/combat/automation/infoBuilders/classFeatureInfoBuilder.js",
-      "verified": "not verified",
+      "verified": "verified",
       "class": "Sorcerer",
       "triggerConditions": "Passive",
       "expectedBehavior": "Resistance to Psychic damage. Advantage on saving throws to avoid/end Charmed or Frightened condition. (Sorcerer Aberrant Sorcery - Psychic Defenses)"
@@ -5029,7 +5029,7 @@
       "handler": "src/services/combat/automation/handlers/classFeatureHandler.js",
       "router": "src/services/combat/automation/routers/classFeatureRouter.js",
       "infoBuilder": "src/services/combat/automation/infoBuilders/classFeatureInfoBuilder.js",
-      "verified": "not verified",
+      "verified": "broken \u2014 see .opencode/plans/bug-cla-276-psychic-whispers-inert.md",
       "class": "Rogue",
       "triggerConditions": "Passive; Rogue Psychic Blades feature",
       "expectedBehavior": "Your psychic blades whisper secrets to you. You can communicate telepathically with creatures within range, and your psychic blades deal extra psychic damage. (Rogue Soulknife feature - Psychic Whispers)"
@@ -5065,7 +5065,7 @@
       "handler": "src/services/combat/automation/handlers/classFeatureHandler.js",
       "router": "src/services/combat/automation/routers/classFeatureRouter.js",
       "infoBuilder": "src/services/combat/automation/infoBuilders/classFeatureInfoBuilder.js",
-      "verified": "not verified",
+      "verified": "broken \u2014 see .opencode/plans/bug-cla-277-quivering-palm-save-dc-and-release-popup.md",
       "class": "Monk",
       "triggerConditions": "Trigger: action; Action: passive",
       "expectedBehavior": "You gain the ability to set up lethal vibrations in someone's body. When you hit a creature with an Unarmed Strike, you can expend 4 Focus Points to start these imperceptible vibrations, which last for a number of days equal to your Monk level. The vibrations are harmless unless you take an action to end them. Alternatively, when you take the Attack action on your turn, you can forgo one of the attacks to end the vibrations. To end them, you and the target must be on the same plane of existence. When you end them, the target must make a Constitution saving throw, taking 10d12 Force damage on a failed save or half as much damage on a successful one. You can have only one creature under the effect of this feature at a time. You can end the vibrations harmlessly (no action required)."
@@ -5077,7 +5077,7 @@
       "handler": "src/services/combat/automation/handlers/classFeatureHandler.js",
       "router": "src/services/combat/automation/routers/classFeatureRouter.js",
       "infoBuilder": "src/services/combat/automation/infoBuilders/classFeatureInfoBuilder.js",
-      "verified": "not verified",
+      "verified": "broken \u2014 see .opencode/plans/bug-cla-278-radiance-of-the-dawn.md",
       "class": "Cleric",
       "triggerConditions": "Action: 1 action",
       "expectedBehavior": "As a Action, you present your Holy Symbol and expend a use of your Channel Divinity to emit a flash of light in a 30-foot Emanation originating from yourself. Any magical Darkness in that area is dispelled. Each creature of your choice in that area must make a Constitution saving throw or take Radiant damage equal to 2d10 plus your Cleric level."
@@ -5089,7 +5089,7 @@
       "handler": "src/services/combat/automation/handlers/classFeatureHandler.js",
       "router": "src/services/combat/automation/routers/classFeatureRouter.js",
       "infoBuilder": "src/services/combat/automation/infoBuilders/classFeatureInfoBuilder.js",
-      "verified": "not verified",
+      "verified": "broken \u2014 see .opencode/plans/bug-cla-279-radiant-soul-double-adder.md",
       "class": "Warlock",
       "triggerConditions": "Automation type: undefined",
       "expectedBehavior": "Resistance to Radiant damage. Once per turn, when a spell you cast deals Radiant or Fire damage, add Charisma modifier to that spell's damage against one of the spell's targets."
