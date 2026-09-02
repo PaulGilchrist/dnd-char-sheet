@@ -420,41 +420,52 @@ describe('handleSuperiorityManeuver', () => {
 // ---------------------------------------------------------------------------
 
 describe('handlePsiBolsteredKnack', () => {
+  const soulknifeStats = {
+    ...mockPlayerStats,
+    level: 14,
+    class: { name: 'Rogue', major: { name: 'Soulknife' }, subclass: { name: 'Soulknife' }, class_levels: {} },
+    skillProficiencies: ['Athletics'],
+    toolProficiencies: ["Thieves' Tools"],
+  };
+  const failedSkillPopup = { name: 'Athletics', rollType: 'skill', rolls: [5], bonus: 3 };
+
   beforeEach(() => {
     vi.clearAllMocks();
   });
 
   it('decrements psionicEnergy when success is true and energy > 0', async () => {
-    const { getRuntimeValue } = await import('../../hooks/runtime/useRuntimeState.js');
+    const { getRuntimeValue, setRuntimeValue } = await import('../../hooks/runtime/useRuntimeState.js');
     getRuntimeValue.mockReturnValue(3);
 
     await handlePsiBolsteredKnack(
-      mockPlayerStats,
+      soulknifeStats,
       mockCampaignName,
-      { name: 'Athletics Check', rolls: [15], bonus: 3 },
+      failedSkillPopup,
       5,
       8,
       true
     );
 
+    expect(setRuntimeValue).toHaveBeenCalledWith('Test Character', 'psionicEnergy', 2, mockCampaignName);
     const { addEntry } = await import('../../services/ui/logService.js');
     expect(addEntry).toHaveBeenCalled();
     expect(addEntry.mock.calls[0][1].abilityName).toBe('Psi-Bolstered Knack');
   });
 
   it('does not expend energy when success is false', async () => {
-    const { getRuntimeValue } = await import('../../hooks/runtime/useRuntimeState.js');
+    const { getRuntimeValue, setRuntimeValue } = await import('../../hooks/runtime/useRuntimeState.js');
     getRuntimeValue.mockReturnValue(3);
 
     await handlePsiBolsteredKnack(
-      mockPlayerStats,
+      soulknifeStats,
       mockCampaignName,
-      { name: 'Athletics Check', rolls: [15], bonus: 3 },
+      failedSkillPopup,
       5,
       8,
       false
     );
 
+    expect(setRuntimeValue).not.toHaveBeenCalledWith('Test Character', 'psionicEnergy', 2, mockCampaignName);
     const { addEntry } = await import('../../services/ui/logService.js');
     expect(addEntry).toHaveBeenCalled();
     const logCall = addEntry.mock.calls[0][1];
@@ -462,21 +473,102 @@ describe('handlePsiBolsteredKnack', () => {
   });
 
   it('does not expend energy when psionicEnergy is 0', async () => {
-    const { getRuntimeValue } = await import('../../hooks/runtime/useRuntimeState.js');
+    const { getRuntimeValue, setRuntimeValue } = await import('../../hooks/runtime/useRuntimeState.js');
     getRuntimeValue.mockReturnValue(0);
 
     await handlePsiBolsteredKnack(
-      mockPlayerStats,
+      soulknifeStats,
       mockCampaignName,
-      { name: 'Athletics Check', rolls: [15], bonus: 3 },
+      failedSkillPopup,
       5,
       8,
       true
     );
 
+    expect(setRuntimeValue).not.toHaveBeenCalled();
     const { addEntry } = await import('../../services/ui/logService.js');
     expect(addEntry).toHaveBeenCalled();
     const logCall = addEntry.mock.calls[0][1];
     expect(logCall.description).toContain('Succeeded, energy expended');
+  });
+
+  it('allows a proficient tool check and spends on success', async () => {
+    const { getRuntimeValue, setRuntimeValue } = await import('../../hooks/runtime/useRuntimeState.js');
+    getRuntimeValue.mockReturnValue(4);
+
+    await handlePsiBolsteredKnack(
+      soulknifeStats,
+      mockCampaignName,
+      { name: "Thieves' Tools", rollType: 'check', rolls: [2], bonus: 5 },
+      6,
+      10,
+      true
+    );
+
+    expect(setRuntimeValue).toHaveBeenCalledWith('Test Character', 'psionicEnergy', 3, mockCampaignName);
+    const { addEntry } = await import('../../services/ui/logService.js');
+    expect(addEntry.mock.calls[0][1].description).toContain("Thieves' Tools");
+  });
+
+  it('refuses a non-proficient skill check without spending energy', async () => {
+    const { getRuntimeValue, setRuntimeValue } = await import('../../hooks/runtime/useRuntimeState.js');
+    getRuntimeValue.mockReturnValue(5);
+    const setPopupHtml = vi.fn();
+
+    await handlePsiBolsteredKnack(
+      soulknifeStats,
+      mockCampaignName,
+      { name: 'Arcana', rollType: 'skill', rolls: [3], bonus: 0 },
+      4,
+      10,
+      false,
+      setPopupHtml
+    );
+
+    expect(setRuntimeValue).not.toHaveBeenCalled();
+    expect(setPopupHtml).toHaveBeenCalledWith(expect.objectContaining({
+      description: expect.stringContaining('only applies when you fail a proficient skill or tool check'),
+    }));
+    const { addEntry } = await import('../../services/ui/logService.js');
+    expect(addEntry.mock.calls[0][1].description).toContain('refused');
+  });
+
+  it('refuses a raw ability check without spending energy', async () => {
+    const { getRuntimeValue, setRuntimeValue } = await import('../../hooks/runtime/useRuntimeState.js');
+    getRuntimeValue.mockReturnValue(5);
+    const setPopupHtml = vi.fn();
+
+    await handlePsiBolsteredKnack(
+      soulknifeStats,
+      mockCampaignName,
+      { name: 'Intelligence', rollType: 'check', rolls: [8], bonus: -1 },
+      4,
+      10,
+      false,
+      setPopupHtml
+    );
+
+    expect(setRuntimeValue).not.toHaveBeenCalled();
+    expect(setPopupHtml).toHaveBeenCalled();
+  });
+
+  it('refuses when the popup records an explicit success', async () => {
+    const { getRuntimeValue, setRuntimeValue } = await import('../../hooks/runtime/useRuntimeState.js');
+    getRuntimeValue.mockReturnValue(5);
+    const setPopupHtml = vi.fn();
+
+    await handlePsiBolsteredKnack(
+      soulknifeStats,
+      mockCampaignName,
+      { name: 'Athletics', rollType: 'skill', rolls: [15], bonus: 3, success: true },
+      4,
+      10,
+      true,
+      setPopupHtml
+    );
+
+    expect(setRuntimeValue).not.toHaveBeenCalled();
+    const { addEntry } = await import('../../services/ui/logService.js');
+    expect(addEntry.mock.calls[0][1].description).toContain('refused');
   });
 });

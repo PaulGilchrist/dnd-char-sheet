@@ -7,6 +7,7 @@ import { loadCombatSummary } from '../../services/encounters/combatData.js'
 import * as storageService from '../../services/ui/storage.js'
 import { addEntry } from '../../services/ui/logService.js'
 import { evaluateAutoExpression } from '../../services/combat/automation/automationExpressions.js'
+import { isProficientSkillOrToolCheck } from '../../services/rules/psiBolsteredKnack.js'
 
 export function handleReroll(playerStats, campaignName, conditionEffects, rerollInfo) {
     if (!playerStats) return;
@@ -371,10 +372,32 @@ export async function handleSuperiorityManeuver(playerStats, campaignName, setPo
     }
 }
 
-export async function handlePsiBolsteredKnack(playerStats, campaignName, popupHtml, dieValue, dieSize, success) {
+export async function handlePsiBolsteredKnack(playerStats, campaignName, popupHtml, dieValue, dieSize, success, setPopupHtml) {
     if (!playerStats) return;
     const name = playerStats.name;
     const popupName = popupHtml?.name || 'Ability Check';
+
+    const isIneligibleContext = popupHtml?.success === true
+        || !isProficientSkillOrToolCheck(playerStats, popupHtml?.name);
+    if (isIneligibleContext) {
+        console.error('[CharSheet] Psi-Bolstered Knack refused in ineligible context:', { checkName: popupHtml?.name, rollType: popupHtml?.rollType, success: popupHtml?.success });
+        if (setPopupHtml) {
+            setPopupHtml({
+                type: 'automation_info',
+                name: 'Psi-Bolstered Knack',
+                description: '<b>Psi-Bolstered Knack</b><br/>Psi-Bolstered Knack only applies when you fail a proficient skill or tool check.',
+            });
+        }
+        addEntry(campaignName, {
+            type: 'ability_use',
+            characterName: name,
+            abilityName: 'Psi-Bolstered Knack',
+            description: `${name} attempted Psi-Bolstered Knack on ${popupName} — refused: Psi-Bolstered Knack only applies when you fail a proficient skill or tool check.`,
+            timestamp: Date.now(),
+        }).catch((e) => { console.error('[CharSheet] Error logging Psi-Bolstered Knack refusal:', e); });
+        return;
+    }
+
     const oldRoll = popupHtml?.rolls?.[0] || 0;
     const bonus = popupHtml?.bonus || 0;
     const oldTotal = oldRoll + bonus;

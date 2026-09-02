@@ -27,6 +27,43 @@ function AutoDamageActionButton({ autoDamage, computedHit, onDone }) {
     );
 }
 
+function PsiBolsteredKnackPanel({ psiBolsteredKnack, psiBolsteredKnackDieSize, success, rollType, psiKnackClicked, psiKnackConsumed, psiKnackResult, onKnackClick, onSucceeded, onFailed }) {
+    if (!psiBolsteredKnack || (rollType !== 'check' && rollType !== 'skill')) return null;
+
+    if (psiKnackClicked && psiKnackResult !== null) {
+        return (
+            <div className="dice-roll-reroll-result">
+                <i className="fa-solid fa-brain"></i> Psi-Bolstered Knack: +{psiKnackResult.dieValue} (d{psiKnackResult.dieSize}) → <strong>{psiKnackResult.newTotal}</strong>
+                {!psiKnackConsumed && (
+                    <div className="dice-roll-save-info">Check declared failed — Psionic Energy die is expended only if the boosted total succeeds.</div>
+                )}
+                {!psiKnackConsumed && (
+                    <div className="dice-roll-reroll" style={{ marginTop: '8px' }}>
+                        <button className="dice-roll-reroll-btn" onClick={onSucceeded} type="button">
+                            <i className="fa-solid fa-check"></i> Succeeded
+                        </button>
+                        <button className="dice-roll-reroll-btn" onClick={onFailed} type="button">
+                            <i className="fa-solid fa-xmark"></i> Still Failed
+                        </button>
+                    </div>
+                )}
+            </div>
+        );
+    }
+
+    if (!psiKnackClicked && success !== true) {
+        return (
+            <div className="dice-roll-reroll">
+                <button className="dice-roll-reroll-btn" onClick={onKnackClick} type="button">
+                    <i className="fa-solid fa-brain"></i> Psi-Bolstered Knack (d{psiBolsteredKnackDieSize || 6}) — failed proficient check?
+                </button>
+            </div>
+        );
+    }
+
+    return null;
+}
+
 function DiceRollResult(props) {
     const {
         name, type, rolls, rollType, bonus = 0, bonusDetail, formula = '', modifier = 0,
@@ -472,13 +509,18 @@ function DiceRollResult(props) {
               </div>
             )}
 
-            {psiBolsteredKnack && !psiKnackClicked && (rollType === 'check' || rollType === 'skill') && (
-              <div className="dice-roll-reroll">
-                <button className="dice-roll-reroll-btn" onClick={handlePsiKnackClick} type="button">
-                  <i className="fa-solid fa-brain"></i> Psi-Bolstered Knack (d{psiBolsteredKnackDieSize || 6})
-                </button>
-              </div>
-            )}
+            <PsiBolsteredKnackPanel
+                psiBolsteredKnack={psiBolsteredKnack}
+                psiBolsteredKnackDieSize={psiBolsteredKnackDieSize}
+                success={success}
+                rollType={rollType}
+                psiKnackClicked={psiKnackClicked}
+                psiKnackConsumed={psiKnackConsumed}
+                psiKnackResult={psiKnackResult}
+                onKnackClick={handlePsiKnackClick}
+                onSucceeded={handlePsiKnackSucceeded}
+                onFailed={handlePsiKnackFailed}
+            />
 
             {bardicInspirationDefense && !bardicInspirationDefenseUsed && computedHit && (
               <div className="dice-roll-reroll">
@@ -517,26 +559,6 @@ function DiceRollResult(props) {
                 <button className="dice-roll-reroll-btn" onClick={handleSavageAttacker} type="button">
                   <i className="fa-solid fa-arrows-spin"></i> Savage Attacker
                 </button>
-              </div>
-            )}
-
-            {psiKnackClicked && !psiKnackConsumed && psiKnackResult !== null && (
-              <div className="dice-roll-reroll-result">
-                <i className="fa-solid fa-brain"></i> Psi-Bolstered Knack: +{psiKnackResult.dieValue} (d{psiKnackResult.dieSize}) → <strong>{psiKnackResult.newTotal}</strong>
-                <div className="dice-roll-reroll" style={{ marginTop: '8px' }}>
-                  <button className="dice-roll-reroll-btn" onClick={handlePsiKnackSucceeded} type="button">
-                    <i className="fa-solid fa-check"></i> Succeeded
-                  </button>
-                  <button className="dice-roll-reroll-btn" onClick={handlePsiKnackFailed} type="button">
-                    <i className="fa-solid fa-xmark"></i> Still Failed
-                  </button>
-                </div>
-              </div>
-            )}
-
-            {psiKnackClicked && psiKnackConsumed && psiKnackResult !== null && (
-              <div className="dice-roll-reroll-result">
-                <i className="fa-solid fa-brain"></i> Psi-Bolstered Knack: +{psiKnackResult.dieValue} (d{psiKnackResult.dieSize}) → <strong>{psiKnackResult.newTotal}</strong>
               </div>
             )}
 

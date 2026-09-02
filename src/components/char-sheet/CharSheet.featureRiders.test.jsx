@@ -473,8 +473,8 @@ describe('handlePsiBolsteredKnack', () => {
     addEntry.mockResolvedValue(undefined);
     mockStore.set('Test Character:psionicEnergy', 3);
 
-    const stats = createPlayerStats();
-    const popupHtml = { name: 'Arcana Check', rolls: [15], bonus: 3 };
+    const stats = createPlayerStats({ skillProficiencies: ['Arcana'] });
+    const popupHtml = { name: 'Arcana', rollType: 'skill', rolls: [4], bonus: 3 };
 
     await handlePsiBolsteredKnack(stats, campaignName, popupHtml, 5, 6, true);
 
@@ -487,8 +487,8 @@ describe('handlePsiBolsteredKnack', () => {
     addEntry.mockResolvedValue(undefined);
     mockStore.set('Test Character:psionicEnergy', 3);
 
-    const stats = createPlayerStats();
-    const popupHtml = { name: 'Arcana Check', rolls: [15], bonus: 3 };
+    const stats = createPlayerStats({ skillProficiencies: ['Arcana'] });
+    const popupHtml = { name: 'Arcana', rollType: 'skill', rolls: [4], bonus: 3 };
 
     await handlePsiBolsteredKnack(stats, campaignName, popupHtml, 5, 6, false);
 

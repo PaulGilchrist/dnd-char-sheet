@@ -129,6 +129,56 @@ describe('DiceRollResult', () => {
         });
     });
 
+    describe('psi-bolstered knack offer gates (CLA-270)', () => {
+        it('offers the Knack labeled as a failed-check boost', () => {
+            render(
+                <DiceRollResult
+                    name="Insight"
+                    type="d20"
+                    rolls={[5]}
+                    bonus={3}
+                    rollType="skill"
+                    psiBolsteredKnack={true}
+                    psiBolsteredKnackDieSize={10}
+                />
+            );
+            const btn = screen.getByRole('button', { name: /Psi-Bolstered Knack/ });
+            expect(btn.textContent).toContain('failed proficient check');
+        });
+
+        it('does NOT offer the Knack when the popup records an explicit success', () => {
+            render(
+                <DiceRollResult
+                    name="Insight"
+                    type="d20"
+                    rolls={[15]}
+                    bonus={3}
+                    rollType="skill"
+                    success={true}
+                    psiBolsteredKnack={true}
+                    psiBolsteredKnackDieSize={10}
+                />
+            );
+            expect(screen.queryByRole('button', { name: /Psi-Bolstered Knack/ })).not.toBeInTheDocument();
+        });
+
+        it('shows the failed-check declaration note after clicking the Knack', () => {
+            render(
+                <DiceRollResult
+                    name="Insight"
+                    type="d20"
+                    rolls={[5]}
+                    bonus={3}
+                    rollType="skill"
+                    psiBolsteredKnack={true}
+                    psiBolsteredKnackDieSize={10}
+                />
+            );
+            fireEvent.click(screen.getByRole('button', { name: /Psi-Bolstered Knack/ }));
+            expect(screen.getByText(/expended only if the boosted total succeeds/)).toBeInTheDocument();
+        });
+    });
+
     describe('error paths', () => {
         it('logs console.error when onBardicInspirationDefense is falsy after clicking the defense button', () => {
             const consoleSpy = vi.spyOn(console, 'error').mockReturnValue();

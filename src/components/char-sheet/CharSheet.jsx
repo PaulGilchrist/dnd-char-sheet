@@ -448,8 +448,8 @@ function CharSheetContent({
     }, [playerStats, campaignName, setPopupHtml, popupHtml]);
 
     const handlePsiBolsteredKnackWrapped = React.useCallback(async ({ dieValue, dieSize, success }) => {
-        await handlePsiBolsteredKnack(playerStats, campaignName, popupHtml, dieValue, dieSize, success);
-    }, [playerStats, campaignName, popupHtml]);
+        await handlePsiBolsteredKnack(playerStats, campaignName, popupHtml, dieValue, dieSize, success, setPopupHtml);
+    }, [playerStats, campaignName, popupHtml, setPopupHtml]);
 
     const handleShieldOfFaithTargetSelected = React.useCallback(async (targetName) => {
         const action = {

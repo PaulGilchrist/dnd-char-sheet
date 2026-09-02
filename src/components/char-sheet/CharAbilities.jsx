@@ -6,6 +6,7 @@ import { buildAbilityDetailHtml } from '../../hooks/combat/useActionPopup.js';
 import { getRuntimeValue } from '../../hooks/runtime/useRuntimeState.js';
 import { hasSaveAdvantage } from '../../services/combat/conditions/conditionEffects.js';
 import { loadEquipment } from '../../services/ui/dataLoader.js';
+import { isProficientSkillOrToolCheck } from '../../services/rules/psiBolsteredKnack.js'
 import './CharAbilities.css'
 
 const INTERNAL_SKILL_CHECK_EVENT = 'internal-skill-check';
@@ -198,8 +199,9 @@ function CharAbilities({ allAbilityScores, playerStats, campaignName, exhaustion
                    ctx.autoRerollCondition = conditionEffects.autoRerollCondition;
                    ctx.autoRerollBonus = conditionEffects.autoRerollBonus || null;
                  }
-                const isSoulknife = playerStats?.class?.name === 'Rogue' && playerStats?.class?.major?.name === 'Soulknife';
-                const hasPsiBolsteredKnack = isSoulknife && (playerStats?.level || 0) >= 3;
+                const isSoulknife = playerStats?.class?.name === 'Rogue' && (playerStats?.class?.major?.name || playerStats?.class?.subclass?.name) === 'Soulknife';
+                const hasPsiBolsteredKnack = isSoulknife && (playerStats?.level || 0) >= 3
+                  && isProficientSkillOrToolCheck(playerStats, checkName);
                 if (hasPsiBolsteredKnack) {
                   const classLevel = (playerStats.class?.class_levels || []).find(cl => cl.level === playerStats.level);
                   ctx.psiBolsteredKnack = true;

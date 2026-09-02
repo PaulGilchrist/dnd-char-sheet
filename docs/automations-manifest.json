@@ -4957,7 +4957,7 @@
       "handler": "src/services/combat/automation/handlers/classFeatureHandler.js",
       "router": "src/services/combat/automation/routers/classFeatureRouter.js",
       "infoBuilder": "src/services/combat/automation/infoBuilders/classFeatureInfoBuilder.js",
-      "verified": "broken \u2014 see .opencode/plans/bug-cla-270-psi-bolstered-knack.md",
+      "verified": "verified",
       "class": "Rogue",
       "triggerConditions": "Failed ability check using a proficient skill/tool",
       "expectedBehavior": "If you fail an ability check using a skill or tool you have proficiency with, roll one Psionic Energy Die and add it to the check total; the die is expended only if the roll then succeeds. (Psionic Energy Dice per class_levels energy blocks: lv3 d6x4, lv5 d8x6, lv9 d8x8, lv11 d10x8, lv13 d10x10, lv17 d12x12. Psychic Whispers is CLA-276.)"
