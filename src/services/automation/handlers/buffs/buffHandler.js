@@ -13,6 +13,12 @@ import { getAbilityModifier } from '../../../shared/abilityLookup.js';
 
 const ADRENALINE_RUSH_USES_KEY = 'adrenalineRushUses';
 
+function getPsionicEnergy(playerStats, campaignName) {
+    const stored = getRuntimeValue(playerStats.name, 'psionicEnergy', campaignName);
+    const defaultMax = playerStats._trackedResources?.psionicEnergy?.max || 0;
+    return Number(stored ?? defaultMax);
+}
+
 export async function handle(action, playerStats, campaignName, _mapName) {
     const auto = action.automation;
 
@@ -176,6 +182,56 @@ export async function handle(action, playerStats, campaignName, _mapName) {
         }
     }
 
+    // Tracked uses consumption for temp_buff features that declare uses (e.g., Psychic Veil: 1 use per Long Rest)
+    let usesKey = null;
+    let usesMax = null;
+    let usesRemaining = null;
+    if (auto?.uses != null || auto?.usesMax != null) {
+        if (typeof auto.usesMax === 'number') {
+            usesMax = auto.usesMax;
+        } else if (typeof auto.uses === 'number') {
+            usesMax = auto.uses;
+        } else if (typeof auto.uses === 'string' && /^\d+$/.test(auto.uses)) {
+            usesMax = parseInt(auto.uses, 10);
+        } else if (auto.uses === 'proficiency_bonus') {
+            usesMax = playerStats.proficiency || 0;
+        } else {
+            usesMax = 1;
+        }
+        usesKey = auto.resourceKey || (action.name.toLowerCase().replace(/\s+/g, '') + 'Uses');
+
+        const storedUses = getRuntimeValue(playerStats.name, usesKey, campaignName);
+        usesRemaining = storedUses != null ? Number(storedUses) : usesMax;
+
+        const storedBuffsBefore = getRuntimeValue(playerStats.name, 'activeBuffs', campaignName);
+        const buffActiveBefore = (Array.isArray(storedBuffsBefore) ? storedBuffsBefore : []).some(b => b.name === action.name);
+
+        if (usesRemaining <= 0 && !buffActiveBefore) {
+            if (auto.resourceCost === 'psionic_energy' && getPsionicEnergy(playerStats, campaignName) > 0) {
+                const psionicCurrent = getPsionicEnergy(playerStats, campaignName);
+                await setRuntimeValue(playerStats.name, 'psionicEnergy', psionicCurrent - 1, campaignName);
+                addEntry(campaignName, {
+                    type: 'ability_use',
+                    characterName: playerStats.name,
+                    abilityName: action.name,
+                    description: `${playerStats.name} expended 1 Psionic Energy Die to restore a use of ${action.name}. Psionic Energy: ${psionicCurrent - 1}.`,
+                    timestamp: Date.now(),
+                }).catch((e) => { console.error('[buffHandler] Psionic restore log error:', e); });
+            } else {
+                return {
+                    type: 'popup',
+                    payload: {
+                        type: 'automation_info',
+                        name: action.name,
+                        automationType: auto.type,
+                        description: `${action.name} has been used and cannot be used again until a Long Rest.`,
+                        automation: auto,
+                    },
+                };
+            }
+        }
+    }
+
     const { wasActive } = toggleBuff(
         playerStats.name,
         action.name,
@@ -183,6 +239,23 @@ export async function handle(action, playerStats, campaignName, _mapName) {
         campaignName,
         targetName
     );
+
+    // Consumption happens on activation only; toggling OFF does not refund the use.
+    let usesAfterActivation = null;
+    if (usesKey != null && !wasActive) {
+        usesAfterActivation = Math.max(0, usesRemaining - 1);
+        await setRuntimeValue(playerStats.name, usesKey, usesAfterActivation, campaignName);
+    }
+
+    if (usesKey != null && !wasActive) {
+        addEntry(campaignName, {
+            type: 'ability_use',
+            characterName: playerStats.name,
+            abilityName: action.name,
+            description: `${playerStats.name} activated ${action.name} (${usesAfterActivation} use${usesAfterActivation !== 1 ? 's' : ''} remaining).`,
+            timestamp: Date.now(),
+        }).catch((e) => { console.error('[buffHandler] Tracked buff activation log error:', e); });
+    }
 
     if (auto?.effect === 'invisible') {
         const storedConditions = getRuntimeValue(targetName, 'activeConditions') || [];
@@ -259,6 +332,10 @@ export async function handle(action, playerStats, campaignName, _mapName) {
         const wildShape = playerStats.class?.class_levels?.find(cl => cl.level === playerStats.level)?.wild_shape || 0;
         durationDisplay = `${Math.floor(wildShape / 2)} hours`;
     }
+    const usesDisplay = usesKey != null && !wasActive
+        ? ` (${usesAfterActivation} use${usesAfterActivation !== 1 ? 's' : ''} remaining)`
+        : '';
+
     return {
         type: 'popup',
         payload: {
@@ -267,7 +344,7 @@ export async function handle(action, playerStats, campaignName, _mapName) {
             automationType: auto.type,
             description: wasActive
                 ? `${action.name} toggled OFF`
-                : `${action.name} activated on ${displayTarget} (${durationDisplay})`,
+                : `${action.name} activated on ${displayTarget} (${durationDisplay})${usesDisplay}`,
             automation: auto,
         },
     };

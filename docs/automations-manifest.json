@@ -4945,7 +4945,7 @@
       "handler": "src/services/combat/automation/handlers/classFeatureHandler.js",
       "router": "src/services/combat/automation/routers/classFeatureRouter.js",
       "infoBuilder": "src/services/combat/automation/infoBuilders/classFeatureInfoBuilder.js",
-      "verified": "broken \u2014 see .opencode/plans/bug-cla-269-psychic-veil.md",
+      "verified": "verified",
       "class": "Rogue",
       "triggerConditions": "Action: action; Range: self",
       "expectedBehavior": "Action, gain Invisible condition for 1 hour. Ends after dealing damage or forcing saving throw. Once per Long Rest (or expend Psionic Energy Die to restore)."

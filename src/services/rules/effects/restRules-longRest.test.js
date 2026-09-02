@@ -216,6 +216,12 @@ describe('applyLongRest', () => {
       await applyLongRest(flareStats, CAMPAIGN)
       expect(getBatchUpdates().wardingflareUses).toBeNull()
     })
+
+    it('resets psychicveilUses (Psychic Veil once-per-long-rest) to null on long rest', async () => {
+      vi.clearAllMocks()
+      await applyLongRest(makeStats(), CAMPAIGN)
+      expect(getBatchUpdates().psychicveilUses).toBeNull()
+    })
   })
 
   describe('Divine Intervention Wish cooldown', () => {

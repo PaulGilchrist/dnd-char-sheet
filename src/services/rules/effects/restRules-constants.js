@@ -146,6 +146,7 @@ export const LONG_REST_RESOURCES = [
    'gloriousDefenseUses',
    'warlockPactMagic',
   'innateSorceryUses',
+  'psychicveilUses',
   'sorcerousRestorationUses',
   'zealousPresenceUses',
   'intimidatingPresenceUses',

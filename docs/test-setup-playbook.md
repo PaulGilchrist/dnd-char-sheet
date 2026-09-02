@@ -1480,3 +1480,9 @@ GM confirmed reducing test-campaign to ONE character per class. On next session 
 
 - **FIX:** `applyDamage.js` player branch now writes `projectedWardDamage` `{rawDamage,damageType,attackerName,timestamp}` on the damaged NON-warden player (aggregates multi-part attacks via same-`attackerName` sequence detection), so `arcaneWardHandler.js:71` reaction finds recent damage → rollback-absorb. Cleared at turn start in `useInitiativeEffects.js` (same block that resets `actionSurgeUsedThisRound`). Mirrors `bastionOfLawLastAttackDamage` mechanism. Range via `isWithinRange` (gridless=true).
 - Proven full-absorb (13) + overflow (5-of-11) E2E; `ward_absorbed` + `ability_use` logs present.
+
+### CLA-269 Psychic Veil once-per-rest uses (FIXED 2026-09-02)
+
+- Generic buffHandler temp_buff path now consumes tracked uses for ANY automation declaring `uses` (key `auto.resourceKey || name.toLowerCase()+'Uses'` → `psychicveilUses`): consume on activation only (OFF toggle never refunds), gate refusal at 0, `ability_use` log, popup states uses remaining. Hole was `buffHandler.js:70` gate `recharge==='long_rest' && !auto.uses` skipping declared uses. Added to `LONG_REST_RESOURCES`.
+- Psionic-die restore implemented at 0 uses when `resourceCost:'psionic_energy'` && `psionicEnergy>0` (mirrors `psychicTeleportationHandler.js`): expends 1 die + logs.
+- Long Rest here can complete with a SINGLE "Long Rest" click (CLA-180's two-click note is flow-dependent) — change-data nulling is the ground truth.
