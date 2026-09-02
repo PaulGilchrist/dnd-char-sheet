@@ -4981,7 +4981,7 @@
       "handler": "src/services/combat/automation/handlers/classFeatureHandler.js",
       "router": "src/services/combat/automation/routers/classFeatureRouter.js",
       "infoBuilder": "src/services/combat/automation/infoBuilders/classFeatureInfoBuilder.js",
-      "verified": "broken \u2014 see .opencode/plans/bug-cla-272-evards-black-tentacles-typo-uncastable.md",
+      "verified": "verified",
       "class": "Sorcerer",
       "triggerConditions": "Automation type: psionic_spells_list",
       "expectedBehavior": "Level 3: Arms of Hadar, Calm Emotions, Detect Thoughts, Dissonant Whispers, Mind Sliver. Level 5: Hunger of Hadar, Sending. Level 7: Evard's Black Tentacles, Summon Aberration. Level 9: Rary's Telepathic Bond, Telekinesis."

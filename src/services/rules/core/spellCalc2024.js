@@ -299,7 +299,22 @@ export function getSpellAbilities(allSpells, playerStats, playerSummary) {
                     const majorFeatures = playerStats.class?.major?.features || [];
                     const majorFeatureNames = majorFeatures.map(f => f.name);
                     if (majorFeatureNames.includes(feature.name)) {
+                        // CLA-272: tier-gate via major.spells[].level (char-unlock tiers 3/5/7/9)
+                        // and skip names that fail to resolve in the spells DB, so an unresolvable
+                        // or pre-tier spell can never render as a blank-level uncastable row.
+                        const tierBySpellName = new Map(
+                            (playerStats.class?.major?.spells || [])
+                                .map(s => ({ name: s.name || s.spell?.name, level: s.level }))
+                                .filter(s => s.name && s.level != null)
+                                .map(s => [s.name, s.level])
+                        );
                         feature.psionicSpells.forEach(spellName => {
+                            const tier = tierBySpellName.get(spellName);
+                            if (tier != null && playerStats.level < tier) return;
+                            if (allSpells && !allSpells.find(s => s.name === spellName)) {
+                                console.error('[spellCalc2024] psionic_spells_list: spell name does not resolve in the spells DB, skipping:', spellName);
+                                return;
+                            }
                             if (!spellAbilities.spells.find(s => s.name === spellName)) {
                                 spellAbilities.spells.push({ name: spellName, prepared: 'Always' });
                             }
