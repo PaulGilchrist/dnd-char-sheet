@@ -554,8 +554,9 @@ describe('useActionSpellMetamagic - casting flow', () => {
         result.current.handleActionSpellDamageClick(makeAttack());
       });
 
+      // CLA-271: popup flags the psionic checkbox via psionicActive; cost added once.
       await act(async () => {
-        result.current.handleActionMetamagicConfirm({ totalCost: 3, options: ['Heightened Spell'] });
+        result.current.handleActionMetamagicConfirm({ totalCost: 3, options: ['Heightened Spell'], psionicActive: true });
       });
 
       expect(logMetamagicUse).toHaveBeenCalledWith(
@@ -708,7 +709,7 @@ describe('useActionSpellMetamagic - casting flow', () => {
       });
 
       await act(async () => {
-        result.current.handleActionMetamagicConfirm({ options: [] });
+        result.current.handleActionMetamagicConfirm({ options: [], psionicActive: true });
       });
 
       const metaCtx = executeSpellCast.mock.calls[0][1];

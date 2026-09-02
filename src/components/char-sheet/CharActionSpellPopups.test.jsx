@@ -11,11 +11,13 @@ vi.mock('../common/popup.jsx', () => ({
 }));
 
 vi.mock('./popups/MetamagicPopup.jsx', () => ({
-  default: function TestMetamagicPopup({ spell, onConfirm, onSkip }) {
+  default: function TestMetamagicPopup({ spell, playerStats, onConfirm, onSkip }) {
     return (
       <div data-testid="metamagic-popup">
         <span data-testid="metamagic-spell-name">{spell?.name}</span>
         <span data-testid="metamagic-spell-level">{spell?.level}</span>
+        <span data-testid="metamagic-is-psionic">{String(playerStats?._isPsionicSpell)}</span>
+        <span data-testid="metamagic-psionic-cost">{String(playerStats?._psionicCost)}</span>
         {onConfirm && <button data-testid="metamagic-confirm" onClick={onConfirm}>Confirm</button>}
         {onSkip && <button data-testid="metamagic-skip" onClick={onSkip}>Skip</button>}
       </div>
@@ -217,6 +219,17 @@ describe('CharActionSpellPopups', () => {
       screen.getByTestId('metamagic-skip').click();
       expect(actionHandleSkip).toHaveBeenCalled();
     });
+
+    it('forwards _isPsionicSpell/_psionicCost so the Psionic Sorcery option renders (CLA-271)', () => {
+      render(
+        <CharActionSpellPopups
+          {...createBaseProps()}
+          actionPendingMetamagic={{ spellName: 'Dissonant Whispers', spellLevel: 1, isPsionic: true, psionicCost: 1 }}
+        />
+      );
+      expect(screen.getByTestId('metamagic-is-psionic')).toHaveTextContent('true');
+      expect(screen.getByTestId('metamagic-psionic-cost')).toHaveTextContent('1');
+    });
   });
 
   describe('MetamagicPopup (pendingActionMetamagic)', () => {
@@ -242,6 +255,17 @@ describe('CharActionSpellPopups', () => {
       );
       screen.getByTestId('metamagic-skip').click();
       expect(handleActionMetamagicSkip).toHaveBeenCalled();
+    });
+
+    it('forwards _isPsionicSpell/_psionicCost so the Psionic Sorcery option renders (CLA-271)', () => {
+      render(
+        <CharActionSpellPopups
+          {...createBaseProps()}
+          pendingActionMetamagic={{ spellName: 'Dissonant Whispers', spellLevel: 1, isPsionic: true, psionicCost: 1 }}
+        />
+      );
+      expect(screen.getByTestId('metamagic-is-psionic')).toHaveTextContent('true');
+      expect(screen.getByTestId('metamagic-psionic-cost')).toHaveTextContent('1');
     });
   });
 

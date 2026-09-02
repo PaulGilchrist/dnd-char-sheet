@@ -305,5 +305,14 @@ describe('prepareSpellCast — psionic sorcery payment', () => {
     });
 
     expect(setRuntimeValue).toHaveBeenCalledWith('TestSorcerer', 'sorceryPoints', 7, 'camp');
+    const { addEntry } = await import('../../../services/ui/logService.js');
+    expect(addEntry).toHaveBeenCalledWith('camp', expect.objectContaining({
+      type: 'psionic_sorcery',
+      spellName: 'Fireball',
+      spellLevel: 3,
+      sorceryPointsSpent: 3,
+      componentsWaived: ['V', 'S'],
+      note: 'Cast without Verbal or Somatic components. No Material components unless consumed or have cost.',
+    }));
   });
 });

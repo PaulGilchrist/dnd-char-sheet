@@ -184,7 +184,7 @@ export default function CharActionSpellPopups({
             {actionPendingMetamagic && (
                 <MetamagicPopup
                     spell={{ name: actionPendingMetamagic.spellName, level: actionPendingMetamagic.spellLevel || 0 }}
-                    playerStats={{ ...playerStats, _metamagicCurrentSP: actionPendingMetamagic._currentSP }}
+                    playerStats={{ ...playerStats, _metamagicCurrentSP: actionPendingMetamagic._currentSP, _isPsionicSpell: actionPendingMetamagic.isPsionic, _psionicCost: actionPendingMetamagic.psionicCost }}
                     campaignName={campaignName}
                     onConfirm={actionHandleConfirm}
                     onSkip={actionHandleSkip}
@@ -391,7 +391,7 @@ export default function CharActionSpellPopups({
             {pendingActionMetamagic && (
                 <MetamagicPopup
                     spell={{ name: pendingActionMetamagic.spellName, level: pendingActionMetamagic.spellLevel || 0 }}
-                    playerStats={{ ...playerStats, _metamagicCurrentSP: pendingActionMetamagic._currentSP }}
+                    playerStats={{ ...playerStats, _metamagicCurrentSP: pendingActionMetamagic._currentSP, _isPsionicSpell: pendingActionMetamagic.isPsionic, _psionicCost: pendingActionMetamagic.psionicCost }}
                     campaignName={campaignName}
                     onConfirm={handleActionMetamagicConfirm}
                     onSkip={handleActionMetamagicSkip}

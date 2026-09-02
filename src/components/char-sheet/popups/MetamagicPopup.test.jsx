@@ -420,9 +420,11 @@ describe('MetamagicPopup', () => {
       computeMetamagicCost.mockImplementation((selected) => createCostMock(selected));
       fireEvent.click(screen.getByText('Psionic Sorcery'));
       fireEvent.click(screen.getByText(/Apply & Cast/));
+      // CLA-271: confirmed totalCost is Metamagic-options only — psionic cost is
+      // carried by psionicActive and paid downstream.
       expect(onConfirm).toHaveBeenCalledWith({
         options: [],
-        totalCost: 1,
+        totalCost: 0,
         twinTarget: null,
         psionicActive: true,
       });
@@ -435,7 +437,7 @@ describe('MetamagicPopup', () => {
       fireEvent.click(screen.getByText(/Apply & Cast/));
       expect(onConfirm).toHaveBeenCalledWith({
         options: [],
-        totalCost: 10,
+        totalCost: 9,
         twinTarget: null,
         psionicActive: true,
       });
@@ -488,7 +490,7 @@ describe('MetamagicPopup', () => {
       fireEvent.click(screen.getByText(/Apply & Cast/));
       expect(onConfirm).toHaveBeenCalledWith({
         options: ['Careful Spell'],
-        totalCost: 2,
+        totalCost: 1,
         twinTarget: null,
         psionicActive: true,
       });

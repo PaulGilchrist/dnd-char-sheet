@@ -26,11 +26,10 @@ export function useActionSpellMetamagic({
         setPendingActionMetamagic(null);
         if (!pending) return;
 
-        let totalMetamagicCost = result?.totalCost || 0;
-        let psionicCost = 0;
-        if (pending.isPsionic && !result?.options?.includes('Subtle Spell')) {
-            psionicCost = pending.psionicCost;
-        }
+        // CLA-271: the popup confirms Metamagic-options cost only; add the Psionic
+        // Sorcery cost once, and only when its checkbox was actually selected.
+        const totalMetamagicCost = result?.totalCost || 0;
+        const psionicCost = result?.psionicActive ? (pending.psionicCost || 0) : 0;
         const totalCost = totalMetamagicCost + psionicCost;
         if (totalCost > 0) {
             spendSorceryPoints(playerStats.name, totalCost, campaignName, getMaxSorceryPoints(playerStats));

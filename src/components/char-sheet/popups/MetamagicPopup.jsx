@@ -58,13 +58,17 @@ export default function MetamagicPopup({ spell, playerStats, campaignName, onCon
 
   const handleConfirm = useCallback(() => {
     if (needsTwinTarget) return;
+    // CLA-271: confirmed totalCost is the Metamagic-options cost ONLY — the
+    // Psionic Sorcery SP payment is paid downstream (prepareSpellCast pays + skips
+    // the slot + logs psionic_sorcery; the Actions-bar confirm handler pays when
+    // psionicActive). Including it here caused a double charge when re-added.
     onConfirm({
       options: selected,
-      totalCost: grandTotalCost,
+      totalCost,
       twinTarget: hasTwinned && creatureTargets.length > 0 ? twinTarget : null,
       psionicActive,
     });
-  }, [selected, grandTotalCost, twinTarget, hasTwinned, needsTwinTarget, creatureTargets.length, onConfirm, psionicActive]);
+  }, [selected, totalCost, twinTarget, hasTwinned, needsTwinTarget, creatureTargets.length, onConfirm, psionicActive]);
 
   useEffect(() => {
     const handleKey = (e) => {

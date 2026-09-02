@@ -572,6 +572,7 @@ export async function prepareSpellCast(spell, metaCtx, { playerName, playerStats
         spellName: spell.name,
         spellLevel: effectiveSpellLevel,
         sorceryPointsSpent: effectiveSpellLevel,
+        componentsWaived: ['V', 'S'],
         note: 'Cast without Verbal or Somatic components. No Material components unless consumed or have cost.',
         timestamp: Date.now(),
       });

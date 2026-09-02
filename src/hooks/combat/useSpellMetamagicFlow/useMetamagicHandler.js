@@ -11,20 +11,20 @@ export function useMetamagicHandler(playerStats, campaignName, cfClearPending, g
 
     cfClearPending('metamagic')
 
-    let totalMetamagicCost = result?.totalCost || 0
-    let psionicCost = 0
-
-    if (pending.isPsionic && !result?.options?.includes('Subtle Spell')) {
-      psionicCost = pending.psionicCost
-    }
-
+    // CLA-271: the popup confirms Metamagic-options cost only; the Psionic Sorcery
+    // SP payment is owned by prepareSpellCast (spends SP, skips the spell slot and
+    // logs the canonical psionic_sorcery entry). Do not spend psionic SP here.
+    const totalMetamagicCost = result?.totalCost || 0
+    const usePsionicPayment = !!(result?.psionicActive || pending.spell?.usePsionicPayment)
+    const psionicCost = usePsionicPayment ? (pending.psionicCost || 0) : 0
     const totalCost = totalMetamagicCost + psionicCost
-    if (totalCost > 0) {
-      spendSorceryPoints(playerStats.name, totalCost, campaignName, getMaxSorceryPoints(playerStats))
+
+    if (totalMetamagicCost > 0) {
+      spendSorceryPoints(playerStats.name, totalMetamagicCost, campaignName, getMaxSorceryPoints(playerStats))
     }
 
     const metamagicOptions = result?.options || []
-    if (psionicCost > 0 && !metamagicOptions.includes('Psionic Sorcery')) {
+    if (usePsionicPayment && !metamagicOptions.includes('Psionic Sorcery')) {
       metamagicOptions.push('Psionic Sorcery')
     }
 
@@ -51,7 +51,7 @@ export function useMetamagicHandler(playerStats, campaignName, cfClearPending, g
       if (result.options.includes('Twinned Spell') && result.twinTarget) metaCtx.metamagicTwinTarget = result.twinTarget
       if (result.options.includes('Distant Spell')) metaCtx.metamagicDistant = true
     }
-    if (psionicCost > 0) {
+    if (usePsionicPayment) {
       metaCtx.psionicSpell = true
     }
 
@@ -65,6 +65,7 @@ export function useMetamagicHandler(playerStats, campaignName, cfClearPending, g
       isUpcast,
       upcastLevel,
       freeCastAuthorized,
+      usePsionicPayment,
     })
     if (!metaCtx.slotLevel && upcastLevel) {
       metaCtx.slotLevel = upcastLevel

@@ -121,6 +121,9 @@ export async function gateMetamagic(spell, metaCtx, {
         isUpcast,
         upcastLevel,
         freeCastAuthorized,
+        // CLA-271: forward the Psionic Sorcery SP-payment opt-in so prepareSpellCast
+        // pays SP, skips the spell slot and logs psionic_sorcery.
+        usePsionicPayment: !!spell.usePsionicPayment,
       });
       if (!metaCtx.slotLevel && upcastLevel) {
         metaCtx.slotLevel = upcastLevel;

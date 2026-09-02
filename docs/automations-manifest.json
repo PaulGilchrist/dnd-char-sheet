@@ -4969,7 +4969,7 @@
       "handler": "src/services/combat/automation/handlers/classFeatureHandler.js",
       "router": "src/services/combat/automation/routers/classFeatureRouter.js",
       "infoBuilder": "src/services/combat/automation/infoBuilders/classFeatureInfoBuilder.js",
-      "verified": "broken \u2014 see .opencode/plans/bug-cla-271-psionic-sorcery-double-cost-slot-consumed.md",
+      "verified": "verified",
       "class": "Sorcerer",
       "triggerConditions": "Automation type: psionic_sorcery",
       "expectedBehavior": "When you cast any level 1+ spell from Psionic Spells feature, cast by expending spell slot normally or spending Sorcery Points equal to spell's level. If cast using Sorcery Points, no Verbal or Somatic components, no Material components unless consumed or have cost."

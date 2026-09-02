@@ -55,6 +55,18 @@ vi.mock('../../services/rules/spells/materialComponents.js', () => ({
   getMaterialRequirementMessage: vi.fn(() => null),
 }));
 
+// CLA-271: passthrough prepareSpellCast mock so options (usePsionicPayment) are assertable
+vi.mock('../../services/rules/spells/spellPreparationService.js', async (importOriginal) => ({
+  ...(await importOriginal()),
+  prepareSpellCast: vi.fn(async (spell, metaCtx) => ({
+    modifiedSpell: spell,
+    metaCtx: { ...metaCtx },
+    slotConsumed: false,
+    freeCastUsed: false,
+  })),
+  isFreeCastAuthorized: vi.fn(() => false),
+}));
+
 global.fetch = vi.fn((url) => {
   if (url && url.includes('combat-summary')) {
     return Promise.resolve({
@@ -376,28 +388,54 @@ describe('useSpellMetamagicFlow — psionic sorcery confirm flow', () => {
     return { result, onExecute };
   }
 
-  it('adds psionic cost to total and includes Psionic Sorcery in metamagic when no Subtle Spell', async () => {
+  it('counts metamagic cost once and forwards psionic payment when Psionic Sorcery selected', async () => {
     const { result, onExecute } = setupPsionic();
 
+    // CLA-271: popup confirms metamagic-options cost only; psionic SP payment is
+    // paid by prepareSpellCast (usePsionicPayment forwarded), not re-added here.
     act(() => {
-      result.current.handleConfirm({ totalCost: 1, options: ['Empowered Spell'] });
+      result.current.handleConfirm({ totalCost: 1, options: ['Empowered Spell'], psionicActive: true });
     });
 
     await new Promise(r => setTimeout(r, 0));
 
     expect(spendSorceryPoints).toHaveBeenCalledWith(
-      'TestSorcerer', expect.any(Number), 'TestCampaign', expect.any(Number)
+      'TestSorcerer', 1, 'TestCampaign', expect.any(Number)
     );
-    const spendCall = spendSorceryPoints.mock.calls[0];
-    expect(spendCall[1]).toBeGreaterThan(1);
 
     expect(addEntry).toHaveBeenCalledWith('TestCampaign', expect.objectContaining({
       metamagic: expect.arrayContaining(['Psionic Sorcery', 'Empowered Spell']),
-      spCost: expect.any(Number),
+      spCost: 2,
     }));
     expect(onExecute).toHaveBeenCalledWith(
       expect.any(Object),
       expect.objectContaining({ psionicSpell: true })
+    );
+  });
+
+  it('forwards usePsionicPayment from the spell detail opt-in even without popup checkbox', async () => {
+    const onExecute = vi.fn();
+    const { prepareSpellCast } = await import('../../services/rules/spells/spellPreparationService.js');
+    const { result } = renderHook(() =>
+      useSpellMetamagicFlow(makePlayerStats(), 'TestCampaign', onExecute)
+    );
+
+    isPsionicSpell.mockReturnValue(true);
+    hasPsionicSorcery.mockReturnValue(true);
+
+    act(() => {
+      result.current.gateMetamagic(makeSpell({ name: 'Mind Sliver', level: 1, usePsionicPayment: true }));
+    });
+
+    await act(async () => {
+      await result.current.handleConfirm({ totalCost: 0, options: [], psionicActive: false });
+    });
+
+    expect(spendSorceryPoints).not.toHaveBeenCalled();
+    expect(prepareSpellCast).toHaveBeenCalledWith(
+      expect.any(Object),
+      expect.objectContaining({ psionicSpell: true }),
+      expect.objectContaining({ usePsionicPayment: true })
     );
   });
 
@@ -460,9 +498,10 @@ describe('useSpellMetamagicFlow — psionic sorcery confirm flow', () => {
 
     await new Promise(r => setTimeout(r, 0));
 
+    // CLA-271: psionic payment requires an explicit selection — no re-add.
     expect(addEntry).toHaveBeenCalledWith('TestCampaign', expect.objectContaining({
-      metamagic: ['Psionic Sorcery'],
-      spCost: expect.any(Number),
+      metamagic: [],
+      spCost: 0,
     }));
   });
 

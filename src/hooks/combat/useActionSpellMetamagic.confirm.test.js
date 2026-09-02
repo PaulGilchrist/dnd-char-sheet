@@ -232,12 +232,54 @@ describe('useActionSpellMetamagic - handleActionMetamagicConfirm', () => {
     });
 
     await act(async () => {
-      result.current.handleActionMetamagicConfirm({ totalCost: 2, options: ['Quickened Spell'] });
+      // CLA-271: popup confirms metamagic-options cost only; psionic added once
+      // when its checkbox is selected (psionicActive).
+      result.current.handleActionMetamagicConfirm({ totalCost: 2, options: ['Quickened Spell'], psionicActive: true });
     });
 
     expect(spendSorceryPoints).toHaveBeenCalledWith(
       'TestSorcerer',
       5,
+      'test-campaign',
+      10,
+    );
+  });
+
+  it('does not re-add psionic cost when Psionic Sorcery checkbox is not selected', async () => {
+    const { spendSorceryPoints } = await import('./useMetamagic.js');
+    const spell = makeSpell();
+    const props = makeHookProps({
+      playerStats: {
+        name: 'TestSorcerer',
+        class: { name: 'Sorcerer' },
+        level: 5,
+        spellAbilities: { spells: [spell] },
+      },
+    });
+    const { isPsionicSpell, hasPsionicSorcery } = await import('../../services/rules/spells/metamagicRules.js');
+
+    isPsionicSpell.mockReturnValue(true);
+    hasPsionicSorcery.mockReturnValue(true);
+
+    const attack = {
+      name: 'Fireball',
+      spellLevel: 3,
+      castingTime: '1 Action',
+    };
+
+    const { result } = renderHook(() => useActionSpellMetamagic(props));
+
+    await act(async () => {
+      result.current.handleActionSpellDamageClick(attack);
+    });
+
+    await act(async () => {
+      result.current.handleActionMetamagicConfirm({ totalCost: 2, options: ['Quickened Spell'] });
+    });
+
+    expect(spendSorceryPoints).toHaveBeenCalledWith(
+      'TestSorcerer',
+      2,
       'test-campaign',
       10,
     );
@@ -313,7 +355,7 @@ describe('useActionSpellMetamagic - handleActionMetamagicConfirm', () => {
     });
 
     await act(async () => {
-      result.current.handleActionMetamagicConfirm({ totalCost: 0, options: [] });
+      result.current.handleActionMetamagicConfirm({ totalCost: 0, options: [], psionicActive: true });
     });
 
     expect(logMetamagicUse).toHaveBeenCalledWith(
@@ -655,7 +697,7 @@ describe('useActionSpellMetamagic - handleActionMetamagicConfirm', () => {
     });
 
     await act(async () => {
-      result.current.handleActionMetamagicConfirm({ totalCost: 0, options: [] });
+      result.current.handleActionMetamagicConfirm({ totalCost: 0, options: [], psionicActive: true });
     });
 
     expect(executeSpellCast).toHaveBeenCalledWith(
