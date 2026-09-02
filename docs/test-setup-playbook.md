@@ -1469,3 +1469,9 @@ GM confirmed reducing test-campaign to ONE character per class. On next session 
 - **FIX:** data-driven CD consume — `healingPoolHandler.js` gained `resolveChannelDivinityCharges()` + pre-open gate on `auto.resourceCost==='channel_divinity'` (refuses at 0 with popup + refusal log, mirrors `combatStanceHandler.js:142-161`); `HealingPoolModal.jsx` consumes exactly 1 charge per modal session (idempotent ref, first resource-consuming apply) + logs `ability_use`; `CharActionModals.jsx` passes `resourceCost` through. Only Preserve Life carries the flag — Lay on Hands unaffected (tested).
 - **PITFALL:** port 80 serves STALE `dist` — dev E2E MUST run on :5173 after source edits (bug reproduced on stale :80 but fixed on :5173).
 - `el.remove()` on `.popup-overlay` causes React removeChild crash — dismiss popups by clicking their content. Preserve Life self-bloodied works by setting the self HP tracker (modal reads runtime `currentHitPoints`, not combatSummary stub maxHp:1).
+
+### CLA-265 Primal Order Magician Wisdom-mod stale read (FIXED 2026-09-02)
+
+- **FIX:** `abilityCalc2024.js getAbilities` restructured to two passes — Divine Order Thaumaturge (:41-51) + Primal Order Magician (:54-64) now read the COMPUTED Wisdom modifier from the function's own mapped results (was reading raw `playerStats.abilities` where `bonus` is undefined → `max(1,0)=1`). 5e `abilityCalc.js` has no order code (2024-only).
+- **TEST PITFALL:** prior Thaumaturge/Magician tests passed a precomputed `bonus` on RAW Wisdom entries, masking the bug — order-bonus tests MUST use raw shape (baseScore/backgroundIncrease only).
+- Wizard step-6 Primal Order combobox = `getByRole('combobox').nth(1)`; `✓Save` via textContent regex; Admin Clear confirm dialogs auto-accept via persistent `page.on('dialog')` listener (`handle_dialog` + `once` races).

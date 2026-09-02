@@ -430,6 +430,74 @@ describe('abilityCalc2024', () => {
       expect(nature.bonus).toBe(3); // 0 + 3 primal
       expect(history.bonus).toBe(0); // unaffected
     });
+
+    // CLA-265 regression: stored abilities carry no precomputed `bonus` field;
+    // the order bonus must come from the COMPUTED Wisdom modifier.
+    it('CLA-265: applies Magician primal order bonus from computed Wisdom mod on raw stored abilities shape', async () => {
+      const result = await getAbilities(makeStats({
+        level: 20,
+        class: { name: 'Druid', primalOrder: 'Magician', saving_throw_proficiencies: [] },
+        abilities: [
+          { name: 'Strength', baseScore: 8, featIncrease: 0, miscIncrease: 0, backgroundIncrease: 0 },
+          { name: 'Dexterity', baseScore: 8, featIncrease: 0, miscIncrease: 0, backgroundIncrease: 0 },
+          { name: 'Constitution', baseScore: 14, featIncrease: 0, miscIncrease: 0, backgroundIncrease: 0 },
+          { name: 'Intelligence', baseScore: 8, featIncrease: 0, miscIncrease: 0, backgroundIncrease: 1 },
+          { name: 'Wisdom', baseScore: 15, featIncrease: 0, miscIncrease: 0, backgroundIncrease: 1 },
+          { name: 'Charisma', baseScore: 8, featIncrease: 0, miscIncrease: 0, backgroundIncrease: 1 },
+        ],
+      }));
+
+      const int = result.find(a => a.name === 'Intelligence');
+      const arcana = int.skills.find(s => s.name === 'Arcana');
+      const nature = int.skills.find(s => s.name === 'Nature');
+      const history = int.skills.find(s => s.name === 'History');
+
+      // INT 9 = -1, WIS 16 = +3, primalBonus = max(1, 3) = 3
+      expect(arcana.bonus).toBe(2); // -1 + 3
+      expect(nature.bonus).toBe(2); // -1 + 3
+      expect(history.bonus).toBe(-1); // unaffected control
+    });
+
+    it('CLA-265: applies Magician primal order minimum +1 from computed Wisdom mod when Wisdom is low', async () => {
+      const result = await getAbilities(makeStats({
+        class: { name: 'Druid', primalOrder: 'Magician', saving_throw_proficiencies: [] },
+        abilities: [
+          { name: 'Strength', baseScore: 10, featIncrease: 0, miscIncrease: 0, backgroundIncrease: 0 },
+          { name: 'Dexterity', baseScore: 10, featIncrease: 0, miscIncrease: 0, backgroundIncrease: 0 },
+          { name: 'Constitution', baseScore: 10, featIncrease: 0, miscIncrease: 0, backgroundIncrease: 0 },
+          { name: 'Intelligence', baseScore: 10, featIncrease: 0, miscIncrease: 0, backgroundIncrease: 0 },
+          { name: 'Wisdom', baseScore: 9, featIncrease: 0, miscIncrease: 0, backgroundIncrease: 0 },
+          { name: 'Charisma', baseScore: 10, featIncrease: 0, miscIncrease: 0, backgroundIncrease: 0 },
+        ],
+      }));
+
+      const int = result.find(a => a.name === 'Intelligence');
+      // WIS 9 = -1 computed, primalBonus = max(1, -1) = 1
+      expect(int.skills.find(s => s.name === 'Arcana').bonus).toBe(1);
+      expect(int.skills.find(s => s.name === 'Nature').bonus).toBe(1);
+      expect(int.skills.find(s => s.name === 'History').bonus).toBe(0);
+    });
+
+    it('CLA-265: applies Thaumaturge divine order bonus from computed Wisdom mod on raw stored abilities shape', async () => {
+      const result = await getAbilities(makeStats({
+        level: 20,
+        class: { name: 'Cleric', divineOrder: 'Thaumaturge', saving_throw_proficiencies: [] },
+        abilities: [
+          { name: 'Strength', baseScore: 8, featIncrease: 0, miscIncrease: 0, backgroundIncrease: 0 },
+          { name: 'Dexterity', baseScore: 8, featIncrease: 0, miscIncrease: 0, backgroundIncrease: 0 },
+          { name: 'Constitution', baseScore: 14, featIncrease: 0, miscIncrease: 0, backgroundIncrease: 0 },
+          { name: 'Intelligence', baseScore: 8, featIncrease: 0, miscIncrease: 0, backgroundIncrease: 1 },
+          { name: 'Wisdom', baseScore: 15, featIncrease: 0, miscIncrease: 0, backgroundIncrease: 1 },
+          { name: 'Charisma', baseScore: 8, featIncrease: 0, miscIncrease: 0, backgroundIncrease: 1 },
+        ],
+      }));
+
+      const int = result.find(a => a.name === 'Intelligence');
+      // INT 9 = -1, WIS 16 = +3 computed, divineBonus = max(1, 3) = 3
+      expect(int.skills.find(s => s.name === 'Arcana').bonus).toBe(2);
+      expect(int.skills.find(s => s.name === 'Religion').bonus).toBe(2);
+      expect(int.skills.find(s => s.name === 'History').bonus).toBe(-1); // unaffected control
+    });
   });
 
   describe('getHitPoints', () => {

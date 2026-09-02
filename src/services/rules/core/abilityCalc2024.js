@@ -4,7 +4,7 @@ export { getCarryingCapacity } from './carryingCapacity.js';
 
 export async function getAbilities(playerStats) {
     const skills = await loadSkills();
-    return playerStats.abilities.map((ability) => {
+    const computedAbilities = playerStats.abilities.map((ability) => {
         const proficiency = Math.floor((playerStats.level - 1) / 4 + 2);
         const newAbility = { ...ability };
         newAbility.totalScore = Math.min(
@@ -37,34 +37,35 @@ export async function getAbilities(playerStats) {
             return newSkill;
            });
 
-        // Divine Order: Thaumaturge grants WIS mod (min +1) bonus to Arcana and Religion checks
-        if (playerStats.class?.divineOrder === 'Thaumaturge' && playerStats.class?.name === 'Cleric') {
-            const wisAbility = playerStats.abilities.find(a => a.name === 'Wisdom');
-            const wisMod = wisAbility?.bonus || 0;
-            const divineBonus = Math.max(1, wisMod);
-            newAbility.skills = newAbility.skills.map((skill) => {
-                if (skill.name === 'Arcana' || skill.name === 'Religion') {
-                    return { ...skill, bonus: skill.bonus + divineBonus };
-                }
-                return skill;
-            });
-        }
-
-        // Primal Order: Magician grants WIS mod (min +1) bonus to Arcana and Nature checks
-        if (playerStats.class?.primalOrder === 'Magician' && playerStats.class?.name === 'Druid') {
-            const wisAbility = playerStats.abilities.find(a => a.name === 'Wisdom');
-            const wisMod = wisAbility?.bonus || 0;
-            const primalBonus = Math.max(1, wisMod);
-            newAbility.skills = newAbility.skills.map((skill) => {
-                if (skill.name === 'Arcana' || skill.name === 'Nature') {
-                    return { ...skill, bonus: skill.bonus + primalBonus };
-                }
-                return skill;
-            });
-        }
-
         return newAbility;
        });
+
+    // CLA-265: Divine/Primal Order bonuses must read the COMPUTED Wisdom
+    // modifier. The raw stored abilities list carries no `bonus` field
+    // (it is only computed above), so reading playerStats.abilities here
+    // resolved wisMod to 0 and pinned the bonus at the +1 minimum.
+    const thaumaturgeActive = playerStats.class?.divineOrder === 'Thaumaturge' && playerStats.class?.name === 'Cleric';
+    const magicianActive = playerStats.class?.primalOrder === 'Magician' && playerStats.class?.name === 'Druid';
+    if (!thaumaturgeActive && !magicianActive) {
+        return computedAbilities;
+    }
+
+    const wisAbility = computedAbilities.find(a => a.name === 'Wisdom');
+    if (!wisAbility) {
+        console.error('getAbilities: Wisdom ability missing; order bonus falls back to +1 minimum');
+    }
+    const orderBonus = Math.max(1, wisAbility ? wisAbility.bonus : 0);
+    const orderSkillNames = thaumaturgeActive ? ['Arcana', 'Religion'] : ['Arcana', 'Nature'];
+
+    return computedAbilities.map((ability) => ({
+        ...ability,
+        skills: ability.skills.map((skill) => {
+            if (orderSkillNames.includes(skill.name)) {
+                return { ...skill, bonus: skill.bonus + orderBonus };
+            }
+            return skill;
+        }),
+    }));
 }
 
 export function getHitPoints(playerStats) {
