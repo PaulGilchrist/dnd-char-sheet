@@ -7171,6 +7171,18 @@
       "class": "Barbarian",
       "triggerConditions": "Action: 1 bonus action; Action: bonus_action; Range: 60 ft; Duration: until_start_of_next_turn",
       "expectedBehavior": "As a Bonus Action, you unleash a battle cry infused with divine energy. Up to ten other creatures of your choice within 60 feet of you gain Advantage on attack rolls and saving throws until the start of your next turn. Once you use this feature, you can't use it again until you finish a Long Rest unless you expend a use of your Rage (no action required) to restore your use of it."
+    },
+    {
+      "id": "CLA-173",
+      "name": "Encounter-joined combatSummary IRV dual-schema mapping",
+      "type": "data_mapping",
+      "handler": "src/services/encounters/encounterToInitiative.js; src/services/encounters/initiativeService.js",
+      "router": "n/a",
+      "infoBuilder": "src/services/npcs/monsterIrvUtils.js; src/components/encounter/MonsterCardBody.jsx",
+      "verified": "verified",
+      "class": null,
+      "triggerConditions": "monster joined via Encounter Builder or +NPC on initiative card",
+      "expectedBehavior": "Joined combatSummary creatures carry dual-schema-resolved resistances/immunities plus vulnerabilities from monsters.json, and the statblock viewer renders all IRV lines."
     }
   ]
 }

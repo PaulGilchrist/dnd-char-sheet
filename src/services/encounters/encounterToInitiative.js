@@ -5,6 +5,7 @@ import { rollD20 } from '../dice/diceRoller.js';
 import { addEntry } from '../ui/logService.js';
 import { getRuntimeValue } from '../../hooks/runtime/useRuntimeState.js';
 import { loadCombatSummary } from './combatData.js';
+import { resolveMonsterIRV } from '../npcs/monsterIrvUtils.js';
 
 export function getMonsterSaveBonuses(monster) {
   const map = { str: 'Strength', dex: 'Dexterity', con: 'Constitution', int: 'Intelligence', wis: 'Wisdom', cha: 'Charisma' };
@@ -88,6 +89,7 @@ export async function expandMonstersToCreatures(selectedMonsters, characters, _c
       for (let i = 0; i < qty; i++) {
           const name = qty === 1 ? baseName : `${baseName} ${i + 1}`;
           const rollResult = rollNpcInitiative(monster);
+          const irv = resolveMonsterIRV(monster);
            creatureList.push({
              name,
              type: 'npc',
@@ -95,8 +97,9 @@ export async function expandMonstersToCreatures(selectedMonsters, characters, _c
              initiative: String(rollResult.total),
              targetName: null,
              ac: typeof monster.armor_class === 'number' ? monster.armor_class : (console.error(`[AC] Monster "${name}" has no armor_class defined. Defaulting to 10.`), 10),
-             resistances: monster.damage_resistances || [],
-             immunities: monster.damage_immunities || [],
+             resistances: irv.resistances,
+             immunities: irv.immunities,
+             vulnerabilities: irv.vulnerabilities,
              concentration: null,
              maxHp: npcHp,
              currentHp: npcHp,
@@ -176,6 +179,7 @@ export async function addMonstersToInitiative(selectedMonsters, characters, camp
         for (let i = 0; i < qty; i++) {
             const name = getNextUniqueMonsterName(baseName, combatSummary.creatures);
             const rollResult = rollNpcInitiative(monster);
+            const irv = resolveMonsterIRV(monster);
              combatSummary.creatures.push({
                  name,
                  type: 'npc',
@@ -183,8 +187,9 @@ export async function addMonstersToInitiative(selectedMonsters, characters, camp
                  initiative: String(rollResult.total),
                  targetName: null,
                  ac: typeof monster.armor_class === 'number' ? monster.armor_class : (console.error(`[AC] Monster "${name}" has no armor_class defined. Defaulting to 10.`), 10),
-                 resistances: monster.damage_resistances || [],
-                 immunities: monster.damage_immunities || [],
+                 resistances: irv.resistances,
+                 immunities: irv.immunities,
+                 vulnerabilities: irv.vulnerabilities,
                  concentration: null,
                  maxHp: npcHp,
                  currentHp: npcHp,

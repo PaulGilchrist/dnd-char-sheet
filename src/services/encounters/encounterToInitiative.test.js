@@ -215,6 +215,40 @@ describe('expandMonstersToCreatures', () => {
     });
   });
 
+  describe('dual-schema IRV mapping (CLA-173)', () => {
+    it('maps legacy capitalized resistances/immunities/vulnerabilities onto the creature', async () => {
+      rollD20.mockReturnValueOnce(10).mockReturnValueOnce(10);
+      const monster = createMonster('Shadow', {
+        damage_resistances: null,
+        damage_immunities: null,
+        resistances: ['Acid', 'Cold', 'Fire', 'Lightning', 'Thunder'],
+        immunities: ['Necrotic', 'Poison', 'Exhaustion', 'Frightened', 'Grappled', 'Paralyzed', 'Petrified', 'Poisoned', 'Prone', 'Restrained', 'Unconscious'],
+        vulnerabilities: ['Radiant'],
+      });
+      const result = await expandMonstersToCreatures([monster], [], 'TestCampaign');
+
+      const npc = result.creatures.find((c) => c.name === 'Shadow');
+      expect(npc.resistances).toEqual(['Acid', 'Cold', 'Fire', 'Lightning', 'Thunder']);
+      expect(npc.immunities).toEqual(['Necrotic', 'Poison']);
+      expect(npc.vulnerabilities).toEqual(['Radiant']);
+    });
+
+    it('maps 2024 damage_* schema keys including vulnerabilities', async () => {
+      rollD20.mockReturnValueOnce(10).mockReturnValueOnce(10);
+      const monster = createMonster('Wight', {
+        damage_resistances: ['Acid', 'Cold'],
+        damage_immunities: ['Necrotic', 'Poison'],
+        damage_vulnerabilities: ['Radiant'],
+      });
+      const result = await expandMonstersToCreatures([monster], [], 'TestCampaign');
+
+      const npc = result.creatures.find((c) => c.name === 'Wight');
+      expect(npc.resistances).toEqual(['Acid', 'Cold']);
+      expect(npc.immunities).toEqual(['Necrotic', 'Poison']);
+      expect(npc.vulnerabilities).toEqual(['Radiant']);
+    });
+  });
+
   describe('phantasmal summon hp halving', () => {
     it('halves hp for Bestial Spirit when character has it in phantasmal list', async () => {
       rollD20.mockReturnValueOnce(10).mockReturnValueOnce(10);
@@ -494,6 +528,29 @@ describe('addMonstersToInitiative', () => {
     const npc = result.creatures.find((c) => c.name === 'Aarakocra 1');
     expect(npc.type).toBe('npc');
     expect(npc.monsterType).toBe('humanoid');
+  });
+
+  it('copies dual-schema IRV including vulnerabilities onto joined creatures (CLA-173)', async () => {
+    rollD20.mockReturnValueOnce(15).mockReturnValueOnce(10);
+    const monsters = [createMonster('Shadow', {
+      damage_resistances: null,
+      damage_immunities: null,
+      resistances: ['Acid', 'Cold', 'Fire', 'Lightning', 'Thunder'],
+      immunities: ['Necrotic', 'Poison', 'Exhaustion'],
+      vulnerabilities: ['Radiant'],
+    })];
+
+    const result = await addMonstersToInitiative(monsters, [], 'TestCampaign');
+
+    const shadow = result.creatures.find((c) => c.name === 'Shadow 1');
+    expect(shadow.resistances).toEqual(['Acid', 'Cold', 'Fire', 'Lightning', 'Thunder']);
+    expect(shadow.immunities).toEqual(['Necrotic', 'Poison']);
+    expect(shadow.vulnerabilities).toEqual(['Radiant']);
+    expect(storage.set).toHaveBeenCalledWith(
+      'combatSummary',
+      expect.objectContaining({ creatures: expect.arrayContaining([expect.objectContaining({ name: 'Shadow 1', vulnerabilities: ['Radiant'] })]) }),
+      'TestCampaign',
+    );
   });
 
   it('uses unique names when monsters already exist', async () => {

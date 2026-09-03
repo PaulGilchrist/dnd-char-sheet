@@ -2,57 +2,10 @@ import { getRuntimeValue, setRuntimeValue } from '../../../../hooks/runtime/useR
 import { rollExpression } from '../../../dice/diceRoller.js';
 import { evaluateAutoExpression } from '../../../combat/automation/automationService.js';
 import { getMonsterData } from '../../../../services/npcs/monsterUtils.js';
+import { resolveMonsterIRV } from '../../../../services/npcs/monsterIrvUtils.js';
 import { getCombatContext, getTargetFromAttacker } from '../../../../services/rules/combat/damageUtils.js';
 import { getCurrentCombatRound } from '../../../../services/encounters/combatData.js';
 import { addEntry } from '../../../ui/logService.js';
-
-// Canonical source mirrors the CONDITIONS labels in
-// src/services/combat/conditions/conditionUtils.js (kept inline to avoid adding
-// a conditionUtils import to this module's test-graph — many suites partial-mock it).
-// Exhaustion/Diseased are legacy 5e conditions that still appear inside the mixed
-// `immunities` list of older monsters.json statblocks but were dropped from CONDITIONS.
-const LEGACY_CONDITION_NAMES = new Set([
-    'blinded', 'charmed', 'cursed', 'deafened', 'frightened', 'grappled',
-    'incapacitated', 'paralyzed', 'petrified', 'poisoned', 'prone', 'restrained',
-    'slow', 'stunned', 'unconscious', 'exhaustion', 'diseased',
-]);
-
-function hasEntries(list) {
-    return Array.isArray(list) && list.length > 0;
-}
-
-/**
- * monsters.json stores IRV under two schemas:
- *  - 2024-batch monsters: damage_immunities / damage_resistances / damage_vulnerabilities / condition_immunities
- *  - legacy monsters: immunities / resistances / vulnerabilities, with damage types AND condition
- *    names mixed together inside `immunities` (CLA-207).
- * Resolve either shape into the split lists the popup/log expects.
- */
-function resolveMonsterIRV(monsterData) {
-    const resistances = hasEntries(monsterData.damage_resistances)
-        ? monsterData.damage_resistances
-        : (monsterData.resistances || []);
-    const vulnerabilities = hasEntries(monsterData.damage_vulnerabilities)
-        ? monsterData.damage_vulnerabilities
-        : (monsterData.vulnerabilities || []);
-
-    if (hasEntries(monsterData.damage_immunities)) {
-        return {
-            immunities: monsterData.damage_immunities,
-            resistances,
-            vulnerabilities,
-            conditionImmunities: monsterData.condition_immunities || [],
-        };
-    }
-
-    const legacyImmunities = monsterData.immunities || [];
-    const conditionImmunities = legacyImmunities.filter(v => LEGACY_CONDITION_NAMES.has(String(v).toLowerCase()));
-    const immunities = legacyImmunities.filter(v => !LEGACY_CONDITION_NAMES.has(String(v).toLowerCase()));
-    if (!hasEntries(conditionImmunities) && hasEntries(monsterData.condition_immunities)) {
-        return { immunities, resistances, vulnerabilities, conditionImmunities: monsterData.condition_immunities };
-    }
-    return { immunities, resistances, vulnerabilities, conditionImmunities };
-}
 
 export async function handle(action, playerStats, campaignName, _mapName) {
     const auto = action.automation;

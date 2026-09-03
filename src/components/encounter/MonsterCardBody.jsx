@@ -2,6 +2,7 @@ import { useMemo } from 'react';
 import { sanitizeHtml } from '../../services/ui/sanitize.js';
 import { getCombatSummary } from '../../services/encounters/combatData.js';
 import { computeConditionEffects } from '../../services/combat/conditions/conditionEffects.js';
+import { resolveMonsterIRV } from '../../services/npcs/monsterIrvUtils.js';
 import { EFFECT_DESCRIPTIONS } from '../../services/combat/conditions/effectDescriptions.js';
 import { MonsterAction } from './MonsterAction.jsx';
 import { hasEntries, hasSenseEntries, saveAbilityAbbr, parseInitiativeBonus, formatSenses } from './MonsterCardHelpers.js';
@@ -235,6 +236,7 @@ function MonsterCardAbilities({ monster, handleAbilityCheck }) {
 function MonsterCardDefenses({ monster, monsterName, campaignName, handleSaveThrow, handleSkillCheck }) {
   const currentCs = getCombatSummary(campaignName);
   const summaryCreature = currentCs?.creatures?.find(c => c.name === monsterName);
+  const irv = resolveMonsterIRV(monster);
   const saves = summaryCreature?.saving_throws && hasEntries(summaryCreature.saving_throws)
     ? summaryCreature.saving_throws
     : monster.saving_throws;
@@ -283,28 +285,28 @@ function MonsterCardDefenses({ monster, monsterName, campaignName, handleSaveThr
           <span>{Array.isArray(monster.languages) ? monster.languages.join(', ') : monster.languages}</span>
         </div>
       )}
-      {hasEntries(monster.damage_vulnerabilities) && (
+      {hasEntries(irv.vulnerabilities) && (
         <div className="mc-defense-row">
           <span className="mc-defense-label">Damage Vuln.</span>
-          <span>{monster.damage_vulnerabilities.join(', ')}</span>
+          <span>{irv.vulnerabilities.join(', ')}</span>
         </div>
       )}
-      {hasEntries(monster.damage_resistances) && (
+      {hasEntries(irv.resistances) && (
         <div className="mc-defense-row">
           <span className="mc-defense-label">Damage Resist.</span>
-          <span>{monster.damage_resistances.join(', ')}</span>
+          <span>{irv.resistances.join(', ')}</span>
         </div>
       )}
-      {hasEntries(monster.damage_immunities) && (
+      {hasEntries(irv.immunities) && (
         <div className="mc-defense-row">
           <span className="mc-defense-label">Damage Imm</span>
-          <span>{monster.damage_immunities.join(', ')}</span>
+          <span>{irv.immunities.join(', ')}</span>
         </div>
       )}
-      {hasEntries(monster.condition_immunities) && (
+      {hasEntries(irv.conditionImmunities) && (
         <div className="mc-defense-row">
           <span className="mc-defense-label">Condition Imm</span>
-          <span>{monster.condition_immunities.join(', ')}</span>
+          <span>{irv.conditionImmunities.join(', ')}</span>
         </div>
       )}
       <div className="mc-defense-row mc-defense-cr">

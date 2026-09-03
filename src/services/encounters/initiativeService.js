@@ -1,5 +1,6 @@
 import { rollD20 } from '../dice/diceRoller.js'
 import { getMonsterData, getMonsterImageUrl } from '../npcs/monsterUtils.js'
+import { resolveMonsterIRV } from '../npcs/monsterIrvUtils.js'
 import { getMonsterSaveBonuses } from './encounterToInitiative.js'
 import { getRuntimeValue } from '../../hooks/runtime/useRuntimeState.js'
 
@@ -113,8 +114,10 @@ async function applyNpcMonsterData(combatSummary, creatureIndex, monster, campai
     creature.ac = typeof monster.armor_class === 'number'
         ? monster.armor_class
         : (console.error(`[AC] Monster "${creature.name}" has no armor_class defined. Defaulting to 10.`), 10)
-    creature.resistances = monster.damage_resistances || []
-    creature.immunities = monster.damage_immunities || []
+    const irv = resolveMonsterIRV(monster)
+    creature.resistances = irv.resistances
+    creature.immunities = irv.immunities
+    creature.vulnerabilities = irv.vulnerabilities
     creature.initiativeBonus = monster.initiative_details ? parseInt(monster.initiative_details) || 0 : 0
     let hp = monster.hit_points || 10
     // Phantasmal Creatures: halve HP for Bestial Spirit and Fey Spirit when summoned via the feature
