@@ -14,6 +14,7 @@ import { endInvisibilityOnHostileAction } from '../../../services/rules/features
 import { hasPotentCantrip, hasSoulstitchProtection, applyMinDamageAdjustment } from '../loggedDiceRollUtils.js';
 import { getCoronaSaveDisadvantage } from '../../../services/combat/auras/coronaAuraUtils.js';
 import { getElderChampionSaveDisadvantage } from '../../../services/combat/auras/elderChampionAuraUtils.js';
+import { resolveCreatureType } from '../../../services/combat/creatureTypeResolver.js';
 import { isCircleOfPowerActive } from '../../../services/automation/handlers/buffs/circleOfPowerHandler.js';
 import { handleOverchannelSelfDamage } from './handleOverchannelSelfDamage.js';
 
@@ -347,7 +348,7 @@ export function createNpcSaveDamageHandler(deps) {
                     playerStats: targetStats,
                     getRuntimeValue: getRuntimeValue,
                     campaignName: campaignName,
-                    sourceCreatureType: attackerCreature?.type,
+                    sourceCreatureType: resolveCreatureType(attackerCreature),
                 })) {
                     continue;
                 }

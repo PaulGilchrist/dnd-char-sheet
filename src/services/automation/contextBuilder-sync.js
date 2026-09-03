@@ -11,6 +11,7 @@ import { getCoronaSaveDisadvantage } from '../combat/auras/coronaAuraUtils.js';
 import { endSanctuary } from './handlers/spells/sanctuaryHandler.js';
 import { isActive as isAvengingAngelActive, isAuraTarget } from '../automation/handlers/class-cleric-paladin/avengingAngelHandler.js';
 import { isProtectionFromEvilAndGoodActive, isCreatureWarded } from '../automation/handlers/buffs/protectionFromEvilAndGoodHandler.js';
+import { resolveCreatureType } from '../combat/creatureTypeResolver.js';
 import { isDeathWardActive } from '../automation/handlers/buffs/deathWardHandler.js';
 import { collectWeaponMastery } from '../combat/automation/automationService.js';
 import { selectBrutalStrikeRiders } from '../combat/brutalStrikeSelection.js';
@@ -231,7 +232,7 @@ export async function buildAttackContextSync(attack, playerStats, campaignName, 
             if (isProtectionFromEvilAndGoodActive(targetName, campaignName)) {
                 const combatSummary = await getCombatContext(campaignName);
                 const attackerCreature = combatSummary?.creatures?.find(c => c.name === playerName);
-                if (attackerCreature && isCreatureWarded(attackerCreature.type, targetName, campaignName)) {
+                if (attackerCreature && isCreatureWarded(resolveCreatureType(attackerCreature), targetName, campaignName)) {
                     dis++;
                 }
             }

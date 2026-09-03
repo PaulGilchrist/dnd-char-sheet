@@ -8,6 +8,7 @@ import {
   normalizeSaveType,
 } from '../../services/rules/combat/applyDamage.js';
 import { hasIgnoreResistance, playerIsImmuneToCondition } from '../../services/combat/automation/automationService.js';
+import { resolveCreatureType } from '../../services/combat/creatureTypeResolver.js';
 import { addEntry } from '../../services/ui/logService.js';
 import { endInvisibilityOnHostileAction } from '../../services/rules/features/invisibilityService.js';
 import { hasSoulstitchProtection } from './loggedDiceRollUtils.js';
@@ -315,7 +316,7 @@ export function setupEventListeners(deps) {
                         playerStats: targetStats,
                         getRuntimeValue: getRuntimeValue,
                         campaignName: pending.campaignName,
-                        sourceCreatureType: attackerCreature?.type,
+                        sourceCreatureType: resolveCreatureType(attackerCreature),
                     })) {
                         continue;
                     }

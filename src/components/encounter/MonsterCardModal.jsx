@@ -7,6 +7,7 @@ import { getCombatContext } from '../../services/rules/combat/damageUtils.js';
 import { findCreatureByName } from '../../services/rules/combat/damageUtils.js';
 import { computeConditionEffects, combineAttackModes, CONDITIONS_THAT_CANNOT_ACT } from '../../services/combat/conditions/conditionEffects.js';
 import { isProtectionFromEvilAndGoodActive, isCreatureWarded } from '../../services/automation/handlers/buffs/protectionFromEvilAndGoodHandler.js';
+import { resolveCreatureType } from '../../services/combat/creatureTypeResolver.js';
 import { computeRangeEffect, getDistanceFeet, getNearestPlacedItem, rangeToFeet } from '../../services/rules/combat/rangeValidation.js';
 import { isDistanceInRange } from '../../services/rules/combat/rangeCheck.js';
 import * as mapsService from '../../services/maps/mapsService.js';
@@ -268,7 +269,7 @@ function MonsterCardModal({ monster, onClose, campaignName, creatures, creatureN
 
     if (isProtectionFromEvilAndGoodActive(target?.name, campaignName)) {
       const attackerCreature = getAttackerCreature();
-      if (attackerCreature && isCreatureWarded(attackerCreature.type, target?.name, campaignName)) {
+      if (attackerCreature && isCreatureWarded(resolveCreatureType(attackerCreature), target?.name, campaignName)) {
         targetEffectData.targetDisadvantageCount = (targetEffectData.targetDisadvantageCount || 0) + 1;
       }
     }
