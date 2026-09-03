@@ -35,6 +35,16 @@ import { handleFalseLife as handleFalseLifeTrigger } from './triggerSpells.js';
 import { handleRemoveCurse as handleRemoveCurseTrigger } from './triggerSpells.js';
 import { getCombatSummary } from '../../../../../services/encounters/combatData.js';
 
+// CLA-268: Psychic Spells damage-type swap is opt-in — honor the cast-time
+// checkbox flag (_psychicSpellsOverride / usePsychicDamage); otherwise keep RAW.
+function computePsychicDamageType(spell, psychicSpellsConfig, damageType) {
+    const optedIn = spell._psychicSpellsOverride || spell.usePsychicDamage;
+    if (psychicSpellsConfig && spell.damage && damageType && optedIn) {
+        return psychicSpellsConfig.damageType || 'Psychic';
+    }
+    return damageType;
+}
+
 export async function executeSpellCast(spell, metaCtx, { rollAttack, rollDamage, playerStats, getTargetInfo, attackerPos, targetPos, featEffects, campaignName, mapName, characters }) {
     // --- Block checks ---
     const buffs = (await import('./spellResolution.js')).getActiveBuffs(playerStats.name, campaignName);
@@ -135,10 +145,7 @@ export async function executeSpellCast(spell, metaCtx, { rollAttack, rollDamage,
     const damageInfo = resolveSpellDamageWithTypes(spell, spell.level || 1);
     const formula = damageInfo?.formula || null;
     const damageType = damageInfo?.primaryType || spell.damage?.damage_type || '';
-    let effectiveDamageType = damageType;
-    if (psychicSpellsConfig && spell.damage && damageType) {
-        effectiveDamageType = psychicSpellsConfig.damageType || 'Psychic';
-    }
+    const effectiveDamageType = computePsychicDamageType(spell, psychicSpellsConfig, damageType);
 
     const cantripSpellAbility = spell.spellCastingAbility || playerStats.spellAbilities?.spellCastingAbility;
     let spellToHit = playerStats.spellAbilities?.toHit || 0;

@@ -597,20 +597,43 @@ describe('executeSpellCast - Feature riders & special cases', () => {
   // Psychic Spells damage type override
   // ------------------------------------------------------------------
   describe('Psychic Spells damage type override', () => {
-    it('overrides damage type to Psychic when Psychic Spells config has damageType', async () => {
+    const psychicPassives = [
+      {
+        name: 'Psychic Spells',
+        type: 'psychic_spells',
+        spellSchools: ['enchantment', 'illusion'],
+        componentReduction: [],
+        damageType: 'Psychic',
+      },
+    ]
+
+    it('overrides damage type to Psychic only when the cast-time opt-in flag is set', async () => {
       const services = makeServices({
         playerStats: makePlayerStats({
-          automation: {
-            passives: [
-              {
-                name: 'Psychic Spells',
-                type: 'psychic_spells',
-                spellSchools: ['enchantment', 'illusion'],
-                componentReduction: [],
-                damageType: 'Psychic',
-              },
-            ],
-          },
+          automation: { passives: psychicPassives },
+        }),
+        getTargetInfo: async () => ({ name: 'Target' }),
+      })
+
+      const spell = makeSpell({
+        name: 'Charm Person',
+        school: 'Enchantment',
+        damage: { damage_type: 'Thunder', damage_at_slot_level: { 1: '1d6' } },
+        dc: { dc_type: 'wis', dc_success: 'none' },
+        _psychicSpellsOverride: true,
+      })
+
+      await executeSpellCast(spell, makeMetaCtx(), services)
+
+      expect(services.rollDamage).toHaveBeenCalled()
+      const ctx = services.rollDamage.mock.calls[0][5]
+      expect(ctx.damageType).toBe('Psychic')
+    })
+
+    it('keeps RAW damage type when the opt-in flag is not set', async () => {
+      const services = makeServices({
+        playerStats: makePlayerStats({
+          automation: { passives: psychicPassives },
         }),
         getTargetInfo: async () => ({ name: 'Target' }),
       })
@@ -626,7 +649,7 @@ describe('executeSpellCast - Feature riders & special cases', () => {
 
       expect(services.rollDamage).toHaveBeenCalled()
       const ctx = services.rollDamage.mock.calls[0][5]
-      expect(ctx.damageType).toBe('Psychic')
+      expect(ctx.damageType).toBe('Thunder')
     })
   })
 

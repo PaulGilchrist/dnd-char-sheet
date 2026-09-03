@@ -107,7 +107,9 @@ function SpellDetailPopup({ spell, playerStats, campaignName, onClose, onCast, u
     const modifiedSpell = isCantrip && cantripAutoLevel ? { ...spell, level: cantripAutoLevel, baseLevel: 0 } : { ...spell, baseLevel: isCantrip ? 0 : undefined };
 
     if (isCantrip) {
-      onCast(modifiedSpell, metaCtx);
+      // Carry the Psychic damage opt-in flag through the cantrip path so the
+      // execution resolver can honor the checkbox (CLA-268).
+      onCast({ ...modifiedSpell, usePsychicDamage }, metaCtx);
       return;
     }
 
