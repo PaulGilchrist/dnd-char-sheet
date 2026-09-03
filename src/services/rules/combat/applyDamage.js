@@ -20,6 +20,7 @@ import { checkRelentlessRage } from '../../rules/features/relentlessRageService.
 import { checkDeathWard } from '../../rules/features/deathWardService.js';
 import { isActive as isAvengingAngelActive, cleanupAuraTargetOnDamage } from '../../automation/handlers/class-cleric-paladin/avengingAngelHandler.js';
 import { endCompelledDuel } from '../../automation/handlers/spells/compelledDuelHandler.js';
+import { createSaveListener } from '../../automation/common/savePrompt.js';
 import { revertPolymorph } from '../../automation/handlers/spells/polymorphService.js';
 import { cleanupWildShape } from '../../automation/handlers/class-druid/wildShapeCreatureBuilder.js';
 
@@ -184,8 +185,9 @@ if (auraComboEffects.resistances.length > 0) {
   resistances = [...new Set([...resistances, ...auraComboEffects.resistances])];
 }
 if (!Array.isArray(damageTypes)) { throw new Error('damageTypes must be an array'); }
-const resResult = computeDamageAfterResistancesWithDetails(rawDamage, damageTypes, resistances, immunities, ignoreResistance);
-    let finalDamage = resResult.finalDamage;
+    let combatSummaryChanged = false;
+    const resResult = computeDamageAfterResistancesWithDetails(rawDamage, damageTypes, resistances, immunities, ignoreResistance);
+     let finalDamage = resResult.finalDamage;
     let resistanceDetails = resResult.typeDetails;
 
     // Apply damage reduction from features (e.g., Heavy Armor Master)
@@ -331,6 +333,13 @@ const resResult = computeDamageAfterResistancesWithDetails(rawDamage, damageType
 
     if (wardDamage > 0) {
         applyWardingBond(creature, combatSummary, campaignName, wardDamage);
+      // Dominate (Person/Monster/Beast): a dominated target repeats its WIS save
+      // on damage instead of the generic unconditional charm-strip.
+      const domination = findDomination(creature.name, combatSummary, campaignName);
+      if (domination) {
+        const summaryChanged = handleDominateRepeatSave(creature, isPlayer, domination, combatSummary, characters, campaignName, attackerName);
+        if (summaryChanged) combatSummaryChanged = true;
+      }
       if (isPlayer) {
         const rawConditions = getRuntimeValue(creature.name, 'activeConditions');
         const conditions = rawConditions || [];
@@ -346,7 +355,7 @@ const resResult = computeDamageAfterResistancesWithDetails(rawDamage, damageType
             timestamp: Date.now(),
           }).catch((e) => { console.error("[applyDamage] Error:", e); });
         }
-        if (conditions.some(c => String(c).toLowerCase() === 'charmed')) {
+        if (!domination && conditions.some(c => String(c).toLowerCase() === 'charmed')) {
           const filtered = conditions.filter(c => String(c).toLowerCase() !== 'charmed');
           setRuntimeValue(creature.name, 'activeConditions', filtered, campaignName);
           addEntry(campaignName, {
@@ -374,7 +383,7 @@ const resResult = computeDamageAfterResistancesWithDetails(rawDamage, damageType
           }).catch((e) => { console.error("[applyDamage] Error:", e); });
         }
         const hadCharmed = rawConditions.some(c => String(c).toLowerCase() === 'charmed');
-        if (hadCharmed) {
+        if (!domination && hadCharmed) {
           const filtered = rawConditions.filter(c => String(c).toLowerCase() !== 'charmed');
           setRuntimeValue(creature.name, 'activeConditions', filtered, campaignName);
           addEntry(campaignName, {
@@ -382,7 +391,7 @@ const resResult = computeDamageAfterResistancesWithDetails(rawDamage, damageType
             action: 'removed',
             characterName: creature.name,
             condition: 'Charmed',
-            reason: 'took damage (Animal Friendship)',
+            reason: 'took damage (Charm)',
             timestamp: Date.now(),
           }).catch((e) => { console.error("[applyDamage] Error:", e); });
         }
@@ -440,7 +449,6 @@ const resResult = computeDamageAfterResistancesWithDetails(rawDamage, damageType
         checkDarkOnesBlessing(characters, creature, finalDamage, isPlayer, wasAlive, isNowUnconscious, campaignName, attackerName);
 
   let npcConcentrationBroken = false;
-  let combatSummaryChanged = false;
     if (creature.type === 'player') {
     if (wasAlive && isNowUnconscious) {
       // Check for Undying Sentinel (Oath of Glory level 15)
@@ -585,6 +593,133 @@ const resResult = computeDamageAfterResistancesWithDetails(rawDamage, damageType
   }
 
   return { finalDamage, oldHp, newHp, damageReduced: finalDamage < rawDamage, damageReducedByFeature: damageReducedByFeature, resistanceDetails, holyAuraSaveResult };
+}
+
+// Identifies a Dominate (Person/Monster/Beast) target: Charmed condition + a caster
+// concentrating on a Dominate spell whose pendingExpirations carry a 'dominated'
+// marker for this target. 'dominated' expirations are written ONLY by dominateHandler,
+// so this gates the repeat-save behavior to domination — not every charm.
+export function findDomination(targetName, combatSummary, campaignName) {
+  const rawConditions = getRuntimeValue(targetName, 'activeConditions', campaignName) || [];
+  const conditions = Array.isArray(rawConditions) ? rawConditions : [];
+  if (!conditions.some(c => String(c).toLowerCase() === 'charmed')) return null;
+  for (const caster of combatSummary?.creatures || []) {
+    const spell = String(caster.concentration?.spell || '').trim();
+    if (!/^dominate (person|monster|beast)$/i.test(spell)) continue;
+    const expirations = getRuntimeValue(caster.name, 'pendingExpirations', campaignName) || [];
+    if (!Array.isArray(expirations)) continue;
+    const dominated = expirations.some(e => e.target === targetName && Array.isArray(e.effects) && e.effects.some(ef => ef.type === 'dominated'));
+    if (dominated) return { casterName: caster.name, spellName: spell };
+  }
+  return null;
+}
+
+function resolveDominateSaveDc(domination, characters, combatSummary) {
+  const casterChar = (characters || []).find(c => c && (c.name === domination.casterName || c.name.startsWith(domination.casterName + ' ')));
+  const computed = casterChar?.computedStats || casterChar;
+  const saveDc = computed?.spellAbilities?.saveDc;
+  if (saveDc != null) return saveDc;
+  const casterCreature = combatSummary?.creatures?.find(c => c.name === domination.casterName);
+  if (casterCreature?.concentration?.dc != null) return casterCreature.concentration.dc;
+  console.error(`[applyDamage] No save DC available for ${domination.spellName} repeat save by ${domination.casterName}`);
+  return null;
+}
+
+// Repeat WIS save when a dominated target takes damage — mirrors the established
+// damage-triggered concentration-save round trip: NPCs AUTO-ROLL inline
+// (concentration NPC branch), PCs get a queued save prompt via createSaveListener
+// (the same subsystem dominateHandler uses on the initial cast) resolved via 'save-result'.
+// On success: Charmed + dominated expiration removed, caster concentration cleared, spell ends.
+// On failure: Charmed retained, spell continues.
+function handleDominateRepeatSave(creature, isPlayer, domination, combatSummary, characters, campaignName, attackerName) {
+  const { casterName, spellName } = domination;
+  const saveDc = resolveDominateSaveDc(domination, characters, combatSummary);
+  if (saveDc == null) return false;
+  const damageWord = attackerName && attackerName !== creature.name ? ` from ${attackerName}` : '';
+
+  const endDomination = (detail) => {
+    const casterCreature = combatSummary.creatures.find(c => c.name === casterName);
+    if (casterCreature && casterCreature.concentration) casterCreature.concentration = null;
+    cleanupConcentrationEffects(casterName, spellName, campaignName);
+    const stored = getRuntimeValue(creature.name, 'activeConditions', campaignName) || [];
+    const conditions = Array.isArray(stored) ? stored : [];
+    const filtered = conditions.filter(c => String(c).toLowerCase() !== 'charmed');
+    if (filtered.length !== conditions.length) {
+      setRuntimeValue(creature.name, 'activeConditions', filtered, campaignName);
+    }
+    addEntry(campaignName, {
+      type: 'roll',
+      characterName: creature.name,
+      rollType: 'save',
+      name: `${spellName} Repeat Save`,
+      rolls: detail.rawRolls || [detail.roll],
+      total: detail.total,
+      bonus: detail.saveBonus ?? detail.bonus ?? 0,
+      saveType: 'WIS',
+      saveDc,
+      saveResult: 'success',
+    }).catch((e) => { console.error('[applyDamage] Error:', e); });
+    addEntry(campaignName, {
+      type: 'condition',
+      action: 'removed',
+      characterName: creature.name,
+      condition: 'Charmed',
+      reason: `${spellName} — spell ends on successful save against damage`,
+      timestamp: Date.now(),
+    }).catch((e) => { console.error('[applyDamage] Error:', e); });
+    storage.set('combatSummary', combatSummary, campaignName);
+    window.dispatchEvent(new CustomEvent('combat-summary-updated'));
+  };
+
+  const resistDomination = (detail) => {
+    addEntry(campaignName, {
+      type: 'roll',
+      characterName: creature.name,
+      rollType: 'save',
+      name: `${spellName} Repeat Save`,
+      rolls: detail.rawRolls || [detail.roll],
+      total: detail.total,
+      bonus: detail.saveBonus ?? detail.bonus ?? 0,
+      saveType: 'WIS',
+      saveDc,
+      saveResult: 'failure',
+    }).catch((e) => { console.error('[applyDamage] Error:', e); });
+    addEntry(campaignName, {
+      type: 'ability_use',
+      characterName: creature.name,
+      abilityName: spellName,
+      description: `${creature.name} failed the repeat WIS save (DC ${saveDc}) after taking damage${damageWord} — remains Charmed (dominated by ${casterName}).`,
+      timestamp: Date.now(),
+    }).catch((e) => { console.error('[applyDamage] Error:', e); });
+  };
+
+  if (isPlayer) {
+    const { promise } = createSaveListener(campaignName, {
+      targetName: creature.name,
+      attackerName: casterName,
+      saveType: 'WIS',
+      saveDc,
+      dcSuccess: 'none',
+      condition: 'charmed',
+      sourceName: casterName,
+    });
+    promise.then((detail) => {
+      if (detail.success) {
+        endDomination(detail);
+      } else {
+        resistDomination(detail);
+      }
+    });
+    return false;
+  }
+
+  const saveResult = rollSaveForCreature(creature, 'wis', saveDc);
+  if (saveResult.success) {
+    endDomination(saveResult);
+    return true;
+  }
+  resistDomination(saveResult);
+  return false;
 }
 
 function logDamageApplication(creature, damage, oldHp, newHp, campaignName) {

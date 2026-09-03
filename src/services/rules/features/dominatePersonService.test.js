@@ -171,7 +171,7 @@ describe('dominatePersonService', () => {
   });
 
   describe('combat advantage', () => {
-    it('passes advantage=true when target is not at full health', async () => {
+    it('never grants advantage from the old full-health proxy (RAW requires "you or allies fighting it" — no such signal exists)', async () => {
       getCombatContext.mockResolvedValue({
         creatures: [
           { name: 'TestCaster' },
@@ -184,7 +184,7 @@ describe('dominatePersonService', () => {
 
       expect(executeHandler).toHaveBeenCalledWith(
         expect.objectContaining({
-          automation: expect.objectContaining({ advantage: true }),
+          automation: expect.objectContaining({ advantage: false }),
         }),
         makePlayerStats(),
         campaignName,

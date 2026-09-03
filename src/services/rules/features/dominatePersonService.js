@@ -67,11 +67,9 @@ export async function triggerDominatePerson(spell, metaCtx, playerStats, campaig
         return { type: 'popup', payload: { type: 'automation_info', name: 'Dominate Person', description: `No effect. ${targetName} is not a Humanoid. Spell slot refunded.` } };
     }
 
-    // Check if target is at full health to determine if target gets advantage on save
-    const cs = await getCombatContext(campaignName);
-    const targetCreature = cs?.creatures?.find(c => c.name === targetName);
-    const targetNotFullHealth = targetCreature && targetCreature.currentHp != null && targetCreature.maxHp != null && targetCreature.currentHp < targetCreature.maxHp;
-
+    // RAW advantage is "if you or your allies are fighting it" — the gridless app
+    // exposes no adjacency/hostility signal on combatSummary, so no advantage is
+    // granted here (the former currentHp<maxHp proxy was not the RAW condition).
     const spellSaveDc = metaCtx?.spellSaveDc || playerStats.spellAbilities?.saveDc || 8 + (playerStats.proficiency || 2);
     const slotLevel = metaCtx?.slotLevel || spell.level || 5;
 
@@ -81,7 +79,7 @@ export async function triggerDominatePerson(spell, metaCtx, playerStats, campaig
             type: 'dominate_person',
             saveDc: spellSaveDc,
             targetName: targetName,
-            advantage: targetNotFullHealth,
+            advantage: false,
         },
         spell,
         spellSlotLevel: slotLevel,
