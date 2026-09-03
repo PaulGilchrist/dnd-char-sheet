@@ -41,6 +41,36 @@ export async function gateMetamagic(spell, metaCtx, {
     const creatureTargets = getCreatureTargets(playerStats?.name, campaignName, characters);
     if (creatureTargets.length > 0) {
       if (isPowerWordSpell && setSecondaryTargetModal) {
+        // SP-088/SP-089: this Words-of-Creation branch early-returns, so the generic
+        // prepareSpellCast call below is never reached and Power Word slots were never
+        // consumed. Spend the slot here (mirroring the generic call and createConfirmHandler)
+        // on BOTH the target-selected and skip paths — both still cast the spell.
+        const spendPowerWordSlot = async () => {
+          const isUpcast = spell.isUpcast;
+          const upcastLevel = spell.upcastLevel;
+          const freeCastAuthorized = isFreeCastAuthorized(playerStats.name, spell.name, spell.level, playerStats, campaignName);
+          const result = await prepareSpellCast(spell, metaCtx, {
+            playerName: playerStats.name,
+            playerStats,
+            campaignName,
+            isUpcast,
+            upcastLevel,
+            freeCastAuthorized,
+            usePsionicPayment: !!spell.usePsionicPayment,
+            usePsychicDamage: !!spell.usePsychicDamage,
+          });
+          if (result.slotConsumed) {
+            addEntry(campaignName, {
+              type: 'ability_use',
+              characterName: playerStats.name,
+              abilityName: spell.name,
+              spellName: spell.name,
+              description: `${spell.name}: Expended a level ${result.modifiedSpell.level || spell.level} spell slot.`,
+              timestamp: Date.now(),
+            }).catch((e) => { console.error("[useSpellMetamagicGates:slot-log-error]", e); });
+          }
+          return result;
+        };
         const modalConfig = {
           title: 'Words of Creation — Choose Second Target',
           targets: creatureTargets.map(name => ({ name, type: 'creature' })),
@@ -58,11 +88,12 @@ export async function gateMetamagic(spell, metaCtx, {
               castingTime: spell.casting_time,
               timestamp: Date.now(),
             }).catch((e) => { console.error("[useSpellMetamagicGates:log-error]", e); });
+            await spendPowerWordSlot();
             const mCtx = { multiTarget: secondTargetName };
             onExecute(spell, mCtx);
             setSecondaryTargetModal(null);
           },
-          onSkip: () => {
+          onSkip: async () => {
             addEntry(campaignName, {
               type: 'spell',
               characterName: playerStats.name,
@@ -71,6 +102,7 @@ export async function gateMetamagic(spell, metaCtx, {
               castingTime: spell.casting_time,
               timestamp: Date.now(),
             }).catch((e) => { console.error("[useSpellMetamagicGates:log-error]", e); });
+            await spendPowerWordSlot();
             onExecute(spell, {});
             setSecondaryTargetModal(null);
           },

@@ -4717,7 +4717,7 @@
       "handler": "src/services/combat/automation/handlers/spellHandler.js",
       "router": "src/services/combat/automation/routers/spellRouter.js",
       "infoBuilder": "src/services/combat/automation/infoBuilders/spellInfoBuilder.js",
-      "verified": "broken \u2014 see .opencode/plans/bug-sp-088-power-word-heal.md",
+      "verified": "verified",
       "class": "Spell",
       "triggerConditions": "Automation type: power_word_heal",
       "expectedBehavior": "A wave of healing energy washes over one creature you can see within range. The target regains all its Hit Points. If the creature has the Charmed, Frightened, Paralyzed, Poisoned, or Stunned condition, the condition ends. If the creature has the Prone condition, it can use its Reaction to stand up."
