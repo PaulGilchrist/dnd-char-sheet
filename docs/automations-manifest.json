@@ -4885,7 +4885,7 @@
       "handler": "src/services/combat/automation/handlers/spellHandler.js",
       "router": "src/services/combat/automation/routers/spellRouter.js",
       "infoBuilder": "src/services/combat/automation/infoBuilders/spellInfoBuilder.js",
-      "verified": "broken \u2014 see .opencode/plans/bug-sp-093-protection-from-energy.md",
+      "verified": "verified",
       "class": "Spell",
       "triggerConditions": "Action: 1 action; Range: Touch; Duration: Concentration, up to 1 hour",
       "expectedBehavior": "For the duration, the willing creature you touch has Resistance to one damage type of your choice: Acid, Cold, Fire, Lightning, or Thunder."

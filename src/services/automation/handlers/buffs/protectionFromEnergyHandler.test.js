@@ -29,6 +29,10 @@ vi.mock('../../../rules/combat/damageUtils.js', () => ({
   getCombatContext: vi.fn(),
 }));
 
+vi.mock('../../../ui/storage.js', () => ({
+  default: { set: vi.fn() },
+}));
+
 // ── Imports (Vite returns mocked versions) ───────────────────────
 
 import {
@@ -44,6 +48,7 @@ import * as concentrationService from '../../../combat/concentration/concentrati
 import * as combatData from '../../../encounters/combatData.js';
 import * as logService from '../../../ui/logService.js';
 import * as damageUtils from '../../../rules/combat/damageUtils.js';
+import * as storageService from '../../../ui/storage.js';
 
 // ── Helpers ───────────────────────────────────────────────────────
 
@@ -464,6 +469,29 @@ describe('protectionFromEnergyHandler', () => {
         11,
         TARGET_NAME
       );
+    });
+
+    it('persists combatSummary after addConcentration (SP-093)', async () => {
+      const ps = makePlayerStats({ spellAbilities: { saveDc: 18 }, proficiency: 3 });
+      const action = makeAction();
+      useRuntimeState.getRuntimeValue.mockReturnValue(null);
+      const cs = makeCombatContext([PLAYER_NAME, TARGET_NAME]);
+      combatData.getCombatSummary.mockReturnValue(cs);
+      concentrationService.addConcentration.mockImplementation((summary, name, spellName, dc, target) => {
+        const creature = summary.creatures.find((c) => c.name === name);
+        if (creature) creature.concentration = { spell: spellName, dc, target };
+      });
+
+      await applyProtectionFromEnergy(action, ps, CAMPAIGN_NAME, TARGET_NAME, 'lightning');
+
+      // concentration written on the summary then persisted (fearHandler pattern)
+      expect(concentrationService.addConcentration).toHaveBeenCalled();
+      expect(storageService.default.set).toHaveBeenCalledWith('combatSummary', cs, CAMPAIGN_NAME);
+
+      // persist happens AFTER the concentration write
+      const concCall = concentrationService.addConcentration.mock.invocationCallOrder[0];
+      const storageCall = storageService.default.set.mock.invocationCallOrder[0];
+      expect(storageCall).toBeGreaterThan(concCall);
     });
 
     it('preserves other buffs when replacing protection buff', async () => {

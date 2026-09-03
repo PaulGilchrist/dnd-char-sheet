@@ -4,6 +4,7 @@ import { rollbackSpellSlot } from '../useConfirmableFlow.js'
 import { applyEnhanceAbilityEffect } from '../../../services/automation/index.js'
 import { applyProtectionFromEnergyHandler } from '../../../services/automation/index.js'
 import { applyResistanceEffect } from '../../../services/automation/index.js'
+import { isFreeCastAuthorized, prepareSpellCast } from '../../../services/rules/spells/spellPreparationService.js'
 
 export function useTwoStageHandlers(playerStats, campaignName, cfClearPending, getPending, setPopupHtml, _characters) {
   const [resistanceStage, setResistanceStage] = React.useState(null)
@@ -96,6 +97,7 @@ export function useTwoStageHandlers(playerStats, campaignName, cfClearPending, g
     const pending = getPending('protectionFromEnergy')
     if (!pending || !protectionFromEnergySelectedTarget) return
 
+    const targetName = protectionFromEnergySelectedTarget
     cfClearPending('protectionFromEnergy')
     setProtectionFromEnergyStage(null)
     setProtectionFromEnergySelectedTarget(null)
@@ -103,19 +105,37 @@ export function useTwoStageHandlers(playerStats, campaignName, cfClearPending, g
     addEntry(campaignName, {
       type: 'spell',
       characterName: playerStats.name,
-      targetName: protectionFromEnergySelectedTarget,
-      targets: [protectionFromEnergySelectedTarget],
+      targetName,
+      targets: [targetName],
       spellName: pending.spellName,
       spellLevel: pending.spellLevel || 0,
       castingTime: pending.castingTime,
       timestamp: Date.now(),
     }).catch((e) => { console.error("[useTwoStageHandlers:log-error]", e); })
 
+    // SP-093: consume the spell slot via prepareSpellCast at type-select confirm,
+    // mirroring createConfirmHandler (useConfirmableFlow.js) / SP-085 — the two-stage
+    // confirm previously bypassed it, so no slot was ever spent.
+    const isCantrip = (pending.spell?.level === 0)
+    if (!isCantrip && pending.spell) {
+      const freeCastAuthorized = isFreeCastAuthorized(playerStats.name, pending.spellName, pending.spellLevel || 0, playerStats, campaignName)
+      const upcastLevel = pending.spell.upcastLevel
+      const isUpcast = upcastLevel != null && upcastLevel !== pending.spell.level
+      await prepareSpellCast(pending.spell, {}, {
+        playerName: playerStats.name,
+        playerStats,
+        campaignName,
+        isUpcast,
+        upcastLevel,
+        freeCastAuthorized,
+      })
+    }
+
     await applyProtectionFromEnergyHandler(
       { name: pending.spellName, spell: pending.spell, automation: { type: 'protection_from_energy', damageTypes: pending.damageTypes } },
       playerStats,
       campaignName,
-      protectionFromEnergySelectedTarget,
+      targetName,
       damageType
     )
   }, [playerStats, campaignName, cfClearPending, getPending, protectionFromEnergySelectedTarget])
@@ -134,7 +154,8 @@ export function useTwoStageHandlers(playerStats, campaignName, cfClearPending, g
         castingTime: pending.castingTime,
         timestamp: Date.now(),
       }).catch((e) => { console.error("[useTwoStageHandlers:log-error]", e); })
-      rollbackSpellSlot(playerStats.name, pending.spellName, pending.spellLevel || 0, playerStats, campaignName)
+      // SP-093: no rollback — the slot is only spent at type-select confirm, so a
+      // skip here has consumed nothing and rolling back would inflate slots above max.
     }
     cfClearPending('protectionFromEnergy')
     setProtectionFromEnergyStage(null)

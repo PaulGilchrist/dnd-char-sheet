@@ -4,6 +4,7 @@ import { addConcentration } from '../../../combat/concentration/concentrationSer
 import { getCombatSummary } from '../../../encounters/combatData.js';
 import { addEntry } from '../../../ui/logService.js';
 import { getCombatContext } from '../../../rules/combat/damageUtils.js';
+import storage from '../../../ui/storage.js';
 
 const PROTECTION_FROM_ENERGY_KEY = 'protectionFromEnergyDamageType';
 
@@ -80,7 +81,11 @@ export async function applyProtectionFromEnergy(action, playerStats, campaignNam
 
     const spellSaveDc = playerStats.spellAbilities?.saveDc || 8 + playerStats.proficiency;
     const combatSummary = getCombatSummary(campaignName);
+    // SP-093: addConcentration mutates the cached summary only — persist it (fearHandler
+    // pattern) so the caster's concentration is durably registered (CLA-170 family).
     addConcentration(combatSummary, playerStats.name, 'Protection from Energy', spellSaveDc, targetName);
+    storage.set('combatSummary', combatSummary, campaignName);
+    window.dispatchEvent(new CustomEvent('combat-summary-updated'));
 
     await addEntry(campaignName, {
         type: 'ability_use',
