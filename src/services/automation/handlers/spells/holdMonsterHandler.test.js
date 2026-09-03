@@ -199,7 +199,7 @@ describe('holdMonsterHandler.handle', () => {
       );
     });
 
-    it('stores condition metadata with DC and ability', async () => {
+    it('stores condition metadata with DC and WIS ability for repeat saves', async () => {
       setupFailedSave();
       await handle(makeAction(), makePlayerStats(), campaignName, null);
 
@@ -207,10 +207,45 @@ describe('holdMonsterHandler.handle', () => {
         targetName,
         'activeConditionMeta',
         expect.objectContaining({
-          paralyzed: expect.objectContaining({ dc: 15, ability: 'con' }),
+          paralyzed: expect.objectContaining({ dc: 15, ability: 'wis' }),
         }),
         campaignName,
       );
+    });
+
+    it('Hold Person repeat-save meta uses WIS ability (SP-066)', async () => {
+      setupFailedSave();
+      buildSaveDc.mockReturnValue(19);
+      const action = {
+        name: 'Hold Person',
+        automation: { type: 'hold_monster', saveType: 'WIS', saveDc: 19 },
+        metaCtx: { holdPersonTargets: [targetName] },
+      };
+      await handle(action, makePlayerStats(), campaignName, null);
+
+      expect(setRuntimeValue).toHaveBeenCalledWith(
+        targetName,
+        'activeConditionMeta',
+        expect.objectContaining({
+          paralyzed: expect.objectContaining({ dc: 19, ability: 'wis' }),
+        }),
+        campaignName,
+      );
+    });
+
+    it('falls back to WIS ability when automation saveType is missing', async () => {
+      setupFailedSave();
+      const action = {
+        name: 'Hold Monster',
+        automation: { type: 'hold_monster' },
+        metaCtx: { holdMonsterTargets: [targetName] },
+      };
+      await handle(action, makePlayerStats(), campaignName, null);
+
+      const metaCall = setRuntimeValue.mock.calls.find(
+        c => c[0] === targetName && c[1] === 'activeConditionMeta',
+      );
+      expect(metaCall[2].paralyzed.ability).toBe('wis');
     });
 
     it('registers concentration on the caster', async () => {

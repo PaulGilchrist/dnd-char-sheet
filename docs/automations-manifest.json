@@ -3238,7 +3238,7 @@
       "handler": "src/services/combat/automation/handlers/spellHandler.js",
       "router": "src/services/combat/automation/routers/spellRouter.js",
       "infoBuilder": "src/services/combat/automation/infoBuilders/spellInfoBuilder.js",
-      "verified": "broken \u2014 see .opencode/plans/bug-sp-066-hold-person-repeat-save-wrong-ability.md",
+      "verified": "verified",
       "class": "Spell",
       "triggerConditions": "Duration: Concentration, up to 1 minute",
       "expectedBehavior": "Choose a Humanoid that you can see within range. The target must succeed on a Wisdom saving throw or have the Paralyzed condition for the duration. At the end of each of its turns, the target repeats the save, ending the spell on itself on a success."
