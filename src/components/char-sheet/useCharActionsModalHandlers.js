@@ -5,6 +5,7 @@ import { addEntry } from '../../services/ui/logService.js'
 import { executeSweepingAttack, executeBaitAndSwitchChoice, executeCommanderStrikeChoice, executeRallyChoice } from '../../services/automation/handlers/class-fighter-rogue/combatSuperiorityHandler.js'
 import { activateBulwarkOfForce } from '../../services/automation/handlers/class-sorcerer/bulwarkOfForceHandler.js'
 import { confirmZealousPresence } from '../../services/automation/handlers/class-barbarian/zealousPresenceHandler.js'
+import { confirmPsychicWhispers } from '../../services/automation/handlers/buffs/buffHandler.js'
 import { confirmMassHeal } from '../../services/automation/handlers/healing/massHealHandler.js'
 import { confirmClockworkCavalcadeHeal, confirmClockworkCavalcadeDispel, confirmClockworkCavalcadeRepair } from '../../services/automation/handlers/class-sorcerer/clockworkCavalcadeHandler.js'
 import { confirmMassCureWounds } from '../../services/automation/handlers/healing/massCureWoundsHandler.js'
@@ -120,6 +121,20 @@ export default function useCharActionsModalHandlers({
             setPopupHtml(result.payload);
         }
         setModalState({ zealousPresenceModal: null });
+    }
+
+    async function handlePsychicWhispersConfirm(targetNames) {
+        if (!targetNames || !modalState.psychicWhispersModal) return;
+        const result = await confirmPsychicWhispers(
+            modalState.psychicWhispersModal.action,
+            modalState.psychicWhispersModal.playerStats,
+            modalState.psychicWhispersModal.campaignName,
+            targetNames
+        );
+        if (result?.payload) {
+            setPopupHtml(result.payload);
+        }
+        setModalState({ psychicWhispersModal: null });
     }
 
     async function handleMassHealConfirm(distribution) {
@@ -426,6 +441,7 @@ export default function useCharActionsModalHandlers({
         handleRallyChoiceConfirm,
         handleBulwarkOfForceConfirm,
         handleZealousPresenceConfirm,
+        handlePsychicWhispersConfirm,
         handleMassHealConfirm,
         handleClockworkCavalcadeHealConfirm,
         handleClockworkCavalcadeDispelConfirm,

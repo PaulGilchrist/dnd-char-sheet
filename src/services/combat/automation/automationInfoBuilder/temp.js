@@ -32,6 +32,10 @@ export const tempHandlers = {
             trigger: auto.trigger || null,
             uses: auto.uses || null,
             usesMax,
+            multiTarget: !!auto.multiTarget,
+            targets: auto.targets || null,
+            resourceCost: auto.resourceCost || '',
+            freeFirstUseAfterLongRest: !!auto.freeFirstUseAfterLongRest,
             hasAutomation: true
         }
     },

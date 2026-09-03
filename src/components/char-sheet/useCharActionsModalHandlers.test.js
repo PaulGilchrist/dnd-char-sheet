@@ -143,10 +143,10 @@ describe('useCharActionsModalHandlers', () => {
   });
 
   describe('return value', () => {
-    it('returns an object with exactly 26 handler functions', () => {
+    it('returns an object with exactly 27 handler functions', () => {
       const handlers = getHandlers();
       const entries = Object.entries(handlers);
-      expect(entries.length).toBe(26);
+      expect(entries.length).toBe(27);
       entries.forEach(([_key, value]) => {
         expect(typeof value).toBe('function');
       });

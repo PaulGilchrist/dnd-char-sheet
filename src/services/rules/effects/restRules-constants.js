@@ -134,6 +134,7 @@ export const LONG_REST_RESOURCES = [
     'secondWindUses',
   'psionicEnergy',
   'focusPoints',
+  'psychicWhispersFreeUsed',
   'uncannymetabolismUses',
   'sorceryPoints',
   'arcaneRecoveryLevels',

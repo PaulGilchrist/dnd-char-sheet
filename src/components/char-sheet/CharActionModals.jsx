@@ -51,6 +51,7 @@ function CharActionModals({
     handleRallyChoiceConfirm,
     handleBulwarkOfForceConfirm,
     handleZealousPresenceConfirm,
+    handlePsychicWhispersConfirm,
     handleNaturesSanctuaryConfirm,
     handleCoronaEnemySelectionConfirm,
     handleRadianceOfDawnConfirm,
@@ -462,6 +463,7 @@ function CharActionModals({
                 handleConstellationSelect={handleConstellationSelect}
                 handleBulwarkOfForceConfirm={handleBulwarkOfForceConfirm}
                 handleZealousPresenceConfirm={handleZealousPresenceConfirm}
+                handlePsychicWhispersConfirm={handlePsychicWhispersConfirm}
                 handleCoronaEnemySelectionConfirm={handleCoronaEnemySelectionConfirm}
                 handleRadianceOfDawnConfirm={handleRadianceOfDawnConfirm}
                 handleMantleOfInspirationConfirm={handleMantleOfInspirationConfirm}

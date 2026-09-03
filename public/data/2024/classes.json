@@ -10088,6 +10088,23 @@
                         "level": 3
                     },
                     {
+                        "name": "Psychic Whispers",
+                        "description": "Action, choose creatures up to Proficiency Bonus, roll one Psionic Energy Die. For hours equal to number rolled, chosen creatures can speak telepathically with you (within 35 feet). First use after Long Rest doesn't expend die.",
+                        "level": 3,
+                        "automation": {
+                            "type": "temp_buff",
+                            "effect": "telepathic_speech",
+                            "action": "action",
+                            "casting_time": "1 action",
+                            "range": "35 ft",
+                            "multiTarget": true,
+                            "targets": "proficiency_bonus",
+                            "duration": "psychic_energy_die_hours",
+                            "resourceCost": "psionic_energy",
+                            "freeFirstUseAfterLongRest": true
+                        }
+                    },
+                    {
                         "name": "Psychic Blades",
                         "description": "Manifest shimmering blades of psychic energy. When you take Attack action or make Opportunity Attack, manifest Psychic Blade in free hand. Simple Melee, 1d6 Psychic + ability modifier, Finesse, Thrown (60/120), Mastery: Vex (doesn't count against Weapon Mastery). Vanishes after hit/miss. After attacking, can make melee or ranged attack with second psychic blade as Bonus Action (1d4 damage).",
                         "level": 3,

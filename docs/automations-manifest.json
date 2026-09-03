@@ -5029,7 +5029,7 @@
       "handler": "src/services/combat/automation/handlers/classFeatureHandler.js",
       "router": "src/services/combat/automation/routers/classFeatureRouter.js",
       "infoBuilder": "src/services/combat/automation/infoBuilders/classFeatureInfoBuilder.js",
-      "verified": "broken \u2014 see .opencode/plans/bug-cla-276-psychic-whispers-inert.md",
+      "verified": "verified",
       "class": "Rogue",
       "triggerConditions": "Passive; Rogue Psychic Blades feature",
       "expectedBehavior": "Your psychic blades whisper secrets to you. You can communicate telepathically with creatures within range, and your psychic blades deal extra psychic damage. (Rogue Soulknife feature - Psychic Whispers)"

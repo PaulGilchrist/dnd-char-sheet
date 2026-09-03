@@ -1,4 +1,4 @@
-import { toggleBuff } from '../../common/buffToggle.js';
+import { toggleBuff, isBuffActive } from '../../common/buffToggle.js';
 import { addExpiration } from '../../../rules/effects/expirations.js';
 import { handle as handleTeleport } from '../class-warlock/tempTeleportHandler.js';
 import { handle as handleVowOfEnmity } from '../class-cleric-paladin/vowOfEnmityHandler.js';
@@ -12,6 +12,8 @@ import { addEntry } from '../../../ui/logService.js';
 import { getAbilityModifier } from '../../../shared/abilityLookup.js';
 
 const ADRENALINE_RUSH_USES_KEY = 'adrenalineRushUses';
+const PSYCHIC_WHISPERS_FREE_KEY = 'psychicWhispersFreeUsed';
+const PSYCHIC_WHISPERS_TARGETS_KEY = 'psychicWhispersTargets';
 
 function getPsionicEnergy(playerStats, campaignName) {
     const stored = getRuntimeValue(playerStats.name, 'psionicEnergy', campaignName);
@@ -110,6 +112,11 @@ export async function handle(action, playerStats, campaignName, _mapName) {
 
     // Telepathic Speech: defer to modal for target selection
     if (auto?.effect === 'telepathic_speech') {
+        // CLA-276: Psychic Whispers is the multi-target psionic variant
+        // (data declares multiTarget + targets cap + psionic die cost)
+        if (auto?.multiTarget) {
+            return handlePsychicWhispers(action, playerStats, campaignName, _mapName);
+        }
         return handleTelepathicSpeech(action, playerStats, campaignName, _mapName);
     }
 
@@ -602,6 +609,145 @@ export async function confirmTelepathicSpeech(action, playerStats, campaignName,
             description: wasActive
                 ? `${featureName} deactivated.`
                 : `${featureName} activated with ${targetName} (${miles} mile${miles !== 1 ? 's' : ''}, ${durationMinutes} minute${durationMinutes !== 1 ? 's' : ''} duration).`,
+            automation: auto,
+        },
+    };
+}
+
+function resolvePsychicWhispersMaxTargets(auto, playerStats) {
+    if (auto?.targets === 'proficiency_bonus') {
+        return playerStats.proficiency || 1;
+    }
+    if (typeof auto?.targets === 'number') {
+        return auto.targets;
+    }
+    return 1;
+}
+
+async function handlePsychicWhispers(action, playerStats, campaignName, _mapName) {
+    const auto = action.automation;
+    const playerName = playerStats.name;
+    const maxTargets = resolvePsychicWhispersMaxTargets(auto, playerStats);
+
+    const combatSummary = await loadCombatSummary(campaignName);
+    const allCreatures = combatSummary?.creatures || [];
+    const creatureTargets = allCreatures
+        .filter(c => c.name !== playerName)
+        .map(c => ({
+            name: c.name,
+            currentHp: c.currentHp,
+            maxHp: c.maxHp,
+            size: c.size,
+            type: c.type,
+        }));
+
+    const dieSize = evaluateAutoExpression('psionic_energy_die', playerStats) || 6;
+
+    return {
+        type: 'modal',
+        modalName: 'psychicWhispersTarget',
+        payload: {
+            action,
+            playerStats,
+            campaignName,
+            creatureTargets,
+            maxTargets,
+            dieSize,
+        },
+    };
+}
+
+export async function confirmPsychicWhispers(action, playerStats, campaignName, targetNames) {
+    const auto = action.automation;
+    const playerName = playerStats.name;
+    const featureName = action.name || 'Psychic Whispers';
+    const maxTargets = resolvePsychicWhispersMaxTargets(auto, playerStats);
+    const finalTargets = (targetNames || []).slice(0, maxTargets);
+
+    // First use after a Long Rest is free: the flag is nulled by LONG_REST_RESOURCES,
+    // so anything other than `true` means no die has been spent since the last rest.
+    const freeFlag = getRuntimeValue(playerName, PSYCHIC_WHISPERS_FREE_KEY, campaignName);
+    const isFreeUse = freeFlag !== true;
+
+    const defaultMax = playerStats._trackedResources?.psionicEnergy?.max || 0;
+    const poolBefore = Number(getRuntimeValue(playerName, 'psionicEnergy', campaignName) ?? defaultMax);
+
+    if (!isFreeUse && poolBefore <= 0) {
+        return {
+            type: 'popup',
+            payload: {
+                type: 'automation_info',
+                name: featureName,
+                automationType: auto.type,
+                description: `${featureName}: No Psionic Energy remaining. Recharges on a Short or Long Rest.`,
+                automation: auto,
+            },
+        };
+    }
+
+    const dieSize = evaluateAutoExpression('psionic_energy_die', playerStats) || 6;
+    const dieRoll = Math.floor(Math.random() * dieSize) + 1;
+    const hours = dieRoll;
+
+    if (isFreeUse) {
+        await setRuntimeValue(playerName, PSYCHIC_WHISPERS_FREE_KEY, true, campaignName);
+    } else {
+        await setRuntimeValue(playerName, 'psionicEnergy', poolBefore - 1, campaignName);
+    }
+
+    const buffAuto = {
+        effect: 'telepathic_speech',
+        duration: `${hours} hour${hours !== 1 ? 's' : ''}`,
+        casting_time: auto?.casting_time || '1 action',
+    };
+
+    // Re-activation replaces the previous link: drop stale targets first.
+    const storedPrevious = getRuntimeValue(playerName, PSYCHIC_WHISPERS_TARGETS_KEY, campaignName);
+    const previousTargets = Array.isArray(storedPrevious) ? storedPrevious : [];
+    for (const staleName of previousTargets) {
+        if (!finalTargets.includes(staleName) && isBuffActive(staleName, featureName, campaignName)) {
+            toggleBuff(staleName, featureName, buffAuto, campaignName);
+        }
+    }
+
+    const { wasActive } = toggleBuff(playerName, featureName, buffAuto, campaignName);
+    if (wasActive) {
+        // toggleBuff removed the existing buff on re-activation — re-apply refreshed duration.
+        toggleBuff(playerName, featureName, buffAuto, campaignName);
+    }
+
+    for (const targetName of finalTargets) {
+        const { wasActive: targetWasActive } = toggleBuff(targetName, featureName, buffAuto, campaignName);
+        if (targetWasActive) {
+            // Re-link: refresh the existing buff with the new duration.
+            toggleBuff(targetName, featureName, buffAuto, campaignName);
+        }
+    }
+
+    await setRuntimeValue(playerName, PSYCHIC_WHISPERS_TARGETS_KEY, [...finalTargets], campaignName);
+
+    const costText = isFreeUse
+        ? 'Free first use after Long Rest — no Psionic Energy Die expended.'
+        : `Expended 1 Psionic Energy Die. Psionic Energy: ${poolBefore - 1}/${defaultMax}.`;
+    const linkText = finalTargets.length > 0
+        ? `${finalTargets.join(', ')} can speak telepathically with ${playerName}`
+        : 'no creatures were linked';
+
+    await addEntry(campaignName, {
+        type: 'ability_use',
+        characterName: playerName,
+        abilityName: featureName,
+        description: `${playerName} activated ${featureName}: Rolled d${dieSize} for ${hours} hour${hours !== 1 ? 's' : ''} — ${linkText} (within 35 feet). ${costText}`,
+        timestamp: Date.now(),
+    }).catch((e) => { console.error('[buffHandler] Psychic Whispers log error:', e); });
+
+    return {
+        type: 'popup',
+        payload: {
+            type: 'automation_info',
+            name: featureName,
+            automationType: auto.type,
+            description: `${featureName} activated: ${linkText} for ${hours} hour${hours !== 1 ? 's' : ''} (Rolled d${dieSize}: ${dieRoll}). ${costText}`,
             automation: auto,
         },
     };

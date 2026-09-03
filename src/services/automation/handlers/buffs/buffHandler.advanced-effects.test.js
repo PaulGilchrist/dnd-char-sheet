@@ -4,6 +4,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 
 vi.mock('../../common/buffToggle.js', () => ({
   toggleBuff: vi.fn(),
+  isBuffActive: vi.fn(),
 }));
 
 vi.mock('../class-warlock/tempTeleportHandler.js', () => ({

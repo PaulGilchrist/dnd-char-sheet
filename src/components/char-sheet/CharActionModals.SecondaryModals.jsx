@@ -77,6 +77,7 @@ function SecondaryModals({
     handleConstellationSelect,
     handleBulwarkOfForceConfirm,
     handleZealousPresenceConfirm,
+    handlePsychicWhispersConfirm,
     handleCoronaEnemySelectionConfirm,
     handleRadianceOfDawnConfirm,
     handleMantleOfInspirationConfirm,
@@ -469,6 +470,19 @@ function SecondaryModals({
                     maxTargets={mergedModalState.zealousPresenceModal.maxTargets}
                     onConfirm={handleZealousPresenceConfirm}
                     onSkip={() => setModalState({ zealousPresenceModal: null })}
+                />
+            )}
+            {mergedModalState.psychicWhispersModal && (
+                <CreatureSelectionModal
+                    title="Psychic Whispers"
+                    icon="fa-brain"
+                    targets={mergedModalState.psychicWhispersModal.creatureTargets}
+                    maxTargets={mergedModalState.psychicWhispersModal.maxTargets}
+                    description={`Choose up to ${mergedModalState.psychicWhispersModal.maxTargets} creatures within 35 feet to form a telepathic link. Roll one Psionic Energy Die (d${mergedModalState.psychicWhispersModal.dieSize}): link lasts for hours equal to the roll. First use after a Long Rest doesn't expend a die.`}
+                    confirmLabel="Establish Link"
+                    confirmIcon="fa-brain"
+                    onConfirm={handlePsychicWhispersConfirm}
+                    onSkip={() => setModalState({ psychicWhispersModal: null })}
                 />
             )}
             {mergedModalState.coronaEnemySelectionModal && (

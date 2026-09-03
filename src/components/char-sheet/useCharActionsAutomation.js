@@ -109,6 +109,7 @@ export default function useCharActionsAutomation({
             inspiringMovementAlly: simpleModal('inspiringMovementAllyModal'),
             arcaneWardRestore: simpleModal('arcaneWardRestoreModal'),
             oceanicGiftTarget: simpleModal('oceanicGiftTargetModal'),
+            psychicWhispersTarget: simpleModal('psychicWhispersModal'),
             telepathicSpeech: (payload) => {
                 const { action: speechAction, creatureTargets } = payload;
                 setModalState({ secondaryTargetModal: {

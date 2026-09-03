@@ -197,6 +197,7 @@ const CharActions = function CharActions({ playerStats, campaignName, exhaustion
         handleRallyChoiceConfirm,
         handleBulwarkOfForceConfirm,
         handleZealousPresenceConfirm,
+        handlePsychicWhispersConfirm,
         handleMassHealConfirm,
         handleClockworkCavalcadeHealConfirm,
         handleClockworkCavalcadeDispelConfirm,
@@ -493,6 +494,7 @@ const CharActions = function CharActions({ playerStats, campaignName, exhaustion
                     handleRallyChoiceConfirm={handleRallyChoiceConfirm}
                     handleBulwarkOfForceConfirm={handleBulwarkOfForceConfirm}
                     handleZealousPresenceConfirm={handleZealousPresenceConfirm}
+                    handlePsychicWhispersConfirm={handlePsychicWhispersConfirm}
                     handleNaturesSanctuaryConfirm={handleNaturesSanctuaryConfirm}
                     handleCoronaEnemySelectionConfirm={handleCoronaEnemySelectionConfirm}
                     handleRadianceOfDawnConfirm={handleRadianceOfDawnConfirm}
