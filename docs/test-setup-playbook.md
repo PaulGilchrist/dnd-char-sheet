@@ -1161,10 +1161,18 @@ Monk self-targeting Hand of Healing: the initiative card Target dropdown EXCLUDE
 - Physician's Touch = Warrior of MERCY major lv6 (2024 classes.json). Auto-cure path: self-target Hand of Healing (empty Target fallback) while self carries exactly ONE cureable condition (stage via own initiative-card Add -> Apply) -> modal auto-renders 'Condition Cleared - <cond> removed (Physician's Touch)' + activeConditions [] + broken log. Picker only when >1 condition (HandOfHealingModal.jsx:87-92/:128).
 - PITFALL: a full page-reload BETWEEN staging the condition and clicking the sheet row silently reverts the staged condition (runtime [], no broken log). Verify live with getRuntimeValue immediately before triggering; do NOT reload. Hand of Healing skips FP cost globally at lv11+ (Flurry of Healing and Harm, useCharActionsAutomation.js:170-172).
 
-### Piercer reroll TDZ crash / FT-061 (FAIL, 2026-09-01 — `.opencode/plans/bug-ft-061-piercer.md`)
+### Piercer reroll TDZ crash / FT-061 (FIXED 2026-09-03 — see 'FT-061 Piercer puncture TDZ + die-size fixed')
 
 - PITFALL: Piercer (piercing-hit damage-die reroll) reroll button renders + updates the POPUP display only; `handlePuncture` throws `ReferenceError: Cannot access 'targetName' before initialization` (TDZ — `targetName` used at CharSheet.handlers.js:159/160, const-destructured at :161). Consequence: rerolled die NEVER applied to HP, `piercerPunctureUsedThisTurn` never written (button re-offered same turn), no log. When verifying any reroll feat, confirm the rerolled value lands in HP (change-data currentHitPoints delta), not just the popup text.
 - Retest-ready char: FeyRanger lv15 has Piercer + Longbow equipped + Hunter's Mark prepared.
+
+### FT-061 Piercer puncture TDZ + die-size fixed (FIXED, 2026-09-03)
+
+- FIXED: `handlePuncture` TDZ gone (punctureData destructure hoisted above the `!combatSummary || !targetName` guard, mirroring `handleSavageAttacker`); reroll now applies the HP delta, writes `piercerPunctureUsedThisTurn`, and logs `ability_use` 'Piercer - Puncture'. Second same-turn hit confirmed gated (no button).
+- FIXED: reroll die size in `DiceRollResult.handlers.js` no longer uses `rolls[0]` VALUE as die sides; parses ALL `/(\d+)d(\d+)/gi` terms of the popup formula into a per-roll-index size map (`1d8-1 [piercing] + 1d6 [force]` -> sizes [8,6]) and rerolls the target die on its own size, fallback d6.
+- Recipe (verified live): EB-join Zombie -> initiative-card Target=Zombie 1 (native setter on card select) -> sheet Hunter's Mark row -> Cast Spell (free) -> Longbow '+5' dice link (`getByText('+5').nth(4)`) -> HIT popup Done -> damage popup 'Piercer - Puncture' click -> popup '2, 4 -> 8, 4' + >=11s change-data `combatSummary.creatures[Zombie 1].currentHp` drops by exactly (new-old)=+6 + `FeyRanger.piercerPunctureUsedThisTurn:true` + Piercer log entry; second hit same turn = NO reroll button.
+- PITFALL: the leftover damage popup is a `.popup-overlay` that intercepts further '+5' attack clicks — corner-click (box.x+8, box.y+8) to dismiss before the next attack. Console error totals persist across the session: count deltas, not presence, prove a click is clean. Zombie 'HP: X -> Y' inside a LATER popup can read pre-debounce stale HP — trust change-data.
+- Test pin inverted: `CharSheet.featureRiders.test.jsx` previously asserted `rejects.toThrow()` for handlePuncture (pinned the crash); now asserts damage-delta apply + flag + log + same-turn gate. New `DiceRollResult.handlers.test.js` covers die-size mapping (Math.random 0.999 -> max face).
 
 ### Poisoner ignore_resistance / FT-063 (VERIFIED PASS, 2026-09-01)
 

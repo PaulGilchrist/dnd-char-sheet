@@ -4624,7 +4624,7 @@
       "handler": "src/services/combat/automation/handlers/featHandler.js",
       "router": "src/services/combat/automation/routers/featRouter.js",
       "infoBuilder": "src/services/combat/automation/infoBuilders/featInfoBuilder.js",
-      "verified": "broken \u2014 see .opencode/plans/bug-ft-061-piercer.md",
+      "verified": "verified",
       "triggerConditions": "Action: reaction",
       "expectedBehavior": "Once per turn, when you hit a creature with an attack that deals Piercing damage, you can reroll one of the attack's damage dice, and you must use the new roll."
     },

@@ -156,11 +156,11 @@ export async function handlePuncture(playerStats, campaignName, characters, popu
     const used = getRuntimeValue(playerName, usedKey, campaignName);
     if (used) return null;
     
+    const { rawDamage, targetName, damageTypes, originalRolls, newRolls, rerolledIndex, originalValue, newValue } = punctureData;
+
     const combatSummary = await getCombatContext(campaignName);
     if (!combatSummary || !targetName) return null;
-    
-    const { rawDamage, targetName, damageTypes, originalRolls, newRolls, rerolledIndex, originalValue, newValue } = punctureData;
-    
+
     const damageDifference = newRolls.reduce((sum, r) => sum + r, 0) + (popupHtml?.modifier || 0) - rawDamage;
     
     if (damageDifference !== 0) {

@@ -145,6 +145,87 @@ describe('handlePuncture', () => {
     });
     expect(result).toBeNull();
   });
+
+  it('applies damage delta, writes piercerPunctureUsedThisTurn and logs when combat context exists', async () => {
+    const { getRuntimeValue, setRuntimeValue } = await import('../../hooks/runtime/useRuntimeState.js');
+    const { getCombatContext } = await import('../../services/rules/combat/damageUtils.js');
+    const { applyDamageToTarget } = await import('../../services/rules/combat/applyDamage.js');
+    const { addEntry } = await import('../../services/ui/logService.js');
+
+    getRuntimeValue.mockReturnValue(null);
+    getCombatContext.mockResolvedValue({ creatures: [] });
+    applyDamageToTarget.mockReturnValue({});
+
+    const setPopupHtml = vi.fn();
+    const punctureData = {
+      rawDamage: 10,
+      targetName: 'Zombie 1',
+      damageTypes: ['Piercing'],
+      originalRolls: [5, 5, 1],
+      newRolls: [5, 5, 5],
+      rerolledIndex: 2,
+      originalValue: 1,
+      newValue: 5,
+    };
+
+    const result = await handlePuncture(
+      mockPlayerStats,
+      mockCampaignName,
+      [],
+      { modifier: -1, damageType: 'Piercing' },
+      setPopupHtml,
+      punctureData
+    );
+
+    expect(applyDamageToTarget).toHaveBeenCalledWith(
+      expect.anything(),
+      'Zombie 1',
+      4,
+      ['Piercing'],
+      mockCampaignName,
+      [],
+      false,
+      'Test Character'
+    );
+    expect(setRuntimeValue).toHaveBeenCalledWith('Test Character', 'piercerPunctureUsedThisTurn', true, mockCampaignName);
+    expect(addEntry).toHaveBeenCalled();
+    expect(addEntry.mock.calls[0][1].abilityName).toBe('Piercer - Puncture');
+    expect(result.newDice).toEqual([5, 5, 5]);
+    expect(setPopupHtml).toHaveBeenCalled();
+  });
+
+  it('gates a second same-turn puncture after the flag is written', async () => {
+    const { getRuntimeValue } = await import('../../hooks/runtime/useRuntimeState.js');
+    const { getCombatContext } = await import('../../services/rules/combat/damageUtils.js');
+    const { applyDamageToTarget } = await import('../../services/rules/combat/applyDamage.js');
+    const { addEntry } = await import('../../services/ui/logService.js');
+
+    getRuntimeValue.mockReturnValue(null);
+    getCombatContext.mockResolvedValue({ creatures: [] });
+    applyDamageToTarget.mockReturnValue({});
+
+    const punctureData = {
+      rawDamage: 10,
+      targetName: 'Zombie 1',
+      damageTypes: ['Piercing'],
+      originalRolls: [5, 5, 1],
+      newRolls: [5, 5, 5],
+      rerolledIndex: 2,
+      originalValue: 1,
+      newValue: 5,
+    };
+
+    await handlePuncture(mockPlayerStats, mockCampaignName, [], { modifier: -1 }, vi.fn(), punctureData);
+
+    getRuntimeValue.mockReturnValue(true);
+    applyDamageToTarget.mockClear();
+    addEntry.mockClear();
+
+    const second = await handlePuncture(mockPlayerStats, mockCampaignName, [], { modifier: -1 }, vi.fn(), punctureData);
+    expect(second).toBeNull();
+    expect(applyDamageToTarget).not.toHaveBeenCalled();
+    expect(addEntry).not.toHaveBeenCalled();
+  });
 });
 
 // ---------------------------------------------------------------------------

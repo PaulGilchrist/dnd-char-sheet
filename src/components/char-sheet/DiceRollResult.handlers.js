@@ -105,7 +105,19 @@ export function createDiceRollHandlers(props, state) {
             .sort((a, b) => a.value - b.value);
         const lowestIndex = sortedWithIndex[0].index;
         const originalRolls = [...rolls];
-        const newRoll = Math.floor(Math.random() * (rolls[0] > 0 ? rolls[0] : 6)) + 1;
+
+        const diceSizes = [];
+        if (formula) {
+            for (const diceMatch of formula.matchAll(/(\d+)d(\d+)/gi)) {
+                const count = parseInt(diceMatch[1], 10);
+                const size = parseInt(diceMatch[2], 10);
+                if (size > 0) {
+                    for (let i = 0; i < count; i++) diceSizes.push(size);
+                }
+            }
+        }
+        const dieSize = diceSizes[lowestIndex] || diceSizes[0] || 6;
+        const newRoll = Math.floor(Math.random() * dieSize) + 1;
         const newRolls = [...rolls];
         newRolls[lowestIndex] = newRoll;
 

@@ -285,6 +285,9 @@ describe('handlePuncture', () => {
   });
 
   it('applies damage difference and marks puncture used when valid', async () => {
+    const { addEntry } = await import('../../services/ui/logService.js');
+    const { applyDamageToTarget } = await import('../../services/rules/combat/applyDamage.js');
+
     const stats = createPlayerStats();
     const setPopupHtml = vi.fn();
     const popupHtml = { modifier: 3 };
@@ -299,9 +302,52 @@ describe('handlePuncture', () => {
       newValue: 8,
     };
 
-    await expect(
-      handlePuncture(stats, campaignName, [], popupHtml, setPopupHtml, punctureData)
-    ).rejects.toThrow();
+    const result = await handlePuncture(stats, campaignName, [], popupHtml, setPopupHtml, punctureData);
+
+    expect(applyDamageToTarget).toHaveBeenCalledWith(
+      expect.anything(),
+      'Goblin',
+      3,
+      ['Piercing'],
+      campaignName,
+      [],
+      false,
+      'Test Character'
+    );
+    expect(mockStore.get('Test Character:piercerPunctureUsedThisTurn')).toBe(true);
+    expect(addEntry).toHaveBeenCalled();
+    expect(addEntry.mock.calls[0][1].abilityName).toBe('Piercer - Puncture');
+    expect(result.newDice).toEqual([8]);
+    expect(setPopupHtml).toHaveBeenCalled();
+  });
+
+  it('does not re-offer puncture on a second same-turn hit once flag is written', async () => {
+    const { addEntry } = await import('../../services/ui/logService.js');
+    const { applyDamageToTarget } = await import('../../services/rules/combat/applyDamage.js');
+
+    const stats = createPlayerStats();
+    const popupHtml = { modifier: 3 };
+    const punctureData = {
+      rawDamage: 8,
+      targetName: 'Goblin',
+      damageTypes: ['Piercing'],
+      originalRolls: [5],
+      newRolls: [8],
+      rerolledIndex: 0,
+      originalValue: 5,
+      newValue: 8,
+    };
+
+    await handlePuncture(stats, campaignName, [], popupHtml, vi.fn(), punctureData);
+    expect(mockStore.get('Test Character:piercerPunctureUsedThisTurn')).toBe(true);
+
+    applyDamageToTarget.mockClear();
+    addEntry.mockClear();
+
+    const second = await handlePuncture(stats, campaignName, [], popupHtml, vi.fn(), punctureData);
+    expect(second).toBeNull();
+    expect(applyDamageToTarget).not.toHaveBeenCalled();
+    expect(addEntry).not.toHaveBeenCalled();
   });
 });
 
