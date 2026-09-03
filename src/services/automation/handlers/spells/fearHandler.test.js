@@ -34,6 +34,15 @@ vi.mock('../../../rules/effects/expirations.js', () => ({
   addExpiration: vi.fn(),
 }));
 
+vi.mock('../../../combat/concentration/concentrationService.js', () => ({
+  addConcentration: vi.fn(),
+  breakConcentration: vi.fn(),
+}));
+
+vi.mock('../../../ui/storage.js', () => ({
+  default: { set: vi.fn(() => Promise.resolve()) },
+}));
+
 // ── Imports ────────────────────────────────────────────────────
 
 import { handle } from './fearHandler.js';
@@ -42,6 +51,8 @@ import { buildSaveDc, createSaveListener } from '../../common/savePrompt.js';
 import { addEntry } from '../../../ui/logService.js';
 import { getRuntimeValue, setRuntimeValue } from '../../../../hooks/runtime/useRuntimeState.js';
 import { addExpiration } from '../../../rules/effects/expirations.js';
+import { addConcentration } from '../../../combat/concentration/concentrationService.js';
+import storage from '../../../ui/storage.js';
 
 // ── Helpers ────────────────────────────────────────────────────
 
@@ -186,6 +197,25 @@ describe('fearHandler.handle', () => {
         saveType: 'WIS',
         saveDc: 15,
       }));
+    });
+  });
+
+  describe('caster concentration registration', () => {
+    it('registers caster concentration at the resolved spell save DC and persists combatSummary', async () => {
+      const ps = makePlayerStats();
+      const action = makeAction({ saveDc: 17 });
+      const ctx = makeCombatContext([
+        { name: 'Goblin', type: 'monster', currentHp: 5, maxHp: 7 },
+        { name: casterName },
+      ]);
+      getCombatContext.mockResolvedValue(ctx);
+      buildSaveDc.mockReturnValue(17);
+      createSaveListener.mockReturnValue(successSaveListener());
+
+      await handle(action, ps, campaignName, null);
+
+      expect(addConcentration).toHaveBeenCalledWith(ctx, casterName, 'Fear', 17);
+      expect(storage.set).toHaveBeenCalledWith('combatSummary', ctx, campaignName);
     });
   });
 

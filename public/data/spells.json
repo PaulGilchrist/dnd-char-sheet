@@ -3642,6 +3642,7 @@
         "automation": {
             "type": "fear",
             "saveType": "WIS",
+            "saveDc": "spell_save_dc",
             "range": "Self (30-foot Cone)",
             "duration": "Concentration, up to 1 minute"
         }

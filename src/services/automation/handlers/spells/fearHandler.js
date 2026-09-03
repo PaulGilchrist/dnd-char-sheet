@@ -5,6 +5,8 @@ import { addEntry } from '../../../ui/logService.js';
 import { getRuntimeValue, setRuntimeValue } from '../../../../hooks/runtime/useRuntimeState.js';
 import { addExpiration } from '../../../rules/effects/expirations.js';
 import { storeSpellLastAttack, addTargetResult } from '../../common/damageRollback.js';
+import { addConcentration } from '../../../combat/concentration/concentrationService.js';
+import storage from '../../../ui/storage.js';
 
 export async function handle(action, playerStats, campaignName, _mapName) {
     const auto = action.automation || {};
@@ -23,6 +25,11 @@ export async function handle(action, playerStats, campaignName, _mapName) {
     }
 
     const casterName = playerStats.name;
+
+    // Register caster concentration at the caster's spell save DC (sleetStormHandler pattern)
+    addConcentration(cs, casterName, 'Fear', dc);
+    storage.set('combatSummary', cs, campaignName);
+    window.dispatchEvent(new CustomEvent('combat-summary-updated'));
 
     storeSpellLastAttack(campaignName, {
         casterName,
@@ -113,7 +120,7 @@ export async function handle(action, playerStats, campaignName, _mapName) {
 
             // Track Fear-specific effect: affected creature can re-save if it ends its turn
             // without line of sight to the caster
-            const targetEffects = getRuntimeValue('campaign', 'targetEffects') || [];
+            const targetEffects = getRuntimeValue('campaign', 'targetEffects', campaignName) || [];
             const effects = Array.isArray(targetEffects) ? [...targetEffects] : [];
             const existingIdx = effects.findIndex(
                 te => te.target === targetName && te.effect === 'fear_end_on_los'
