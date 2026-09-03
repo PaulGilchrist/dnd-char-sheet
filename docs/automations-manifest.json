@@ -7195,6 +7195,18 @@
       "class": null,
       "triggerConditions": "Damaging hit (finalDamage > 0) on an NPC/EB-monster creature with combatSummary concentration set and runtime activeBuffs null/absent",
       "expectedBehavior": "No throw; auto-rolls CON save DC max(10, floor(dmg/2)), logs save roll or Concentration broken by damage, and persists damage to combatSummary currentHp"
+    },
+    {
+      "id": "CLA-396",
+      "name": "Zero-feat save-proficiency grant loss",
+      "type": "passive_modifier",
+      "handler": "src/services/rules/rules.js",
+      "router": "n/a",
+      "infoBuilder": "automationService.getAllSaveProficiencies",
+      "verified": "verified",
+      "class": null,
+      "triggerConditions": "getPlayerStats for any character (feat count irrelevant); save_proficiency features from class/subclass/racial/feat via allFeatures",
+      "expectedBehavior": "playerStats.saveProficiencies computed unconditionally from allFeatures so feature-based save grants (e.g. Iron Mind WIS) apply even with feats:[]."
     }
   ]
 }

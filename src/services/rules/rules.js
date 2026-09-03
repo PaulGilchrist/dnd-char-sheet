@@ -341,10 +341,13 @@ const rules = {
                    }
               }
           }
-
-          // Recompute save proficiencies now that feat features are included in allFeatures
-          playerStats.saveProficiencies = getAllSaveProficiencies(allFeatures, playerStats);
       }
+
+      // CLA-396: Recompute save proficiencies unconditionally — allFeatures is
+      // complete (class/subclass/racial/background pushed earlier, feat features
+      // pushed above). Gating on featFeatures.length silently dropped every
+      // feature-based save grant (e.g. Iron Mind) for zero-feat characters.
+      playerStats.saveProficiencies = getAllSaveProficiencies(allFeatures, playerStats);
 
       // Add Magic Initiate level 1 spell free_spell features
       const miInstances = playerStats.magicInitiateInstances || [];
