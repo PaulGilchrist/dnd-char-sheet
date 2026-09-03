@@ -37,6 +37,7 @@ vi.mock('../../../encounters/combatData.js', () => ({
     getCombatSummary: vi.fn(() => ({
         creatures: [{ name: 'Goblin', type: 'npc', monsterType: 'fiend' }],
     })),
+    getCurrentCombatRound: vi.fn(() => 5),
 }));
 
 vi.mock('../../../rules/combat/applyDamage.js', () => ({
@@ -131,11 +132,11 @@ describe('hurlThroughHellHandler.handle', () => {
         vi.restoreAllMocks();
     });
 
-    // ── Guard: per-turn check ──
+    // ── Guard: per-turn check (CLA-175 round-keyed latch) ──
 
     describe('guard: already used this turn', () => {
-        it('should return popup when already used this turn', async () => {
-            mockRuntime({ turnUsed: 'turn1' });
+        it('should return popup when latch holds the current round number', async () => {
+            mockRuntime({ turnUsed: 5 });
 
             const result = await handle(makeAction(), makePlayerStats(), CAMPAIGN, MAP);
 
@@ -144,6 +145,35 @@ describe('hurlThroughHellHandler.handle', () => {
             expect(result.payload.description).toContain('Already used this turn');
             expect(result.payload.description).toContain('Once per turn');
             expect(result.payload.automation).toEqual(makeAction().automation);
+        });
+
+        it('should allow use when latch holds a previous round number (self-re-arms)', async () => {
+            mockRuntime({ turnUsed: 4 });
+
+            const result = await handle(makeAction(), makePlayerStats(), CAMPAIGN, MAP);
+
+            expect(result.type).toBe('modal');
+        });
+
+        it('should allow use when latch holds the legacy unknown sentinel', async () => {
+            mockRuntime({ turnUsed: 'unknown' });
+
+            const result = await handle(makeAction(), makePlayerStats(), CAMPAIGN, MAP);
+
+            expect(result.type).toBe('modal');
+        });
+
+        it('should allow use on the next round after a same-round refusal', async () => {
+            mockRuntime({ turnUsed: 5 });
+            const refused = await handle(makeAction(), makePlayerStats(), CAMPAIGN, MAP);
+            expect(refused.type).toBe('popup');
+
+            // Round advances — latch stored 5, current round now 6.
+            const combatData = await import('../../../encounters/combatData.js');
+            combatData.getCurrentCombatRound.mockReturnValue(6);
+
+            const allowed = await handle(makeAction(), makePlayerStats(), CAMPAIGN, MAP);
+            expect(allowed.type).toBe('modal');
         });
     });
 

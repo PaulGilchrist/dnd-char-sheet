@@ -24,6 +24,7 @@ vi.mock('../../../services/rules/combat/applyDamage.js', () => ({
 }));
 
 vi.mock('../../../services/encounters/combatData.js', () => ({
+  getCurrentCombatRound: vi.fn(() => 5),
   getCombatSummary: vi.fn(() => ({
     creatures: [
       { name: 'Goblin1', type: 'npc' },

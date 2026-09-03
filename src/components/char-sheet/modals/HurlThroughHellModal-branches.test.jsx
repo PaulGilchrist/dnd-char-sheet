@@ -31,6 +31,7 @@ vi.mock('../../../services/encounters/combatData.js', () => ({
       { name: 'Elf Mage', type: 'player' },
     ],
   })),
+  getCurrentCombatRound: vi.fn(() => 5),
 }));
 
 vi.mock('../../../services/dice/diceRoller.js', () => ({
@@ -99,12 +100,9 @@ describe('HurlThroughHellModal - error handling and fallback branches', () => {
     runtimeState.setRuntimeValue.mockImplementation(() => Promise.resolve());
   });
 
-  describe('currentTurn null fallback', () => {
-    it('uses "unknown" when currentTurn is null', async () => {
-      runtimeState.getRuntimeValue.mockImplementation((name, key) => {
-        if (key === 'currentTurn') return null;
-        return null;
-      });
+  describe('round-keyed turn latch', () => {
+    it('stamps the current combat round number (CLA-175)', async () => {
+      runtimeState.getRuntimeValue.mockImplementation(() => null);
 
       render(<HurlThroughHellModal {...makeProps()} />);
 
@@ -114,7 +112,7 @@ describe('HurlThroughHellModal - error handling and fallback branches', () => {
         expect(runtimeState.setRuntimeValue).toHaveBeenCalledWith(
           'Throg',
           'hurlThroughHellTurnUsed',
-          'unknown',
+          5,
           'test-campaign'
         );
       });

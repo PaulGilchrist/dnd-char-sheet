@@ -31,6 +31,7 @@ vi.mock('../../../services/encounters/combatData.js', () => ({
       { name: 'Elf Mage', type: 'player' },
     ],
   })),
+  getCurrentCombatRound: vi.fn(() => 5),
 }));
 
 vi.mock('../../../services/dice/diceRoller.js', () => ({
@@ -219,7 +220,7 @@ describe('HurlThroughHellModal', () => {
         expect(runtimeState.setRuntimeValue).toHaveBeenCalledWith(
           'Throg',
           'hurlThroughHellTurnUsed',
-          'Turn5',
+          5,
           'test-campaign'
         );
         expect(runtimeState.setRuntimeValue).toHaveBeenCalledWith(

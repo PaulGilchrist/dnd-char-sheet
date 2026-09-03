@@ -3,7 +3,7 @@ import { createSaveListener } from '../../../services/automation/common/saveProm
 import { addEntry } from '../../../services/ui/logService.js';
 import { getRuntimeValue, setRuntimeValue } from '../../../hooks/runtime/useRuntimeState.js';
 import { applyDamageToTarget } from '../../../services/rules/combat/applyDamage.js';
-import { getCombatSummary } from '../../../services/encounters/combatData.js';
+import { getCombatSummary, getCurrentCombatRound } from '../../../services/encounters/combatData.js';
 import { rollExpression } from '../../../services/dice/diceRoller.js';
 import { addExpiration } from '../../../services/rules/effects/expirations.js';
 
@@ -23,9 +23,11 @@ function HurlThroughHellModal({ action, playerStats, campaignName, targetName, s
     const handleConfirm = async () => {
         setStep('result');
 
-        // Mark as used this turn
-        const currentTurn = getRuntimeValue(playerName, 'currentTurn', campaignName) || 'unknown';
-        await setRuntimeValue(playerName, 'hurlThroughHellTurnUsed', currentTurn, campaignName);
+        // CLA-175: round-keyed once-per-turn latch (CLA-109/CLA-273 pattern) —
+        // stamps the current round number so later rounds self-re-arm; the
+        // never-written 'currentTurn'/'unknown' sentinel falsified every turn.
+        const currentRound = getCurrentCombatRound(campaignName);
+        await setRuntimeValue(playerName, 'hurlThroughHellTurnUsed', currentRound, campaignName);
 
         if (hasUse) {
             await setRuntimeValue(playerName, 'hurlThroughHellUses', currentUses + 1, campaignName);

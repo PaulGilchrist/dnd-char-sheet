@@ -2,6 +2,7 @@ import { getRuntimeValue } from '../../../../hooks/runtime/useRuntimeState.js';
 import { rollExpression } from '../../../dice/diceRoller.js';
 import { buildSaveDc } from '../../common/savePrompt.js';
 import { getCombatContext, getTargetFromAttacker } from '../../../rules/combat/damageUtils.js';
+import { getCurrentCombatRound } from '../../../encounters/combatData.js';
 
 const USES_KEY = 'hurlThroughHellUses';
 const TURN_USED_KEY = 'hurlThroughHellTurnUsed';
@@ -11,9 +12,11 @@ export async function handle(action, playerStats, campaignName, _mapName) {
     const playerName = playerStats.name;
     const featureName = action.name || 'Hurl Through Hell';
 
-    // Check once-per-turn
+    // CLA-175: round-keyed once-per-turn latch (CLA-109/CLA-273 pattern) —
+    // compares the stored round number against the current round so the latch
+    // self-re-arms each round instead of treating any sentinel as "used".
     const turnUsed = getRuntimeValue(playerName, TURN_USED_KEY, campaignName);
-    if (turnUsed) {
+    if (turnUsed != null && Number(turnUsed) === getCurrentCombatRound(campaignName)) {
         return {
             type: 'popup',
             payload: {
