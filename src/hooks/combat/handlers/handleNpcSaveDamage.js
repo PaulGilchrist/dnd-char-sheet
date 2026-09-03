@@ -17,6 +17,22 @@ import { getElderChampionSaveDisadvantage } from '../../../services/combat/auras
 import { isCircleOfPowerActive } from '../../../services/automation/handlers/buffs/circleOfPowerHandler.js';
 import { handleOverchannelSelfDamage } from './handleOverchannelSelfDamage.js';
 
+// CLA-279: consume Radiant Soul once-per-turn when the save-damage roll carries the
+// execution-owned " + N [Radiant Soul]" adder (single-target save spells).
+function consumeRadiantSoulOncePerTurn(characterName, formula, appliedDamage, campaignName) {
+    if (appliedDamage > 0 && String(formula || '').includes('[Radiant Soul]')) {
+        const radiantSoulFlagKey = `_radiantSoul_${characterName.replace(/\s+/g, '_')}_oncePerTurn`;
+        setRuntimeValue(characterName, radiantSoulFlagKey, true, campaignName);
+    }
+}
+
+function applyPostSaveDamageEffects(primaryApplyResult, characterName, campaignName, formula) {
+    if (primaryApplyResult && primaryApplyResult.finalDamage > 0) {
+        endInvisibilityOnHostileAction(characterName, campaignName);
+        consumeRadiantSoulOncePerTurn(characterName, formula, primaryApplyResult.finalDamage, campaignName);
+    }
+}
+
 export function createNpcSaveDamageHandler(deps) {
     const { characterName, campaignName, characters, setPopupHtml, logEntry } = deps;
 
@@ -221,9 +237,7 @@ export function createNpcSaveDamageHandler(deps) {
           ? await applyDamageToTarget(combatSummary, target.name, finalDamage, [damageType], campaignName, characters, ignoreResistance, characterName, true, { concentrationTotalDamage: finalDamage + secondaryFinalDamage })
           : await applyDamageToTarget(combatSummary, target.name, finalDamage, [damageType], campaignName, characters, ignoreResistance, characterName, true);
 
-        if (primaryApplyResult && primaryApplyResult.finalDamage > 0) {
-            endInvisibilityOnHostileAction(characterName, campaignName);
-        }
+        applyPostSaveDamageEffects(primaryApplyResult, characterName, campaignName, formula);
 
         const isCrit = context?.isAutoCrit || false;
         const displayFormula = isCrit ? formatDamageFormula(formula, displayRolls, true) : formula;

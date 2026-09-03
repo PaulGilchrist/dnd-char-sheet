@@ -76,6 +76,21 @@ async function handleAoE(spell, fullSpell, metaCtx, playerStats, campaignName, m
     const damageFormula = empEvocFormula || damageExpression || '0';
     const payloadDamage = overchannelActive ? `${damageFormula} [Overchannel Maximize]` : damageFormula;
 
+    // CLA-279: Radiant Soul (Celestial Patron) — one target of the spell's damage roll gains CHA mod.
+    // Gate checked here at cast resolution; the SaveAttackAoeModal stamps the first selected eligible
+    // target via pendingRadiantSoulTarget and consumes the once-per-turn flag at damage application.
+    let radiantSoulChaMod = 0;
+    if (hasDamage) {
+        const radiantSoulPassive = playerStats.automation?.passives?.find(p => p.type === 'radiant_soul');
+        const radiantSoulTypes = (radiantSoulPassive?.damageTypes || []).map(dt => String(dt).toLowerCase());
+        const radiantSoulFlagKey = `_radiantSoul_${playerStats.name.replace(/\s+/g, '_')}_oncePerTurn`;
+        if (radiantSoulPassive?.hasAutomation
+            && radiantSoulTypes.includes(String(effectiveDamageType || '').toLowerCase())
+            && !getRuntimeValue(playerStats.name, radiantSoulFlagKey, campaignName)) {
+            radiantSoulChaMod = Math.max(0, playerStats.abilities?.find(a => a.name === 'Charisma')?.bonus || 0);
+        }
+    }
+
     if (isConditionOnlyAoe) {
         const conditionNames = automationEffects.fail.map(e => e.condition || e.type).filter(Boolean);
         const includeCaster = fullSpell.name && fullSpell.name.toLowerCase() === 'grease';
@@ -114,6 +129,7 @@ async function handleAoE(spell, fullSpell, metaCtx, playerStats, campaignName, m
                 range: rangeFeet,
                 damage: payloadDamage,
                 damageType: effectiveDamageType,
+                radiantSoulChaMod,
                 saveType: fullSpell.dc?.dc_type || spell.dc.dc_type || 'DEX',
                 saveDc: spellSaveDc + (innateSorceryActive ? 1 : 0),
                 dcSuccess: (() => {

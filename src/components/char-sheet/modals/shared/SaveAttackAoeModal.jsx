@@ -21,6 +21,7 @@ function SaveAttackAoeModal({
     range,
     damage,
     damageType,
+    radiantSoulChaMod = 0,
     saveType,
     saveDc,
     dcSuccess,
@@ -76,6 +77,16 @@ function SaveAttackAoeModal({
         const scalingEntry = resolveScaling(playerStats, action.automation?.scaling);
         const resolvedDamage = scalingEntry?.damage || damage;
 
+        // CLA-279: Radiant Soul — CHA mod lands on exactly ONE of the spell's targets (first eligible).
+        const radiantSoulFlagKey = `_radiantSoul_${playerStats.name.replace(/\s+/g, '_')}_oncePerTurn`;
+        let radiantSoulTarget = null;
+        if (radiantSoulChaMod > 0 && !getRuntimeValue(playerStats.name, radiantSoulFlagKey, campaignName)) {
+            radiantSoulTarget = selectedNames.find(n => combatSummary.creatures.some(c => c.name === n)) || null;
+            if (radiantSoulTarget) {
+                setRuntimeValue(playerStats.name, 'pendingRadiantSoulTarget', radiantSoulTarget, campaignName);
+            }
+        }
+
         for (const targetName of selectedNames) {
             const target = combatSummary.creatures.find(c => c.name === targetName);
             if (!target) continue;
@@ -93,7 +104,9 @@ function SaveAttackAoeModal({
                 const saveRoll = (isHeightenTarget || hasRiderDisadvantage) ? Math.min(Math.floor(Math.random() * 20) + 1, Math.floor(Math.random() * 20) + 1) : Math.floor(Math.random() * 20) + 1;
                 const saveTotal = saveRoll + saveBonus;
                 const success = saveTotal >= saveDc;
-                const damageRoll = overchannelActive ? rollExpressionMaximized(resolvedDamage) : rollExpression(resolvedDamage);
+                const isRadiantSoulTarget = targetName === radiantSoulTarget;
+                const targetDamageFormula = isRadiantSoulTarget ? `${resolvedDamage} + ${radiantSoulChaMod} [Radiant Soul]` : resolvedDamage;
+                const damageRoll = overchannelActive ? rollExpressionMaximized(targetDamageFormula) : rollExpression(targetDamageFormula);
                 const rawDamage = damageRoll?.total ?? 0;
                 const targetCreature = combatSummary.creatures.find(c => c.name === targetName);
                 const resistances = targetCreature?.resistances || [];
@@ -117,12 +130,24 @@ function SaveAttackAoeModal({
                         campaignName, characters, true, playerStats.name, false
                     );
 
+                    if (isRadiantSoulTarget) {
+                        setRuntimeValue(playerStats.name, radiantSoulFlagKey, true, campaignName);
+                        setRuntimeValue(playerStats.name, 'pendingRadiantSoulTarget', null, campaignName);
+                        addEntry(campaignName, {
+                            type: 'ability_use',
+                            characterName: playerStats.name,
+                            abilityName: 'Radiant Soul',
+                            description: `Radiant Soul: +${radiantSoulChaMod} ${damageType} damage added to ${targetName}'s damage roll (once per turn).`,
+                            timestamp: Date.now(),
+                        }).catch((e) => { console.error('[SaveAttackAoeModal] Error logging Radiant Soul:', e); });
+                    }
+
                     addEntry(campaignName, {
                         type: 'roll',
                         characterName: playerStats.name,
                         rollType: 'save-damage',
                         name: action.name,
-                        formula: resolvedDamage,
+                        formula: targetDamageFormula,
                         rolls: damageRoll?.rolls ?? [],
                         total: rawDamage,
                         modifier: damageRoll?.modifier ?? 0,
@@ -184,7 +209,9 @@ function SaveAttackAoeModal({
                     const promptId = `${Date.now()}-${Math.random().toString(36).slice(2, 9)}`;
                     const scalingEntry = resolveScaling(playerStats, action.automation?.scaling);
                     const resolvedDamage = scalingEntry?.damage || damage;
-                    const damageRoll = overchannelActive ? rollExpressionMaximized(resolvedDamage) : rollExpression(resolvedDamage);
+                    const isRadiantSoulTarget = targetName === radiantSoulTarget;
+                    const targetDamageFormula = isRadiantSoulTarget ? `${resolvedDamage} + ${radiantSoulChaMod} [Radiant Soul]` : resolvedDamage;
+                    const damageRoll = overchannelActive ? rollExpressionMaximized(targetDamageFormula) : rollExpression(targetDamageFormula);
                     const rawDamage = damageRoll?.total ?? 0;
 
                     sendSavePrompt(campaignName, {
@@ -217,7 +244,7 @@ function SaveAttackAoeModal({
         }
 
         return { results, prompts };
-    }, [campaignName, action.name, action.automation?.scaling, playerStats, damage, damageType, dcSuccess, saveDc, saveType, isCarefulSpell, isCarefulAlly, heightenTarget, overchannelActive, overchannelUseCount, overchannelSpellLevel]);
+    }, [campaignName, action.name, action.automation?.scaling, playerStats, damage, damageType, radiantSoulChaMod, dcSuccess, saveDc, saveType, isCarefulSpell, isCarefulAlly, heightenTarget, overchannelActive, overchannelUseCount, overchannelSpellLevel]);
 
     const handleSaveResult = useCallback(async (event, ctx) => {
         const detail = event.detail;
@@ -241,7 +268,12 @@ function SaveAttackAoeModal({
 
         const scalingEntry = resolveScaling(playerStats, action.automation?.scaling);
         const resolvedDamage = scalingEntry?.damage || damage;
-        const damageRoll = overchannelActive ? rollExpressionMaximized(resolvedDamage) : rollExpression(resolvedDamage);
+        // CLA-279: if this PC is the stamped Radiant Soul recipient, its damage roll carries the CHA adder.
+        const radiantSoulFlagKey = `_radiantSoul_${playerStats.name.replace(/\s+/g, '_')}_oncePerTurn`;
+        const radiantSoulPending = getRuntimeValue(playerStats.name, 'pendingRadiantSoulTarget', campaignName);
+        const isRadiantSoulTarget = radiantSoulChaMod > 0 && radiantSoulPending === targetName;
+        const targetDamageFormula = isRadiantSoulTarget ? `${resolvedDamage} + ${radiantSoulChaMod} [Radiant Soul]` : resolvedDamage;
+        const damageRoll = overchannelActive ? rollExpressionMaximized(targetDamageFormula) : rollExpression(targetDamageFormula);
 
         if (finalDamage > 0) {
             addEntry(campaignName, {
@@ -266,12 +298,24 @@ function SaveAttackAoeModal({
                 campaignName, characters, false, playerStats.name, false
             );
 
+            if (isRadiantSoulTarget) {
+                setRuntimeValue(playerStats.name, radiantSoulFlagKey, true, campaignName);
+                setRuntimeValue(playerStats.name, 'pendingRadiantSoulTarget', null, campaignName);
+                addEntry(campaignName, {
+                    type: 'ability_use',
+                    characterName: playerStats.name,
+                    abilityName: 'Radiant Soul',
+                    description: `Radiant Soul: +${radiantSoulChaMod} ${damageType} damage added to ${targetName}'s damage roll (once per turn).`,
+                    timestamp: Date.now(),
+                }).catch((e) => { console.error('[SaveAttackAoeModal] Error logging Radiant Soul:', e); });
+            }
+
             addEntry(campaignName, {
                 type: 'roll',
                 characterName: playerStats.name,
                 rollType: 'save-damage',
                 name: action.name,
-                formula: resolvedDamage,
+                formula: targetDamageFormula,
                 rolls: damageRoll?.rolls ?? [],
                 total: rawDamage,
                 modifier: damageRoll?.modifier ?? 0,
@@ -323,7 +367,7 @@ function SaveAttackAoeModal({
             });
             setPendingPrompts(prev => prev.filter(p => p.promptId !== detail.promptId));
         }
-    }, [campaignName, damage, damageType, dcSuccess, action.name, action.automation?.scaling, playerStats, saveDc, saveType, pendingPrompts, overchannelActive]);
+    }, [campaignName, damage, damageType, radiantSoulChaMod, dcSuccess, action.name, action.automation?.scaling, playerStats, saveDc, saveType, pendingPrompts, overchannelActive]);
 
     useEffect(() => {
         if (pendingPrompts.length === 0) return;

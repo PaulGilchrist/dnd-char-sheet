@@ -39,8 +39,10 @@ export function buildRollBaseDamageStep() {
         }
       }
 
+      // CLA-279: execution/index.js computeRadiantSoul is the single owner of the direct-path
+      // adder — attack.damage may already carry " + N [Radiant Soul]"; never re-append.
       const radiantSoulPassive = ps.automation?.passives?.find(p => p.type === 'radiant_soul');
-      if (radiantSoulPassive && radiantSoulPassive.hasAutomation) {
+      if (radiantSoulPassive && radiantSoulPassive.hasAutomation && !formula.includes('[Radiant Soul]')) {
         const spellDamageType = (ctx.attack?.damageType || '').toLowerCase();
         const damageTypes = (radiantSoulPassive.damageTypes || []).map(dt => dt.toLowerCase());
         const oncePerTurnKey = `_radiantSoul_${ps.name.replace(/\s+/g, '_')}_oncePerTurn`;

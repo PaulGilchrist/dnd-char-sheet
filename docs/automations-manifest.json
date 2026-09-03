@@ -5089,9 +5089,9 @@
       "handler": "src/services/combat/automation/handlers/classFeatureHandler.js",
       "router": "src/services/combat/automation/routers/classFeatureRouter.js",
       "infoBuilder": "src/services/combat/automation/infoBuilders/classFeatureInfoBuilder.js",
-      "verified": "broken \u2014 see .opencode/plans/bug-cla-279-radiant-soul-double-adder.md",
+      "verified": "verified",
       "class": "Warlock",
-      "triggerConditions": "Automation type: undefined",
+      "triggerConditions": "Automation type: radiant_soul",
       "expectedBehavior": "Resistance to Radiant damage. Once per turn, when a spell you cast deals Radiant or Fire damage, add Charisma modifier to that spell's damage against one of the spell's targets."
     },
     {
