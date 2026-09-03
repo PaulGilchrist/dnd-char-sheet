@@ -39,6 +39,8 @@ These caused past runs to give up on fixable problems. Exhaust every one of thes
 
 14. **Sheet attack-row cell semantics: damage cell = damage-only roll; '+7' hit link = full attack (CLA-274)** — clicking the Damage cell (e.g. `1d6+2`) of a sheet attack row rolls bare damage (log entry "Psychic Blade Psychic 1d6+2(5)7" with NO 'vs AC'/HIT line and NO HP change — NOT evidence of a broken attack). The full auto-roll attack (popup "d20 X +7 ✓ HIT (vs AC)", then Done → damage popup + hp_change log) comes ONLY from clicking the "+N" hit-bonus link. Locate rows via `page.locator('.attacks').nth(0|1)` (grid 0=Actions, 1=Bonus Actions; name texts inside both grids make getByText ambiguous). Also `.log-entry` DOM order is NEWEST-FIRST — `slice(-N)` returns the OLDEST entries; use `slice(0,N)` for the recent tail, and re-mount Log (Initiative→Log) after attacks to flush SSE lag.
 
+15. **Subagent jq-rewrites of giant data files cause 13k-line churn (CLA-277)** — editing `public/data/2024/classes.json` via `jq`/full rewrite re-indents the ENTIRE 13.5k-line file (26k-line diff), hiding the real 2-key change. Orchestrator now validates with `jq -S` normalized diff vs the pre-fix blob (proves semantic equality) — but MAKE data edits TARGETED text edits preserving the file's original indentation; jq only to VALIDATE (`jq empty`), never to write giant data files.
+
 If you hit a NEW pitfall of this kind, append it to this list (and the Recipes section) before finishing, so the next subagent doesn't rediscover it.
 
 ## Recipes
