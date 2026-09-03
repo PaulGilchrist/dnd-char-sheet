@@ -121,6 +121,35 @@ export function useCustomHandlers(playerStats, campaignName, cfClearPending, get
       timestamp: Date.now(),
     }).catch((e) => { console.error("[useCustomHandlers:log-error]", e); })
 
+    // SP-095: consume the spell slot via prepareSpellCast, mirroring SP-085 /
+    // createConfirmHandler (useConfirmableFlow.js) — the custom confirm previously
+    // bypassed it, so no lv2 slot was ever spent. No concentration is registered
+    // because the spell data says concentration:false (RAW 2024: not concentration).
+    const isCantrip = (pending.spell?.level === 0)
+    if (!isCantrip && pending.spell) {
+      const freeCastAuthorized = isFreeCastAuthorized(playerStats.name, pending.spellName, pending.spellLevel || 0, playerStats, campaignName)
+      const upcastLevel = pending.spell.upcastLevel
+      const isUpcast = upcastLevel != null && upcastLevel !== pending.spell.level
+      const slotResult = await prepareSpellCast(pending.spell, {}, {
+        playerName: playerStats.name,
+        playerStats,
+        campaignName,
+        isUpcast,
+        upcastLevel,
+        freeCastAuthorized,
+      })
+      if (slotResult && slotResult.slotConsumed) {
+        addEntry(campaignName, {
+          type: 'ability_use',
+          characterName: playerStats.name,
+          abilityName: pending.spellName,
+          spellName: pending.spellName,
+          description: `${pending.spellName}: Expended a level ${(slotResult.modifiedSpell && slotResult.modifiedSpell.level) || pending.spellLevel || 0} spell slot.`,
+          timestamp: Date.now(),
+        }).catch((e) => { console.error("[useCustomHandlers:log-error]", e); })
+      }
+    }
+
     const popup = await applyProtectionFromPoisonHandler(
       { name: pending.spellName, spell: pending.spell, automation: { type: 'protection_from_poison', range: pending.range } },
       playerStats,
@@ -148,7 +177,8 @@ export function useCustomHandlers(playerStats, campaignName, cfClearPending, get
         castingTime: pending.castingTime,
         timestamp: Date.now(),
       }).catch((e) => { console.error("[useCustomHandlers:log-error]", e); })
-      rollbackSpellSlot(playerStats.name, pending.spellName, pending.spellLevel || 0, playerStats, campaignName)
+      // SP-095: no rollbackSpellSlot — the gate never spends the slot; it is spent
+      // at confirm time in handleProtectionFromPoisonConfirm (mirrors SP-085/SP-093).
     }
     cfClearPending('protectionFromPoison')
   }, [playerStats, campaignName, cfClearPending, getPending])

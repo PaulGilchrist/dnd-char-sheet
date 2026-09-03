@@ -474,7 +474,7 @@ describe('protectionFromPoisonHandler', () => {
             expect(poisonEffect).toBeTruthy();
             expect(poisonEffect.target).toBe('Ally1');
             expect(poisonEffect.source).toBe(PLAYER_NAME);
-            expect(poisonEffect.duration).toBe('concentration');
+            expect(poisonEffect.duration).toBe('1 hour');
         });
 
         it('handles targetEffects with array target format', async () => {
@@ -550,7 +550,7 @@ describe('protectionFromPoisonHandler', () => {
             expect(otherEffect).toBeTruthy();
         });
 
-        it('registers concentration with correct DC', async () => {
+        it('does NOT impose caster concentration (SP-095: RAW/data concentration:false)', async () => {
             useRuntimeState.getRuntimeValue
                 .mockReturnValueOnce(['poisoned'])
                 .mockReturnValueOnce([])
@@ -570,16 +570,14 @@ describe('protectionFromPoisonHandler', () => {
                 { targetName: 'Ally1' }
             );
 
-            expect(concentrationService.addConcentration).toHaveBeenCalledWith(
-                expect.objectContaining({ creatures: expect.any(Array) }),
-                PLAYER_NAME,
-                'Protection from Poison',
-                13, // spellSaveDc from playerStats
-                'Ally1'
+            expect(concentrationService.addConcentration).not.toHaveBeenCalled();
+            const csWrites = useRuntimeState.setRuntimeValue.mock.calls.filter(
+                (c) => c[1] === 'combatSummary'
             );
+            expect(csWrites).toHaveLength(0);
         });
 
-        it('uses default spellSaveDc when playerStats lacks spellAbilities', async () => {
+        it('does NOT impose concentration even when playerStats lacks spellAbilities', async () => {
             useRuntimeState.getRuntimeValue
                 .mockReturnValueOnce(['poisoned'])
                 .mockReturnValueOnce([])
@@ -600,13 +598,7 @@ describe('protectionFromPoisonHandler', () => {
                 { targetName: 'Ally1' }
             );
 
-            expect(concentrationService.addConcentration).toHaveBeenCalledWith(
-                expect.objectContaining({ creatures: expect.any(Array) }),
-                PLAYER_NAME,
-                'Protection from Poison',
-                11, // 8 + 3 (proficiency)
-                'Ally1'
-            );
+            expect(concentrationService.addConcentration).not.toHaveBeenCalled();
         });
 
         it('registers expiration for initiative/rest cleanup', async () => {
@@ -697,7 +689,7 @@ describe('protectionFromPoisonHandler', () => {
             consoleSpy.mockRestore();
         });
 
-        it('dispatches combat-summary-updated event when combat context exists', async () => {
+        it('does NOT dispatch combat-summary-updated (SP-095: concentration block removed)', async () => {
             useRuntimeState.getRuntimeValue
                 .mockReturnValueOnce(['poisoned'])
                 .mockReturnValueOnce([])
@@ -717,7 +709,7 @@ describe('protectionFromPoisonHandler', () => {
                 { targetName: 'Ally1' }
             );
 
-            expect(window.dispatchEvent).toHaveBeenCalledWith(
+            expect(window.dispatchEvent).not.toHaveBeenCalledWith(
                 expect.objectContaining({ type: 'combat-summary-updated' })
             );
         });

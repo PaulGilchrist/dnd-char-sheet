@@ -1,7 +1,6 @@
 import { getRuntimeValue, setRuntimeValue } from '../../../../hooks/runtime/useRuntimeState.js';
 import { addEntry } from '../../../ui/logService.js';
 import { addExpiration } from '../../../rules/effects/expirations.js';
-import { addConcentration } from '../../../combat/concentration/concentrationService.js';
 import { getCombatSummary } from '../../../encounters/combatData.js';
 function conditionMatches(c, targetCondition) {
     return (typeof c === 'string' ? c.toLowerCase() : '').trim() === (typeof targetCondition === 'string' ? targetCondition.toLowerCase() : '').trim();
@@ -93,18 +92,12 @@ export async function applyProtectionFromPoison(action, playerStats, campaignNam
         target: targetName,
         effect: EFFECT_KEY,
         source: casterName,
-        duration: 'concentration',
+        duration,
     };
     setRuntimeValue('campaign', 'targetEffects', [...existingFiltered, newEffect], campaignName);
 
-    // Register concentration
-    const combatSummary = getCombatSummary(campaignName);
-    if (combatSummary) {
-        const spellSaveDc = playerStats.spellAbilities?.saveDc || 8 + (playerStats.proficiency || 2);
-        addConcentration(combatSummary, casterName, SPELL_NAME, spellSaveDc, targetName);
-        setRuntimeValue('campaign', 'combatSummary', combatSummary, campaignName);
-        window.dispatchEvent(new CustomEvent('combat-summary-updated'));
-    }
+    // SP-095: no concentration registered — spell data says concentration:false
+    // (RAW 2024 Protection from Poison does not require concentration).
 
     // Register expiration: expires on initiative roll, short rest, long rest
     addExpiration(casterName, targetName, [
@@ -117,7 +110,7 @@ export async function applyProtectionFromPoison(action, playerStats, campaignNam
         type: 'ability_use',
         characterName: casterName,
         abilityName: SPELL_NAME,
-        description: `${casterName} cast ${SPELL_NAME} on ${targetName}. Poisoned condition removed. Target has Advantage on saving throws vs Poisoned and Resistance to Poison damage. Concentration, up to 1 hour. Expires on concentration loss, initiative roll, short rest, or long rest.`,
+        description: `${casterName} cast ${SPELL_NAME} on ${targetName}. Poisoned condition removed. Target has Advantage on saving throws vs Poisoned and Resistance to Poison damage. Duration 1 hour, no concentration. Expires on initiative roll, short rest, or long rest.`,
         targetName,
         timestamp: Date.now(),
     }).catch((e) => { console.error("[protectionFromPoisonHandler] Error:", e); });

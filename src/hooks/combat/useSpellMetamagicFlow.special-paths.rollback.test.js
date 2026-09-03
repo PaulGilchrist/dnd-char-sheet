@@ -150,7 +150,7 @@ describe('useSpellMetamagicFlow — skip handler rollback behavior', () => {
     getMultiTargetSpreadForSpell.mockReturnValue(null);
   });
 
-  it('handlesProtectionFromPoisonSkip: clears pending, logs entry, and rolls back spell slot', async () => {
+  it('handlesProtectionFromPoisonSkip: clears pending and logs, but does NOT roll back an unconsumed slot (SP-095)', async () => {
     const { result } = renderHook(() =>
       useSpellMetamagicFlow(makePlayerStats(), 'TestCampaign', vi.fn())
     );
@@ -173,7 +173,10 @@ describe('useSpellMetamagicFlow — skip handler rollback behavior', () => {
       spellLevel: 2,
       castingTime: '1 Action',
     }));
-    expect(setRuntimeValue).toHaveBeenCalledWith('TestSorcerer', expect.stringContaining('spell_slots'), expect.any(Number), 'TestCampaign');
+    // SP-095: the gate never spends the slot (it is spent at confirm), so skip
+    // must not write any spell_slots rollback (that inflated slots above max).
+    const slotWrites = setRuntimeValue.mock.calls.filter(c => String(c[1]).includes('spell_slots'));
+    expect(slotWrites).toHaveLength(0);
   });
 
   it('handleStoneSkinSkip: clears pending, logs entry, and rolls back spell slot', async () => {

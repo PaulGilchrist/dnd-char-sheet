@@ -4909,7 +4909,7 @@
       "handler": "src/services/combat/automation/handlers/spellHandler.js",
       "router": "src/services/combat/automation/routers/spellRouter.js",
       "infoBuilder": "src/services/combat/automation/infoBuilders/spellInfoBuilder.js",
-      "verified": "broken \u2014 see .opencode/plans/bug-sp-095-protection-from-poison.md",
+      "verified": "verified",
       "class": "Spell",
       "triggerConditions": "Action: 1 action; Range: Touch; Duration: 1 hour",
       "expectedBehavior": "You touch a creature and end the Poisoned condition on it. For the duration, the target has Advantage on saving throws to avoid or end the Poisoned condition, and it has Resistance to Poison damage."
