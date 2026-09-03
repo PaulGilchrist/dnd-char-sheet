@@ -68,6 +68,14 @@ function pushDisadvNextAttackBadge(badges, targetEffects, creatureName) {
     badges.push({ label: def.label, cls: 'effect-debuff', icon: def.icon, removable: true, removeAction: 'target_effect', effectType: 'disadvantage_next_attack', tooltip: `Disadvantage on its next attack roll (from ${effect.source || 'unknown'})` })
 }
 
+function pushPassWithoutTraceBadge(badges, targetEffects, creatureName, isLocalhost) {
+    const pwtEffect = (targetEffects || []).find(te => te.effect === 'pass_without_trace_bonus' && te.target === creatureName)
+    if (!pwtEffect) return
+    const casterName = pwtEffect.source || 'unknown'
+    const pwtDef = getEffectDefinition('pass_without_trace_bonus')
+    badges.push({ label: pwtDef.label, cls: 'effect-buff', icon: pwtDef.icon, removable: isLocalhost, removeAction: 'target_effect', effectType: 'pass_without_trace_bonus', tooltip: `Pass Without Trace from ${casterName}: +10 bonus to Dexterity (Stealth) checks and leaves no tracks (Concentration, up to 1 hour)` })
+}
+
 function pushPerceptionDisadvBadge(badges, targetEffects, creatureName) {
     const effect = (targetEffects || []).find(te => {
         const teTarget = Array.isArray(te.target) ? te.target[0] : te.target
@@ -308,6 +316,8 @@ function ConditionEffectBadges({ conditions, targetEffects = [], creatureName, c
         const casterName = circleOfPowerEffect.source || 'unknown'
         badges.push({ label: 'Circle of Power', cls: 'effect-buff', icon: 'fa-shield-halved', removable: isLocalhost, removeAction: 'target_effect', effectType: 'circle_of_power', tooltip: `Circle of Power from ${casterName}: Advantage on saving throws, no damage on successful save vs half-damage effects` })
     }
+
+    pushPassWithoutTraceBadge(badges, targetEffects, creatureName, isLocalhost)
 
     const heroismEffect = targetEffects?.find(te => te.effect === 'heroism' && te.target === creatureName)
     if (heroismEffect) {

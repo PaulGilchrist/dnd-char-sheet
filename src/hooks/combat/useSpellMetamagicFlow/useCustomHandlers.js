@@ -6,6 +6,7 @@ import { applyPassWithoutTraceEffect } from '../../../services/automation/index.
 import { applyProtectionFromPoisonHandler } from '../../../services/automation/index.js'
 import { applyStoneSkinHandler } from '../../../services/automation/index.js'
 import { consumeMaterial } from '../../../services/rules/spells/materialComponents.js'
+import { isFreeCastAuthorized, prepareSpellCast } from '../../../services/rules/spells/spellPreparationService.js'
 
 export function useCustomHandlers(playerStats, campaignName, cfClearPending, getPending, setPopupHtml, characters) {
   const handleBarkskinConfirm = React.useCallback(async (result) => {
@@ -63,8 +64,26 @@ export function useCustomHandlers(playerStats, campaignName, cfClearPending, get
       timestamp: Date.now(),
     }).catch((e) => { console.error("[useCustomHandlers:log-error]", e); })
 
+    // SP-085: consume the spell slot + register concentration via prepareSpellCast,
+    // mirroring createConfirmHandler (useConfirmableFlow.js) — the custom confirm
+    // previously bypassed it, so no slot was spent and no concentration tracked.
+    const isCantrip = (pending.spell?.level === 0)
+    if (!isCantrip && pending.spell) {
+      const freeCastAuthorized = isFreeCastAuthorized(playerStats.name, pending.spellName, pending.spellLevel || 0, playerStats, campaignName)
+      const upcastLevel = pending.spell.upcastLevel
+      const isUpcast = upcastLevel != null && upcastLevel !== pending.spell.level
+      await prepareSpellCast(pending.spell, {}, {
+        playerName: playerStats.name,
+        playerStats,
+        campaignName,
+        isUpcast,
+        upcastLevel,
+        freeCastAuthorized,
+      })
+    }
+
     const popup = await applyPassWithoutTraceEffect(
-      { name: pending.spellName, spell: pending.spell },
+      pending.spell,
       playerStats,
       campaignName,
       null,
