@@ -186,6 +186,7 @@ const CharActions = function CharActions({ playerStats, campaignName, exhaustion
         playerStats,
         getRuntimeValue,
         setRuntimeValue,
+        setPopupHtml,
     });
 
     // Modal handlers extracted to hook

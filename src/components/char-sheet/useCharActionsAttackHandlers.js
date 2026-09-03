@@ -1,4 +1,4 @@
-import { getActiveCreatureName } from '../../services/encounters/combatData.js'
+import { getActiveCreatureName, getCurrentCombatRound } from '../../services/encounters/combatData.js'
 import { toggleBuff } from '../../services/automation/common/buffToggle.js'
 import { addExpiration } from '../../services/rules/effects/expirations.js'
 import { addEntry } from '../../services/ui/logService.js'
@@ -20,9 +20,35 @@ export default function useCharActionsAttackHandlers({
     playerStats,
     getRuntimeValue,
     setRuntimeValue,
+    setPopupHtml,
 }) {
+    // CLA-274 Soulknife Psychic Blades action economy: the Attack-action blade
+    // row stamps the round it attacks; the second-blade Bonus Action row is only
+    // armed by a blade attack this round and is consumed once per round
+    // (round-keyed latch re-arms on round change, CLA-109/CLA-273 pattern).
+    const PSY_BLADE_ATTACK_ROUND_KEY = '_PsychicBlade_attack_round';
+    const PSY_BLADE_SECOND_ROUND_KEY = '_PsychicBlade_secondBlade_round';
+
     function handleAttackClick(attack) {
         if (cannotAct) return;
+        if (attack?.isPsychicBlade) {
+            const currentRound = getCurrentCombatRound(campaignName);
+            if (attack.type === 'Bonus Action') {
+                const secondBladeRound = Number(getRuntimeValue(playerName, PSY_BLADE_SECOND_ROUND_KEY, campaignName) ?? 0);
+                if (secondBladeRound === currentRound) {
+                    setPopupHtml('<b>Psychic Blade</b><br/>You have already attacked with your second psychic blade this turn. The blade vanishes after the attack — manifest a new one with the Attack action on your next turn.<br/><span class="dice-roll-hint">click to dismiss</span>');
+                    return;
+                }
+                const bladeAttackedRound = Number(getRuntimeValue(playerName, PSY_BLADE_ATTACK_ROUND_KEY, campaignName) ?? 0);
+                if (bladeAttackedRound !== currentRound) {
+                    setPopupHtml('<b>Psychic Blade</b><br/>Your Psychic Blades manifest when you take the Attack action or make an Opportunity Attack. Attack with your manifested blade before making the second-blade bonus attack.<br/><span class="dice-roll-hint">click to dismiss</span>');
+                    return;
+                }
+                setRuntimeValue(playerName, PSY_BLADE_SECOND_ROUND_KEY, currentRound, campaignName);
+            } else {
+                setRuntimeValue(playerName, PSY_BLADE_ATTACK_ROUND_KEY, currentRound, campaignName);
+            }
+        }
         endFriendsOnHostileAction(playerName, campaignName);
         endInvisibilityOnHostileAction(playerName, campaignName);
 
