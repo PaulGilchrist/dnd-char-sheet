@@ -7183,6 +7183,18 @@
       "class": null,
       "triggerConditions": "monster joined via Encounter Builder or +NPC on initiative card",
       "expectedBehavior": "Joined combatSummary creatures carry dual-schema-resolved resistances/immunities plus vulnerabilities from monsters.json, and the statblock viewer renders all IRV lines."
+    },
+    {
+      "id": "CLA-395",
+      "name": "Monster Concentration Save vs EB Monsters",
+      "type": "combat_plumbing",
+      "handler": "src/services/rules/combat/applyDamage.js",
+      "router": "n/a",
+      "infoBuilder": "n/a",
+      "verified": "verified",
+      "class": null,
+      "triggerConditions": "Damaging hit (finalDamage > 0) on an NPC/EB-monster creature with combatSummary concentration set and runtime activeBuffs null/absent",
+      "expectedBehavior": "No throw; auto-rolls CON save DC max(10, floor(dmg/2)), logs save roll or Concentration broken by damage, and persists damage to combatSummary currentHp"
     }
   ]
 }

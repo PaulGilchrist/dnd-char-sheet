@@ -9,6 +9,7 @@ import { applyDamageToTarget } from './applyDamage.js';
 import { getRuntimeValue } from '../../../hooks/runtime/useRuntimeState.js';
 import { rollConcentrationSave } from '../../combat/concentration/concentrationRules.js';
 import { addEntry } from '../../ui/logService.js';
+import storage from '../../ui/storage.js';
 
 // ── Mocks ──────────────────────────────────────────────────────
 
@@ -338,6 +339,100 @@ describe('NPC Concentration — Dragon Constellation & Relentless Hunter', () =>
         saveResult: 'success',
       }));
       expect(orcCreature.concentration).not.toBeNull();
+    });
+  });
+
+  describe('CLA-395: null/absent activeBuffs on EB monsters', () => {
+    it('does not throw, rolls concentration save, and persists damage when activeBuffs is null', async () => {
+      const wight = createNpcCreature('Wight 1', 82, 82, {
+        concentration: { spell: 'Wight Hold Person', dc: 10 },
+        saveBonuses: { con: 2 },
+      });
+      const cs = makeCombatSummary([wight]);
+
+      stubNpcRuntime(82, [], { activeBuffs: null });
+      rollConcentrationSave.mockReturnValue({ success: false, roll: 3, total: 5, rawRolls: [3] });
+
+      await expect(applyDamageToTarget(cs, 'Wight 1', 10, ['Slashing'], 'TestCampaign', [
+        createMinimalCharacter('EvasiveFighter', 18),
+      ])).resolves.toBeTruthy();
+
+      expect(rollConcentrationSave).toHaveBeenCalledWith(2, 10, false, false);
+      expect(wight.currentHp).toBe(72);
+      expect(wight.concentration).toBeNull();
+      expect(storage.set).toHaveBeenCalledWith('combatSummary', cs, 'TestCampaign');
+      expect(addEntry).toHaveBeenCalledWith('TestCampaign', expect.objectContaining({
+        type: 'condition',
+        action: 'removed',
+        characterName: 'Wight 1',
+        condition: 'Concentrating on Wight Hold Person',
+      }));
+    });
+
+    it('does not throw when activeBuffs runtime key is absent (undefined)', async () => {
+      const wight = createNpcCreature('Wight 1', 82, 82, {
+        concentration: { spell: 'Wight Hold Person', dc: 10 },
+        saveBonuses: { con: 2 },
+      });
+      const cs = makeCombatSummary([wight]);
+
+      getRuntimeValue.mockReset();
+      getRuntimeValue.mockImplementation((_charName, key) => {
+        if (key === 'arcaneWardActive') return false;
+        if (key === 'arcaneWardHp') return 0;
+        if (key === 'currentHitPoints') return 82;
+        if (key === 'activeConditions') return [];
+        if (key === 'targetEffects') return [];
+        if (key === 'tempHp') return 0;
+        return undefined;
+      });
+      rollConcentrationSave.mockReturnValue({ success: true, roll: 15, total: 17, rawRolls: [15] });
+
+      await expect(applyDamageToTarget(cs, 'Wight 1', 10, ['Slashing'], 'TestCampaign', [
+        createMinimalCharacter('EvasiveFighter', 18),
+      ])).resolves.toBeTruthy();
+
+      expect(rollConcentrationSave).toHaveBeenCalledWith(2, 10, false, false);
+      expect(wight.currentHp).toBe(72);
+      expect(wight.concentration).not.toBeNull();
+      expect(storage.set).toHaveBeenCalledWith('combatSummary', cs, 'TestCampaign');
+    });
+
+    it('still rolls the save with activeBuffs present (control)', async () => {
+      const wight = createNpcCreature('Wight 1', 82, 82, {
+        concentration: { spell: 'Wight Hold Person', dc: 10 },
+        saveBonuses: { con: 2 },
+      });
+      const cs = makeCombatSummary([wight]);
+
+      stubNpcRuntime(82, [], { activeBuffs: [{ name: 'Some Buff' }] });
+      rollConcentrationSave.mockReturnValue({ success: true, roll: 15, total: 17, rawRolls: [15] });
+
+      await expect(applyDamageToTarget(cs, 'Wight 1', 10, ['Slashing'], 'TestCampaign', [
+        createMinimalCharacter('EvasiveFighter', 18),
+      ])).resolves.toBeTruthy();
+
+      expect(rollConcentrationSave).toHaveBeenCalledWith(2, 10, false, false);
+      expect(wight.currentHp).toBe(72);
+      expect(storage.set).toHaveBeenCalledWith('combatSummary', cs, 'TestCampaign');
+    });
+
+    it('still grants Dragon Starry Form advantage from a populated activeBuffs array', async () => {
+      const wight = createNpcCreature('Wight 1', 82, 82, {
+        concentration: { spell: 'Wight Hold Person', dc: 10 },
+        saveBonuses: { con: 2 },
+      });
+      const cs = makeCombatSummary([wight]);
+
+      stubNpcRuntime(82, [], { activeBuffs: [{ name: 'Starry Form', constellation: 'Dragon' }] });
+      rollConcentrationSave.mockReturnValue({ success: true, roll: 15, total: 17, rawRolls: [15] });
+
+      await applyDamageToTarget(cs, 'Wight 1', 10, ['Slashing'], 'TestCampaign', [
+        createMinimalCharacter('EvasiveFighter', 18),
+      ]);
+
+      expect(rollConcentrationSave).toHaveBeenCalledWith(2, 10, true, false);
+      expect(wight.currentHp).toBe(72);
     });
   });
 

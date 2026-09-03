@@ -41,6 +41,10 @@ These caused past runs to give up on fixable problems. Exhaust every one of thes
 
 16. **jq-rewrites of giant data files cause 13k-line churn (CLA-277 fix-session lesson)** — rewriting `public/data/2024/classes.json` via jq re-indents the whole file, hiding the real change. Make data edits TARGETED text edits preserving original indentation; use jq only to VALIDATE (`jq empty` / `jq -S` normalized diff).
 
+17. **CLA-395 FIXED 2026-09-03: monster concentration saves now work vs EB monsters** — the `applyDamage.js` NPC-branch hard-throw on null `activeBuffs` is gone (null-safe `Array.isArray ? : []` mirrored from the PC branch :162 pattern). EB monsters NEVER write runtime activeBuffs — null is the NORMAL state, not fatal. Verification recipe: EB-join monster → card Add -> Concentration tab (fill Spell Name + DC spinbutton -> Apply) → PC attack with card Target=monster -> Done. Ground truth = campaign log auto-entries (roll `Concentration Save` on success OR condition `removed` + sourceName `Concentration broken by damage` on fail — monsters AUTO-ROLL, there is NO `.cnp-overlay` prompt for NPC saves) + change-data `combatSummary` currentHp drop + Remove-NPC confirm HP probe. The old pitfall #7 workaround (make the concentrator a PC) is no longer needed for concentration-break testing.
+
+18. **Tactical Master mastery `.sp-overlay` can hijack the attack-click slot** — a pending mastery picker (`Choose a mastery property against X`) can render BEFORE the attack roll popup and silently intercepts further `.attacks .clickable` clicks (Playwright reports 'intercepts pointer events' + 30s timeout even though the attack already rolled). Dismiss via `.sp-dismiss-btn` (Skip), then re-roll fresh.
+
 If you hit a NEW pitfall of this kind, append it to this list (and the Recipes section) before finishing, so the next subagent doesn't rediscover it.
 
 ## Recipes

@@ -517,8 +517,7 @@ const resResult = computeDamageAfterResistancesWithDetails(rawDamage, damageType
       const saveBonus = creature?.saveBonuses?.['con'] ?? 0;
       const dragonConstellationActive = (() => {
         const rawActiveBuffs = getRuntimeValue(creature.name, 'activeBuffs');
-        if (rawActiveBuffs == null || !Array.isArray(rawActiveBuffs)) { console.error('[applyDamage] activeBuffs is not an array'); throw new Error('activeBuffs must be an array'); }
-        const activeBuffs = rawActiveBuffs;
+        const activeBuffs = Array.isArray(rawActiveBuffs) ? rawActiveBuffs : [];
         return activeBuffs.some(b => b.name === 'Starry Form' && b.constellation === 'Dragon');
       })();
       const relentlessHunterActive = (() => {
