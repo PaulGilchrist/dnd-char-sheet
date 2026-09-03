@@ -36,7 +36,12 @@ vi.mock('../../../encounters/combatData.js', () => ({
 }));
 
 vi.mock('../../../rules/combat/applyDamage.js', () => ({
-  applyDamageToTarget: vi.fn(() => ({ finalDamage: 0, newHp: 0 })),
+  applyDamageToTarget: vi.fn((cs, name, dmg) => ({ finalDamage: dmg, newHp: 30 - dmg })),
+  computeDamageAfterSave: (rawDamage, saveSuccess, dcSuccess) => {
+    if (!saveSuccess) return rawDamage;
+    if (dcSuccess === 'half') return Math.floor(rawDamage / 2);
+    return 0;
+  },
 }));
 
 vi.mock('../../../combat/automation/automationService.js', () => ({
@@ -66,7 +71,12 @@ function makePlayerStats(overrides = {}) {
   return {
     name: 'TestCleric',
     level: 5,
+    proficiency: 3,
     proficiency_bonus: 3,
+    abilities: [
+      { name: 'Wisdom', bonus: 2 },
+      { name: 'Constitution', bonus: 2 },
+    ],
     ability_scores: { WIS: { bonus: 2 } },
     class: {
       class_levels: [
@@ -85,7 +95,8 @@ function makeAction(automation = {}) {
   return {
     name: 'Radiance of the Dawn',
     automation: {
-      saveDc: 13,
+      saveDc: 'ability',
+      saveAbility: 'WIS',
       saveType: 'CON',
       damage: '6d10 + cleric level',
       damageType: 'Radiant',
@@ -346,9 +357,9 @@ describe('radianceOfDawnHandler.confirmRadianceOfDawn', () => {
       expect(applyDamage.applyDamageToTarget).toHaveBeenCalled();
     });
 
-    it('applies half damage on save success and full damage on save failure', async () => {
+    it('applies ZERO damage on save success and full damage on save failure', async () => {
       diceRoller.rollExpression.mockReturnValue({ total: 20, rolls: [10, 10], modifier: 0 });
-      applyDamage.applyDamageToTarget.mockReturnValue({ finalDamage: 10, newHp: 20 });
+      applyDamage.applyDamageToTarget.mockImplementation((cs, name, dmg) => ({ finalDamage: dmg, newHp: 30 - dmg }));
       const passSpy = vi.spyOn(Math, 'random').mockReturnValue(0.99);
 
       const csPass = { creatures: [makeCreature('Goblin', 'npc', { saveBonuses: { con: 5 } })] };
@@ -356,12 +367,16 @@ describe('radianceOfDawnHandler.confirmRadianceOfDawn', () => {
       const action = makeAction({ saveDc: 13 });
       const result = await confirmRadianceOfDawn(action, makePlayerStats(), campaignName, ['Goblin']);
       expect(result.payload.results[0].success).toBe(true);
-      expect(result.payload.results[0].damage).toBe(10);
+      expect(result.payload.results[0].damage).toBe(0);
+      expect(applyDamage.applyDamageToTarget).toHaveBeenCalledWith(
+        expect.any(Object), 'Goblin', 0, ['Radiant'], campaignName,
+        expect.any(Array), false, 'TestCleric', true,
+      );
       passSpy.mockRestore();
 
       vi.clearAllMocks();
       diceRoller.rollExpression.mockReturnValue({ total: 20, rolls: [10, 10], modifier: 0 });
-      applyDamage.applyDamageToTarget.mockReturnValue({ finalDamage: 20, newHp: 10 });
+      applyDamage.applyDamageToTarget.mockImplementation((cs, name, dmg) => ({ finalDamage: dmg, newHp: 30 - dmg }));
       const failSpy = vi.spyOn(Math, 'random').mockReturnValue(0.01);
 
       const csFail = { creatures: [makeCreature('Goblin', 'npc', { saveBonuses: { con: 0 } })] };
@@ -370,6 +385,30 @@ describe('radianceOfDawnHandler.confirmRadianceOfDawn', () => {
       expect(result2.payload.results[0].success).toBe(false);
       expect(result2.payload.results[0].damage).toBe(20);
       failSpy.mockRestore();
+    });
+
+    it('resolves save DC from WIS saveAbility, never the CON fallback', async () => {
+      const stats = makePlayerStats({
+        proficiency: 3,
+        abilities: [
+          { name: 'Wisdom', bonus: -1 },
+          { name: 'Constitution', bonus: 2 },
+        ],
+      });
+      useRuntimeState.getRuntimeValue.mockReturnValue(2);
+      mockCombatSummary(['Goblin']);
+
+      const result = await handle(makeAction({ saveDc: undefined, saveAbility: 'WIS' }), stats, campaignName, null);
+      expect(result.payload.saveDc).toBe(10);
+    });
+
+    it('passes numeric resolved DC into the modal payload, not the raw ability string', async () => {
+      useRuntimeState.getRuntimeValue.mockReturnValue(2);
+      mockCombatSummary(['Goblin']);
+
+      const result = await handle(makeAction(), makePlayerStats(), campaignName, null);
+      expect(typeof result.payload.saveDc).toBe('number');
+      expect(result.payload.saveDc).toBe(13);
     });
 
     it('skips targets not found in combat summary', async () => {
@@ -401,6 +440,7 @@ describe('radianceOfDawnHandler.confirmRadianceOfDawn', () => {
       expect(pendingSave.rawDamage).toBe(25);
       expect(pendingSave.attackerName).toBe('TestCleric');
       expect(pendingSave.saveType).toBe('CON');
+      expect(pendingSave.dcSuccess).toBe('none');
     });
   });
 
@@ -483,6 +523,7 @@ describe('radianceOfDawnHandler.confirmRadianceOfDawn', () => {
         targetName: 'Goblin',
         saveType: 'CON',
         saveDc: 13,
+        dcSuccess: 'none',
         finalDamage: 20,
         damageType: 'Radiant',
       });
@@ -533,7 +574,7 @@ describe('radianceOfDawnHandler.confirmRadianceOfDawn', () => {
       expect(result.payload.description).toContain('DC 15');
       expect(result.payload.description).toContain('20 Radiant damage');
       expect(result.payload.description).toContain('Goblin');
-      expect(result.payload.description).toContain('half damage');
+      expect(result.payload.description).toContain('no damage');
       randomSpy.mockRestore();
     });
   });

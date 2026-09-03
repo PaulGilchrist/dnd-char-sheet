@@ -3,7 +3,7 @@ import { getRuntimeValue, setRuntimeValue } from '../../../../hooks/runtime/useR
 import { registerPendingSavePrompt } from '../../../combat/auras/pendingSaveRegistry.js';
 import { addEntry } from '../../../ui/logService.js';
 import { loadCombatSummary } from '../../../encounters/combatData.js';
-import { applyDamageToTarget } from '../../../rules/combat/applyDamage.js';
+import { applyDamageToTarget, computeDamageAfterSave } from '../../../rules/combat/applyDamage.js';
 import { hasIgnoreResistance } from '../../../combat/automation/automationService.js';
 import { endInvisibilityOnHostileAction } from '../../../rules/features/invisibilityService.js';
 import { getCombatSummary } from '../../../encounters/combatData.js';
@@ -54,7 +54,7 @@ export async function handle(action, playerStats, campaignName, _mapName) {
             playerStats,
             campaignName,
             creatureTargets,
-            saveDc: auto.saveDc || Math.floor(8 + playerStats.proficiency_bonus + playerStats.ability_scores.WIS?.bonus || 0),
+            saveDc: buildSaveDc({ ...auto, saveDc: auto.saveDc || 'ability' }, playerStats),
             featureName: action.name,
             saveType: auto.saveType || 'CON',
             rangeFeet,
@@ -111,7 +111,7 @@ export async function confirmRadianceOfDawn(action, playerStats, campaignName, s
     }
 
     const saveDc = buildSaveDc(auto, playerStats);
-    const dcSuccess = 'half';
+    const dcSuccess = 'none';
     const ignoreResistance = hasIgnoreResistance(playerStats, damageType);
 
     const results = [];
@@ -131,7 +131,7 @@ export async function confirmRadianceOfDawn(action, playerStats, campaignName, s
             const success = saveTotal >= saveDc;
 
             // Calculate damage
-            let finalDamage = success ? Math.floor(totalDamage / 2) : totalDamage;
+            const finalDamage = computeDamageAfterSave(totalDamage, success, dcSuccess);
             const applyResult = applyDamageToTarget(
                 combatSummary, targetName, finalDamage, [damageType], campaignName,
                 playerStats ? [playerStats] : null, ignoreResistance, playerName, true
@@ -255,7 +255,7 @@ export async function confirmRadianceOfDawn(action, playerStats, campaignName, s
 
     for (const r of results) {
         const saveResult = r.success ? '<span style="color: #4caf50;">Passed</span>' : '<span style="color: #f44336;">Failed</span>';
-        const damageWord = r.success ? 'half' : 'full';
+        const damageWord = r.success ? 'no' : 'full';
         resultsHtml += `<b>${r.targetName}</b>: ${saveResult} (${r.roll}+${r.saveBonus}=${r.total} vs DC ${saveDc}) — ${damageWord} damage: ${r.damage}<br/>`;
     }
 

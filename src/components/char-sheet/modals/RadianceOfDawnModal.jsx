@@ -16,7 +16,7 @@ export default function RadianceOfDawnModal({
             icon="fa-sun"
             targets={creatureTargets}
             description={`Select creatures within ${rangeFeet} feet. Each must make a <strong>${saveType}</strong> saving throw (DC ${saveDc}).`}
-            note={`On a failed save, target takes ${damageExpression} ${damageType} damage. On a successful save, target takes half damage.`}
+            note={`On a failed save, target takes ${damageExpression} ${damageType} damage. On a successful save, target takes no damage.`}
             confirmLabel="Channel Divinity"
             confirmIcon="fa-sun"
             onConfirm={onConfirm}

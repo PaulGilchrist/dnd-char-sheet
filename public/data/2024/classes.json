@@ -2852,6 +2852,7 @@
               "damageType": "Radiant",
               "saveType": "CON",
               "saveDc": "ability",
+              "saveAbility": "WIS",
               "shape": "emanation_30ft",
               "resourceCost": "channel_divinity",
               "casting_time": "1 action"
