@@ -303,6 +303,7 @@ export async function applyRelease(action, playerStats, campaignName, targetName
             automationType: auto.type,
             description: `Vibrations released harmlessly against ${targetName}.`,
             automation: auto,
+            isRelease: true,
         },
     };
 }

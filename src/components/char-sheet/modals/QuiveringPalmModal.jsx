@@ -20,6 +20,27 @@ function QuiveringPalmModal({ action, playerStats, campaignName, targetName, isR
         setLoading(false);
     };
 
+    if (result?.payload?.isRelease) {
+        return (
+            <div className="sp-overlay" onClick={(e) => {
+        if (e.target.closest('.sp-modal')) return;
+        onClose?.();
+    }}>
+                <div className="sp-modal">
+                    <div className="sp-header">
+                        <i className="fa-solid fa-hand-fist"></i> {action.name}
+                    </div>
+                    <div className="sp-body">
+                        <p>{result.payload.description}</p>
+                    </div>
+                    <div className="sp-actions">
+                        <button className="sp-roll-btn" onClick={onClose}>Done</button>
+                    </div>
+                </div>
+            </div>
+        );
+    }
+
     if (result) {
         const p = result.payload;
         const saveText = p.success ? 'Success' : 'Failure';

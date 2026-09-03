@@ -1,6 +1,6 @@
 // @improved-by-ai
 // @cleaned-by-ai
-import { render, screen, fireEvent, act } from '@testing-library/react';
+import { render, screen, fireEvent, act, waitFor } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import QuiveringPalmModal from './QuiveringPalmModal.jsx';
 
@@ -125,14 +125,7 @@ describe('QuiveringPalmModal - release flow', () => {
                 automationType: 'quivering_palm',
                 description: 'Vibrations released harmlessly against Goblin1.',
                 automation: { type: 'quivering_palm' },
-                success: true,
-                saveType: 'CON',
-                saveDc: 15,
-                rawDamage: 0,
-                finalDamage: 0,
-                damageExpression: '0d0',
-                damageType: 'Force',
-                diceDisplay: '',
+                isRelease: true,
             },
         });
 
@@ -149,5 +142,34 @@ describe('QuiveringPalmModal - release flow', () => {
             'Goblin1'
         );
         expect(quiveringPalmHandler.applyShockwave).not.toHaveBeenCalled();
+    });
+
+    it('renders a simple info popup for a release result, not the shockwave save/damage template', async () => {
+        quiveringPalmHandler.applyRelease.mockResolvedValue({
+            type: 'popup',
+            payload: {
+                type: 'automation_info',
+                name: 'Quivering Palm',
+                automationType: 'quivering_palm',
+                description: 'Vibrations released harmlessly against Goblin1.',
+                automation: { type: 'quivering_palm' },
+                isRelease: true,
+            },
+        });
+
+        renderModal();
+
+        await act(async () => {
+            fireEvent.click(screen.getByRole('button', { name: /Release the Harmless Vibrations/ }));
+        });
+
+        await waitFor(() => {
+            expect(screen.getByText('Vibrations released harmlessly against Goblin1.')).toBeInTheDocument();
+        });
+        expect(screen.queryByText(/rolled a .* save/)).not.toBeInTheDocument();
+        expect(screen.queryByText(/Full damage/)).not.toBeInTheDocument();
+        expect(screen.queryByText(/Half damage/)).not.toBeInTheDocument();
+        expect(screen.queryByText(/Failure/)).not.toBeInTheDocument();
+        expect(screen.getByRole('button', { name: 'Done' })).toBeInTheDocument();
     });
 });
