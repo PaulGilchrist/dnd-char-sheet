@@ -414,6 +414,20 @@ describe('useCharActionsAutomation', () => {
             expect(hooks.setModalState).toHaveBeenCalledWith({ baitAndSwitchChoiceModal: { choice: 'switch' } });
         });
 
+        it('should handle rallyChoice modal (MN-016)', async () => {
+            const hooks = createHooks();
+            hooks.executeHandler.mockResolvedValue({
+                type: 'modal',
+                modalName: 'rallyChoice',
+                payload: { dieValue: 7, totalHp: 16, allyOptions: [{ label: 'HexWarlock', value: 'HexWarlock' }] },
+            });
+            const { handleAutomationAction } = useCharActionsAutomation(hooks);
+            const action = { name: 'Rally', automation: {} };
+            await handleAutomationAction(action);
+
+            expect(hooks.setModalState).toHaveBeenCalledWith({ rallyChoiceModal: { dieValue: 7, totalHp: 16, allyOptions: [{ label: 'HexWarlock', value: 'HexWarlock' }] } });
+        });
+
         it('should handle bulwarkOfForce modal', async () => {
             const hooks = createHooks();
             hooks.executeHandler.mockResolvedValue({

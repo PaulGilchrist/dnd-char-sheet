@@ -5161,7 +5161,7 @@
       "handler": "src/services/combat/automation/handlers/maneuverHandler.js",
       "router": "src/services/combat/automation/routers/maneuverRouter.js",
       "infoBuilder": "src/services/combat/automation/infoBuilders/maneuverInfoBuilder.js",
-      "verified": "broken — see .opencode/plans/bug-mn-016-rally-bonus-row-no-modal-dispatch.md",
+      "verified": "verified",
       "class": "Fighter",
       "triggerConditions": "Action type: bonus_action; Uses: superiority_die",
       "expectedBehavior": "As a Bonus Action, you can expend one Superiority Die to bolster the resolve of a companion. Choose an ally within 30 feet who can see or hear you. That creature gains Temporary Hit Points equal to the Superiority Die roll + half your Fighter level (rounded down)."

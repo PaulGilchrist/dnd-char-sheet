@@ -92,6 +92,9 @@ export default function useCharActionsModalHandlers({
         if (result.payload) {
             setPopupHtml(result.payload);
         }
+        if (result?.logEntries) {
+            result.logEntries.forEach(entry => addEntry(modalData.campaignName, entry).catch((e) => { console.error("[useCharActionsModalHandlers:log-error]", e); }));
+        }
         setModalState({ rallyChoiceModal: null });
     }
 

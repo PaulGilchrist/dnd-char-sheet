@@ -34,6 +34,30 @@ export async function executeBonusActionManeuver(action, playerStats, campaignNa
     const targetInfo = await resolveTarget(campaignName, playerStats.name);
     const targetName = targetInfo?.target?.name || null;
 
+    // MN-016: Rally resolves its ally picker in a modal — gate on ally availability
+    // BEFORE roll/expend so a no-allies click neither rolls nor spends a die.
+    let rallyAllies = [];
+    if (maneuver.effect === 'temp_hp') {
+        const cs = await getCombatContext(campaignName);
+        rallyAllies = cs?.creatures?.filter(c => c.name !== playerStats.name) || [];
+        if (rallyAllies.length === 0) {
+            return {
+                type: 'popup',
+                payload: {
+                    type: 'automation_info',
+                    name: maneuver.name,
+                    description: `${maneuver.name}: No allies available to receive Rally.`,
+                },
+                logEntries: [{
+                    type: 'ability_use',
+                    characterName: playerStats.name,
+                    abilityName: maneuver.name,
+                    description: `${maneuver.name}: No allies available to receive Rally.`,
+                }],
+            };
+        }
+    }
+
     const { dieValue, dieDescription, expendedDie } = rollManeuverDie(maneuver, playerStats, campaignName);
     await expendSuperiorityDie(playerStats, campaignName, expendedDie, superiorityDice);
 
@@ -61,25 +85,7 @@ export async function executeBonusActionManeuver(action, playerStats, campaignNa
             : Math.floor(fighterLevel / 2);
         const extraHp = typeof extraHpRaw === 'number' ? Math.floor(extraHpRaw) : Math.floor(fighterLevel / 2);
         const totalHp = dieValue + extraHp;
-        const cs = await getCombatContext(campaignName);
-        const allies = cs?.creatures?.filter(c => c.name !== playerStats.name) || [];
-        if (allies.length === 0) {
-            return {
-                type: 'popup',
-                payload: {
-                    type: 'automation_info',
-                    name: maneuver.name,
-                    description: `${maneuver.name}: No allies available to receive Rally.`,
-                },
-                logEntries: [{
-                    type: 'ability_use',
-                    characterName: playerStats.name,
-                    abilityName: maneuver.name,
-                    description: `${maneuver.name}: No allies available to receive Rally.`,
-                }],
-            };
-        }
-        const allyOptions = allies.map(a => ({ label: a.name, value: a.name }));
+        const allyOptions = rallyAllies.map(a => ({ label: a.name, value: a.name }));
         const logEntry = {
             type: 'ability_use',
             characterName: playerStats.name,

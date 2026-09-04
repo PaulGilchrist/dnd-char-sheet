@@ -43,6 +43,8 @@ const {
   executeRallyChoice,
 } = await import('../../services/automation/handlers/class-fighter-rogue/combatSuperiorityHandler.js');
 
+const { addEntry } = await import('../../services/ui/logService.js');
+
 const mockSetPopupHtml = vi.fn();
 const mockSetModalState = vi.fn();
 
@@ -251,6 +253,36 @@ describe('useCharActionsModalHandlers - combat superiority', () => {
       await handlers.handleRallyChoiceConfirm('Ally2', modalData);
       expect(mockSetPopupHtml).not.toHaveBeenCalled();
       expect(mockSetModalState).toHaveBeenCalledWith({ rallyChoiceModal: null });
+    });
+
+    it('flushes executeRallyChoice logEntries to the campaign log (MN-016)', async () => {
+      const grantEntry = {
+        type: 'ability_use',
+        characterName: 'TestChar',
+        abilityName: 'Rally',
+        description: 'Rally: HexWarlock gains 16 temporary hit points.',
+        d10Roll: 7,
+      };
+      executeRallyChoice.mockResolvedValue({ payload: { description: 'Rally!' }, logEntries: [grantEntry] });
+      const handlers = getHandlers();
+      const modalData = makeModalData({
+        dieValue: 7,
+        maneuverName: 'Rally',
+        totalHp: 16,
+        extraHp: 9,
+        description: 'Rally description',
+      });
+      await handlers.handleRallyChoiceConfirm('HexWarlock', modalData);
+      expect(addEntry).toHaveBeenCalledWith('test-campaign', grantEntry);
+      expect(mockSetModalState).toHaveBeenCalledWith({ rallyChoiceModal: null });
+    });
+
+    it('does not call addEntry when result has no logEntries', async () => {
+      executeRallyChoice.mockResolvedValue({ payload: { description: 'Rally!' } });
+      const handlers = getHandlers();
+      const modalData = makeModalData({ dieValue: 7, maneuverName: 'Rally', totalHp: 16, extraHp: 9 });
+      await handlers.handleRallyChoiceConfirm('HexWarlock', modalData);
+      expect(addEntry).not.toHaveBeenCalled();
     });
   });
 });

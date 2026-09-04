@@ -96,6 +96,9 @@ export default function useCharActionsAutomation({
             combatSuperiority: simpleModal('combatSuperiorityModal'),
             sweepingAttackTarget: simpleModal('sweepingAttackTargetModal'),
             baitAndSwitchChoice: simpleModal('baitAndSwitchChoiceModal'),
+            // MN-016: Rally bonus-action row returned {type:'modal', modalName:'rallyChoice'}
+            // with no map entry — die was spent and the picker silently dropped.
+            rallyChoice: simpleModal('rallyChoiceModal'),
             bulwarkOfForceTarget: simpleModal('bulwarkOfForceModal'),
             zealousPresenceTarget: simpleModal('zealousPresenceModal'),
             clockworkCavalcade: simpleModal('clockworkCavalcadeModal'),
