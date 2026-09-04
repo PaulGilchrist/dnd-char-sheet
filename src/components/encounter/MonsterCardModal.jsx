@@ -365,6 +365,7 @@ function MonsterCardModal({ monster, onClose, campaignName, creatures, creatureN
       damageTypeChoices: getDamageTypeChoices(action),
       resistanceNotice,
       forcedMode: rangeForcedMode || (forcedMode !== 'normal' ? forcedMode : undefined),
+      isMelee,
       isAutoCrit,
       isAutoMiss,
       rangeReason,

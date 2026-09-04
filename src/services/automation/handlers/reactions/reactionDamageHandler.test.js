@@ -61,6 +61,10 @@ vi.mock('../../common/polearmUtils.js', () => ({
     isPolearmWeapon: vi.fn(async () => true),
 }));
 
+vi.mock('../../../rules/combat/rangeCheck.js', () => ({
+    isWithinRange: vi.fn(async () => true),
+}));
+
 const { getRuntimeValue, setRuntimeValue } = await import('../../../../hooks/runtime/useRuntimeState.js');
 const { addEntry } = await import('../../../ui/logService.js');
 const { resolveTarget } = await import('../../common/targetResolver.js');
@@ -68,6 +72,7 @@ const { getCombatContext } = await import('../../../rules/combat/damageUtils.js'
 const { findLastAttack } = await import('../../common/damageRollback.js');
 const { createSaveListener } = await import('../../common/savePrompt.js');
 const { applyDamageToTarget } = await import('../../../rules/combat/applyDamage.js');
+const { isWithinRange } = await import('../../../rules/combat/rangeCheck.js');
 
 beforeEach(() => {
     vi.resetAllMocks();
@@ -447,6 +452,160 @@ describe('reactionDamageHandler', () => {
             findLastAttack.mockResolvedValue({ attackerName: 'Goblin' });
             const result = await handle(action, ps, 'test-campaign', null);
             expect(result.payload.targetName).toBe('Goblin');
+        });
+    });
+
+    describe('CLA-297 damage_from_adjacent_creature gates (Retaliation)', () => {
+        const RETALIATION_USED_ROUND_KEY = '_Retaliation_usedRound';
+
+        function makeRetaliation() {
+            return makeAction({
+                name: 'Retaliation',
+                automation: {
+                    type: 'reaction_damage',
+                    trigger: 'damage_from_adjacent_creature',
+                    range: '5 ft',
+                    effect: 'melee_attack_reaction',
+                    casting_time: '1 reaction',
+                },
+            });
+        }
+
+        function makeHero() {
+            return makePlayerStats({
+                attacks: [{ name: 'Warhammer', type: 'Action', range: 5, damage: '1d8+7' }],
+            });
+        }
+
+        function armTrigger(overrides = {}) {
+            findLastAttack.mockResolvedValue({
+                attackEvent: {
+                    attackerName: 'Thug 1',
+                    targetName: 'TestHero',
+                    weaponType: 'melee',
+                    hit: true,
+                    actualDamage: 3,
+                    timestamp: 5000,
+                    ...overrides.attackEvent,
+                },
+                attackerName: 'Thug 1',
+                targetName: 'TestHero',
+                totalDamage: overrides.totalDamage != null ? overrides.totalDamage : 3,
+                damageTypes: ['Bludgeoning'],
+                ...overrides.result,
+            });
+        }
+
+        beforeEach(() => {
+            isWithinRange.mockResolvedValue(true);
+            getCombatContext.mockResolvedValue({ round: 1, creatures: [] });
+            getRuntimeValue.mockImplementation(() => undefined);
+        });
+
+        it('offers attack_roll, stamps the round latch, and logs ability_use on a valid adjacent melee hit', async () => {
+            armTrigger();
+            const result = await handle(makeRetaliation(), makeHero(), 'test-campaign', null, []);
+
+            expect(result.type).toBe('attack_roll');
+            expect(result.payload.targetName).toBe('Thug 1');
+            expect(result.payload.attack.name).toBe('Warhammer');
+            expect(setRuntimeValue).toHaveBeenCalledWith('TestHero', RETALIATION_USED_ROUND_KEY, 1, 'test-campaign');
+            expect(addEntry).toHaveBeenCalledWith('test-campaign', expect.objectContaining({
+                type: 'ability_use',
+                characterName: 'TestHero',
+                abilityName: 'Retaliation',
+                targetName: 'Thug 1',
+                description: expect.stringContaining('used Retaliation (Reaction)'),
+            }));
+        });
+
+        it('refuses a second use in the same round (round-keyed latch) without rolling', async () => {
+            armTrigger();
+            getRuntimeValue.mockImplementation((_name, key) => {
+                if (key === RETALIATION_USED_ROUND_KEY) return 1;
+                return undefined;
+            });
+
+            const result = await handle(makeRetaliation(), makeHero(), 'test-campaign', null, []);
+            expect(result.type).toBe('popup');
+            expect(result.payload.description).toContain('already used Retaliation this round');
+            expect(result.payload.description).toContain('Reaction is spent');
+            expect(setRuntimeValue).not.toHaveBeenCalled();
+            expect(addEntry).not.toHaveBeenCalled();
+        });
+
+        it('re-arms on the next round', async () => {
+            armTrigger();
+            getCombatContext.mockResolvedValue({ round: 2, creatures: [] });
+            getRuntimeValue.mockImplementation((_name, key) => {
+                if (key === RETALIATION_USED_ROUND_KEY) return 1;
+                return undefined;
+            });
+
+            const result = await handle(makeRetaliation(), makeHero(), 'test-campaign', null, []);
+            expect(result.type).toBe('attack_roll');
+            expect(setRuntimeValue).toHaveBeenCalledWith('TestHero', RETALIATION_USED_ROUND_KEY, 2, 'test-campaign');
+        });
+
+        it('refuses when the holder was not the target of the last attack', async () => {
+            armTrigger({
+                attackEvent: { targetName: 'HexWarlock' },
+                result: { targetName: 'HexWarlock' },
+            });
+
+            const result = await handle(makeRetaliation(), makeHero(), 'test-campaign', null, []);
+            expect(result.type).toBe('popup');
+            expect(result.payload.description).toContain('You were not the target of the last attack');
+            expect(setRuntimeValue).not.toHaveBeenCalled();
+        });
+
+        it('refuses when the last attack was made by the holder (self-target / stale lastAttack)', async () => {
+            armTrigger({
+                attackEvent: { attackerName: 'TestHero', targetName: 'Thug 1' },
+                result: { attackerName: 'TestHero', targetName: 'Thug 1' },
+            });
+
+            const result = await handle(makeRetaliation(), makeHero(), 'test-campaign', null, []);
+            expect(result.type).toBe('popup');
+            expect(result.payload.description).toContain('cannot attack yourself');
+            expect(setRuntimeValue).not.toHaveBeenCalled();
+        });
+
+        it('refuses when the last attack dealt no damage', async () => {
+            armTrigger({ totalDamage: 0, attackEvent: { hit: false, actualDamage: null } });
+
+            const result = await handle(makeRetaliation(), makeHero(), 'test-campaign', null, []);
+            expect(result.type).toBe('popup');
+            expect(result.payload.description).toContain('dealt you no damage');
+            expect(setRuntimeValue).not.toHaveBeenCalled();
+        });
+
+        it('refuses ranged damage (weaponType ranged) even when it damaged the holder', async () => {
+            armTrigger({ attackEvent: { weaponType: 'ranged' } });
+
+            const result = await handle(makeRetaliation(), makeHero(), 'test-campaign', null, []);
+            expect(result.type).toBe('popup');
+            expect(result.payload.description).toContain('Ranged attack');
+            expect(setRuntimeValue).not.toHaveBeenCalled();
+        });
+
+        it('refuses when the attacker is beyond 5 feet on an active map', async () => {
+            armTrigger();
+            isWithinRange.mockResolvedValue(false);
+
+            const result = await handle(makeRetaliation(), makeHero(), 'test-campaign', null, []);
+            expect(result.type).toBe('popup');
+            expect(result.payload.description).toContain('not within 5 feet');
+            expect(setRuntimeValue).not.toHaveBeenCalled();
+        });
+
+        it('refuses when there is no recent attack at all', async () => {
+            findLastAttack.mockResolvedValue({ attackEvent: null, attackerName: null, targetName: null, totalDamage: 0, damageTypes: [] });
+
+            const result = await handle(makeRetaliation(), makeHero(), 'test-campaign', null, []);
+            expect(result.type).toBe('popup');
+            expect(result.payload.description).toContain('No recent attack found');
+            expect(setRuntimeValue).not.toHaveBeenCalled();
         });
     });
 

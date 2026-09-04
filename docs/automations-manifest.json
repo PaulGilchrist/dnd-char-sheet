@@ -5364,7 +5364,7 @@
       "handler": "src/services/combat/automation/handlers/classFeatureHandler.js",
       "router": "src/services/combat/automation/routers/classFeatureRouter.js",
       "infoBuilder": "src/services/combat/automation/infoBuilders/classFeatureInfoBuilder.js",
-      "verified": "broken — see .opencode/plans/bug-CLA-297-retaliation-no-reaction-or-range-gates.md",
+      "verified": "verified",
       "class": "Barbarian",
       "triggerConditions": "Trigger: damage_from_adjacent_creature; Action: 1 reaction; Range: 5 ft",
       "expectedBehavior": "When you take damage from a creature that is within 5 feet of you, you can take a Reaction to make one melee attack against that creature, using a weapon or an Unarmed Strike."

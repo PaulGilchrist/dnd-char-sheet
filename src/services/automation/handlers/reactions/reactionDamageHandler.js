@@ -10,6 +10,61 @@ import { getCombatContext } from '../../../rules/combat/damageUtils.js';
 import { applyDamageToTarget, computeDamageAfterSave } from '../../../rules/combat/applyDamage.js';
 import { getAbilityModifier } from '../../../shared/abilityLookup.js';
 import { isPolearmWeapon } from '../../common/polearmUtils.js';
+import { isWithinRange } from '../../../rules/combat/rangeCheck.js';
+
+// CLA-297: Retaliation ("when you take damage from a creature within 5 feet of you")
+// once-per-round reaction latch, round-keyed like the CLA-274 Psychic Blade precedent
+// (re-arms when the combat round advances; also cleared at round wrap in
+// initiative.jsx / navigationHandlers.js).
+const ADJACENT_DAMAGE_REACTION_ROUND_KEY = '_Retaliation_usedRound';
+
+function refusalPopup(action, auto, description) {
+    return {
+        type: 'popup',
+        payload: {
+            type: 'automation_info',
+            name: action.name,
+            description,
+            automation: auto,
+        },
+    };
+}
+
+// Gates for the generic no-save reaction_damage consumers whose data declares
+// trigger 'damage_from_adjacent_creature' (CLA-297 Retaliation). Other triggers
+// (Guardian's ally-defense OA, Reactive Strike's polearm reach) are NOT gated here.
+async function gateAdjacentDamageReaction(action, auto, playerStats, lastAttackResult, campaignName) {
+    const playerName = playerStats.name;
+    const lastAttack = lastAttackResult.attackEvent;
+    const attackerName = lastAttackResult.attackerName;
+
+    if (!lastAttack || !attackerName) {
+        return refusalPopup(action, auto, `${action.name}: No recent attack found. ${action.name} triggers when a creature within 5 feet of you deals damage to you.`);
+    }
+    if (attackerName === playerName) {
+        return refusalPopup(action, auto, `${action.name}: you cannot attack yourself — the triggering attack must come from another creature.`);
+    }
+    if (lastAttackResult.targetName !== playerName) {
+        return refusalPopup(action, auto, `You were not the target of the last attack (${lastAttackResult.targetName} was). ${action.name} only triggers when you take damage.`);
+    }
+    if (!(lastAttackResult.totalDamage > 0)) {
+        return refusalPopup(action, auto, `The last attack dealt you no damage. ${action.name} triggers only when you take damage.`);
+    }
+    if (lastAttack.weaponType === 'ranged') {
+        return refusalPopup(action, auto, `The last attack was a Ranged attack. ${action.name} only triggers when a creature within 5 feet of you deals damage to you.`);
+    }
+    const within5ft = await isWithinRange(playerName, attackerName, 5);
+    if (!within5ft) {
+        return refusalPopup(action, auto, `${attackerName} is not within 5 feet of you. ${action.name} requires the attacker to be adjacent.`);
+    }
+    const combatContext = await getCombatContext(campaignName);
+    const currentRound = combatContext?.round || 1;
+    const usedRound = Number(getRuntimeValue(playerName, ADJACENT_DAMAGE_REACTION_ROUND_KEY, campaignName) ?? 0);
+    if (usedRound === currentRound) {
+        return refusalPopup(action, auto, `You have already used ${action.name} this round — your Reaction is spent until your next turn.`);
+    }
+    return null;
+}
 
 function getChosenResistanceTypes(playerName, campaignName) {
     const stored = getRuntimeValue(playerName, '_Energy_Resistances_chosenTypes', campaignName);
@@ -87,6 +142,11 @@ export async function handle(action, playerStats, campaignName, _mapName, charac
         const lastAttackResult = await findLastAttack(campaignName);
         const targetName = lastAttackResult.attackerName || null;
 
+        if (auto.trigger === 'damage_from_adjacent_creature') {
+            const refusal = await gateAdjacentDamageReaction(action, auto, playerStats, lastAttackResult, campaignName);
+            if (refusal) return refusal;
+        }
+
         const meleeAttacks = (playerStats.attacks || []).filter(
             a => a.type === 'Action' && a.range === MELEE_REACH_FEET
         );
@@ -102,6 +162,20 @@ export async function handle(action, playerStats, campaignName, _mapName, charac
                     automation: auto,
                 },
             };
+        }
+
+        if (auto.trigger === 'damage_from_adjacent_creature') {
+            const combatContext = await getCombatContext(campaignName);
+            const currentRound = combatContext?.round || 1;
+            await setRuntimeValue(playerStats.name, ADJACENT_DAMAGE_REACTION_ROUND_KEY, currentRound, campaignName);
+            addEntry(campaignName, {
+                type: 'ability_use',
+                characterName: playerStats.name,
+                abilityName: action.name,
+                description: `${playerStats.name} used ${action.name} (Reaction) — melee attack against ${targetName} in response to the ${lastAttackResult.totalDamage} damage taken from them.`,
+                targetName,
+                timestamp: Date.now(),
+            }).catch((e) => { console.error('[reactionDamage] Error logging ability_use:', e); });
         }
 
         return {
