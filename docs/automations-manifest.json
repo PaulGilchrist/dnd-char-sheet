@@ -5233,7 +5233,7 @@
       "handler": "src/services/combat/automation/handlers/classFeatureHandler.js",
       "router": "src/services/combat/automation/routers/classFeatureRouter.js",
       "infoBuilder": "src/services/combat/automation/infoBuilders/classFeatureInfoBuilder.js",
-      "verified": "broken — see .opencode/plans/bug-cla-289-relentless-hunter-exemption-too-broad.md",
+      "verified": "verified",
       "class": "Ranger",
       "triggerConditions": "",
       "expectedBehavior": "Taking damage can't break your Concentration on Hunter's Mark."

@@ -189,17 +189,19 @@ describe('NPC Concentration — Dragon Constellation & Relentless Hunter', () =>
     });
   });
 
-  describe('Relentless Hunter — Ranger level 13+', () => {
-    it('skips concentration save for Rangers level 13+', async () => {
+  describe('Relentless Hunter — Ranger concentrating Hunter\'s Mark only', () => {
+    const rangerFeatureLevels = [{ level: 13, features: [{ name: 'Relentless Hunter' }] }];
+
+    it('skips concentration save for a Ranger with Relentless Hunter concentrating Hunter\'s Mark', async () => {
       const rangerCreature = createNpcCreature('Ranger', 30, 30, {
-        concentration: { spell: 'Haste', dc: 10 },
+        concentration: { spell: "Hunter's Mark", dc: 10 },
         saveBonuses: { con: 0 },
       });
       const cs = makeCombatSummary([rangerCreature]);
 
       const rangerCharacter = createMinimalCharacter('Ranger', 13, {
         computedExtra: {
-          class: { name: 'Ranger', class_levels: [{ level: 13 }] },
+          class: { name: 'Ranger', class_levels: rangerFeatureLevels },
           level: 13,
         },
       });
@@ -208,23 +210,29 @@ describe('NPC Concentration — Dragon Constellation & Relentless Hunter', () =>
 
       await applyDamageToTarget(cs, 'Ranger', 10, ['Slashing'], 'TestCampaign', [rangerCharacter]);
 
-      // Relentless Hunter skips the concentration save entirely
+      // Relentless Hunter suppresses the save for Hunter's Mark only
       expect(rollConcentrationSave).not.toHaveBeenCalled();
-      // Concentration should still be active
       expect(rangerCreature.concentration).not.toBeNull();
+      expect(addEntry).toHaveBeenCalledWith('TestCampaign', expect.objectContaining({
+        type: 'condition',
+        action: 'maintained',
+        characterName: 'Ranger',
+        condition: 'Concentration on Hunter\'s Mark',
+        sourceName: 'Relentless Hunter',
+      }));
     });
 
-    it('does not skip concentration save for Rangers below level 13', async () => {
+    it('DOES roll the concentration save for a qualifying Ranger concentrating a non-Hunter\'s-Mark spell (CLA-289)', async () => {
       const rangerCreature = createNpcCreature('Ranger', 30, 30, {
         concentration: { spell: 'Haste', dc: 10 },
         saveBonuses: { con: 0 },
       });
       const cs = makeCombatSummary([rangerCreature]);
 
-      const rangerCharacter = createMinimalCharacter('Ranger', 10, {
+      const rangerCharacter = createMinimalCharacter('Ranger', 13, {
         computedExtra: {
-          class: { name: 'Ranger', class_levels: [{ level: 10 }] },
-          level: 10,
+          class: { name: 'Ranger', class_levels: rangerFeatureLevels },
+          level: 13,
         },
       });
 
@@ -236,16 +244,38 @@ describe('NPC Concentration — Dragon Constellation & Relentless Hunter', () =>
       expect(rollConcentrationSave).toHaveBeenCalled();
     });
 
-    it('does not skip concentration save for non-Rangers regardless of level', async () => {
+    it('does not exempt a Ranger whose class_levels lack the Relentless Hunter feature', async () => {
+      const rangerCreature = createNpcCreature('Ranger', 30, 30, {
+        concentration: { spell: "Hunter's Mark", dc: 10 },
+        saveBonuses: { con: 0 },
+      });
+      const cs = makeCombatSummary([rangerCreature]);
+
+      const rangerCharacter = createMinimalCharacter('Ranger', 12, {
+        computedExtra: {
+          class: { name: 'Ranger', class_levels: [{ level: 12, features: [] }] },
+          level: 12,
+        },
+      });
+
+      stubNpcRuntime(30);
+      rollConcentrationSave.mockReturnValue({ success: true, roll: 15, total: 15 });
+
+      await applyDamageToTarget(cs, 'Ranger', 10, ['Slashing'], 'TestCampaign', [rangerCharacter]);
+
+      expect(rollConcentrationSave).toHaveBeenCalled();
+    });
+
+    it('does not exempt non-Rangers regardless of level', async () => {
       const wizardCreature = createNpcCreature('Wizard', 30, 30, {
-        concentration: { spell: 'Haste', dc: 10 },
+        concentration: { spell: "Hunter's Mark", dc: 10 },
         saveBonuses: { con: 0 },
       });
       const cs = makeCombatSummary([wizardCreature]);
 
       const wizardCharacter = createMinimalCharacter('Wizard', 1, {
         computedExtra: {
-          class: { name: 'Wizard', class_levels: [{ level: 20 }] },
+          class: { name: 'Wizard', class_levels: [{ level: 20, features: [{ name: 'Relentless Hunter' }] }] },
           level: 20,
         },
       });
@@ -258,9 +288,9 @@ describe('NPC Concentration — Dragon Constellation & Relentless Hunter', () =>
       expect(rollConcentrationSave).toHaveBeenCalled();
     });
 
-    it('throws when Ranger player level is null', async () => {
+    it('throws when Ranger player level is null (Hunter\'s Mark concentration)', async () => {
       const rangerCreature = createNpcCreature('Ranger', 30, 30, {
-        concentration: { spell: 'Haste', dc: 10 },
+        concentration: { spell: "Hunter's Mark", dc: 10 },
         saveBonuses: { con: 0 },
       });
       const cs = makeCombatSummary([rangerCreature]);
@@ -276,7 +306,7 @@ describe('NPC Concentration — Dragon Constellation & Relentless Hunter', () =>
           characterAdvancement: [],
           allFeatures: [],
           automation: { passives: [] },
-          class: { name: 'Ranger', class_levels: [{ level: 13 }] },
+          class: { name: 'Ranger', class_levels: rangerFeatureLevels },
           level: null,
         },
       };

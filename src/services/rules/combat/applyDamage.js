@@ -115,6 +115,26 @@ export function rollSaveForCreature(creature, saveType, saveDc, disadvantage = f
   return { roll: finalRoll, total, bonus, success, rawRolls: [roll1, roll2] };
 }
 
+// Relentless Hunter (Ranger): "Taking damage can't break your Concentration on Hunter's
+// Mark." The exemption is rule-exact ONLY while the concentrated spell IS Hunter's Mark.
+// Feature availability is resolved from class_levels data (feature presence at the
+// character's level) — NOT a hardcoded magic number. Reuses the established feature-name
+// pattern (see WizardStepMagicItems.jsx:31-33).
+function hasRelentlessHunterExemption(creature, characters) {
+  if (creature?.concentration?.spell !== "Hunter's Mark") return false;
+  const player = (characters || []).find(c => c.name === creature.name || c.name.startsWith(creature.name + ' '));
+  const computed = player?.computedStats || player;
+  if (!computed || computed.class?.name !== 'Ranger') return false;
+  const rawClassLevels = computed.class?.class_levels;
+  if (rawClassLevels == null || !Array.isArray(rawClassLevels)) { console.error('[applyDamage] class_levels is not an array'); throw new Error('class_levels must be an array'); }
+  const level = player?.level ?? computed.level;
+  if (level == null) {
+    console.error('[applyDamage] Relentless Hunter: player level is missing');
+    throw new Error('player level is required for relentless hunter check');
+  }
+  return rawClassLevels.some(cl => cl.level <= level && (cl.features || []).some(f => f.name === 'Relentless Hunter'));
+}
+
 export async function applyDamageToTarget(combatSummary, targetName, rawDamage, damageTypes, campaignName, characters, ignoreResistance = false, attackerName = null, suppressHpLog = false, options = {}) {
   if (!combatSummary) return null;
   const creature = combatSummary.creatures.find(c => c.name === targetName);
@@ -492,22 +512,15 @@ if (!Array.isArray(damageTypes)) { throw new Error('damageTypes must be an array
     }
 
     if (!options?.skipConcentration && creature.concentration && (actualDamageTaken > 0 || options?.concentrationTotalDamage > 0)) {
-      const relentlessHunterActive = (() => {
-        const allCharacters = characters;
-        const player = allCharacters.find(c => c.name === creature.name || c.name.startsWith(creature.name + ' '));
-        const computed = player?.computedStats || player;
-        if (!computed || computed.class?.name !== 'Ranger') return false;
-        const rawClassLevels = computed.class?.class_levels;
-        if (rawClassLevels == null || !Array.isArray(rawClassLevels)) { console.error('[applyDamage] class_levels is not an array'); throw new Error('class_levels must be an array'); }
-        const classLevels = rawClassLevels;
-        if (player?.level == null) {
-          console.error('[applyDamage] Relentless Hunter: player level is missing')
-          throw new Error('player level is required for relentless hunter check')
-        }
-        const currentLevel = classLevels.find(cl => cl.level === player.level);
-        return (currentLevel?.level || 0) >= 13;
-      })();
-      if (!relentlessHunterActive) {
+      if (hasRelentlessHunterExemption(creature, characters)) {
+        addEntry(campaignName, {
+          type: 'condition',
+          action: 'maintained',
+          characterName: creature.name,
+          condition: 'Concentration on Hunter\'s Mark',
+          sourceName: 'Relentless Hunter',
+        }).catch((e) => { console.error("[applyDamage] Error:", e); });
+      } else {
         const promptId = utils.guid();
         sendConcentrationPrompt(campaignName, {
           promptId,
@@ -528,22 +541,15 @@ if (!Array.isArray(damageTypes)) { throw new Error('damageTypes must be an array
         const activeBuffs = Array.isArray(rawActiveBuffs) ? rawActiveBuffs : [];
         return activeBuffs.some(b => b.name === 'Starry Form' && b.constellation === 'Dragon');
       })();
-      const relentlessHunterActive = (() => {
-        const allCharacters = characters;
-        const player = allCharacters.find(c => c.name === creature.name || c.name.startsWith(creature.name + ' '));
-        const computed = player?.computedStats || player;
-        if (!computed || computed.class?.name !== 'Ranger') return false;
-        const rawClassLevels = computed.class?.class_levels;
-        if (rawClassLevels == null || !Array.isArray(rawClassLevels)) { console.error('[applyDamage] class_levels is not an array'); throw new Error('class_levels must be an array'); }
-        const classLevels = rawClassLevels;
-        if (player?.level == null) {
-          console.error('[applyDamage] Relentless Hunter: player level is missing')
-          throw new Error('player level is required for relentless hunter check')
-        }
-        const currentLevel = classLevels.find(cl => cl.level === player.level);
-        return (currentLevel?.level || 0) >= 13;
-      })();
-      if (!relentlessHunterActive) {
+      if (hasRelentlessHunterExemption(creature, characters)) {
+        addEntry(campaignName, {
+          type: 'condition',
+          action: 'maintained',
+          characterName: creature.name,
+          condition: 'Concentration on Hunter\'s Mark',
+          sourceName: 'Relentless Hunter',
+        }).catch((e) => { console.error("[applyDamage] Error:", e); });
+      } else {
         const attacker = attackerName ? characters.find(c => c.name === attackerName || c.name.startsWith(attackerName + ' ')) : null;
         const attackerModifiers = attacker?.saveModifiers || attacker?.computedStats?.saveModifiers;
         const hasConcentrationBreaker = attackerModifiers?.some(mod =>
