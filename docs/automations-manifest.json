@@ -5041,7 +5041,7 @@
       "handler": "src/services/combat/automation/handlers/weaponMasteryHandler.js",
       "router": "src/services/combat/automation/routers/weaponMasteryRouter.js",
       "infoBuilder": "src/services/combat/automation/infoBuilders/weaponMasteryInfoBuilder.js",
-      "verified": "not verified",
+      "verified": "broken — see .opencode/plans/bug-wm-004-push-mastery-no-consumer.md",
       "class": "Barbarian",
       "triggerConditions": "",
       "expectedBehavior": "If you hit a creature with this weapon, you can push the creature up to 10 feet straight away from yourself if it is Large or smaller."
@@ -5053,7 +5053,7 @@
       "handler": "src/services/combat/automation/handlers/maneuverHandler.js",
       "router": "src/services/combat/automation/routers/maneuverRouter.js",
       "infoBuilder": "src/services/combat/automation/infoBuilders/maneuverInfoBuilder.js",
-      "verified": "not verified",
+      "verified": "broken — see .opencode/plans/bug-mn-015-push-attack-save-dc-and-size-gate.md",
       "class": "Fighter",
       "triggerConditions": "Action type: attack_rider; Trigger: weapon_attack_hit; Uses: superiority_die",
       "expectedBehavior": "When you hit a creature with an attack roll using a weapon or an Unarmed Strike, you can expend one Superiority Die to attempt to push the target. Add the Superiority Die to the attack's damage roll. If the target is Large or smaller, it must succeed on a Strength saving throw or be pushed up to 15 feet directly away from you."
@@ -5101,7 +5101,7 @@
       "handler": "src/services/combat/automation/handlers/classFeatureHandler.js",
       "router": "src/services/combat/automation/routers/classFeatureRouter.js",
       "infoBuilder": "src/services/combat/automation/infoBuilders/classFeatureInfoBuilder.js",
-      "verified": "not verified",
+      "verified": "broken — see .opencode/plans/bug-cla-280-radiant-strikes-ranged-no-gate.md",
       "class": "Paladin",
       "triggerConditions": "Trigger: melee_weapon_hit; Once per turn: no",
       "expectedBehavior": "Your strikes now carry supernatural power. When you hit a target with an attack roll using a Melee weapon or Unarmed Strike, the target takes extra 1d8 Radiant damage."
@@ -5113,7 +5113,7 @@
       "handler": "src/services/combat/automation/handlers/classFeatureHandler.js",
       "router": "src/services/combat/automation/routers/classFeatureRouter.js",
       "infoBuilder": "src/services/combat/automation/infoBuilders/classFeatureInfoBuilder.js",
-      "verified": "not verified",
+      "verified": "broken — see .opencode/plans/bug-cla-281-rage-damage-plus-term-dropped.md",
       "class": "Barbarian",
       "triggerConditions": "Action: undefined; Duration: until_next_turn_extendable",
       "expectedBehavior": "You can imbue yourself with a primal power called Rage, a force that grants you extraordinary might and resilience. You can enter it as a Bonus Action if you aren't wearing Heavy armor. You can enter your Rage the number of times shown for your Barbarian level in the Rages column of the Barbarian Features table. You Regain one expended use when you finish a Short Rest, and you regain all expended uses when you finish a Long Rest. While active, your Rage follows the rules below. Damage Resistance: You have Resistance to Bludgeoning, Piercing, and Slashing damage. Rage Damage: When you make an attack using Strength with either a weapon or an Unarmed Strike and deal damage to the target, you gain a bonus to the damage that increases as you gain levels as a Barbarian, as shown in the Rage Damage column of the Barbarian Features table. Strength Advantage: You have Advantage on Strength checks and Strength saving throws. No Concentration or Spells: You can't maintain Concentration, and you can't cast spells. Duration: The Rage lasts until the end of your next turn, and it ends early if you don Heavy armor or have the Incapacitated condition. If your Rage is still active on your next turn, you can extend the Rage for another round by doing one of the following: Make an attack roll against an enemy. Force an enemy to make a saving throw. Take a Bonus Action to extend your Rage. Each time the Rage is extended, it lasts until the end of your next turn. You can maintain a Rage for up to 10 minutes."
@@ -5125,7 +5125,7 @@
       "handler": "src/services/combat/automation/handlers/classFeatureHandler.js",
       "router": "src/services/combat/automation/routers/classFeatureRouter.js",
       "infoBuilder": "src/services/combat/automation/infoBuilders/classFeatureInfoBuilder.js",
-      "verified": "not verified",
+      "verified": "verified",
       "class": "Barbarian",
       "triggerConditions": "Action: undefined; Duration: 1_minute",
       "expectedBehavior": "When you activate your Rage, you can assume the form of a divine warrior. This form lasts for 1 minute or until you drop to 0 Hit Points. Once you use this feature, you can't do so again until you finish a Long Rest. While in this form, you gain the benefits below. Flight: You have a Fly Speed equal to your Speed and can hover. Resistance: You have Resistance to Necrotic, Psychic, and Radiant damage. Revivification: When a creature within 30 feet of you would drop to 0 Hit Points, you can take a Reaction to expend a use of your Rage to instead change the target's Hit Points to a number equal to your Barbarian level."
@@ -5137,7 +5137,7 @@
       "handler": "src/services/combat/automation/handlers/classFeatureHandler.js",
       "router": "src/services/combat/automation/routers/classFeatureRouter.js",
       "infoBuilder": "src/services/combat/automation/infoBuilders/classFeatureInfoBuilder.js",
-      "verified": "not verified",
+      "verified": "broken — see .opencode/plans/bug-cla-283-wolf-advantage-not-awaited.md",
       "class": "Barbarian",
       "triggerConditions": "Action: undefined; Duration: while_raging",
       "expectedBehavior": "Your Rage taps into the primal power of animals. Whenever you activate your Rage, you gain one of the following options of your choice. Bear: While your Rage is active, you have Resistance to every damage type except Force, Necrotic, Psychic, and Radiant. Eagle: When you activate your Rage, you can take the Disengage and Dash actions as part of that Bonus Action. While your Rage is active, you can take a Bonus Action to take both of those actions. Wolf: While your Rage is active, your allies have Advantage on attack rolls against any enemy of yours within 5 feet of you."
@@ -5149,7 +5149,7 @@
       "handler": "src/services/combat/automation/handlers/spellHandler.js",
       "router": "src/services/combat/automation/routers/spellRouter.js",
       "infoBuilder": "src/services/combat/automation/infoBuilders/spellInfoBuilder.js",
-      "verified": "not verified",
+      "verified": "verified",
       "class": "Spell",
       "triggerConditions": "Automation type: healing_start_of_turn",
       "expectedBehavior": "A creature you touch regains 4d8 + 15 Hit Points. For the duration, the target regains 1 Hit Point at the start of each of its turns, and any severed body parts regrow after 2 minutes."
@@ -5161,7 +5161,7 @@
       "handler": "src/services/combat/automation/handlers/maneuverHandler.js",
       "router": "src/services/combat/automation/routers/maneuverRouter.js",
       "infoBuilder": "src/services/combat/automation/infoBuilders/maneuverInfoBuilder.js",
-      "verified": "not verified",
+      "verified": "broken — see .opencode/plans/bug-mn-016-rally-bonus-row-no-modal-dispatch.md",
       "class": "Fighter",
       "triggerConditions": "Action type: bonus_action; Uses: superiority_die",
       "expectedBehavior": "As a Bonus Action, you can expend one Superiority Die to bolster the resolve of a companion. Choose an ally within 30 feet who can see or hear you. That creature gains Temporary Hit Points equal to the Superiority Die roll + half your Fighter level (rounded down)."
@@ -5173,7 +5173,7 @@
       "handler": "src/services/combat/automation/handlers/spellHandler.js",
       "router": "src/services/combat/automation/routers/spellRouter.js",
       "infoBuilder": "src/services/combat/automation/infoBuilders/spellInfoBuilder.js",
-      "verified": "not verified",
+      "verified": "broken — see .opencode/plans/bug-sp-097-ray-of-enfeeblement-dc-target-repeat-save.md",
       "class": "Spell",
       "triggerConditions": "",
       "expectedBehavior": "A beam of enervating energy shoots from you toward a creature within range. The target must make a Constitution saving throw. On a successful save, the target has Disadvantage on the next attack roll it makes until the start of your next turn. On a failed save, the target has Disadvantage on Strength-based d20 tests for the duration. During that time, it also subtracts 1d8 from all its damage rolls. The target repeats the save at the end of each of its turns, ending the spell on a success."
@@ -5185,7 +5185,7 @@
       "handler": "src/services/combat/automation/handlers/classFeatureHandler.js",
       "router": "src/services/combat/automation/routers/classFeatureRouter.js",
       "infoBuilder": "src/services/combat/automation/infoBuilders/classFeatureInfoBuilder.js",
-      "verified": "not verified",
+      "verified": "broken — see .opencode/plans/bug-cla-284-reactive-spell-phantom-wizard-row.md",
       "class": "Wizard",
       "triggerConditions": "Reaction; when creature provokes opportunity attack by leaving reach",
       "expectedBehavior": "When a creature provokes an Opportunity Attack from you by leaving your reach, you can take a Reaction to cast a spell at the creature rather than making an Opportunity Attack. The spell must have a casting time of one action and must target only that creature. (War Caster Feat benefit - misattributed to Wizard in manifest)"
@@ -5197,7 +5197,7 @@
       "handler": "src/services/combat/automation/handlers/classFeatureHandler.js",
       "router": "src/services/combat/automation/routers/classFeatureRouter.js",
       "infoBuilder": "src/services/combat/automation/infoBuilders/classFeatureInfoBuilder.js",
-      "verified": "not verified",
+      "verified": "verified",
       "class": "Barbarian",
       "triggerConditions": "Action: passive; Range: self",
       "expectedBehavior": "You can throw aside all concern for defense to attack with increased ferocity. When you make your first attack roll on your turn, you can decide to attack recklessly. Doing so gives you Advantage on attack rolls using Strength until the start of your next turn, but attack rolls against you have Advantage during that time."
@@ -5209,7 +5209,7 @@
       "handler": "src/services/combat/automation/handlers/classFeatureHandler.js",
       "router": "src/services/combat/automation/routers/classFeatureRouter.js",
       "infoBuilder": "src/services/combat/automation/infoBuilders/classFeatureInfoBuilder.js",
-      "verified": "not verified",
+      "verified": "broken — see .opencode/plans/bug-cla-286-relentless-die-size-and-no-rearm.md",
       "class": "Fighter",
       "triggerConditions": "Passive: Always active",
       "expectedBehavior": "Once per turn, when you use a maneuver, roll 1d8 and use the number instead of expending a Superiority Die."
@@ -5221,8 +5221,8 @@
       "handler": "src/services/combat/automation/handlers/classFeatureHandler.js",
       "router": "src/services/combat/automation/routers/classFeatureRouter.js",
       "infoBuilder": "src/services/combat/automation/infoBuilders/classFeatureInfoBuilder.js",
-      "verified": "not verified",
-      "class": "Barbarian",
+      "verified": "verified",
+      "class": "Orc (2024) / Half-Orc (5e) racial trait",
       "triggerConditions": "Trigger: reduced_to_0_hp; Action: passive",
       "expectedBehavior": "When you are reduced to 0 Hit Points but not killed outright, you can drop to 1 Hit Point instead. Once you use this trait, you can't do so again until you finish a Long Rest."
     },
@@ -5233,7 +5233,7 @@
       "handler": "src/services/combat/automation/handlers/classFeatureHandler.js",
       "router": "src/services/combat/automation/routers/classFeatureRouter.js",
       "infoBuilder": "src/services/combat/automation/infoBuilders/classFeatureInfoBuilder.js",
-      "verified": "not verified",
+      "verified": "broken — see .opencode/plans/bug-cla-289-relentless-hunter-exemption-too-broad.md",
       "class": "Ranger",
       "triggerConditions": "",
       "expectedBehavior": "Taking damage can't break your Concentration on Hunter's Mark."
@@ -5245,7 +5245,7 @@
       "handler": "src/services/combat/automation/handlers/classFeatureHandler.js",
       "router": "src/services/combat/automation/routers/classFeatureRouter.js",
       "infoBuilder": "src/services/combat/automation/infoBuilders/classFeatureInfoBuilder.js",
-      "verified": "not verified",
+      "verified": "broken — see .opencode/plans/bug-cla-290-relentless-rage-uses-gate-no-shortrest-reset.md",
       "class": "Barbarian",
       "triggerConditions": "Action: passive",
       "expectedBehavior": "Your Rage can keep you fighting despite grievous wounds. If you drop to 0 Hit Points while your Rage is active and don't die outright, you can make a DC 10 Constitution saving throw. If you succeed, your Hit Points instead change to a number equal to twice your Barbarian level. Each time you use this feature after the first, the DC increases by 5. When you finish a Short or Long Rest, the DC resets to 10."
@@ -5257,7 +5257,7 @@
       "handler": "src/services/combat/automation/handlers/classFeatureHandler.js",
       "router": "src/services/combat/automation/routers/classFeatureRouter.js",
       "infoBuilder": "src/services/combat/automation/infoBuilders/classFeatureInfoBuilder.js",
-      "verified": "not verified",
+      "verified": "broken — see .opencode/plans/bug-cla-291-reliable-talent-floors-non-proficient.md",
       "class": "Rogue",
       "triggerConditions": "Action: passive",
       "expectedBehavior": "Whenever you make an ability check that uses one of your skill or tool proficiencies, you can treat a d20 roll of 9 or lower as a 10."
@@ -5269,9 +5269,9 @@
       "handler": "src/services/combat/automation/handlers/classFeatureHandler.js",
       "router": "src/services/combat/automation/routers/classFeatureRouter.js",
       "infoBuilder": "src/services/combat/automation/infoBuilders/classFeatureInfoBuilder.js",
-      "verified": "not verified",
+      "verified": "verified",
       "class": "Fighter",
-      "triggerConditions": "Automation type: undefined",
+      "triggerConditions": "passive_rule initiative_advantage; conditional_advantage STR ability_check (remarkable_athlete_athletics); auto_effect crit_hit remarkable_athlete_movement — Fighter Champion major lv3 (2024 classes.json)",
       "expectedBehavior": "Advantage on Initiative and Strength (Athletics) checks. After Critical Hit, move up to half Speed without Opportunity Attacks."
     },
     {
@@ -5281,7 +5281,7 @@
       "handler": "src/services/combat/automation/handlers/spellHandler.js",
       "router": "src/services/combat/automation/routers/spellRouter.js",
       "infoBuilder": "src/services/combat/automation/infoBuilders/spellInfoBuilder.js",
-      "verified": "not verified",
+      "verified": "verified",
       "class": "Spell",
       "triggerConditions": "Action: 1 action; Range: Touch",
       "expectedBehavior": "At your touch, all curses affecting one creature or object end. If the object is a cursed magic item, its curse remains, but the spell breaks its owner's Attunement to the object so it can be removed or discarded."
@@ -5293,7 +5293,7 @@
       "handler": "src/services/combat/automation/handlers/classFeatureHandler.js",
       "router": "src/services/combat/automation/routers/classFeatureRouter.js",
       "infoBuilder": "src/services/combat/automation/infoBuilders/classFeatureInfoBuilder.js",
-      "verified": "not verified",
+      "verified": "broken — see .opencode/plans/bug-cla-293-rend-mind-no-long-rest-rearm.md",
       "class": "Rogue",
       "triggerConditions": "Trigger: psychic_blade_sneak_attack_hit; Once per turn: no",
       "expectedBehavior": "When you use Psychic Blades to deal Sneak Attack damage, force target to make Wisdom save (DC 8 + Dex mod + Prof Bonus). On fail, target has Stunned condition for 1 minute (repeats save at end of each turn). Once per Long Rest (or expend 3 Psionic Energy Dice to restore)."
@@ -5305,7 +5305,7 @@
       "handler": "src/services/combat/automation/handlers/featHandler.js",
       "router": "src/services/combat/automation/routers/featRouter.js",
       "infoBuilder": "src/services/combat/automation/infoBuilders/featInfoBuilder.js",
-      "verified": "not verified",
+      "verified": "verified",
       "triggerConditions": "Automation type: save_proficiency",
       "expectedBehavior": "You gain saving throw proficiency with the chosen ability."
     },
