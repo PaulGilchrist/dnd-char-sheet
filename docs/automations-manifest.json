@@ -5293,7 +5293,7 @@
       "handler": "src/services/combat/automation/handlers/classFeatureHandler.js",
       "router": "src/services/combat/automation/routers/classFeatureRouter.js",
       "infoBuilder": "src/services/combat/automation/infoBuilders/classFeatureInfoBuilder.js",
-      "verified": "broken — see .opencode/plans/bug-cla-293-rend-mind-no-long-rest-rearm.md",
+      "verified": "verified",
       "class": "Rogue",
       "triggerConditions": "Trigger: psychic_blade_sneak_attack_hit; Once per turn: no",
       "expectedBehavior": "When you use Psychic Blades to deal Sneak Attack damage, force target to make Wisdom save (DC 8 + Dex mod + Prof Bonus). On fail, target has Stunned condition for 1 minute (repeats save at end of each turn). Once per Long Rest (or expend 3 Psionic Energy Dice to restore)."

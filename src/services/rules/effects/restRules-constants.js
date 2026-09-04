@@ -207,7 +207,8 @@ export const LONG_REST_RESOURCES = [
    '_boonOfEnergyResistanceUsedThisRest',
    '_Energy_Resistances_chosenTypes',
    '_guardedMind_usedRest',
-   'poisonedWeaponsActive'
+   'poisonedWeaponsActive',
+   '_RendMind_Used'
 ]
 
 export function getLongRestResources() {

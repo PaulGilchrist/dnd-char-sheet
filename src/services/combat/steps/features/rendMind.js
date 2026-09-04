@@ -18,13 +18,11 @@ export const rendMind = {
     );
     if (!rendMind) return { data: prevData };
 
+    // CLA-293: re-arm comes from LONG_REST_RESOURCES (restRules-constants.js)
+    // nulling '_RendMind_Used' on long rest — the former '_LastLongRest'/
+    // '_CurrentLongRest' reads had zero writers app-wide (dead code).
     const key = '_RendMind_Used';
-    let active = getRuntimeValue(ps.name, key, ctx.campaignName);
-    if (active) {
-      const llr = getRuntimeValue(ps.name, '_LastLongRest', ctx.campaignName);
-      const clr = getRuntimeValue(ps.name, '_CurrentLongRest', ctx.campaignName);
-      if (llr !== clr) { await setRuntimeValue(ps.name, key, false, ctx.campaignName); active = false; }
-    }
+    const active = getRuntimeValue(ps.name, key, ctx.campaignName);
     if (!active) {
       const dex = ps.abilities?.find(a => a.name === 'Dexterity');
       const dc = 8 + (dex?.bonus || 0) + (ps.proficiency || 0);

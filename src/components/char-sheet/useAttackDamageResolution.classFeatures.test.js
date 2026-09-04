@@ -350,21 +350,37 @@ describe('useAttackDamageResolution - class features', () => {
             expect(conditionCalls).toHaveLength(0);
         });
 
-        it.each([
-            { scenario: 'already used this long rest', _RendMind_Used: true, _LastLongRest: 2, _CurrentLongRest: 2 },
-            { scenario: 'no target in context', _RendMind_Used: false, targetName: null },
-        ])('skips Rend Mind when $scenario', async ({ _RendMind_Used, _LastLongRest, _CurrentLongRest, targetName }) => {
-            if (_RendMind_Used !== undefined) {
-                getRuntimeValue.mockImplementation((name, key) => {
-                    if (key === '_RendMind_Used') return _RendMind_Used;
-                    if (key === '_LastLongRest') return _LastLongRest;
-                    if (key === '_CurrentLongRest') return _CurrentLongRest;
-                    return null;
-                });
-            }
-            if (targetName !== undefined) {
-                mockBuildCtxSync.mockResolvedValue({ targetName });
-            }
+        it('skips Rend Mind when already latched used', async () => {
+            getRuntimeValue.mockImplementation((name, key) => {
+                if (key === '_RendMind_Used') return true;
+                return null;
+            });
+            const { resolveAttackDamage } = UseAttackDamageResolution({ playerStats: makeRendMindStats() });
+            await resolveAttackDamage(makeAttack({ name: 'Psychic Blade', damage: '1d6+5', damageType: 'Psychic' }));
+            await tick();
+            expect(createSaveListener).not.toHaveBeenCalled();
+        });
+
+        it('re-arms after long rest nulls the latch (CLA-293)', async () => {
+            // Long rest nulls _RendMind_Used via LONG_REST_RESOURCES batch write
+            getRuntimeValue.mockImplementation((name, key) => {
+                if (key === '_RendMind_Used') return null;
+                return null;
+            });
+            getCombatContext.mockResolvedValue({ creatures: [{ name: 'Goblin' }] });
+            const { resolveAttackDamage } = UseAttackDamageResolution({ playerStats: makeRendMindStats() });
+            await resolveAttackDamage(makeAttack({ name: 'Psychic Blade', damage: '1d6+5', damageType: 'Psychic' }));
+            await tick();
+            expect(createSaveListener).toHaveBeenCalledWith('test-campaign', {
+                targetName: 'Goblin',
+                saveType: 'WIS',
+                saveDc: 19,
+            });
+            expect(setRuntimeValue).toHaveBeenCalledWith('TestRogue', '_RendMind_Used', true, 'test-campaign');
+        });
+
+        it('skips Rend Mind when no target in context', async () => {
+            mockBuildCtxSync.mockResolvedValue({ targetName: null });
             const { resolveAttackDamage } = UseAttackDamageResolution({ playerStats: makeRendMindStats() });
             await resolveAttackDamage(makeAttack({ name: 'Psychic Blade', damage: '1d6+5', damageType: 'Psychic' }));
             await tick();

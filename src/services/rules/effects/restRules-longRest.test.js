@@ -123,6 +123,8 @@ describe('applyLongRest', () => {
       expect(data.ragePoints).toBeNull()
       expect(data.sorceryPoints).toBeNull()
       expect(data.illusorySelfUses).toBeNull()
+      // CLA-293: Rend Mind latch re-arms via LONG_REST_RESOURCES
+      expect(data._RendMind_Used).toBeNull()
       expect(data.activeBuffs).toEqual([])
       expect(data.activeConditions).toEqual([])
     })
