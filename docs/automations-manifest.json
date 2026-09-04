@@ -5101,7 +5101,7 @@
       "handler": "src/services/combat/automation/handlers/classFeatureHandler.js",
       "router": "src/services/combat/automation/routers/classFeatureRouter.js",
       "infoBuilder": "src/services/combat/automation/infoBuilders/classFeatureInfoBuilder.js",
-      "verified": "broken — see .opencode/plans/bug-cla-280-radiant-strikes-ranged-no-gate.md",
+      "verified": "verified",
       "class": "Paladin",
       "triggerConditions": "Trigger: melee_weapon_hit; Once per turn: no",
       "expectedBehavior": "Your strikes now carry supernatural power. When you hit a target with an attack roll using a Melee weapon or Unarmed Strike, the target takes extra 1d8 Radiant damage."

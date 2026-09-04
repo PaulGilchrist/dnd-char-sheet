@@ -19,9 +19,12 @@ export function buildAutomationBonusesStep() {
       let rolls = [...(ctx.rolls || [])];
       const actions = ctx.playerStats.automation.actions || [];
 
-      for (const a of actions.filter(x => x.type === 'damage_bonus' && x.trigger === 'melee_weapon_hit')) {
-        const r = rollExpression(a.damageExpression);
-        if (r) { formula += ` + ${a.damageExpression} [${a.damageType.toLowerCase()}]`; total += r.total; rolls = [...rolls, ...r.rolls]; }
+      const melee = actions.filter(x => x.type === 'damage_bonus' && x.trigger === 'melee_weapon_hit');
+      if (melee.length > 0 && ctx.isMeleeOrUnarmed === true) {
+        for (const a of melee) {
+          const r = rollExpression(a.damageExpression);
+          if (r) { formula += ` + ${a.damageExpression} [${a.damageType.toLowerCase()}]`; total += r.total; rolls = [...rolls, ...r.rolls]; }
+        }
       }
 
       for (const a of actions.filter(x => x.type === 'damage_bonus' && x.trigger === 'monk_weapon_or_unarmed_hit')) {

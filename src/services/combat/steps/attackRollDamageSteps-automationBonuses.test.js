@@ -102,6 +102,20 @@ describe('buildAttackRollDamageSteps - automationBonuses', () => {
         const r = await steps[10].handler(makeCtx({ isMeleeOrUnarmed: true, playerStats: { automation: { actions: [{ type: 'damage_bonus', trigger: 'melee_weapon_hit', damageExpression: '1d6', damageType: 'fire' }] } }, formula: '1d8+3', total: 11, rolls: [8, 3] }));
         expect(r.data.formula).toContain('+ 1d6 [fire]');
       });
+      it('CLA-280: melee hit gains 1d8 radiant from Radiant Strikes', async () => {
+        const r = await steps[10].handler(makeCtx({ isMeleeOrUnarmed: true, attack: { weaponType: 'melee', properties: ['Versatile'] }, playerStats: { name: 'TestChar', automation: { actions: [{ type: 'damage_bonus', trigger: 'melee_weapon_hit', damageExpression: '1d8', damageType: 'Radiant' }] } }, formula: '1d8+5', total: 10, rolls: [5, 5] }));
+        expect(r.data.formula).toContain('+ 1d8 [radiant]');
+        expect(r.data.total).toBeGreaterThan(10);
+      });
+      it('CLA-280: ranged attack gains NO melee_weapon_hit bonus', async () => {
+        const r = await steps[10].handler(makeCtx({ isMeleeOrUnarmed: false, attack: { weaponType: 'ranged', properties: ['Ammunition', 'Heavy', 'Range'] }, playerStats: { name: 'TestChar', automation: { actions: [{ type: 'damage_bonus', trigger: 'melee_weapon_hit', damageExpression: '1d8', damageType: 'Radiant' }] } }, formula: '1d8+3', total: 8, rolls: [5, 3] }));
+        expect(r.data.formula).toBe('1d8+3');
+        expect(r.data.total).toBe(8);
+      });
+      it('CLA-280: unarmed strike gains melee_weapon_hit bonus', async () => {
+        const r = await steps[10].handler(makeCtx({ isMeleeOrUnarmed: true, attack: { weaponType: 'unarmed' }, playerStats: { name: 'TestChar', automation: { actions: [{ type: 'damage_bonus', trigger: 'melee_weapon_hit', damageExpression: '1d8', damageType: 'Radiant' }] } }, formula: '1d8+5', total: 9, rolls: [4, 5] }));
+        expect(r.data.formula).toContain('+ 1d8 [radiant]');
+      });
       it('applies monk_weapon_or_unarmed_hit with elemental attunement', async () => {
         gvImpl((_, p) => p === '_Elemental_Attunement_option' ? 'fire' : null);
         const r = await steps[10].handler(makeCtx({ isMeleeOrUnarmed: true, playerStats: { automation: { actions: [{ type: 'damage_bonus', trigger: 'monk_weapon_or_unarmed_hit', damageExpression: '1d6', damageType: '' }] } }, formula: '1d8+3', total: 11, rolls: [8, 3] }));
