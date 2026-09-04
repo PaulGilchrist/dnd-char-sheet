@@ -44,15 +44,16 @@ export async function handle(action, playerStats, campaignName, _mapName) {
     const playerName = playerStats.name;
     const featureName = action.name || 'Relentless Rage';
 
-    const storedRage = getRuntimeValue(playerName, 'ragePoints', campaignName);
-    const currentRage = storedRage != null ? Number(storedRage) : 0;
-    if (currentRage <= 0) {
+    const rawBuffs = getRuntimeValue(playerName, 'activeBuffs', campaignName);
+    const activeBuffs = Array.isArray(rawBuffs) ? rawBuffs : [];
+    const rageActive = activeBuffs.some(b => b.name === 'Rage');
+    if (!rageActive) {
         return {
             type: 'popup',
             payload: {
                 type: 'automation_info',
                 name: featureName,
-                description: 'No Rage remaining to power Relentless Rage.',
+                description: 'Rage is not active. Relentless Rage requires an active Rage.',
                 automation: auto,
             },
         };

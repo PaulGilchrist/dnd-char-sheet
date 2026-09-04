@@ -95,29 +95,45 @@ describe('relentlessRageService', () => {
       expect(result.intercepted).toBe(false);
     });
 
-    it('returns intercepted: false when rage is zero', () => {
+    it('returns intercepted: false when Rage stance is not active even with ragePoints remaining', () => {
       runtimeState.getRuntimeValue.mockImplementation((_name, key) => {
-        if (key === 'ragePoints') return 0;
+        if (key === 'ragePoints') return 5;
+        if (key === 'activeBuffs') return [];
         if (key === 'relentlessrageUses') return 0;
         return null;
       });
       const result = checkRelentlessRage(makeCreature(), makePlayerComputed(), campaignName);
       expect(result.intercepted).toBe(false);
+      expect(createSaveListener).not.toHaveBeenCalled();
     });
 
-    it('returns intercepted: false when rage is null', () => {
+    it('returns intercepted: false when activeBuffs is null', () => {
       runtimeState.getRuntimeValue.mockImplementation((_name, key) => {
-        if (key === 'ragePoints') return null;
+        if (key === 'ragePoints') return 5;
+        if (key === 'activeBuffs') return null;
         if (key === 'relentlessrageUses') return 0;
         return null;
       });
       const result = checkRelentlessRage(makeCreature(), makePlayerComputed(), campaignName);
       expect(result.intercepted).toBe(false);
+      expect(createSaveListener).not.toHaveBeenCalled();
+    });
+
+    it('returns intercepted: true when Rage stance is active even with ragePoints at zero', () => {
+      runtimeState.getRuntimeValue.mockImplementation((_name, key) => {
+        if (key === 'ragePoints') return 0;
+        if (key === 'activeBuffs') return [{ name: 'Rage', effect: 'stance' }];
+        if (key === 'relentlessrageUses') return 0;
+        return null;
+      });
+      const result = checkRelentlessRage(makeCreature(), makePlayerComputed(), campaignName);
+      expect(result.intercepted).toBe(true);
+      expect(result.awaitingSave).toBe(true);
     });
 
     it('returns intercepted: true when uses are exhausted (unlimited uses per rest)', () => {
       runtimeState.getRuntimeValue.mockImplementation((_name, key) => {
-        if (key === 'ragePoints') return 1;
+        if (key === 'activeBuffs') return [{ name: 'Rage', effect: 'stance' }];
         if (key === 'relentlessrageUses') return 1;
         return null;
       });
@@ -127,7 +143,7 @@ describe('relentlessRageService', () => {
 
     it('returns intercepted: true with awaitingSave when all conditions met', () => {
       runtimeState.getRuntimeValue.mockImplementation((_name, key) => {
-        if (key === 'ragePoints') return 1;
+        if (key === 'activeBuffs') return [{ name: 'Rage', effect: 'stance' }];
         if (key === 'relentlessrageUses') return 0;
         return null;
       });
@@ -138,7 +154,7 @@ describe('relentlessRageService', () => {
 
     it('creates save listener with correct parameters including scaling DC', () => {
       runtimeState.getRuntimeValue.mockImplementation((_name, key) => {
-        if (key === 'ragePoints') return 1;
+        if (key === 'activeBuffs') return [{ name: 'Rage', effect: 'stance' }];
         if (key === 'relentlessrageUses') return 0;
         return null;
       });
@@ -153,7 +169,7 @@ describe('relentlessRageService', () => {
 
     it('increments DC by 5 when already used once', () => {
       runtimeState.getRuntimeValue.mockImplementation((_name, key) => {
-        if (key === 'ragePoints') return 1;
+        if (key === 'activeBuffs') return [{ name: 'Rage', effect: 'stance' }];
         if (key === 'relentlessrageUses') return 1;
         return null;
       });
@@ -165,9 +181,40 @@ describe('relentlessRageService', () => {
       });
     });
 
+    it('escalates DC by 5 per prior use (uses=2 -> DC 20, uses=3 -> DC 25)', () => {
+      for (const [uses, expectedDc] of [[2, 20], [3, 25]]) {
+        createSaveListener.mockClear();
+        runtimeState.getRuntimeValue.mockImplementation((_name, key) => {
+          if (key === 'activeBuffs') return [{ name: 'Rage', effect: 'stance' }];
+          if (key === 'relentlessrageUses') return uses;
+          return null;
+        });
+        checkRelentlessRage(makeCreature(), makePlayerComputed(), campaignName);
+        expect(createSaveListener).toHaveBeenCalledWith(campaignName, {
+          targetName: 'TestBarbarian',
+          saveType: 'CON',
+          saveDc: expectedDc,
+        });
+      }
+    });
+
+    it('resets DC to base 10 after short rest nulls relentlessrageUses', () => {
+      runtimeState.getRuntimeValue.mockImplementation((_name, key) => {
+        if (key === 'activeBuffs') return [{ name: 'Rage', effect: 'stance' }];
+        if (key === 'relentlessrageUses') return null;
+        return null;
+      });
+      checkRelentlessRage(makeCreature(), makePlayerComputed(), campaignName);
+      expect(createSaveListener).toHaveBeenCalledWith(campaignName, {
+        targetName: 'TestBarbarian',
+        saveType: 'CON',
+        saveDc: 10,
+      });
+    });
+
     it('logs trigger entry with source field', () => {
       runtimeState.getRuntimeValue.mockImplementation((_name, key) => {
-        if (key === 'ragePoints') return 1;
+        if (key === 'activeBuffs') return [{ name: 'Rage', effect: 'stance' }];
         if (key === 'relentlessrageUses') return 0;
         return null;
       });
@@ -183,7 +230,7 @@ describe('relentlessRageService', () => {
 
     it('uses default saveDc of 10 when automation has no saveDc', () => {
       runtimeState.getRuntimeValue.mockImplementation((_name, key) => {
-        if (key === 'ragePoints') return 1;
+        if (key === 'activeBuffs') return [{ name: 'Rage', effect: 'stance' }];
         if (key === 'relentlessrageUses') return 0;
         return null;
       });
@@ -211,7 +258,7 @@ describe('relentlessRageService', () => {
 
     it('uses default dcScaling of 0 when automation has no dcScaling', () => {
       runtimeState.getRuntimeValue.mockImplementation((_name, key) => {
-        if (key === 'ragePoints') return 1;
+        if (key === 'activeBuffs') return [{ name: 'Rage', effect: 'stance' }];
         if (key === 'relentlessrageUses') return 0;
         return null;
       });
@@ -239,7 +286,7 @@ describe('relentlessRageService', () => {
 
     it('uses custom saveType from automation', () => {
       runtimeState.getRuntimeValue.mockImplementation((_name, key) => {
-        if (key === 'ragePoints') return 1;
+        if (key === 'activeBuffs') return [{ name: 'Rage', effect: 'stance' }];
         if (key === 'relentlessrageUses') return 0;
         return null;
       });
@@ -268,7 +315,7 @@ describe('relentlessRageService', () => {
 
     it('uses default saveType when automation saveType is null', () => {
       runtimeState.getRuntimeValue.mockImplementation((_name, key) => {
-        if (key === 'ragePoints') return 1;
+        if (key === 'activeBuffs') return [{ name: 'Rage', effect: 'stance' }];
         if (key === 'relentlessrageUses') return 0;
         return null;
       });
@@ -297,7 +344,7 @@ describe('relentlessRageService', () => {
 
     it('handles null uses value from getRuntimeValue', () => {
       runtimeState.getRuntimeValue.mockImplementation((_name, key) => {
-        if (key === 'ragePoints') return 1;
+        if (key === 'activeBuffs') return [{ name: 'Rage', effect: 'stance' }];
         if (key === 'relentlessrageUses') return null;
         return null;
       });

@@ -79,7 +79,8 @@ export const SHORT_REST_RESOURCES = [
        '_Shield_Bash_usedRound',
         '_Hamstring_usedRound',
         '_friendsCastTargets',
-   'illusorySelfUses'
+   'illusorySelfUses',
+   'relentlessrageUses'
  ]
 
 export function getShortRestResources() {

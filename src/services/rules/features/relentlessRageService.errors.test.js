@@ -83,7 +83,7 @@ describe('relentlessRageService - error handling', () => {
     it('handles addEntry rejection on initial trigger', async () => {
       logService.addEntry.mockRejectedValue(new Error('log error'));
       runtimeState.getRuntimeValue.mockImplementation((_name, key) => {
-        if (key === 'ragePoints') return 1;
+        if (key === 'activeBuffs') return [{ name: 'Rage', effect: 'stance' }];
         if (key === 'relentlessrageUses') return 0;
         return null;
       });
@@ -103,7 +103,7 @@ describe('relentlessRageService - error handling', () => {
         return p;
       });
       runtimeState.getRuntimeValue.mockImplementation((_name, key) => {
-        if (key === 'ragePoints') return 1;
+        if (key === 'activeBuffs') return [{ name: 'Rage', effect: 'stance' }];
         if (key === 'relentlessrageUses') return 0;
         return null;
       });
@@ -128,7 +128,7 @@ describe('relentlessRageService - error handling', () => {
         return p;
       });
       runtimeState.getRuntimeValue.mockImplementation((_name, key) => {
-        if (key === 'ragePoints') return 1;
+        if (key === 'activeBuffs') return [{ name: 'Rage', effect: 'stance' }];
         if (key === 'relentlessrageUses') return 0;
         if (key === 'currentHitPoints') return 10;
         return null;
@@ -155,7 +155,7 @@ describe('relentlessRageService - error handling', () => {
         return p;
       });
       runtimeState.getRuntimeValue.mockImplementation((_name, key) => {
-        if (key === 'ragePoints') return 1;
+        if (key === 'activeBuffs') return [{ name: 'Rage', effect: 'stance' }];
         if (key === 'relentlessrageUses') return 0;
         if (key === 'currentHitPoints') return -1;
         if (key === 'deathSaves') return [false, false, false];

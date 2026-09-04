@@ -57,9 +57,10 @@ export function checkRelentlessRage(creature, playerComputed, campaignName) {
         return { intercepted: false };
     }
 
-    const storedRage = getRuntimeValue(creature.name, 'ragePoints', campaignName);
-    const currentRage = storedRage != null ? Number(storedRage) : 0;
-    if (currentRage <= 0) {
+    const rawBuffs = getRuntimeValue(creature.name, 'activeBuffs', campaignName);
+    const activeBuffs = Array.isArray(rawBuffs) ? rawBuffs : [];
+    const rageActive = activeBuffs.some(b => b.name === 'Rage');
+    if (!rageActive) {
         return { intercepted: false };
     }
 

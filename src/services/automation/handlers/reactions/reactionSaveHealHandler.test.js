@@ -102,7 +102,7 @@ describe('reactionSaveHealHandler', () => {
     window.removeEventListener('save-result', () => {});
     window.removeEventListener('death-save-result', () => {});
     runtimeState.getRuntimeValue.mockImplementation((_name, key) => {
-      if (key === 'ragePoints') return 1;
+      if (key === 'activeBuffs') return [{ name: 'Rage', effect: 'stance' }];
       if (key === 'currentHitPoints') return 0;
       if (key === 'relentlessrageUses') return 0;
       if (key === 'deathSaves') return [false, false, false];
@@ -118,14 +118,33 @@ describe('reactionSaveHealHandler', () => {
   // ── Early exit guards ───────────────────────────────────────
 
   describe('early exit guards', () => {
-    it('returns popup when rage is zero, null, undefined, or negative', async () => {
-      for (const badRage of [0, null, undefined, -1]) {
-        runtimeState.getRuntimeValue.mockReturnValue(badRage);
-        const result = await handle(makeAction(), makePlayerStats(), campaignName, null);
-        expect(result.type).toBe('popup');
-        expect(result.payload.type).toBe('automation_info');
-        expect(result.payload.description).toContain('No Rage remaining');
-      }
+    it('returns popup when Rage stance is not active even with ragePoints remaining', async () => {
+      runtimeState.getRuntimeValue.mockImplementation((_name, key) => {
+        if (key === 'ragePoints') return 5;
+        if (key === 'activeBuffs') return [];
+        if (key === 'currentHitPoints') return 0;
+        if (key === 'relentlessrageUses') return 0;
+        return 0;
+      });
+      const result = await handle(makeAction(), makePlayerStats(), campaignName, null);
+      expect(result.type).toBe('popup');
+      expect(result.payload.type).toBe('automation_info');
+      expect(result.payload.description).toContain('Rage is not active');
+      expect(savePrompt.createSaveListener).not.toHaveBeenCalled();
+    });
+
+    it('continues when Rage stance is active even with ragePoints at zero', async () => {
+      runtimeState.getRuntimeValue.mockImplementation((_name, key) => {
+        if (key === 'ragePoints') return 0;
+        if (key === 'activeBuffs') return [{ name: 'Rage', effect: 'stance' }];
+        if (key === 'currentHitPoints') return 0;
+        if (key === 'relentlessrageUses') return 0;
+        return 0;
+      });
+      const result = await handle(makeAction(), makePlayerStats(), campaignName, null);
+      expect(result.type).toBe('popup');
+      expect(result.payload.description).toContain('saving throw');
+      expect(savePrompt.createSaveListener).toHaveBeenCalled();
     });
 
     it('returns popup when no combat is active', async () => {
@@ -148,7 +167,7 @@ describe('reactionSaveHealHandler', () => {
 
     it('returns popup when player is not at 0 HP', async () => {
       runtimeState.getRuntimeValue.mockImplementation((_name, key) => {
-        if (key === 'ragePoints') return 1;
+        if (key === 'activeBuffs') return [{ name: 'Rage', effect: 'stance' }];
         if (key === 'currentHitPoints') return 5;
         if (key === 'relentlessrageUses') return 0;
         return 0;
@@ -161,7 +180,7 @@ describe('reactionSaveHealHandler', () => {
 
     it('returns popup when uses are exhausted', async () => {
       runtimeState.getRuntimeValue.mockImplementation((_name, key) => {
-        if (key === 'ragePoints') return 1;
+        if (key === 'activeBuffs') return [{ name: 'Rage', effect: 'stance' }];
         if (key === 'relentlessrageUses') return 1;
         return 0;
       });
@@ -198,7 +217,7 @@ describe('reactionSaveHealHandler', () => {
 
     it('applies dcScaling to the base DC', async () => {
       runtimeState.getRuntimeValue.mockImplementation((_name, key) => {
-        if (key === 'ragePoints') return 1;
+        if (key === 'activeBuffs') return [{ name: 'Rage', effect: 'stance' }];
         if (key === 'currentHitPoints') return 0;
         if (key === 'relentlessrageUses') return 0;
         return 0;
@@ -504,7 +523,7 @@ describe('reactionSaveHealHandler', () => {
 
     it('success with existing saves marks next empty slot', async () => {
       runtimeState.getRuntimeValue.mockImplementation((_name, key) => {
-        if (key === 'ragePoints') return 1;
+        if (key === 'activeBuffs') return [{ name: 'Rage', effect: 'stance' }];
         if (key === 'currentHitPoints') return 0;
         if (key === 'relentlessrageUses') return 0;
         if (key === 'deathSaves') return [true, true, false];

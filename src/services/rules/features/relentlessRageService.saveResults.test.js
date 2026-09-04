@@ -81,7 +81,7 @@ describe('relentlessRageService - save result handling', () => {
 
   function setupAndTriggerSuccess() {
     runtimeState.getRuntimeValue.mockImplementation((_name, key) => {
-      if (key === 'ragePoints') return 1;
+      if (key === 'activeBuffs') return [{ name: 'Rage', effect: 'stance' }];
       if (key === 'relentlessrageUses') return 0;
       if (key === 'hitPoints') return 50;
       return null;
@@ -122,7 +122,7 @@ describe('relentlessRageService - save result handling', () => {
 
   it('filters unconscious from activeConditions on success', async () => {
     runtimeState.getRuntimeValue.mockImplementation((_name, key) => {
-      if (key === 'ragePoints') return 1;
+      if (key === 'activeBuffs') return [{ name: 'Rage', effect: 'stance' }];
       if (key === 'relentlessrageUses') return 0;
       if (key === 'activeConditions') return ['unconscious', 'blinded'];
       return null;
@@ -173,7 +173,7 @@ describe('relentlessRageService - save result handling', () => {
 
   it('sends death save prompt on failure when HP is 0', async () => {
     runtimeState.getRuntimeValue.mockImplementation((_name, key) => {
-      if (key === 'ragePoints') return 1;
+      if (key === 'activeBuffs') return [{ name: 'Rage', effect: 'stance' }];
       if (key === 'relentlessrageUses') return 0;
       if (key === 'currentHitPoints') return 0;
       return null;
@@ -195,7 +195,7 @@ describe('relentlessRageService - save result handling', () => {
 
   it('logs failure with save details', async () => {
     runtimeState.getRuntimeValue.mockImplementation((_name, key) => {
-      if (key === 'ragePoints') return 1;
+      if (key === 'activeBuffs') return [{ name: 'Rage', effect: 'stance' }];
       if (key === 'relentlessrageUses') return 0;
       if (key === 'currentHitPoints') return 0;
       return null;
@@ -219,7 +219,7 @@ describe('relentlessRageService - save result handling', () => {
 
   it('ignores save-result event with wrong promptId', async () => {
     runtimeState.getRuntimeValue.mockImplementation((_name, key) => {
-      if (key === 'ragePoints') return 1;
+      if (key === 'activeBuffs') return [{ name: 'Rage', effect: 'stance' }];
       if (key === 'relentlessrageUses') return 0;
       return null;
     });

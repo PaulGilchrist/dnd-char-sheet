@@ -81,7 +81,7 @@ describe('relentlessRageService - death save handling', () => {
 
   function setupAndTriggerFailure() {
     runtimeState.getRuntimeValue.mockImplementation((_name, key) => {
-      if (key === 'ragePoints') return 1;
+      if (key === 'activeBuffs') return [{ name: 'Rage', effect: 'stance' }];
       if (key === 'relentlessrageUses') return 0;
       if (key === 'currentHitPoints') return -1;
       return null;
@@ -107,7 +107,7 @@ describe('relentlessRageService - death save handling', () => {
 
   it('does not send death save prompt when save fails but HP > 0', async () => {
     runtimeState.getRuntimeValue.mockImplementation((_name, key) => {
-      if (key === 'ragePoints') return 1;
+      if (key === 'activeBuffs') return [{ name: 'Rage', effect: 'stance' }];
       if (key === 'relentlessrageUses') return 0;
       if (key === 'currentHitPoints') return 10;
       return null;
@@ -126,7 +126,7 @@ describe('relentlessRageService - death save handling', () => {
 
   it('handles death save nat20 result (clears all saves and sets HP to 1)', async () => {
     runtimeState.getRuntimeValue.mockImplementation((_name, key) => {
-      if (key === 'ragePoints') return 1;
+      if (key === 'activeBuffs') return [{ name: 'Rage', effect: 'stance' }];
       if (key === 'relentlessrageUses') return 0;
       if (key === 'currentHitPoints') return -1;
       if (key === 'deathSaves') return [false, false, false];
@@ -173,7 +173,7 @@ describe('relentlessRageService - death save handling', () => {
 
   it('handles death save success result', async () => {
     runtimeState.getRuntimeValue.mockImplementation((_name, key) => {
-      if (key === 'ragePoints') return 1;
+      if (key === 'activeBuffs') return [{ name: 'Rage', effect: 'stance' }];
       if (key === 'relentlessrageUses') return 0;
       if (key === 'currentHitPoints') return -1;
       if (key === 'deathSaves') return [false, false, false];
@@ -208,7 +208,7 @@ describe('relentlessRageService - death save handling', () => {
 
   it('handles death save failure result with single fail', async () => {
     runtimeState.getRuntimeValue.mockImplementation((_name, key) => {
-      if (key === 'ragePoints') return 1;
+      if (key === 'activeBuffs') return [{ name: 'Rage', effect: 'stance' }];
       if (key === 'relentlessrageUses') return 0;
       if (key === 'currentHitPoints') return -1;
       if (key === 'deathSaves') return [false, false, false];
@@ -243,7 +243,7 @@ describe('relentlessRageService - death save handling', () => {
 
   it('handles death save failure with nat1 (double fail)', async () => {
     runtimeState.getRuntimeValue.mockImplementation((_name, key) => {
-      if (key === 'ragePoints') return 1;
+      if (key === 'activeBuffs') return [{ name: 'Rage', effect: 'stance' }];
       if (key === 'relentlessrageUses') return 0;
       if (key === 'currentHitPoints') return -1;
       if (key === 'deathSaves') return [false, false, false];
@@ -278,7 +278,7 @@ describe('relentlessRageService - death save handling', () => {
 
   it('logs death save entry with correct fields', async () => {
     runtimeState.getRuntimeValue.mockImplementation((_name, key) => {
-      if (key === 'ragePoints') return 1;
+      if (key === 'activeBuffs') return [{ name: 'Rage', effect: 'stance' }];
       if (key === 'relentlessrageUses') return 0;
       if (key === 'currentHitPoints') return -1;
       if (key === 'deathSaves') return [false, false, false];
@@ -314,7 +314,7 @@ describe('relentlessRageService - death save handling', () => {
 
   it('ignores death save result with wrong promptId', async () => {
     runtimeState.getRuntimeValue.mockImplementation((_name, key) => {
-      if (key === 'ragePoints') return 1;
+      if (key === 'activeBuffs') return [{ name: 'Rage', effect: 'stance' }];
       if (key === 'relentlessrageUses') return 0;
       if (key === 'currentHitPoints') return -1;
       if (key === 'deathSaves') return [false, false, false];
@@ -348,7 +348,7 @@ describe('relentlessRageService - death save handling', () => {
 
   it('handles death save with all saves already filled (nat20 clears them)', async () => {
     runtimeState.getRuntimeValue.mockImplementation((_name, key) => {
-      if (key === 'ragePoints') return 1;
+      if (key === 'activeBuffs') return [{ name: 'Rage', effect: 'stance' }];
       if (key === 'relentlessrageUses') return 0;
       if (key === 'currentHitPoints') return -1;
       if (key === 'deathSaves') return [true, true, true];
@@ -383,7 +383,7 @@ describe('relentlessRageService - death save handling', () => {
 
   it('handles death save failure when all failure slots filled (no-op)', async () => {
     runtimeState.getRuntimeValue.mockImplementation((_name, key) => {
-      if (key === 'ragePoints') return 1;
+      if (key === 'activeBuffs') return [{ name: 'Rage', effect: 'stance' }];
       if (key === 'relentlessrageUses') return 0;
       if (key === 'currentHitPoints') return -1;
       if (key === 'deathSaves') return [false, false, false];
@@ -418,7 +418,7 @@ describe('relentlessRageService - death save handling', () => {
 
   it('uses existing deathSaves array from runtime when truthy', async () => {
     runtimeState.getRuntimeValue.mockImplementation((_name, key) => {
-      if (key === 'ragePoints') return 1;
+      if (key === 'activeBuffs') return [{ name: 'Rage', effect: 'stance' }];
       if (key === 'relentlessrageUses') return 0;
       if (key === 'currentHitPoints') return -1;
       if (key === 'deathSaves') return [true, false, false];
@@ -453,7 +453,7 @@ describe('relentlessRageService - death save handling', () => {
 
   it('handles death save success when all deathSaves slots are already filled (uses default array)', async () => {
     runtimeState.getRuntimeValue.mockImplementation((_name, key) => {
-      if (key === 'ragePoints') return 1;
+      if (key === 'activeBuffs') return [{ name: 'Rage', effect: 'stance' }];
       if (key === 'relentlessrageUses') return 0;
       if (key === 'currentHitPoints') return -1;
       if (key === 'deathSaves') return [true, true, true];
@@ -488,7 +488,7 @@ describe('relentlessRageService - death save handling', () => {
 
   it('handles death save with null deathSaves from runtime (uses default array)', async () => {
     runtimeState.getRuntimeValue.mockImplementation((_name, key) => {
-      if (key === 'ragePoints') return 1;
+      if (key === 'activeBuffs') return [{ name: 'Rage', effect: 'stance' }];
       if (key === 'relentlessrageUses') return 0;
       if (key === 'currentHitPoints') return -1;
       if (key === 'deathSaves') return null;
@@ -523,7 +523,7 @@ describe('relentlessRageService - death save handling', () => {
 
   it('handles death save with null deathFailures from runtime (uses default array)', async () => {
     runtimeState.getRuntimeValue.mockImplementation((_name, key) => {
-      if (key === 'ragePoints') return 1;
+      if (key === 'activeBuffs') return [{ name: 'Rage', effect: 'stance' }];
       if (key === 'relentlessrageUses') return 0;
       if (key === 'currentHitPoints') return -1;
       if (key === 'deathSaves') return [false, false, false];
