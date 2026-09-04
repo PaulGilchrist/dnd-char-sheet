@@ -42,6 +42,15 @@ vi.mock('../../../combat/concentration/concentrationService.js', () => ({
     addConcentration: vi.fn(),
 }));
 
+vi.mock('../../../ui/storage.js', () => ({
+    default: {
+        get: vi.fn(),
+        set: vi.fn(),
+        getProperty: vi.fn(),
+        setProperty: vi.fn(),
+    },
+}));
+
 vi.mock('../../../ui/logService.js', () => ({
     addEntry: vi.fn(() => Promise.resolve()),
 }));
@@ -55,6 +64,7 @@ import { addExpiration } from '../../../rules/effects/expirations.js';
 import { getCombatSummary } from '../../../encounters/combatData.js';
 import { isRayOfEnfeeblementActive } from './rayOfEnfeeblementHandler.js';
 import { addConcentration } from '../../../combat/concentration/concentrationService.js';
+import storage from '../../../ui/storage.js';
 import { storeSpellLastAttack, addTargetResult } from '../../common/damageRollback.js';
 
 // ── Helpers ────────────────────────────────────────────────────
@@ -202,6 +212,7 @@ describe('rayOfEnfeeblementHandler', () => {
                 source: 'Test Wizard',
                 slotLevel: 2,
                 duration: 'concentration',
+                dc: 10,
                 strCheckDisadvantage: true,
                 rayOfEnfeebleDamageReduction: true,
             });
@@ -225,6 +236,81 @@ describe('rayOfEnfeeblementHandler', () => {
                     },
                 ],
                 'test-campaign',
+            );
+        });
+
+        it('uses numeric saveDc from automation (no fallback DC 10) on the save prompt', async () => {
+            buildSaveDc.mockImplementation((auto) => (typeof auto.saveDc === 'number' ? auto.saveDc : 10));
+
+            const action = makeAction({ automation: { targetName: 'Thug 1', saveDc: 17 } });
+            const result = await handle(action, makePlayerStats(), 'test-campaign', null);
+
+            expect(createSaveListener).toHaveBeenCalledWith('test-campaign', {
+                targetName: 'Thug 1',
+                saveType: 'CON',
+                saveDc: 17,
+                dcSuccess: 'none',
+                disadvantage: false,
+            });
+            expect(result.payload.targetName).toBe('Thug 1');
+        });
+
+        it('stores dc on the debuff targetEffect for badge repeat saves', async () => {
+            buildSaveDc.mockReturnValue(17);
+            getRuntimeValue.mockReturnValue([]);
+
+            await handle(makeAction({ automation: { targetName: 'Thug 1', saveDc: 17 } }), makePlayerStats(), 'test-campaign', null);
+
+            expect(setRuntimeValue).toHaveBeenCalledWith(
+                'campaign',
+                'targetEffects',
+                expect.arrayContaining([
+                    expect.objectContaining({
+                        target: 'Thug 1',
+                        effect: 'ray_of_enfeeble_debuff',
+                        dc: 17,
+                    }),
+                ]),
+                'test-campaign'
+            );
+        });
+
+        it('writes activeConditionMeta with dc and CON ability on failed save', async () => {
+            buildSaveDc.mockReturnValue(17);
+            getRuntimeValue.mockImplementation((scope, key) => {
+                if (scope === 'campaign' && key === 'targetEffects') return [];
+                if (scope === 'Goblin' && key === 'activeConditionMeta') return { poisoned: { dc: 12, ability: 'con' } };
+                return [];
+            });
+
+            await handle(makeAction({ automation: { targetName: 'Goblin', saveDc: 17 } }), makePlayerStats(), 'test-campaign', null);
+
+            expect(setRuntimeValue).toHaveBeenCalledWith(
+                'Goblin',
+                'activeConditionMeta',
+                {
+                    poisoned: { dc: 12, ability: 'con' },
+                    ray_of_enfeeble_debuff: { dc: 17, ability: 'con' },
+                },
+                'test-campaign'
+            );
+        });
+
+        it('writes activeConditionMeta even when existing meta is null', async () => {
+            buildSaveDc.mockReturnValue(15);
+            getRuntimeValue.mockImplementation((scope, key) => {
+                if (scope === 'campaign' && key === 'targetEffects') return [];
+                if (scope === 'Goblin' && key === 'activeConditionMeta') return null;
+                return [];
+            });
+
+            await handle(makeAction({ automation: { targetName: 'Goblin', saveDc: 15 } }), makePlayerStats(), 'test-campaign', null);
+
+            expect(setRuntimeValue).toHaveBeenCalledWith(
+                'Goblin',
+                'activeConditionMeta',
+                { ray_of_enfeeble_debuff: { dc: 15, ability: 'con' } },
+                'test-campaign'
             );
         });
 
@@ -732,6 +818,27 @@ describe('rayOfEnfeeblementHandler', () => {
                 'Ray of Enfeeblement',
                 10
             );
+        });
+
+        it('persists the mutated combatSummary after adding concentration with the resolved dc', async () => {
+            buildSaveDc.mockReturnValue(17);
+            const cs = { creatures: [{ name: 'Test Wizard' }] };
+            getCombatSummary.mockReturnValue(cs);
+
+            await handle(makeAction({ automation: { targetName: 'Thug 1', saveDc: 17 } }), makePlayerStats(), 'test-campaign', null);
+
+            expect(addConcentration).toHaveBeenCalledWith(cs, 'Test Wizard', 'Ray of Enfeeblement', 17);
+            expect(storage.set).toHaveBeenCalledWith('combatSummary', cs, 'test-campaign');
+        });
+
+        it('skips concentration persistence when no combat summary exists', async () => {
+            buildSaveDc.mockReturnValue(15);
+            getCombatSummary.mockReturnValue(null);
+
+            await handle(makeAction({ automation: { targetName: 'Thug 1', saveDc: 15 } }), makePlayerStats(), 'test-campaign', null);
+
+            expect(addConcentration).not.toHaveBeenCalled();
+            expect(storage.set).not.toHaveBeenCalled();
         });
     });
 });

@@ -195,6 +195,59 @@ export function createRollConditionSaveHandler({
                     }).catch((e) => { console.error("[initiativeConditionSave:log-error]", e); })
                 }
             }
+
+            // Ray of Enfeeblement
+            if (String(condition.key).toLowerCase() === 'ray_of_enfeeble_debuff') {
+                const rayEffect = (getRuntimeValue('campaign', 'targetEffects') || []).find(
+                    te => te.effect === 'ray_of_enfeeble_debuff' && te.target === creatureName
+                )
+                if (rayEffect) {
+                    const remainingEffects = (getRuntimeValue('campaign', 'targetEffects') || []).filter(
+                        te => !(te.target === creatureName && te.effect === 'ray_of_enfeeble_debuff')
+                    )
+                    setRuntimeValue('campaign', 'targetEffects', remainingEffects, campaignName)
+                    const caster = combatSummary.creatures.find(c => c.name === rayEffect.source)
+                    if (caster && caster.concentration && caster.concentration.spell === 'Ray of Enfeeblement') {
+                        caster.concentration = null
+                    }
+                    await logService.addEntry(campaignName, {
+                        type: 'save_result',
+                        characterName: rayEffect.source,
+                        rollType: 'save-ray-of-enfeeblement',
+                        targetName: creatureName,
+                        saveDc: condition.dc,
+                        saveType: 'CON',
+                        success: true,
+                        description: `${creatureName} succeeded on CON save against Ray of Enfeeblement. The spell ends; the enfeeblement debuff is removed.`,
+                    }).catch((e) => { console.error("[initiativeConditionSave:log-error]", e); })
+                    await logService.addEntry(campaignName, {
+                        type: 'condition',
+                        action: 'removed',
+                        characterName: creatureName,
+                        condition: 'Ray of Enfeeblement debuff',
+                        reason: 'Ray of Enfeeblement (successful repeat save)',
+                        note: `${creatureName} succeeded on the CON repeat save; Ray of Enfeeblement save ends.`,
+                        timestamp: Date.now(),
+                    }).catch((e) => { console.error("[initiativeConditionSave:log-error]", e); })
+                }
+            }
+        }
+
+        if (!success && String(condition.key).toLowerCase() === 'ray_of_enfeeble_debuff') {
+            const rayEffect = (getRuntimeValue('campaign', 'targetEffects') || []).find(
+                te => te.effect === 'ray_of_enfeeble_debuff' && te.target === creatureName
+            )
+            if (rayEffect) {
+                await logService.addEntry(campaignName, {
+                    type: 'condition',
+                    action: 'kept',
+                    characterName: creatureName,
+                    condition: 'Ray of Enfeeblement debuff',
+                    reason: 'Ray of Enfeeblement (failed repeat save)',
+                    note: `${creatureName} failed the CON repeat save; Enfeeblement continues (-1d8 damage rolls, Disadvantage on STR checks).`,
+                    timestamp: Date.now(),
+                }).catch((e) => { console.error("[initiativeConditionSave:log-error]", e); })
+            }
         }
 
         storage.set('combatSummary', combatSummary, campaignName)

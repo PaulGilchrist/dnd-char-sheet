@@ -25,13 +25,24 @@ describe('rayOfEnfeeblementService', () => {
     };
 
     describe('triggerRayOfEnfeeblement', () => {
-        it('executes handler with correct automation type and targetName', async () => {
+        it('executes handler with correct automation type, targetName, and numeric spellSaveDc', async () => {
+            executeHandler.mockResolvedValue(null);
+            await triggerRayOfEnfeeblement({ name: 'Ray of Enfeeblement', level: 2 }, { targetName: 'Goblin', spellSaveDc: 17 }, playerStats, campaignName, mapName);
+            expect(executeHandler).toHaveBeenCalledWith(
+                expect.objectContaining({
+                    name: 'Ray of Enfeeblement',
+                    automation: { type: 'ray_of_enfeeblement', saveDc: 17, targetName: 'Goblin' },
+                }),
+                playerStats, campaignName, mapName,
+            );
+        });
+
+        it('threads saveDc from playerStats.spellAbilities.saveDc when metaCtx has no spellSaveDc', async () => {
             executeHandler.mockResolvedValue(null);
             await triggerRayOfEnfeeblement({ name: 'Ray of Enfeeblement', level: 2 }, { targetName: 'Goblin' }, playerStats, campaignName, mapName);
             expect(executeHandler).toHaveBeenCalledWith(
                 expect.objectContaining({
-                    name: 'Ray of Enfeeblement',
-                    automation: { type: 'ray_of_enfeeblement', targetName: 'Goblin' },
+                    automation: expect.objectContaining({ saveDc: 15 }),
                 }),
                 playerStats, campaignName, mapName,
             );

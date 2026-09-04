@@ -5173,7 +5173,7 @@
       "handler": "src/services/combat/automation/handlers/spellHandler.js",
       "router": "src/services/combat/automation/routers/spellRouter.js",
       "infoBuilder": "src/services/combat/automation/infoBuilders/spellInfoBuilder.js",
-      "verified": "broken — see .opencode/plans/bug-sp-097-ray-of-enfeeblement-dc-target-repeat-save.md",
+      "verified": "verified",
       "class": "Spell",
       "triggerConditions": "",
       "expectedBehavior": "A beam of enervating energy shoots from you toward a creature within range. The target must make a Constitution saving throw. On a successful save, the target has Disadvantage on the next attack roll it makes until the start of your next turn. On a failed save, the target has Disadvantage on Strength-based d20 tests for the duration. During that time, it also subtracts 1d8 from all its damage rolls. The target repeats the save at the end of each of its turns, ending the spell on a success."

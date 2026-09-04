@@ -251,7 +251,8 @@ function ConditionEffectBadges({ conditions, targetEffects = [], creatureName, c
     if (effects.rayOfEnfeebleDamageReduction) {
         const rayEffect = targetEffects?.find(te => te.effect === 'ray_of_enfeeble_debuff' && te.target === creatureName)
         const casterName = rayEffect?.source || 'unknown'
-        badges.push({ label: 'Enfeeblement', cls: 'effect-debuff', icon: 'fa-hand', removable: true, removeAction: 'target_effect', effectType: 'ray_of_enfeeble_debuff', tooltip: `Ray of Enfeeblement from ${casterName}: -1d8 to damage rolls, Disadvantage on STR checks` })
+        const rayDc = rayEffect?.dc || 0
+        badges.push({ label: 'Enfeeblement', cls: 'effect-debuff', icon: 'fa-hand', removable: true, removeAction: 'target_effect', effectType: 'ray_of_enfeeble_debuff', onClick: onRollConditionSave ? () => onRollConditionSave(creatureName, { key: 'ray_of_enfeeble_debuff', label: 'Enfeeblement', dc: rayDc, ability: 'con' }) : undefined, tooltip: `Ray of Enfeeblement from ${casterName}: -1d8 to damage rolls, Disadvantage on STR checks. Click to reroll the CON save (DC ${rayDc}); a success ends the spell.` })
     }
     if (effects.resistanceDamageReduction) {
         const resEffect = targetEffects?.find(te => te.effect === 'resistance_damage_reduction' && te.target === creatureName)

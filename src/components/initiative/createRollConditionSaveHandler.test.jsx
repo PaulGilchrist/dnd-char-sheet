@@ -535,6 +535,103 @@ describe('createRollConditionSaveHandler', () => {
     });
 
     // ------------------------------------------------------------------
+    // Ray of Enfeeblement
+    // ------------------------------------------------------------------
+    describe('Ray of Enfeeblement cleanup', () => {
+        it('clears targetEffect, clears caster concentration, and logs save ends on CON save success', async () => {
+            mockCombatSummary.creatures.push({ name: 'Merlin', type: 'player', concentration: { spell: 'Ray of Enfeeblement', dc: 17 } });
+            const handler = createHandler();
+            rollConditionSave.mockResolvedValue(makeSuccessRoll({ roll: 15, bonus: 2 }));
+            getRuntimeValue.mockImplementation((key, prop) => {
+                if (key === 'campaign' && prop === 'targetEffects') {
+                    return defaultTargetEffects('Alice', 'ray_of_enfeeble_debuff', 'Merlin', 17);
+                }
+                return null;
+            });
+
+            await handler('Alice', { key: 'ray_of_enfeeble_debuff', label: 'Enfeeblement', dc: 17, ability: 'con' });
+
+            const teCalls = setRuntimeValue.mock.calls.filter(c => c[0] === 'campaign' && c[1] === 'targetEffects');
+            expect(teCalls.length).toBeGreaterThan(0);
+            expect(teCalls[teCalls.length - 1][2]).toEqual([]);
+            const merlin = mockCombatSummary.creatures.find(c => c.name === 'Merlin');
+            expect(merlin.concentration).toBeNull();
+            expect(addEntry).toHaveBeenCalledWith(
+                'test-campaign', expect.objectContaining({
+                    type: 'save_result',
+                    rollType: 'save-ray-of-enfeeblement',
+                    targetName: 'Alice',
+                    saveDc: 17,
+                    saveType: 'CON',
+                    success: true,
+                })
+            );
+            expect(addEntry).toHaveBeenCalledWith(
+                'test-campaign', expect.objectContaining({
+                    type: 'condition',
+                    action: 'removed',
+                    condition: 'Ray of Enfeeblement debuff',
+                    note: expect.stringContaining('save ends'),
+                })
+            );
+        });
+
+        it('keeps unrelated caster concentration when ray save succeeds', async () => {
+            mockCombatSummary.creatures.push({ name: 'Merlin', type: 'player', concentration: { spell: 'Hex', dc: 13 } });
+            const handler = createHandler();
+            rollConditionSave.mockResolvedValue(makeSuccessRoll());
+            getRuntimeValue.mockImplementation((key, prop) => {
+                if (key === 'campaign' && prop === 'targetEffects') {
+                    return defaultTargetEffects('Alice', 'ray_of_enfeeble_debuff', 'Merlin', 17);
+                }
+                return null;
+            });
+
+            await handler('Alice', { key: 'ray_of_enfeeble_debuff', label: 'Enfeeblement', dc: 17, ability: 'con' });
+
+            const merlin = mockCombatSummary.creatures.find(c => c.name === 'Merlin');
+            expect(merlin.concentration.spell).toBe('Hex');
+        });
+
+        it('logs that enfeeblement continues on failed repeat save without clearing the targetEffect', async () => {
+            const handler = createHandler();
+            rollConditionSave.mockResolvedValue(makeFailureRoll());
+            getRuntimeValue.mockImplementation((key, prop) => {
+                if (key === 'campaign' && prop === 'targetEffects') {
+                    return defaultTargetEffects('Alice', 'ray_of_enfeeble_debuff', 'Merlin', 17);
+                }
+                return null;
+            });
+
+            await handler('Alice', { key: 'ray_of_enfeeble_debuff', label: 'Enfeeblement', dc: 17, ability: 'con' });
+
+            expect(addEntry).toHaveBeenCalledWith(
+                'test-campaign', expect.objectContaining({
+                    type: 'condition',
+                    action: 'kept',
+                    characterName: 'Alice',
+                    condition: 'Ray of Enfeeblement debuff',
+                    note: expect.stringContaining('continues'),
+                })
+            );
+            expect(setRuntimeValue).not.toHaveBeenCalledWith(
+                'campaign', 'targetEffects', [], 'test-campaign'
+            );
+        });
+
+        it('does not trigger cleanup when no ray effect exists', async () => {
+            const handler = createHandler();
+            rollConditionSave.mockResolvedValue(makeSuccessRoll());
+
+            await handler('Alice', { key: 'ray_of_enfeeble_debuff', label: 'Enfeeblement', dc: 17, ability: 'con' });
+
+            expect(addEntry).not.toHaveBeenCalledWith(
+                'test-campaign', expect.objectContaining({ rollType: 'save-ray-of-enfeeblement' })
+            );
+        });
+    });
+
+    // ------------------------------------------------------------------
     // Case-insensitive condition key matching
     // ------------------------------------------------------------------
     describe('case-insensitive condition key matching', () => {

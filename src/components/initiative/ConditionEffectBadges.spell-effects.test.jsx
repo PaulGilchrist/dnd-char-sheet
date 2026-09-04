@@ -1,6 +1,6 @@
 // @improved-by-ai
 // @cleaned-by-ai
-import { render, screen } from '@testing-library/react';
+import { render, screen, fireEvent } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import ConditionEffectBadges from './ConditionEffectBadges.jsx';
 import { getRuntimeValue } from '../../hooks/runtime/useRuntimeState.js';
@@ -163,6 +163,27 @@ describe('ConditionEffectBadges - Spell Effect Badges', () => {
         it('should render Enfeeblement badge when rayOfEnfeebleDamageReduction is active', () => {
             renderWithTargetEffect({ target: CREATURE_NAME, effect: 'ray_of_enfeeble_debuff', source: 'Wizard' }, { rayOfEnfeebleDamageReduction: true });
             expect(screen.getByText('Enfeeblement')).toBeInTheDocument();
+        });
+
+        it('should trigger CON repeat save with te dc when the badge is clicked', () => {
+            const onRollConditionSave = vi.fn();
+            getRuntimeValue.mockImplementation((name, key) => {
+                if (name === CREATURE_NAME && key === 'activeBuffs') return [];
+                return null;
+            });
+            computeConditionEffects.mockReturnValue(makeEffects({ rayOfEnfeebleDamageReduction: true }));
+            render(
+                <ConditionEffectBadges
+                    conditions={[]}
+                    targetEffects={[{ target: CREATURE_NAME, effect: 'ray_of_enfeeble_debuff', source: 'Wizard', dc: 17 }]}
+                    creatureName={CREATURE_NAME}
+                    campaignName={CAMPAIGN_NAME}
+                    isLocalhost={true}
+                    onRollConditionSave={onRollConditionSave}
+                />
+            );
+            fireEvent.click(screen.getByText('Enfeeblement'));
+            expect(onRollConditionSave).toHaveBeenCalledWith(CREATURE_NAME, { key: 'ray_of_enfeeble_debuff', label: 'Enfeeblement', dc: 17, ability: 'con' });
         });
     });
 

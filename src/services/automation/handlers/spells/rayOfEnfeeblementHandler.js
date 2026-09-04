@@ -5,6 +5,7 @@ import { addExpiration } from '../../../rules/effects/expirations.js';
 import { storeSpellLastAttack, addTargetResult } from '../../common/damageRollback.js';
 import { addConcentration } from '../../../combat/concentration/concentrationService.js';
 import { getCombatSummary } from '../../../encounters/combatData.js';
+import storage from '../../../ui/storage.js';
 
 
 export async function handle(action, playerStats, campaignName, _mapName) {
@@ -116,6 +117,7 @@ export async function handle(action, playerStats, campaignName, _mapName) {
         source: playerStats.name,
         slotLevel: auto.slotLevel || 2,
         duration: 'concentration',
+        dc,
         strCheckDisadvantage: true,
         rayOfEnfeebleDamageReduction: true,
     };
@@ -128,9 +130,24 @@ export async function handle(action, playerStats, campaignName, _mapName) {
 
     setRuntimeValue('campaign', 'targetEffects', allTargetEffects, campaignName);
 
+    // Store effect metadata with DC and ability for the end-of-turn repeat CON save (badge-click model)
+    const existingMeta = getRuntimeValue(targetName, 'activeConditionMeta', campaignName) || {};
+    setRuntimeValue(targetName, 'activeConditionMeta', {
+        ...existingMeta,
+        ray_of_enfeeble_debuff: {
+            ...(existingMeta.ray_of_enfeeble_debuff || {}),
+            dc,
+            ability: 'con',
+        },
+    }, campaignName);
+
     // Set concentration tracking on the caster
     const combatSummary = getCombatSummary(campaignName);
-    addConcentration(combatSummary, playerStats.name, 'Ray of Enfeeblement', dc);
+    if (combatSummary) {
+        addConcentration(combatSummary, playerStats.name, 'Ray of Enfeeblement', dc);
+        storage.set('combatSummary', combatSummary, campaignName);
+        window.dispatchEvent(new CustomEvent('combat-summary-updated'));
+    }
 
     // Apply expiration (concentration handles duration; 1 minute = 10 rounds default)
     addExpiration(playerStats.name, targetName, [
