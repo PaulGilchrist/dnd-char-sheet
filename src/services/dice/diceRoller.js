@@ -27,6 +27,13 @@ function rollDisadvantage() {
   return { total: Math.min(a, b), rolls: [a, b], label: 'disadvantage' };
 }
 
+function parseConstant(formula) {
+  if (!formula) return null;
+  const stripped = formula.replace(/\s*\[.*?\]\s*/g, '').trim();
+  if (/^[+-]?\d+$/.test(stripped)) return parseInt(stripped, 10);
+  return null;
+}
+
 function parseExpression(formula) {
   if (!formula) return null;
   const stripped = formula.replace(/\s*\[.*?\]\s*/g, '').trim();
@@ -80,6 +87,12 @@ function rollExpression(formula, options = {}) {
         total += result.total;
         rolls = rolls.concat(result.rolls);
         modifier += result.modifier;
+      } else {
+        const flat = parseConstant(part);
+        if (flat !== null) {
+          total += flat;
+          modifier += flat;
+        }
       }
     }
     return { total, rolls, modifier, formula };
@@ -119,6 +132,12 @@ function rollExpressionDoubled(formula) {
         rolls = rolls.concat(result.rolls);
         doubledRolls = doubledRolls.concat(result.doubledRolls || result.rolls);
         modifier += result.modifier;
+      } else {
+        const flat = parseConstant(part);
+        if (flat !== null) {
+          total += flat;
+          modifier += flat;
+        }
       }
     }
     return { total, rolls, doubledRolls, modifier, formula };

@@ -255,6 +255,56 @@ describe('rollExpression', () => {
     }
   });
 
+  it('includes constant-only " plus N" parts in total and modifier (CLA-281)', () => {
+    const { restore } = seededRandom([0]);
+    try {
+      const result = rollExpression('1d8+7 plus 4');
+      expect(result).not.toBeNull();
+      expect(result.rolls).toEqual([1]);
+      expect(result.modifier).toBe(11);
+      expect(result.total).toBe(result.rolls[0] + 7 + 4);
+      expect(result.formula).toBe('1d8+7 plus 4');
+    } finally {
+      restore();
+    }
+  });
+
+  it('keeps dice-only " plus " behavior unchanged (CLA-281 regression)', () => {
+    const { restore } = seededRandom([0.5, 0.5]);
+    try {
+      const result = rollExpression('1d8+3 plus 2d6');
+      expect(result.rolls).toHaveLength(3);
+      expect(result.modifier).toBe(3);
+      expect(result.total).toBe(result.rolls.reduce((s, r) => s + r, 0) + 3);
+    } finally {
+      restore();
+    }
+  });
+
+  it('adds bracket-tagged constant " plus 4 [bludgeoning]" part to total', () => {
+    const { restore } = seededRandom([0]);
+    try {
+      const result = rollExpression('1d8+7 plus 4 [bludgeoning]');
+      expect(result).not.toBeNull();
+      expect(result.modifier).toBe(11);
+      expect(result.total).toBe(1 + 7 + 4);
+    } finally {
+      restore();
+    }
+  });
+
+  it('still returns null for unparseable plus parts and standalone constants', () => {
+    const { restore } = seededRandom([0.5]);
+    try {
+      const result = rollExpression('1d8 plus nonsense');
+      expect(result.total).toBe(result.rolls[0]);
+      expect(result.modifier).toBe(0);
+    } finally {
+      restore();
+    }
+    expect(rollExpression('4')).toBeNull();
+  });
+
   it('respects rerollOnes option to reroll 1s', () => {
     const { restore } = seededRandom([0, 0.5, 0.5]);
     try {
@@ -305,6 +355,20 @@ describe('rollExpressionDoubled', () => {
     expect(rollExpressionDoubled('xyz')).toBeNull();
     expect(rollExpressionDoubled('')).toBeNull();
     expect(rollExpressionDoubled('[tag]')).toBeNull();
+  });
+
+  it('keeps constant " plus N" part flat (not doubled) on crits (CLA-281)', () => {
+    const { restore } = seededRandom([0]);
+    try {
+      const result = rollExpressionDoubled('1d8+7 plus 4');
+      expect(result).not.toBeNull();
+      expect(result.rolls).toEqual([1]);
+      expect(result.doubledRolls).toEqual([1, 1]);
+      expect(result.modifier).toBe(11);
+      expect(result.total).toBe(2 + 7 + 4);
+    } finally {
+      restore();
+    }
   });
 
   it('selects first valid " or " option and handles invalid alternatives', () => {
