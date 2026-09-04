@@ -10,9 +10,14 @@ vi.mock('../../rules/combat/rangeCheck.js', () => ({
   isWithinRange: vi.fn(),
 }));
 
+vi.mock('../../rules/combat/damageUtils.js', () => ({
+  getCombatContext: vi.fn(),
+}));
+
 import { getLionDisadvantageAgainst } from './lionAuraUtils.js';
 import { getRuntimeValue } from '../../../hooks/runtime/useRuntimeState.js';
 import { isWithinRange } from '../../rules/combat/rangeCheck.js';
+import { getCombatContext } from '../../rules/combat/damageUtils.js';
 
 function makePlayer(name, gridX = 0, gridY = 0) {
   return { name, gridX, gridY };
@@ -33,17 +38,21 @@ describe('getLionDisadvantageAgainst', () => {
     vi.clearAllMocks();
     getRuntimeValue.mockReset();
     isWithinRange.mockReset();
+    getCombatContext.mockReset();
     getRuntimeValue.mockImplementation(() => []);
     isWithinRange.mockResolvedValue(false);
+    getCombatContext.mockResolvedValue(null);
   });
 
-  it('returns false when mapData is undefined', async () => {
-    const result = await getLionDisadvantageAgainst({ attackerName: 'A', mapData: undefined });
+  it('returns false when mapData is undefined and no combat summary exists', async () => {
+    getCombatContext.mockResolvedValue(null);
+    const result = await getLionDisadvantageAgainst({ attackerName: 'A', campaignName: 'C', mapData: undefined });
     expect(result).toEqual({ disadvantage: false });
   });
 
-  it('returns false when mapData is null', async () => {
-    const result = await getLionDisadvantageAgainst({ attackerName: 'A', mapData: null });
+  it('returns false when mapData is null and combat summary has no players', async () => {
+    getCombatContext.mockResolvedValue({ creatures: [] });
+    const result = await getLionDisadvantageAgainst({ attackerName: 'A', campaignName: 'C', mapData: null });
     expect(result).toEqual({ disadvantage: false });
   });
 
@@ -192,7 +201,7 @@ describe('getLionDisadvantageAgainst', () => {
       campaignName: 'MyCampaign',
       mapData: makeMapData([makePlayer('Attacker'), makePlayer('Barbarian')]),
     });
-    expect(getRuntimeValue).toHaveBeenCalledWith('Barbarian', 'activeBuffs');
+    expect(getRuntimeValue).toHaveBeenCalledWith('Barbarian', 'activeBuffs', 'MyCampaign');
   });
 
   it('returns false when only the attacker exists in mapData', async () => {
@@ -201,5 +210,58 @@ describe('getLionDisadvantageAgainst', () => {
       mapData: makeMapData([makePlayer('Attacker')]),
     });
     expect(result).toEqual({ disadvantage: false });
+  });
+
+  it('falls back to the combat summary party when mapData is missing (no-map mode)', async () => {
+    getCombatContext.mockResolvedValue({
+      creatures: [
+        { name: 'DraconicDragon', type: 'player' },
+        { name: 'HexWarlock', type: 'player' },
+        { name: 'Thug 1', type: 'npc' },
+      ],
+    });
+    getRuntimeValue.mockImplementation((name) => name === 'DraconicDragon' ? [makeLionBuff()] : []);
+
+    const result = await getLionDisadvantageAgainst({
+      attackerName: 'HexWarlock',
+      campaignName: 'test-campaign',
+      skipRangeCheck: true,
+    });
+    expect(result).toEqual({ disadvantage: true, source: 'DraconicDragon' });
+  });
+
+  it('returns false in no-map mode when no ally has the Lion buff', async () => {
+    getCombatContext.mockResolvedValue({
+      creatures: [
+        { name: 'DraconicDragon', type: 'player' },
+        { name: 'HexWarlock', type: 'player' },
+      ],
+    });
+    getRuntimeValue.mockImplementation(() => []);
+
+    const result = await getLionDisadvantageAgainst({
+      attackerName: 'HexWarlock',
+      campaignName: 'test-campaign',
+      skipRangeCheck: true,
+    });
+    expect(result).toEqual({ disadvantage: false });
+  });
+
+  it('applies the range check in no-map mode when skipRangeCheck is not set', async () => {
+    getCombatContext.mockResolvedValue({
+      creatures: [
+        { name: 'DraconicDragon', type: 'player' },
+        { name: 'HexWarlock', type: 'player' },
+      ],
+    });
+    getRuntimeValue.mockImplementation((name) => name === 'DraconicDragon' ? [makeLionBuff()] : []);
+    isWithinRange.mockResolvedValue(false);
+
+    const result = await getLionDisadvantageAgainst({
+      attackerName: 'HexWarlock',
+      campaignName: 'test-campaign',
+    });
+    expect(result).toEqual({ disadvantage: false });
+    expect(isWithinRange).toHaveBeenCalledWith('DraconicDragon', 'HexWarlock', 5);
   });
 });

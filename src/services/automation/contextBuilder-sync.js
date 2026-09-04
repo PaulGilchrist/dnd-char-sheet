@@ -487,7 +487,7 @@ export async function buildAttackContextSync(attack, playerStats, campaignName, 
 
         // Aura checks when no map is active — all creatures considered in range
         if (forcedMode === undefined) {
-            const noMapWolf = getWolfAdvantageAgainst({
+            const noMapWolf = await getWolfAdvantageAgainst({
                 attackerName: playerName,
                 campaignName,
                 skipRangeCheck: true,
@@ -508,7 +508,7 @@ export async function buildAttackContextSync(attack, playerStats, campaignName, 
             }
         }
         if (forcedMode === undefined) {
-            const noMapLion = getLionDisadvantageAgainst({
+            const noMapLion = await getLionDisadvantageAgainst({
                 attackerName: playerName,
                 campaignName,
                 skipRangeCheck: true,

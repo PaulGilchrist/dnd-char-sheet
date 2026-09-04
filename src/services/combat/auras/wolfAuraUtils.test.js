@@ -10,9 +10,14 @@ vi.mock('../../rules/combat/rangeCheck.js', () => ({
   isWithinRange: vi.fn(),
 }));
 
+vi.mock('../../rules/combat/damageUtils.js', () => ({
+  getCombatContext: vi.fn(),
+}));
+
 import { getWolfAdvantageAgainst } from './wolfAuraUtils.js';
 import { getRuntimeValue } from '../../../hooks/runtime/useRuntimeState.js';
 import { isWithinRange } from '../../rules/combat/rangeCheck.js';
+import { getCombatContext } from '../../rules/combat/damageUtils.js';
 
 function makePlayer(name, gridX = 0, gridY = 0) {
   return { name, gridX, gridY };
@@ -31,17 +36,21 @@ describe('getWolfAdvantageAgainst', () => {
     vi.clearAllMocks();
     getRuntimeValue.mockReset();
     isWithinRange.mockReset();
+    getCombatContext.mockReset();
     getRuntimeValue.mockImplementation(() => []);
     isWithinRange.mockResolvedValue(false);
+    getCombatContext.mockResolvedValue(null);
   });
 
-  it('returns false when mapData is undefined', async () => {
-    const result = await getWolfAdvantageAgainst({ attackerName: 'A', mapData: undefined });
+  it('returns false when mapData is undefined and no combat summary exists', async () => {
+    getCombatContext.mockResolvedValue(null);
+    const result = await getWolfAdvantageAgainst({ attackerName: 'A', campaignName: 'C', mapData: undefined });
     expect(result).toEqual({ advantage: false });
   });
 
-  it('returns false when mapData is null', async () => {
-    const result = await getWolfAdvantageAgainst({ attackerName: 'A', mapData: null });
+  it('returns false when mapData is null and combat summary has no players', async () => {
+    getCombatContext.mockResolvedValue({ creatures: [] });
+    const result = await getWolfAdvantageAgainst({ attackerName: 'A', campaignName: 'C', mapData: null });
     expect(result).toEqual({ advantage: false });
   });
 
@@ -188,5 +197,103 @@ describe('getWolfAdvantageAgainst', () => {
       mapData: makeMapData([makePlayer('Barbarian1'), makePlayer('Barbarian2'), makePlayer('Attacker')]),
     });
     expect(result).toEqual({ advantage: false });
+  });
+
+  it('falls back to the combat summary party when mapData is missing (no-map mode)', async () => {
+    getCombatContext.mockResolvedValue({
+      creatures: [
+        { name: 'DraconicDragon', type: 'player' },
+        { name: 'HexWarlock', type: 'player' },
+        { name: 'Thug 1', type: 'npc' },
+      ],
+    });
+    getRuntimeValue.mockImplementation((name) => name === 'DraconicDragon' ? [makeWolfBuff()] : []);
+
+    const result = await getWolfAdvantageAgainst({
+      attackerName: 'HexWarlock',
+      campaignName: 'test-campaign',
+      skipRangeCheck: true,
+    });
+    expect(result).toEqual({ advantage: true, source: 'DraconicDragon' });
+  });
+
+  it('resolves a plain object (not a Promise shell) for gridless sync consumers', async () => {
+    getCombatContext.mockResolvedValue({
+      creatures: [
+        { name: 'DraconicDragon', type: 'player' },
+        { name: 'HexWarlock', type: 'player' },
+      ],
+    });
+    getRuntimeValue.mockImplementation((name) => name === 'DraconicDragon' ? [makeWolfBuff()] : []);
+
+    const result = await getWolfAdvantageAgainst({
+      attackerName: 'HexWarlock',
+      campaignName: 'test-campaign',
+      skipRangeCheck: true,
+    });
+    expect(result.advantage).toBe(true);
+  });
+
+  it('returns false in no-map mode when no ally has the Wolf buff', async () => {
+    getCombatContext.mockResolvedValue({
+      creatures: [
+        { name: 'DraconicDragon', type: 'player' },
+        { name: 'HexWarlock', type: 'player' },
+      ],
+    });
+    getRuntimeValue.mockImplementation(() => []);
+
+    const result = await getWolfAdvantageAgainst({
+      attackerName: 'HexWarlock',
+      campaignName: 'test-campaign',
+      skipRangeCheck: true,
+    });
+    expect(result).toEqual({ advantage: false });
+  });
+
+  it('ignores non-player creatures when falling back to the combat summary', async () => {
+    getCombatContext.mockResolvedValue({
+      creatures: [
+        { name: 'HexWarlock', type: 'player' },
+        { name: 'Thug 1', type: 'npc' },
+      ],
+    });
+    getRuntimeValue.mockImplementation(() => [makeWolfBuff()]);
+
+    const result = await getWolfAdvantageAgainst({
+      attackerName: 'HexWarlock',
+      campaignName: 'test-campaign',
+      skipRangeCheck: true,
+    });
+    expect(result).toEqual({ advantage: false });
+  });
+
+  it('applies the range check in no-map mode when skipRangeCheck is not set', async () => {
+    getCombatContext.mockResolvedValue({
+      creatures: [
+        { name: 'DraconicDragon', type: 'player' },
+        { name: 'HexWarlock', type: 'player' },
+      ],
+    });
+    getRuntimeValue.mockImplementation((name) => name === 'DraconicDragon' ? [makeWolfBuff()] : []);
+    isWithinRange.mockResolvedValue(false);
+
+    const result = await getWolfAdvantageAgainst({
+      attackerName: 'HexWarlock',
+      campaignName: 'test-campaign',
+    });
+    expect(result).toEqual({ advantage: false });
+    expect(isWithinRange).toHaveBeenCalledWith('DraconicDragon', 'HexWarlock', 5);
+  });
+
+  it('reads buffs with the campaignName', async () => {
+    getRuntimeValue.mockImplementation(() => []);
+
+    await getWolfAdvantageAgainst({
+      attackerName: 'Attacker',
+      campaignName: 'MyCampaign',
+      mapData: makeMapData([makePlayer('Attacker'), makePlayer('Barbarian')]),
+    });
+    expect(getRuntimeValue).toHaveBeenCalledWith('Barbarian', 'activeBuffs', 'MyCampaign');
   });
 });

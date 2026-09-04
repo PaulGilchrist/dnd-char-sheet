@@ -47,7 +47,7 @@ export function buildAttackContext(attack, playerStats, campaignName, mapName, c
             if (targetPos && base.forcedMode === undefined) {
                 let mapAdv = 0;
                 let mapDis = 0;
-                const wolfResult = getWolfAdvantageAgainst({
+                const wolfResult = await getWolfAdvantageAgainst({
                     targetPos,
                     attackerName: playerStats.name,
                     campaignName,
@@ -65,7 +65,7 @@ export function buildAttackContext(attack, playerStats, campaignName, mapName, c
                 if (duplicityResult.advantage) {
                     mapAdv++;
                 }
-                const lionResult = getLionDisadvantageAgainst({
+                const lionResult = await getLionDisadvantageAgainst({
                     attackerName: playerStats.name,
                     campaignName,
                     mapData,
@@ -99,7 +99,7 @@ export function buildAttackContext(attack, playerStats, campaignName, mapName, c
             if (!targetPos && base.forcedMode === undefined) {
                 let mapAdv = 0;
                 let mapDis = 0;
-                const noMapWolf = getWolfAdvantageAgainst({
+                const noMapWolf = await getWolfAdvantageAgainst({
                     attackerName: playerStats.name,
                     campaignName,
                     mapData,
@@ -117,7 +117,7 @@ export function buildAttackContext(attack, playerStats, campaignName, mapName, c
                 if (noMapDuplicity.advantage) {
                     mapAdv++;
                 }
-                const noMapLion = getLionDisadvantageAgainst({
+                const noMapLion = await getLionDisadvantageAgainst({
                     attackerName: playerStats.name,
                     campaignName,
                     mapData,
