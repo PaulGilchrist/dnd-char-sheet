@@ -18,9 +18,9 @@ import { buildMasteryDescription } from './weaponMasteryHandler.js';
 // ── Tests ────────────────────────────────────────────────────────
 
 describe('buildMasteryDescription', () => {
-    it('should return default description for Push (removed)', () => {
+    it('should return push description for Push', () => {
         const result = buildMasteryDescription('Push', 'Goblin');
-        expect(result).toBe('Push applied to Goblin.');
+        expect(result).toBe('Push applied to Goblin — pushed up to 10 feet straight away from you.');
     });
 
     it('should return correct description for Topple', () => {
@@ -59,7 +59,7 @@ describe('buildMasteryDescription', () => {
     });
 
     it('should use lowercase "target" when targetName is falsy', () => {
-        expect(buildMasteryDescription('Push', null)).toBe('Push applied to target.');
+        expect(buildMasteryDescription('Push', null)).toBe('Push applied to target — pushed up to 10 feet straight away from you.');
         expect(buildMasteryDescription('Sap', undefined)).toBe('Sap applied to target — Disadvantage on next attack roll.');
         expect(buildMasteryDescription('Slow', '')).toBe('Slow applied to target — Speed reduced by 10 ft.');
     });

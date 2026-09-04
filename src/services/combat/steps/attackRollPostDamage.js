@@ -452,13 +452,17 @@ export function buildTacticalMasterStep() {
       const allMasteries = [available.baseMastery, ...(available.extraMasteries || [])].filter(Boolean);
       const autoApplyMasteries = allMasteries.filter(m => !['Graze', 'Topple', 'Nick', ...choiceMasteries, ...replaceOptions].includes(m));
 
+      console.log('[WM-004 debug] tacticalMaster step', { attackName: lastAttack.attackName, allMasteries, autoApplyMasteries, targetName: lastAttack.targetName });
+      const wh = (ctx.playerStats.equipment || []).find(e => e.name === 'Warhammer');
+      console.log('[WM-004 debug] equipment probe', 'mastery=' + (wh ? String(wh.mastery) : 'no-equip'), 'equipKeys=' + (wh ? Object.keys(wh).join(',') : '-'), 'lastAttack=', JSON.stringify(lastAttack).slice(0, 200));
+
       const targetName = lastAttack.targetName;
 
       for (const masteryName of autoApplyMasteries) {
-        const alreadyApplied = getRuntimeValue(ctx.campaignName, `_${masteryName}_appliedTarget`, ctx.campaignName);
+        const alreadyApplied = getRuntimeValue('campaign', `_${masteryName}_appliedTarget`, ctx.campaignName);
         if (alreadyApplied === targetName) continue;
         if (masteryName !== 'Slow') {
-          setRuntimeValue(ctx.campaignName, `_${masteryName}_appliedTarget`, targetName, ctx.campaignName);
+          setRuntimeValue('campaign', `_${masteryName}_appliedTarget`, targetName, ctx.campaignName);
         }
         await applyMasteryEffect(masteryName, ctx.playerStats, ctx.campaignName, targetName).catch((e) => { console.error('[Mastery] Error:', e); });
       }

@@ -77,8 +77,8 @@ describe('weaponMasteryHandler', () => {
     });
 
     describe('MASTERY_EFFECTS', () => {
-        it('should define all 7 mastery effects', () => {
-            const expectedKeys = ['Topple', 'Sap', 'Slow', 'Vex', 'Cleave', 'Nick', 'Graze'];
+        it('should define all 8 mastery effects', () => {
+            const expectedKeys = ['Topple', 'Sap', 'Slow', 'Vex', 'Cleave', 'Push', 'Nick', 'Graze'];
             expect(Object.keys(MASTERY_EFFECTS)).toEqual(expectedKeys);
         });
     });

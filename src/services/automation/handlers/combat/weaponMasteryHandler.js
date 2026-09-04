@@ -5,6 +5,7 @@ import { collectWeaponMastery } from '../../../combat/automation/automationServi
 import { addExpiration } from '../../../rules/effects/expirations.js';
 import { checkOncePerTurn, markOncePerTurn } from '../../common/oncePerTurn.js';
 import { getCurrentCombatRound } from '../../../../services/encounters/combatData.js';
+import { validateSizeLimit } from '../class-fighter-rogue/executeManeuver.js';
 const MASTERY_EFFECTS = {
     Topple: {
         label: 'Topple (Prone)',
@@ -36,6 +37,13 @@ const MASTERY_EFFECTS = {
         description: 'Make a melee attack roll with the weapon against a second creature within 5 feet of the first.',
         effect: 'cleave',
         oncePerTurn: true,
+    },
+    Push: {
+        label: 'Push (10 ft)',
+        description: 'Push the creature up to 10 feet straight away from yourself if it is Large or smaller.',
+        effect: 'push',
+        value: 10,
+        sizeLimit: 'large_or_smaller',
     },
     Nick: {
         label: 'Nick (Extra Attack)',
@@ -155,6 +163,59 @@ export async function applyMasteryEffect(masteryName, playerStats, campaignName,
         };
     }
 
+    // Push: instant push of a Large-or-smaller target up to 10 ft straight
+    // away (no save). Mirrors the shieldBash instant push write+log shape;
+    // size gate reuses the MN-015 validateSizeLimit resolution (monster data
+    // first, then combatSummary target.size).
+    if (masteryName === 'Push') {
+        const sizeCheck = await validateSizeLimit({ name: 'Push', sizeLimit: 'large_or_smaller' }, targetName, campaignName, playerStats);
+        if (!sizeCheck.valid) {
+            addEntry(campaignName, {
+                type: 'ability_use',
+                characterName: playerStats.name,
+                abilityName: 'Push',
+                description: `${playerStats.name} attacked ${targetName} with a Push weapon but did not push it — ${sizeCheck.description}`,
+                targetName: targetName,
+            }).catch((e) => { console.error('[weaponMasteryHandler:log-error]', e); });
+            return {
+                type: 'popup',
+                payload: {
+                    type: 'automation_info',
+                    name: 'Push',
+                    description: sizeCheck.description,
+                },
+            };
+        }
+        const storedPushEffects = getRuntimeValue('campaign', 'targetEffects') || [];
+        const pushEffect = {
+            target: targetName,
+            source: 'Push',
+            option: 'Push',
+            effect: 'push',
+            value: mastery.value,
+            duration: 'instant',
+        };
+        setRuntimeValue('campaign', 'targetEffects', [...storedPushEffects, pushEffect], campaignName);
+
+        addEntry(campaignName, {
+            type: 'ability_use',
+            characterName: playerStats.name,
+            abilityName: 'Push',
+            description: `${playerStats.name} used Push on ${targetName} — pushed ${mastery.value} feet straight away.`,
+            targetName: targetName,
+        }).catch((e) => { console.error('[weaponMasteryHandler:log-error]', e); });
+
+        return {
+            type: 'popup',
+            payload: {
+                type: 'automation_info',
+                name: 'Push',
+                description: buildMasteryDescription('Push', targetName),
+                automation: { type: 'mastery_rider', masteries: ['Push'] },
+            },
+        };
+    }
+
     const storedEffects = getRuntimeValue('campaign', 'targetEffects') || [];
     let newEffect = {
         target: targetName,
@@ -253,6 +314,7 @@ function buildMasteryDescription(masteryName, targetName) {
         case 'Cleave': return `${masteryName} — make an extra attack against a second creature within 5 ft.`;
         case 'Graze': return `${masteryName} — deal damage equal to ability modifier on a miss.`;
         case 'Nick': return `${masteryName} — make Light weapon extra attack as part of Attack action.`;
+        case 'Push': return `${masteryName} applied to ${target} — pushed up to 10 feet straight away from you.`;
         default: return `${masteryName} applied to ${target}.`;
     }
 }

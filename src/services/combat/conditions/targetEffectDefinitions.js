@@ -698,6 +698,16 @@ const TARGET_EFFECT_DEFINITIONS = [
     defaults: { value: 2 },
   },
   {
+    effect: 'push',
+    label: 'Pushed',
+    description: 'The creature was pushed N feet straight away from the source.',
+    icon: 'fa-hand',
+    cls: 'effect-debuff',
+    group: 'Movement',
+    fields: ['source', 'value'],
+    defaults: { value: 10 },
+  },
+  {
     effect: 'speed_reduction',
     label: 'Speed Reduced',
     description: 'The creature\'s Speed is reduced by N feet.',
