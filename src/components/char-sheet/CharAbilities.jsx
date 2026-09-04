@@ -179,9 +179,10 @@ function CharAbilities({ allAbilityScores, playerStats, campaignName, exhaustion
                if (conditionEffects?.darkOnesLuck) {
                  ctx.darkOnesLuck = true;
                }
-               if (conditionEffects?.reliableTalent) {
-                ctx.reliableTalent = true
-              }
+               // Reliable Talent floors ONLY proficient skill/tool checks (CLA-291) — raw ability checks excluded
+               if (conditionEffects?.reliableTalent && isProficientSkillOrToolCheck(playerStats, checkName)) {
+                 ctx.reliableTalent = true
+               }
                 if (conditionEffects?.strokeOfLuck) {
                   ctx.strokeOfLuck = true
                 }

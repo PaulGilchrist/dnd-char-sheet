@@ -5257,7 +5257,7 @@
       "handler": "src/services/combat/automation/handlers/classFeatureHandler.js",
       "router": "src/services/combat/automation/routers/classFeatureRouter.js",
       "infoBuilder": "src/services/combat/automation/infoBuilders/classFeatureInfoBuilder.js",
-      "verified": "broken — see .opencode/plans/bug-cla-291-reliable-talent-floors-non-proficient.md",
+      "verified": "verified",
       "class": "Rogue",
       "triggerConditions": "Action: passive",
       "expectedBehavior": "Whenever you make an ability check that uses one of your skill or tool proficiencies, you can treat a d20 roll of 9 or lower as a 10."

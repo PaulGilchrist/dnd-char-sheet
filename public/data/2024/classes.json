@@ -9376,16 +9376,6 @@
               "type": "evasion",
               "saveType": "DEX"
             }
-          },
-          {
-            "name": "Reliable Talent",
-            "description": "Whenever you make an ability check that uses one of your skill or tool proficiencies, you can treat a d20 roll of 9 or lower as a 10.",
-            "level": 7,
-            "type": "class_feature",
-            "automation": {
-              "type": "reliable_talent",
-              "casting_time": "passive"
-            }
           }
         ],
         "spellcasting": {
@@ -9538,6 +9528,16 @@
                   "noOAs": true
                 }
               ],
+              "casting_time": "passive"
+            }
+          },
+          {
+            "name": "Reliable Talent",
+            "description": "Whenever you make an ability check that uses one of your skill or tool proficiencies, you can treat a d20 roll of 9 or lower as a 10.",
+            "level": 11,
+            "type": "class_feature",
+            "automation": {
+              "type": "reliable_talent",
               "casting_time": "passive"
             }
           }

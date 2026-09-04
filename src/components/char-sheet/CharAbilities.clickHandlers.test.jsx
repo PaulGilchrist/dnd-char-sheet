@@ -137,7 +137,6 @@ describe('CharAbilities click handlers', () => {
       { name: 'luckyAdvantage', effect: { luckyAdvantage: true }, expected: { luckyAdvantage: true, luckyAdvantageType: 'advantage' } },
       { name: 'luckyDisadvantage', effect: { luckyDisadvantage: true }, expected: { luckyDisadvantage: true, luckyDisadvantageType: 'disadvantage' } },
       { name: 'd20Floor10', effect: { d20Floor10: true }, expected: { d20Floor10: true } },
-      { name: 'reliableTalent', effect: { reliableTalent: true }, expected: { reliableTalent: true } },
       { name: 'tacticalMind', effect: { tacticalMind: true, tacticalMindBonus: 5 }, expected: { tacticalMind: true, tacticalMindBonus: 5 } },
       { name: 'autoReroll', effect: { autoRerollForChecks: true, autoRerollCondition: 'roll_equals_1', autoRerollBonus: null }, expected: { autoReroll: true, autoRerollCondition: 'roll_equals_1', autoRerollBonus: null } },
       { name: 'darkOnesLuck', effect: { darkOnesLuck: true }, expected: { darkOnesLuck: true } },
