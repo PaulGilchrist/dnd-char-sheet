@@ -27,9 +27,9 @@ export function getRelentlessUsedRound(playerStats, campaignName) {
     return getRuntimeValue(playerStats.name, 'relentlessUsedRound', campaignName);
 }
 
-export function setRelentlessUsed(playerStats, campaignName) {
-    const currentRound = getCurrentCombatRound();
-    setRuntimeValue(playerStats.name, 'relentlessUsedRound', currentRound, campaignName);
+export function setRelentlessUsed(playerStats, campaignName, currentRound) {
+    const round = currentRound ?? getCurrentCombatRound(campaignName);
+    setRuntimeValue(playerStats.name, 'relentlessUsedRound', round, campaignName);
 }
 
 export function getKnownManeuvers(playerStats, campaignName) {
@@ -63,8 +63,10 @@ export function computeMaxOptions(playerStats, auto) {
 export function rollManeuverDie(maneuver, playerStats, campaignName) {
     const relentless = hasRelentless(playerStats);
     const storedRound = getRelentlessUsedRound(playerStats, campaignName);
-    const currentRound = getCurrentCombatRound();
-    const relentlessUsed = relentless && storedRound === currentRound;
+    const currentRound = getCurrentCombatRound(campaignName);
+    // CLA-286: round-keyed self-re-arming latch (CLA-109 pattern) — free use
+    // once per round; re-arms automatically when the round advances.
+    const relentlessUsed = relentless && storedRound != null && Number(storedRound) >= Number(currentRound);
 
     let dieValue;
     let dieDescription;
@@ -73,10 +75,11 @@ export function rollManeuverDie(maneuver, playerStats, campaignName) {
     const superiorityDieSize = evaluateAutoExpression(maneuver.dieExpression || 'superiority_die', playerStats);
 
     if (relentless && !relentlessUsed) {
-        const relentlessRoll = rollExpression(`1d${superiorityDieSize}`);
-        dieValue = relentlessRoll?.total || superiorityDieSize;
-        dieDescription = `Rolled d${superiorityDieSize} for ${dieValue} (Relentless).`;
-        setRelentlessUsed(playerStats, campaignName);
+        // CLA-286: canonical Relentless rolls a fixed d8, not the superiority die size.
+        const relentlessRoll = rollExpression('1d8');
+        dieValue = relentlessRoll?.total || 8;
+        dieDescription = `Rolled d8 for ${dieValue} (Relentless).`;
+        setRelentlessUsed(playerStats, campaignName, currentRound);
         expendedDie = false;
     } else {
         const dieRoll = rollExpression(`1d${superiorityDieSize}`);
@@ -96,8 +99,9 @@ export function checkSuperiorityDice(playerStats, campaignName) {
     const superiorityDice = getSuperiorityDice(playerStats, campaignName);
     const relentless = hasRelentless(playerStats);
     const storedRound = getRelentlessUsedRound(playerStats, campaignName);
-    const currentRound = getCurrentCombatRound();
-    const relentlessUsed = relentless && storedRound === currentRound;
+    const currentRound = getCurrentCombatRound(campaignName);
+    // CLA-286: mirror the self-re-arming latch used by rollManeuverDie.
+    const relentlessUsed = relentless && storedRound != null && Number(storedRound) >= Number(currentRound);
     const hasDiceRemaining = superiorityDice > 0 || (relentless && !relentlessUsed);
     return { superiorityDice, relentless, relentlessUsed, hasDiceRemaining };
 }

@@ -17,8 +17,9 @@ export async function handle(action, playerStats, campaignName, _mapName) {
 
     const hasRelentless = (playerStats.automation?.passives ?? []).some(p => p.type === 'passive_rule' && p.effect === 'relentless');
     const storedRound = getRuntimeValue(playerStats.name, 'relentlessUsedRound', campaignName);
-    const currentRound = getCurrentCombatRound();
-    const relentlessUsed = hasRelentless && storedRound === currentRound;
+    const currentRound = getCurrentCombatRound(campaignName);
+    // CLA-286: round-keyed self-re-arming latch (CLA-109 pattern).
+    const relentlessUsed = hasRelentless && storedRound != null && Number(storedRound) >= Number(currentRound);
 
     if (currentUses <= 0 && !(hasRelentless && !relentlessUsed)) {
         return {

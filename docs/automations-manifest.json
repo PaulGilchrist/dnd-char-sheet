@@ -5185,7 +5185,7 @@
       "handler": "src/services/combat/automation/handlers/classFeatureHandler.js",
       "router": "src/services/combat/automation/routers/classFeatureRouter.js",
       "infoBuilder": "src/services/combat/automation/infoBuilders/classFeatureInfoBuilder.js",
-      "verified": "broken — see .opencode/plans/bug-cla-284-reactive-spell-phantom-wizard-row.md",
+      "verified": "needs manual decision — see .opencode/plans/bug-cla-284-reactive-spell-phantom-wizard-row.md",
       "class": "Wizard",
       "triggerConditions": "Reaction; when creature provokes opportunity attack by leaving reach",
       "expectedBehavior": "When a creature provokes an Opportunity Attack from you by leaving your reach, you can take a Reaction to cast a spell at the creature rather than making an Opportunity Attack. The spell must have a casting time of one action and must target only that creature. (War Caster Feat benefit - misattributed to Wizard in manifest)"
@@ -5209,7 +5209,7 @@
       "handler": "src/services/combat/automation/handlers/classFeatureHandler.js",
       "router": "src/services/combat/automation/routers/classFeatureRouter.js",
       "infoBuilder": "src/services/combat/automation/infoBuilders/classFeatureInfoBuilder.js",
-      "verified": "broken — see .opencode/plans/bug-cla-286-relentless-die-size-and-no-rearm.md",
+      "verified": "verified",
       "class": "Fighter",
       "triggerConditions": "Passive: Always active",
       "expectedBehavior": "Once per turn, when you use a maneuver, roll 1d8 and use the number instead of expending a Superiority Die."
