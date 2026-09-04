@@ -305,7 +305,18 @@ export default function useAttackDamageResolution({
             isUnarmedStrike: attack.weaponType === 'unarmed',
             targetName: popupHtmlData?.targetName || null,
         };
-        const action = { automation: {} };
+        // MN-015: forward the Combat Superiority feature's save DC spec
+        // (classes.json automation saveDc:'ability', saveAbility:['STR','DEX'])
+        // so buildSaveDc resolves 8 + STR/DEX mod + PB instead of the DC-10 fallback.
+        const superiorityInfo = [...(playerStats?.automation?.specialActions || []), ...(playerStats?.automation?.actions || [])]
+            .find(a => a.type === 'combat_superiority');
+        const action = {
+            automation: {
+                type: 'combat_superiority',
+                saveDc: superiorityInfo?.saveDc ?? 'ability',
+                saveAbility: superiorityInfo?.saveAbility || ['STR', 'DEX'],
+            },
+        };
         const result = await executeAttackRiderManeuverService(action, playerStats, campaignName, maneuverName, attackInfo);
 
         let updatedFormula = currentFormula;
@@ -366,7 +377,8 @@ export default function useAttackDamageResolution({
                 return { formula: updatedFormula, total: updatedTotal, rolls: updatedRolls, pendingOptions: true };
             }
 
-            if (result?.type === 'popup' && maneuver?.damageBonus) {
+            // MN-015: a size-gate refusal must NOT ride the maneuver die onto damage.
+            if (result?.type === 'popup' && !result.refused && maneuver?.damageBonus) {
                 const dieValue = Number(result.dieValue) || rollExpression(maneuver.dieExpression || 'superiority_die')?.total || evaluateAutoExpression(maneuver.dieExpression || 'superiority_die', playerStats);
                 const dmgType = attack.damageType || 'same_as_weapon';
                 if (dieValue > 0) {

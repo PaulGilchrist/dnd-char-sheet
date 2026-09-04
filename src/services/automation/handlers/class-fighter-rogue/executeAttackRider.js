@@ -56,26 +56,34 @@ export async function executeAttackRiderManeuver(action, playerStats, campaignNa
         return buildNoDiceRemainingPopup(maneuver.name);
     }
 
-    const { dieValue, dieDescription, expendedDie } = rollManeuverDie(maneuver, playerStats, campaignName);
-    await expendSuperiorityDie(playerStats, campaignName, expendedDie, superiorityDice);
-
     const targetInfo = await resolveTarget(campaignName, playerStats.name);
     const targetName = targetInfo?.target?.name || attackInfo?.targetName || null;
 
+    // MN-015: size gate runs BEFORE the die roll so a refusal never expends a die
+    // and never rides the maneuver die onto damage.
     if (targetName && maneuver.sizeLimit) {
         const sizeCheck = await validateSizeLimit(maneuver, targetName, campaignName, playerStats);
         if (!sizeCheck.valid) {
-            await setRuntimeValue(playerStats.name, 'superiorityDice', superiorityDice, campaignName);
             return {
                 type: 'popup',
+                refused: true,
                 payload: {
                     type: 'automation_info',
                     name: maneuver.name,
                     description: sizeCheck.description,
                 },
+                logEntries: [{
+                    type: 'ability_use',
+                    characterName: playerStats.name,
+                    abilityName: maneuver.name,
+                    description: sizeCheck.description,
+                }],
             };
         }
     }
+
+    const { dieValue, dieDescription, expendedDie } = rollManeuverDie(maneuver, playerStats, campaignName);
+    await expendSuperiorityDie(playerStats, campaignName, expendedDie, superiorityDice);
 
     let description = dieDescription;
 

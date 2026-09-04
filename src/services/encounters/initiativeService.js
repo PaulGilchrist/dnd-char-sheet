@@ -137,6 +137,8 @@ async function applyNpcMonsterData(combatSummary, creatureIndex, monster, campai
     creature.maxHp = hp
     creature.currentHp = hp
     creature.saveBonuses = getMonsterSaveBonuses(monster)
+    // MN-015: keep size in sync with monster data so maneuver size gates work on +NPC creatures.
+    creature.size = monster.size || creature.size
     const matchedNpc = campaignNpcs.find(n => n.name?.toLowerCase() === creature.name.toLowerCase())
     if (matchedNpc?.imagePath) {
         creature.imagePath = matchedNpc.imagePath

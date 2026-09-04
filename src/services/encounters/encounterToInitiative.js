@@ -91,9 +91,12 @@ export async function expandMonstersToCreatures(selectedMonsters, characters, _c
           const rollResult = rollNpcInitiative(monster);
           const irv = resolveMonsterIRV(monster);
            creatureList.push({
-             name,
-             type: 'npc',
-             monsterType: monster.type,
+              name,
+              type: 'npc',
+              monsterType: monster.type,
+              // MN-015: size rides onto combatSummary so maneuver size gates
+              // (validateSizeLimit) can enforce large_or_smaller etc.
+              size: monster.size || null,
              initiative: String(rollResult.total),
              targetName: null,
              ac: typeof monster.armor_class === 'number' ? monster.armor_class : (console.error(`[AC] Monster "${name}" has no armor_class defined. Defaulting to 10.`), 10),
@@ -184,6 +187,9 @@ export async function addMonstersToInitiative(selectedMonsters, characters, camp
                  name,
                  type: 'npc',
                  monsterType: monster.type,
+                 // MN-015: size rides onto combatSummary so maneuver size gates
+                 // (validateSizeLimit) can enforce large_or_smaller etc.
+                 size: monster.size || null,
                  initiative: String(rollResult.total),
                  targetName: null,
                  ac: typeof monster.armor_class === 'number' ? monster.armor_class : (console.error(`[AC] Monster "${name}" has no armor_class defined. Defaulting to 10.`), 10),

@@ -6,6 +6,7 @@ import { getCurrentCombatRound } from '../../../../services/encounters/combatDat
 import { addExpiration } from '../../../rules/effects/expirations.js';
 import { getCombatContext } from '../../../rules/combat/damageUtils.js';
 import { applyDamageToTarget } from '../../../rules/combat/applyDamage.js';
+import { getMonsterData } from '../../../npcs/monsterUtils.js';
 import {
     findManeuver,
     checkSuperiorityDice,
@@ -40,12 +41,19 @@ export async function executeManeuver(action, playerStats, campaignName, maneuve
         if (!sizeCheck.valid) {
             return {
                 type: 'popup',
+                refused: true,
                 payload: {
                     type: 'automation_info',
                     name: maneuver.name,
                     description: sizeCheck.description,
                     automation: auto,
                 },
+                logEntries: [{
+                    type: 'ability_use',
+                    characterName: playerStats.name,
+                    abilityName: maneuver.name,
+                    description: sizeCheck.description,
+                }],
             };
         }
     }
@@ -389,7 +397,12 @@ export async function validateSizeLimit(maneuver, targetName, campaignName, play
     if (!cs) return { valid: true };
     const target = cs.creatures?.find(c => c.name === targetName);
     if (!target) return { valid: true };
-    const targetSizeIndex = sizeOrder.indexOf(target.size || 'Medium');
+    // MN-015: monsters.json is the size ground truth (suffix-strip 'Hill Giant 1' -> 'Hill Giant',
+    // getMonsterData pattern from knowEnemyHandler/spellGates resolveHumanoids); fall back to
+    // target.size (combatSummary, populated by encounterToInitiative for EB joins).
+    const monsterData = await getMonsterData(targetName, null);
+    const targetSize = monsterData?.size || target.size || 'Medium';
+    const targetSizeIndex = sizeOrder.indexOf(targetSize);
     if (targetSizeIndex > maxAllowed) {
         const sizeLabel = maneuver.sizeLimit === 'large_or_smaller'
             ? 'Large or smaller'
@@ -398,7 +411,7 @@ export async function validateSizeLimit(maneuver, targetName, campaignName, play
                 : `up to one size larger than you`;
         return {
             valid: false,
-            description: `${maneuver.name}: Target is ${target.size} (too large — only ${sizeLabel} affected).`,
+            description: `${maneuver.name}: Target is ${targetSize} (too large — only ${sizeLabel} affected).`,
         };
     }
     return { valid: true };
