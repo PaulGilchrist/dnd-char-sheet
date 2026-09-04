@@ -5316,7 +5316,7 @@
       "handler": "src/services/combat/automation/handlers/spellHandler.js",
       "router": "src/services/combat/automation/routers/spellRouter.js",
       "infoBuilder": "src/services/combat/automation/infoBuilders/spellInfoBuilder.js",
-      "verified": "not verified",
+      "verified": "broken — see .opencode/plans/bug-sp-099-resistance-once-per-turn-own-turn-reset.md",
       "class": "Spell",
       "triggerConditions": "Trigger: damage_taken_of_chosen_resistance_type; Action: 1 action",
       "expectedBehavior": "You touch a willing creature and choose a damage type: Acid, Bludgeoning, Cold, Fire, Lightning, Necrotic, Piercing, Poison, Radiant, Slashing, or Thunder. When the creature takes damage of the chosen type before the spell ends, the creature reduces the total damage taken by 1d4. A creature can benefit from this spell only once per turn."
@@ -5328,7 +5328,7 @@
       "handler": "src/services/combat/automation/handlers/classFeatureHandler.js",
       "router": "src/services/combat/automation/routers/classFeatureRouter.js",
       "infoBuilder": "src/services/combat/automation/infoBuilders/classFeatureInfoBuilder.js",
-      "verified": "not verified",
+      "verified": "verified",
       "race": "Human",
       "triggerConditions": "Action: passive",
       "expectedBehavior": "You gain Heroic Inspiration whenever you finish a Long Rest."
@@ -5340,7 +5340,7 @@
       "handler": "src/services/combat/automation/handlers/classFeatureHandler.js",
       "router": "src/services/combat/automation/routers/classFeatureRouter.js",
       "infoBuilder": "src/services/combat/automation/infoBuilders/classFeatureInfoBuilder.js",
-      "verified": "not verified",
+      "verified": "broken — see .opencode/plans/bug-cla-295-restore-balance-no-prompt-always-on-passive.md",
       "class": "Sorcerer",
       "triggerConditions": "Action: 1 reaction; Range: 60_ft",
       "expectedBehavior": "Your connection to the plane of absolute order allows you to equalize chaotic moments. When a creature you can see within 60 feet of yourself is about to roll a d20 with Advantage or Disadvantage, you can take a Reaction to prevent the roll from being affected by Advantage and Disadvantage."
@@ -5352,7 +5352,7 @@
       "handler": "src/services/combat/automation/handlers/classFeatureHandler.js",
       "router": "src/services/combat/automation/routers/classFeatureRouter.js",
       "infoBuilder": "src/services/combat/automation/infoBuilders/classFeatureInfoBuilder.js",
-      "verified": "not verified",
+      "verified": "verified",
       "class": "Paladin",
       "triggerConditions": "Passive: Always active",
       "expectedBehavior": "When you use Lay On Hands on a creature, you can also remove one or more conditions: Blinded, Charmed, Deafened, Frightened, Paralyzed, or Stunned. Must expend 5 Hit Points from the healing pool for each condition."
@@ -5364,7 +5364,7 @@
       "handler": "src/services/combat/automation/handlers/classFeatureHandler.js",
       "router": "src/services/combat/automation/routers/classFeatureRouter.js",
       "infoBuilder": "src/services/combat/automation/infoBuilders/classFeatureInfoBuilder.js",
-      "verified": "not verified",
+      "verified": "broken — see .opencode/plans/bug-CLA-297-retaliation-no-reaction-or-range-gates.md",
       "class": "Barbarian",
       "triggerConditions": "Trigger: damage_from_adjacent_creature; Action: 1 reaction; Range: 5 ft",
       "expectedBehavior": "When you take damage from a creature that is within 5 feet of you, you can take a Reaction to make one melee attack against that creature, using a weapon or an Unarmed Strike."
@@ -5376,7 +5376,7 @@
       "handler": "src/services/combat/automation/handlers/classFeatureHandler.js",
       "router": "src/services/combat/automation/routers/classFeatureRouter.js",
       "infoBuilder": "src/services/combat/automation/infoBuilders/classFeatureInfoBuilder.js",
-      "verified": "not verified",
+      "verified": "verified",
       "class": "Sorcerer",
       "triggerConditions": "Action: 1 bonus action; Action: bonus_action; Duration: 10_minutes",
       "expectedBehavior": "Bonus Action, spend 1+ Sorcery Points to magically alter body for 10 minutes. For each SP spent, gain one benefit: Aquatic Adaptation (Swim Speed = 2x Speed, breathe underwater) Glistening Flight (Fly Speed = Speed, hover) See the Invisible (see Invisible creatures within 60 feet) Wormhole Movement (move through spaces as narrow as 1 inch, escape nonmagical restraints)."
@@ -5388,7 +5388,7 @@
       "handler": "src/services/combat/automation/handlers/spellHandler.js",
       "router": "src/services/combat/automation/routers/spellRouter.js",
       "infoBuilder": "src/services/combat/automation/infoBuilders/spellInfoBuilder.js",
-      "verified": "not verified",
+      "verified": "broken — see .opencode/plans/bug-sp-100-revivify-no-dead-target-gate.md",
       "class": "Spell",
       "triggerConditions": "",
       "expectedBehavior": "You touch a creature that has died within the last minute. That creature revives with 1 Hit Point. This spell can't revive a creature that has died of old age, nor does it restore any missing body parts."
@@ -5400,7 +5400,7 @@
       "handler": "src/services/combat/automation/handlers/maneuverHandler.js",
       "router": "src/services/combat/automation/routers/maneuverRouter.js",
       "infoBuilder": "src/services/combat/automation/infoBuilders/maneuverInfoBuilder.js",
-      "verified": "not verified",
+      "verified": "broken — see .opencode/plans/bug-MN-017-riposte-no-miss-trigger-gate-no-reaction-spend.md",
       "class": "Fighter",
       "triggerConditions": "Action type: reaction; Trigger: melee_attack_miss; Uses: superiority_die",
       "expectedBehavior": "When a creature misses you with a melee attack roll, you can use your Reaction and expend one Superiority Die to make a melee attack with a weapon or an Unarmed Strike against the creature. If you hit, add the Superiority Die to the attack's damage roll."
@@ -5412,7 +5412,7 @@
       "handler": "src/services/combat/automation/handlers/classFeatureHandler.js",
       "router": "src/services/combat/automation/routers/classFeatureRouter.js",
       "infoBuilder": "src/services/combat/automation/infoBuilders/classFeatureInfoBuilder.js",
-      "verified": "not verified",
+      "verified": "verified",
       "class": "Wizard",
       "triggerConditions": "Passive: Always active",
       "expectedBehavior": "You can cast any spell as a Ritual if that spell has the Ritual tag and the spell is in your spellbook. You needn't have the spell prepared, but you must read from the book to cast a spell in this way."
@@ -5424,7 +5424,7 @@
       "handler": "src/services/combat/automation/handlers/featHandler.js",
       "router": "src/services/combat/automation/routers/featRouter.js",
       "infoBuilder": "src/services/combat/automation/infoBuilders/featInfoBuilder.js",
-      "verified": "not verified",
+      "verified": "broken — see .opencode/plans/bug-ft-068-ritual-master-ritual-benefits-no-consumers.md",
       "class": "Feat",
       "triggerConditions": "",
       "expectedBehavior": "Ability Score Increase. Increase your Intelligence, Wisdom, or Charisma score by 1, to a maximum of 20. Ritual Spells. Choose a number of level 1 spells equal to your Proficiency Bonus that have the Ritual tag. You always have those spells prepared, and you can cast them with any spell slots you have. The spells' spellcasting ability is the ability increased by this feat. Whenever your Proficiency Bonus increases thereafter, you can add an additional level 1 spell with the Ritual tag to the spells always prepared with this feature. Quick Ritual. With this benefit, you can cast a Ritual spell that you have prepared using its regular casting time rather than the extended time for a Ritual. Doing so doesn't require a spell slot. Once you cast the spell in this way, you can't use this benefit again until you finish a Long Rest."
@@ -5436,7 +5436,7 @@
       "handler": "src/services/combat/automation/handlers/classFeatureHandler.js",
       "router": "src/services/combat/automation/routers/classFeatureRouter.js",
       "infoBuilder": "src/services/combat/automation/infoBuilders/classFeatureInfoBuilder.js",
-      "verified": "not verified",
+      "verified": "verified",
       "class": "Ranger",
       "triggerConditions": "Passive: Always active",
       "expectedBehavior": "Your Speed increases by 10 feet while you aren't wearing Heavy armor. You also have a Climb Speed and a Swim Speed equal to your Speed."
@@ -5448,10 +5448,10 @@
       "handler": "src/services/combat/automation/handlers/classFeatureHandler.js",
       "router": "src/services/combat/automation/routers/classFeatureRouter.js",
       "infoBuilder": "src/services/combat/automation/infoBuilders/classFeatureInfoBuilder.js",
-      "verified": "not verified",
+      "verified": "broken — see .opencode/plans/bug-CLA-301-sacred-weapon-generic-buff-no-cd-spend.md",
       "class": "Paladin",
       "triggerConditions": "Action: 1 action; Range: self",
-      "expectedBehavior": "Expend one use of Channel Divinity to imbue one Melee weapon with positive energy for 10 minutes. Add Charisma modifier to attack rolls (minimum +1). Hit deals normal damage type or Radiant damage. Weapon emits Bright Light in 20-foot radius and Dim Light 20 feet beyond."
+      "expectedBehavior": "CANONICAL (2024, Oath of DEVOTION lv3 major; manifest class/Oath + 1-action casting_time WRONG - data casting_time also says 1 action): Expend one use of Channel Divinity (Bonus Action) to imbue one Melee weapon with positive energy for 10 minutes. Add Charisma modifier to attack rolls (minimum +1). Hit deals normal damage type or Radiant damage. Weapon emits Bright Light in 20-foot radius and Dim Light 20 feet beyond."
     },
     {
       "id": "BG-012",
@@ -5486,7 +5486,7 @@
       "handler": "src/services/combat/automation/handlers/spellHandler.js",
       "router": "src/services/combat/automation/routers/spellRouter.js",
       "infoBuilder": "src/services/combat/automation/infoBuilders/spellInfoBuilder.js",
-      "verified": "not verified",
+      "verified": "verified",
       "class": "Spell",
       "triggerConditions": "Action: 1 bonus action; Range: 30 feet; Duration: 1 minute",
       "expectedBehavior": "You ward a creature within range. Until the spell ends, any creature who targets the warded creature with an attack roll or a damaging spell must succeed on a Wisdom saving throw or, either, choose a new target or lose the attack or spell. This spell doesn't protect the warded creature from areas of effect. The spell ends if the warded creature makes an attack roll, casts a spell, or deals damage."
@@ -5498,7 +5498,7 @@
       "handler": "src/services/combat/automation/handlers/weaponMasteryHandler.js",
       "router": "src/services/combat/automation/routers/weaponMasteryRouter.js",
       "infoBuilder": "src/services/combat/automation/infoBuilders/weaponMasteryInfoBuilder.js",
-      "verified": "not verified",
+      "verified": "verified",
       "class": "Barbarian",
       "triggerConditions": "",
       "expectedBehavior": "If you hit a creature with this weapon, that creature has Disadvantage on its next attack roll before the start of your next turn."
@@ -5510,7 +5510,7 @@
       "handler": "src/services/combat/automation/handlers/featHandler.js",
       "router": "src/services/combat/automation/routers/featRouter.js",
       "infoBuilder": "src/services/combat/automation/infoBuilders/featInfoBuilder.js",
-      "verified": "not verified",
+      "verified": "broken — see .opencode/plans/bug-ft-069-savage-attacker-forced-reroll-heal-leak.md",
       "class": "Feat",
       "triggerConditions": "Automation type: reroll_damage_once_per_turn",
       "expectedBehavior": "Once per turn when you hit a target with a weapon, you can roll the weapon's damage dice twice and use either roll against the target."
@@ -5522,7 +5522,7 @@
       "handler": "src/services/combat/automation/handlers/classFeatureHandler.js",
       "router": "src/services/combat/automation/routers/classFeatureRouter.js",
       "infoBuilder": "src/services/combat/automation/infoBuilders/classFeatureInfoBuilder.js",
-      "verified": "not verified",
+      "verified": "broken — see .opencode/plans/bug-CLA-302-scholar-list-ungated.md",
       "class": "Wizard",
       "triggerConditions": "",
       "expectedBehavior": "By studying magic, you also specialized in another field of study. Choose one of the following skills in which you have proficiency: Arcana, History, Investigation, Medicine, Nature, or Religion. You have Expertise in the chosen skill."
@@ -5547,7 +5547,7 @@
       "handler": "src/services/combat/automation/handlers/classFeatureHandler.js",
       "router": "src/services/combat/automation/routers/classFeatureRouter.js",
       "infoBuilder": "src/services/combat/automation/infoBuilders/classFeatureInfoBuilder.js",
-      "verified": "not verified",
+      "verified": "broken — see .opencode/plans/bug-CLA-303-turn-undead-inert-eb-targets.md",
       "class": "Cleric",
       "triggerConditions": "Trigger: turn_undead_fail; Once per turn: no",
       "expectedBehavior": "Whenever you use Turn Undead, you can roll a number of d8s equal to your Wisdom modifier (minimum of 1d8) and add the rolls together. Each Undead that fails its saving throw against that use of Turn Undead takes Radiant damage equal to the roll's total."
@@ -5559,7 +5559,7 @@
       "handler": "src/services/combat/automation/handlers/classFeatureHandler.js",
       "router": "src/services/combat/automation/routers/classFeatureRouter.js",
       "infoBuilder": "src/services/combat/automation/infoBuilders/classFeatureInfoBuilder.js",
-      "verified": "not verified",
+      "verified": "broken — see .opencode/plans/bug-CLA-304-searing-vengeance-zero-heal-no-cha.md",
       "class": "Warlock",
       "triggerConditions": "Trigger: death_save_by_ally_or_self; Action: 1 reaction; Range: 30_ft",
       "expectedBehavior": "When you or ally within 60 feet is about to make a Death Saving Throw, unleash radiant energy. Creature regains HP equal to half its Hit Point maximum, ends Pending condition. Each creature within 30 feet takes 2d8 + Charisma modifier Radiant damage and has Blinded condition until end of current turn. Once per Long Rest."
@@ -5571,22 +5571,22 @@
       "handler": "src/services/combat/automation/handlers/classFeatureHandler.js",
       "router": "src/services/combat/automation/routers/classFeatureRouter.js",
       "infoBuilder": "src/services/combat/automation/infoBuilders/classFeatureInfoBuilder.js",
-      "verified": "not verified",
+      "verified": "broken — see .opencode/plans/bug-CLA-305-second-wind-zero-heal-roll-total-dropped.md",
       "class": "Fighter",
       "triggerConditions": "Action: 1 bonus action; Action: bonus_action",
       "expectedBehavior": "You have a limited well of physical and mental stamina that you can draw on. As a Bonus Action, you can use it to regain Hit Points equal to 1d10 plus your Fighter level. You can use this feature twice. You regain one expended use when you finish a Short Rest, and you regain all expended uses when you finish a Long Rest."
     },
     {
       "id": "CLA-306",
-      "name": "Secondary-Storywork",
+      "name": "Second-Storywork",
       "type": "classFeature",
       "handler": "src/services/combat/automation/handlers/classFeatureHandler.js",
       "router": "src/services/combat/automation/routers/classFeatureRouter.js",
       "infoBuilder": "src/services/combat/automation/infoBuilders/classFeatureInfoBuilder.js",
-      "verified": "not verified",
+      "verified": "verified",
       "class": "Rogue",
       "triggerConditions": "Passive",
-      "expectedBehavior": "You can take the Hide action as a Bonus Action on your first turn in every combat. You also can't be detected by divination spells while hidden. (Rogue Thief - Second-Storywork)"
+      "expectedBehavior": "CANONICAL 2024 Thief lv3 (classes.json:10222; manifest name/wording were misattributed UA text): Climb Speed equal to Speed. When you make a Long or High Jump, determine the distance using Dexterity (Acrobatics) instead of Strength (Athletics)."
     },
     {
       "id": "SP-102",
@@ -5595,7 +5595,7 @@
       "handler": "src/services/combat/automation/handlers/spellHandler.js",
       "router": "src/services/combat/automation/routers/spellRouter.js",
       "infoBuilder": "src/services/combat/automation/infoBuilders/spellInfoBuilder.js",
-      "verified": "not verified",
+      "verified": "verified",
       "class": "Spell",
       "triggerConditions": "Action: action; Range: self",
       "expectedBehavior": "For the duration, you see creatures and objects that have the Invisible condition as if they were visible, and you can see into the Ethereal Plane. Creatures and objects there appear ghostly."
@@ -5607,7 +5607,7 @@
       "handler": "src/services/combat/automation/handlers/classFeatureHandler.js",
       "router": "src/services/combat/automation/routers/classFeatureRouter.js",
       "infoBuilder": "src/services/combat/automation/infoBuilders/classFeatureInfoBuilder.js",
-      "verified": "not verified",
+      "verified": "broken — see .opencode/plans/bug-CLA-307-self-restoration-turn-end-no-consumer-silent-removal.md",
       "class": "Monk",
       "triggerConditions": "Passive: Always active",
       "expectedBehavior": "Remove Charmed, Frightened, or Poisoned condition from yourself at end of each turn. Forgoing food and drink doesn't give Exhaustion."
@@ -5619,7 +5619,7 @@
       "handler": "src/services/combat/automation/handlers/classFeatureHandler.js",
       "router": "src/services/combat/automation/routers/classFeatureRouter.js",
       "infoBuilder": "src/services/combat/automation/infoBuilders/classFeatureInfoBuilder.js",
-      "verified": "not verified",
+      "verified": "broken — see .opencode/plans/bug-CLA-308-shadow-arts-inert-no-castable-row.md",
       "class": "Monk",
       "triggerConditions": "",
       "expectedBehavior": "You can cast the Darkness, Darkvision, Pass Without Trace, and Silence spells without expending spell slots or preparing them, using Wisdom as your spellcasting ability. Each of these spells can be cast in this way once per Long Rest."
@@ -5631,7 +5631,7 @@
       "handler": "src/services/combat/automation/handlers/classFeatureHandler.js",
       "router": "src/services/combat/automation/routers/classFeatureRouter.js",
       "infoBuilder": "src/services/combat/automation/infoBuilders/classFeatureInfoBuilder.js",
-      "verified": "not verified",
+      "verified": "verified",
       "class": "Monk",
       "triggerConditions": "Action: 1 bonus action; Range: self",
       "expectedBehavior": "As a Bonus Action, you can teleport up to 60 feet to an unoccupied space you can see that is in Dim Light or Darkness. You then have Advantage on the first melee attack roll you make before the end of the turn."
@@ -5643,7 +5643,7 @@
       "handler": "src/services/combat/automation/handlers/featHandler.js",
       "router": "src/services/combat/automation/routers/featRouter.js",
       "infoBuilder": "src/services/combat/automation/infoBuilders/featInfoBuilder.js",
-      "verified": "not verified",
+      "verified": "broken — see .opencode/plans/bug-ft-070-shadow-touched-invisibility-free-cast-inert.md",
       "triggerConditions": "Action: 1 action; Spell: Invisibility",
       "expectedBehavior": "Choose one level 1 spell from the Illusion or Necromancy school of magic. You always have that spell and the Invisibility spell prepared. You can cast each of these spells without expending a spell slot. Once you cast either spell in this way, you can't cast that spell in this way again until you finish a Long Rest. You can also cast these spells using spell slots you have of the appropriate level. The spells' spellcasting ability is the ability increased by this feat."
     },
@@ -5654,7 +5654,7 @@
       "handler": "src/services/combat/automation/handlers/classFeatureHandler.js",
       "router": "src/services/combat/automation/routers/classFeatureRouter.js",
       "infoBuilder": "src/services/combat/automation/infoBuilders/classFeatureInfoBuilder.js",
-      "verified": "not verified",
+      "verified": "broken — see .opencode/plans/bug-cla-310-shadowy-dodge-no-reaction-gate-retroactive-sim.md",
       "class": "Ranger",
       "triggerConditions": "Trigger: after_attack_roll_against_you; Action: 1 reaction; Range: 30_ft",
       "expectedBehavior": "When a creature makes an attack roll against you, take Reaction to impose Disadvantage. Whether hit or miss, teleport up to 30 feet to unoccupied space you can see."
@@ -5666,7 +5666,7 @@
       "handler": "src/services/combat/automation/handlers/spellHandler.js",
       "router": "src/services/combat/automation/routers/spellRouter.js",
       "infoBuilder": "src/services/combat/automation/infoBuilders/spellInfoBuilder.js",
-      "verified": "not verified",
+      "verified": "verified",
       "class": "Spell",
       "triggerConditions": "",
       "expectedBehavior": "You shape-shift into another creature for the duration or until you take a Action to shape-shift into a different eligible form. The new form must be of a creature that has a Challenge Rating no higher than your level or Challenge Rating. You must have seen the sort of creature before, and it can't be a Construct or an Undead. When you cast the spell, you gain a number of Temporary Hit Points equal to the Hit Points of the first form into which you shape-shift. These Temporary Hit Points vanish if any remain when the spell ends. Your game statistics are replaced by the stat block of the chosen form, but you retain your creature type; alignment; personality; Intelligence, Wisdom, and Charisma scores; Hit Points; Hit Point Dice; proficiencies; and ability to communicate. If you have the Spellcasting feature, you retain it too. Upon shape-shifting, you determine whether your equipment drops to the ground or changes in size and shape to fit the new form while you're in it."

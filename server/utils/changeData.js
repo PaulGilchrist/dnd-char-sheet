@@ -52,7 +52,14 @@ export const readFile = () => {
         if (!fs.existsSync(campaignsDir)) return;
         const campaigns = fs.readdirSync(campaignsDir, { withFileTypes: true })
             .filter(d => d.isDirectory())
-            .map(d => d.name);
+            .map(d => d.name)
+            .filter(name => {
+                if (name === '[object Object]' || name === 'undefined' || name === 'null') {
+                    console.error(`[changeData] Ignoring corrupted campaign directory "${name}" (object coerced to name by a client POST).`);
+                    return false;
+                }
+                return true;
+            });
         for (const campaign of campaigns) {
             const filePath = path.join(campaignsDir, campaign, 'data', 'character-change-data.json');
             try {
@@ -104,6 +111,11 @@ export const saveFile = () => {
         const filePath = path.join(process.cwd(), 'public', 'campaigns', campaign, 'data', 'character-change-data.json');
         const dir = path.dirname(filePath);
         if (!fs.existsSync(dir)) {
+            if (String(campaign) === '[object Object]' || campaign === undefined || campaign === null || campaign === '') {
+                console.error(`[changeData] Skipping persist for invalid campaign key "${campaign}" (corrupted client payload). Removing from memory.`, { stack: new Error().stack });
+                characterChangeData.delete(campaign);
+                continue;
+            }
             fs.mkdirSync(dir, { recursive: true });
         }
         try {

@@ -1,3 +1,57 @@
+## PITFALLS CHECKLIST (master list — subagents MUST run through this before declaring incomplete)
+
+1. **Premature "setup gap"** — never claim a character can't cast a spell without reading `public/data/2024/spells.json` / `public/data/spells.json` to verify class access first.
+2. **Wrong spell class attribution** — verify spell class lists from JSON before claiming a class can't use a spell; check BOTH `/data/` and `/data/2024/` paths.
+3. **Server caching blame** — `changeData.js` is in-memory + 10s debounce. If edits don't appear, wait 15s+, reload, or Admin → Clear Change Data. Real issue is usually the client failing to POST.
+4. **Wrong target type** — add the correct NPC via Encounter Builder rather than declaring the test blocked.
+5. **Level requirements** — 6th-level spells need lv13+ characters; check slot levels before casting.
+6. **`.sp-overlay` intercepts clicks** — a lingering spell/save modal overlay blocks pointer events; dismiss it or use `evaluate el.click()` before the next click.
+7. **EB monsters join initiative only via "Join Encounter"** — the select checkbox alone never reaches combatSummary.
+8. **GM features are localhost-only** — test via http://localhost (port 80) or Vite dev (also localhost); network clients are read-only.
+9. **One shared SSE connection** — never `new EventSource` directly; use `subscribeToSSE`.
+10. **Damage popups stack** — dismiss `click to dismiss` popup between attacks or clicks hit the overlay.
+11. **Numbered pitfall refs (21/24/28/29/33/40/41) in older entries below** are pre-truncation references from a lost master list; interpret each from its inline context in the registry/entry it appears in.
+12. **Once-per-turn te-buffs only re-arm at the HOLDER's own turn** — `turnStartEffects.js` clears used-flags only for `activeName`; a benefit consumed *by* the target from *others'* attacks silently degrades to once-per-round. Probe with a 2nd attacker mid-round before trusting "once per turn" wording (SP-099).
+13. **Monster-card `.mc-overlay` persists across avatar clicks** — a stale monster modal intercepts the next click and fires the wrong attacker's action; close it via its × before opening the next card.
+14. **Initiative-card "Add" condition modal**: after picking a condition chip you MUST press **Apply** — and its `.ea-overlay` silently blocks ALL subsequent avatar clicks until closed (CLA-295).
+15. **EB monster attacks from Prone roll `mode:normal`** — attacker-side prone disadvantage is NOT modeled for EB monsters; for adv/dis triggers use Reckless Attack self-advantage (DraconicDragon) instead.
+16. **Ancients Paladin is Frightened-immune (Aura of Courage)** — self-inflicted Frightened auto-removes on next damage before modals evaluate; use Charmed/Deafened for condition-cure tests (CLA-296).
+17. **Initiative-card Add-modal is SINGLE-select** — multiple chips + one Apply persists only the LAST chip (CLA-296).
+18. **EB attack needs popup "Done"** (`dice-roll-reroll-btn`) click to apply damage — dismissing by background click silently abandons the hit; avatar `img.avatar-image.click()` opens `.mc-overlay` (wrapper click no-ops).
+19. **Generic `reaction_damage` branch (CLA-297) has NO reaction tracker/once-gate** — repeat clicks re-fire and `lastAttack` self-overwrites let the holder target SELF; EB ranged attacks persist `weaponType:'melee'` in lastAttack so range gates silently fail.
+20. **Special Actions rows:** click the `b.clickable` label via `evaluate el.click()` — clicking the description span no-ops (CLA-298).
+21. **Two same-tick `setRuntimeValue` POSTs race:** each POSTs the FULL store snapshot; earlier POST can land last server-side, silently reverting the later key (CLA-298 G2) — decisive evidence is POST-body order in the network inspector.
+22. **Admin → Clear Change Data ZEROES Superiority Dice** (getSuperiorityDice fallback 4 while sheet max stays class-table) — Short Rest to refill before any maneuver row works (MN-017).
+23. **VERDICT POLICY (orchestrator):** unenforced trigger/gates ("row live anytime", no reaction spend, fires on successes) = FAIL even if damage math is exact — subagents must not PASS-subset an ungated trigger (MN-017 conversion precedent).
+24. **Ritual Adept auditing trap:** `automation.ritualSpells.length>0` shows "collected" but the sole consumer no-ops the name; real enforcement is the hardcoded `isWizard` gate (CharSpells.jsx:406).
+25. **Sheet computed `prepared` state** is re-overlaid client-side (CharSheet.jsx:122) — fresh in-page getPlayerStats shows all-Prepared even when sheet is un-prepared; trust sheet DOM + change-data.
+26. **Feats with `benefits` but `automation:null` are display-only text** — only ASI observability; spell/utility benefits have zero consumers (FT-068).
+27. **`rulesFactory.getPlayerStats` in-page probe** needs FULL arrays (classes,equipment,magicItems,races,spells,playerSummary) + merged /data+/data/2024 spell lists, and import `.default`.
+28. **Wizard-step tab buttons** have concatenated accessible names ("8 Feats") — locate tabs by innerText match + evaluate click, not getByRole name.
+29. **3-score ASI feats** surface 'any'-choice combobox on Abilities step: `page.selectOption('.bg-ability-select >> nth=N', ...)` nth by feat order (featBuffService.js:202).
+
+30. **Initiative "Next →" walks creatures-array order, not init-sorted** — top-level change-data `activeCreatureName` is truth for turn ownership; combatSummary mirror can be stale (CLA-309).
+31. **`.sp-overlay` save prompts queue BEHIND result popups** — press Done before Roll Save becomes clickable (CLA-309).
+32. **Un-armed `resolveTarget` in teleport/riders yields phantom "Unknown" creatures** in te/state/log — arm target first (CLA-309 Improved Shadow Step).
+33. **Auto-assigned spell checkboxes (wizard step 14) are display-only** for non-caster subclass spell grants — never persist to `spells[]` (CLA-308).
+34. **`mi-overlay` re-opens on every Edit-wizard save** when `magicInitiateInstances:[]` — `.mi-skip` first (CLA-308).
+35. **Any spellless character shows `spell_slots_level_1..9:0`** seeded globally — never slot evidence (CLA-308).
+
+36. **Post-roll reaction rows (Shadowy Dodge) re-fire infinitely on one lastAttack** incl. repeat rollback-heal to max (CLA-310).
+37. **Party-member combatSummary currentHp/maxHp can read 1/1 placeholders** — initiative-card spinbuttons are HP truth (CLA-310).
+### `[object Object]` ghost campaign — root cause + guard (2026-09-04)
+Symptom: `public/campaigns/[object Object]/` respawns after deletion. Root cause: a browser POST of a FULL-store snapshot (incl. old `lastAttack`) with `campaignName` as an OBJECT (encodeURIComponent({}) → `%5Bobject%20Object%5D`) — original payload dated Sep 1 (HeroesFeastBard vs Archmage 1, CLA-249-era run). It then PERSISTS because `changeData.readFile()` ingests every campaign dir at startup and `saveFile()` mkdirs+rewrites every in-memory key per 2s debounce — deleting the folder while any server runs resurrects it. PROVEN not unit tests: full suite (30954 pass) with server stopped did NOT recreate it. GUARD added: `changeData.js` readFile skips corrupted dirs + saveFile refuses/coerced-invalid keys purges them from memory. Removal procedure: stop server FIRST, then `rm -rf`. If it ever returns again, capture the POST in devtools Network to find the client passing an object campaignName (suspect storage.set/setRuntimeValue callers).
+
+### FT-067/FT-068 feat-ASI recipe (2026-09-04)
+Feats step: tick feat via `.list-item-checkbox-trigger` → Abilities step `.bg-ability-select` (nth per feat order) pick ability → Save. Verify ASI applied exactly once in disk base+bg+feat math + featAbilityChoices key `"<Feat>-<n>"`.
+
+## RECIPES
+
+### Heroic Inspiration / Resourceful long-rest grant (CLA-294, 2026-09-04)
+Inspiration state = per-character `hasInspiration` BOOLEAN in change-data + Summary checkbox on sheet (`CharSummary.jsx:283`). Spend = uncheck the box (no roll-consumption UI needed). Grant gate: `restRules-longRest.js:148` checks `playerStats.specialActions` contains "Resourceful" (display categorization, NOT the `passives` categorization from automationRouter.js:669 — two parallel categorizations; trait-name match is the real gate). Cap is boolean 1 max (re-rest while unspent re-writes true, no stacking — acceptable). Human-gated: Orc control (AberrantSorcerer) long-rests with NO hasInspiration key.
+
+### 2024 Resistance cantrip two-stage cast (SP-099, 2026-09-04)
+Edit-wizard Spells step: dismiss lingering `.mi-overlay` via `.mi-skip` first → tick spell via `.list-item-checkbox-trigger` (row click unreliable) → ✓ Save INSIDE `.character-creation-wizard-overlay`. Cast: Spells cell → popup "Cast Spell" → `.sp-overlay` SecondaryTargetModal (`.secondary-target-row`) → "Cast Resistance" → SingleResistanceSelectionModal radio + `.sp-roll-btn`. RAW once-per-turn probe: Join a 2nd monster (auto-active at lower init) and attack in the same round before the target's own turn — popup/hp_change delta is decisive. EB Thug ×2 = proven Bludgeoning/Piercing attacker pair.
 
 ### WM-004 Push weaponMastery auto-apply FIXED (2026-09-04 — `.opencode/plans/bug-wm-004-push-mastery-no-consumer.md`)
 
