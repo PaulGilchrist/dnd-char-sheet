@@ -5181,14 +5181,14 @@
     {
       "id": "CLA-284",
       "name": "Reactive Spell",
-      "type": "classFeature",
-      "handler": "src/services/combat/automation/handlers/classFeatureHandler.js",
-      "router": "src/services/combat/automation/routers/classFeatureRouter.js",
-      "infoBuilder": "src/services/combat/automation/infoBuilders/classFeatureInfoBuilder.js",
-      "verified": "needs manual decision — see .opencode/plans/bug-cla-284-reactive-spell-phantom-wizard-row.md",
-      "class": "Wizard",
-      "triggerConditions": "Reaction; when creature provokes opportunity attack by leaving reach",
-      "expectedBehavior": "When a creature provokes an Opportunity Attack from you by leaving your reach, you can take a Reaction to cast a spell at the creature rather than making an Opportunity Attack. The spell must have a casting time of one action and must target only that creature. (War Caster Feat benefit - misattributed to Wizard in manifest)"
+      "type": "feat",
+      "handler": "src/services/automation/handlers/reactions/reactionSpellHandler.js",
+      "router": "src/services/combat/automation/automationRouter.js",
+      "infoBuilder": "src/services/combat/automation/automationInfoBuilder/reaction.js",
+      "verified": "verified",
+      "class": "War Caster Feat (misattributed — not a Wizard class feature)",
+      "triggerConditions": "Reaction; when creature_leaves_reach provokes opportunity attack (2024 War Caster feat benefits[2] automation type reaction_spell)",
+      "expectedBehavior": "CANONICAL 2024 War Caster feat benefit (feats.json benefits[2], automation type reaction_spell, trigger creature_leaves_reach) — misattributed to Wizard classFeature in manifest; no class grants it. When a creature provokes an Opportunity Attack from you by leaving your reach, use your Reaction to cast a spell at that creature instead of the Opportunity Attack. Spell must have casting time 1 action and target only that creature. Real impl: automationRouter.js:384 -> handlers/reactions/reactionSpellHandler.js -> CharReactions.jsx (applyWarCasterReaction)."
     },
     {
       "id": "CLA-285",
@@ -6952,8 +6952,8 @@
       "router": "src/services/combat/automation/routers/featRouter.js",
       "infoBuilder": "src/services/combat/automation/infoBuilders/featInfoBuilder.js",
       "verified": "not verified",
-      "triggerConditions": "When making concentration_saving_throws checks",
-      "expectedBehavior": "You have Advantage on Constitution saving throws that you make to maintain Concentration."
+      "triggerConditions": "When making concentration_saving_throws checks; Reaction when a creature provokes an Opportunity Attack by leaving your reach (creature_leaves_reach)",
+      "expectedBehavior": "You have Advantage on Constitution saving throws that you make to maintain Concentration. Reactive Spell benefit (2024 feats.json benefits[2], automation type reaction_spell): when a creature provokes an Opportunity Attack from you by leaving your reach, you can take a Reaction to cast a spell at that creature rather than making the Opportunity Attack; the spell must have a casting time of one action and target only that creature."
     },
     {
       "id": "CLA-380",
