@@ -529,10 +529,10 @@ describe('computeConditionEffects — applied modifier effects', () => {
     expect(result.modifyD20RollDice).toBe('2d4');
   });
 
-  it('sets restoreBalance for restore_balance effect', () => {
+  it('never sets restoreBalance passively for restore_balance effect (CLA-295)', () => {
     const modifiers = [{ target: 'saving_throw', effect: 'restore_balance' }];
     const result = computeConditionEffects([], modifiers);
-    expect(result.restoreBalance).toBe(true);
+    expect(result.restoreBalance).toBe(false);
   });
 
   it('sets d20Floor10 for d20_floor_10 effect', () => {

@@ -27,6 +27,7 @@ import { processAttackAfterResult, processPotentCantrip } from './attackPostProc
 import { processSaveRoll } from './saveProcessing.js';
 import { processInitiativeRoll } from './initiativeProcessing.js';
 import { consumeFeatsOfChaos } from './globalFeats.js';
+import { consumeArmedRestoreBalance } from '../../services/combat/restoreBalanceState.js';
 
 export function createLogAndShow(deps) {
     const { characterName, campaignName, characters, setPopupHtml, logEntry, autoDamageSourceRef } = deps;
@@ -69,6 +70,16 @@ export function createLogAndShow(deps) {
         // Show compelled duel popup if target resolution set one
         if (ctx._duelPopup) {
             setPopupHtml(ctx._duelPopup);
+        }
+
+        // Restore Balance (CLA-295): an armed holder within 60 ft who can see the
+        // roller cancels this roll's Advantage/Disadvantage to a normal d20.
+        if (ctx.forcedMode === 'advantage' || ctx.forcedMode === 'disadvantage') {
+            const rollerName = rollType === 'attack' ? (ctx.attackerName || characterName) : characterName;
+            const cancelledBy = await consumeArmedRestoreBalance(campaignName, combatSummary, rollerName, name, rollType);
+            if (cancelledBy) {
+                ctx.forcedMode = 'normal';
+            }
         }
 
         // Compute d20 roll with all modifiers

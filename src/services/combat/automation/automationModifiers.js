@@ -166,14 +166,9 @@ export function collectSaveModifiers(features) {
                     })
                 }
             }
-            if (auto.type === 'restore_balance') {
-                modifiers.push({
-                    source: feature.name,
-                    target: auto.target || 'd20',
-                    condition: '',
-                    effect: 'restore_balance',
-                })
-            }
+            // CLA-295 restore_balance is a Reaction, not a passive modifier — never
+            // collected here. It arms via restoreBalanceHandler (row click) and is
+            // consumed by consumeArmedRestoreBalance at the roll seam (restoreBalanceState.js).
             if (auto.type === 'trance_of_order') {
                 modifiers.push({
                     source: feature.name,

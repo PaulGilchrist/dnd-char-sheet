@@ -9,7 +9,9 @@ function saveModifierApplies(modifier, saveType, abilityName, isRaging = false, 
   if (modifier.effect === 'replacement') return true;
   if (modifier.effect === 'reliable_talent') return true;
   if (modifier.effect === 'dex_jump') return true;
-  if (modifier.effect === 'restore_balance') return true;
+  // CLA-295: restore_balance is a spent-reaction cancel (restoreBalanceState.js),
+  // never a passive modifier — reject it here so it cannot silently cancel adv/dis.
+  if (modifier.effect === 'restore_balance') return false;
   if (modifier.effect === 'dark_ones_luck') return true;
   if (modifier.effect === 'portent') return true;
   if (modifier.effect === 'potent_cantrip') return true;
@@ -182,9 +184,6 @@ function applySaveModifiers(effects, modifiers, saveType, abilityName, isRaging 
         effects.targetDisadvantageCount = (effects.targetDisadvantageCount || 0) + 1;
       }
     } else if (mod.target === 'd20') {
-      if (mod.effect === 'restore_balance') {
-        effects.restoreBalance = true;
-      }
       if (mod.effect === 'portent') {
         effects.portent = true;
       }
@@ -280,9 +279,6 @@ function applySaveModifiers(effects, modifiers, saveType, abilityName, isRaging 
       effects.modifyD20Roll = true;
       effects.modifyD20RollDice = mod.diceExpression || '2d4';
       effects.modifyD20RollCanBeBonusOrPenalty = !!mod.canBeBonusOrPenalty;
-    }
-    else if (mod.effect === 'restore_balance') {
-      effects.restoreBalance = true;
     }
     else if (mod.effect === 'd20_floor_10') {
       effects.d20Floor10 = true;

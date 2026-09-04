@@ -5340,10 +5340,10 @@
       "handler": "src/services/combat/automation/handlers/classFeatureHandler.js",
       "router": "src/services/combat/automation/routers/classFeatureRouter.js",
       "infoBuilder": "src/services/combat/automation/infoBuilders/classFeatureInfoBuilder.js",
-      "verified": "broken — see .opencode/plans/bug-cla-295-restore-balance-no-prompt-always-on-passive.md",
+      "verified": "verified",
       "class": "Sorcerer",
       "triggerConditions": "Action: 1 reaction; Range: 60_ft",
-      "expectedBehavior": "Your connection to the plane of absolute order allows you to equalize chaotic moments. When a creature you can see within 60 feet of yourself is about to roll a d20 with Advantage or Disadvantage, you can take a Reaction to prevent the roll from being affected by Advantage and Disadvantage."
+      "expectedBehavior": "Your connection to the plane of absolute order allows you to equalize chaotic moments. When a creature you can see within 60 feet of yourself is about to roll a d20 with Advantage or Disadvantage, you can take a Reaction to prevent the roll from being affected by Advantage and Disadvantage. Real impl: Reactions row click -> handlers/class-sorcerer/restoreBalanceHandler.js arms restoreBalanceArmed + spends restorebalanceUses (cosmicOmenPendingBonus armed-flag pattern); consumed by consumeArmedRestoreBalance (combat/restoreBalanceState.js) at the logAndShow seam (useLoggedDiceRollAttack.js) forcing forcedMode:'normal' gated by isWithinRange 60 ft + Blinded check; no passive modifier collection (CLA-295)."
     },
     {
       "id": "CLA-296",

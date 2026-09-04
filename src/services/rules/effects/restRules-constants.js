@@ -189,6 +189,7 @@ export const LONG_REST_RESOURCES = [
     'avengingAngelRestUsed',
   'warpingimplosionUses',
   'restorebalanceUses',
+  'restoreBalanceArmed',
   'tranceOfOrderUses',
   'tamedSurgeUses',
     'featsOfChaosUses',

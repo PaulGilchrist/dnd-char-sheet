@@ -234,7 +234,7 @@ describe('conditionEffects', () => {
         { modifier: { target: 'saving_throw', effect: 'd20_floor_10' }, field: 'd20Floor10', value: true },
         { modifier: { target: 'saving_throw', effect: 'potent_cantrip' }, field: 'potentCantrip', value: true },
         { modifier: { target: 'ability_check', effect: 'dex_jump' }, field: 'dexJump', value: true },
-        { modifier: { target: 'd20', effect: 'restore_balance' }, field: 'restoreBalance', value: true },
+        { modifier: { target: 'd20', effect: 'restore_balance' }, field: 'restoreBalance', value: false }, // CLA-295: reaction only, never passive
         { modifier: { target: 'attack_roll', effect: 'no_advantage_against' }, field: 'noAdvantageAgainst', value: true },
         { modifier: { target: 'attack_roll', effect: 'dark_ones_luck' }, field: 'darkOnesLuck', value: true },
         { modifier: { target: 'attack_roll', effect: 'portent' }, field: 'portent', value: true },

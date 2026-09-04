@@ -441,28 +441,26 @@ describe('collectSaveModifiers', () => {
     })
   })
 
-  describe('restore_balance type', () => {
-    it('extracts restore_balance with default target', () => {
+  describe('restore_balance type (CLA-295)', () => {
+    it('never collects restore_balance as a passive modifier', () => {
       const features = [{
         name: 'Restore Balance',
-        automation: { type: 'restore_balance' }
+        automation: { type: 'restore_balance', target: 'd20', range: '60_ft' }
       }]
       const result = collectSaveModifiers(features)
-      expect(result).toEqual([{
-        source: 'Restore Balance',
-        target: 'd20',
-        condition: '',
-        effect: 'restore_balance'
-      }])
+      expect(result.filter(m => m.effect === 'restore_balance')).toEqual([])
     })
 
-    it('uses custom target when provided', () => {
+    it('does not collect restore_balance alongside other automations', () => {
       const features = [{
         name: 'Restore Balance',
-        automation: { type: 'restore_balance', target: 'attack_roll' }
+        automation: [
+          { type: 'restore_balance', target: 'attack_roll' },
+          { type: 'conditional_advantage', target: 'saving_throw', condition: 'charmed', effect: 'advantage' }
+        ]
       }]
       const result = collectSaveModifiers(features)
-      expect(result[0].target).toBe('attack_roll')
+      expect(result.some(m => m.effect === 'restore_balance')).toBe(false)
     })
   })
 

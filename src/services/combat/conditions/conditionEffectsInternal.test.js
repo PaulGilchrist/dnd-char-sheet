@@ -4,7 +4,7 @@
 // @improved-by-ai
 // @cleaned-by-ai
 import { describe, it, expect } from 'vitest';
-import { saveModifierApplies } from './conditionEffectsInternal.js';
+import { saveModifierApplies, applySaveModifiers } from './conditionEffectsInternal.js';
 
 // ---------------------------------------------------------------------------
 // saveModifierApplies — target validation
@@ -43,7 +43,6 @@ describe('saveModifierApplies — effect short-circuits', () => {
     'replacement',
     'reliable_talent',
     'dex_jump',
-    'restore_balance',
     'd20_floor_10',
     'no_advantage_against',
     'dark_ones_luck',
@@ -58,6 +57,18 @@ describe('saveModifierApplies — effect short-circuits', () => {
       expect(saveModifierApplies(modifier, ...baseArgs)).toBe(true);
     });
   }
+
+  it('CLA-295: rejects restore_balance modifiers (reaction spend only, never passive)', () => {
+    expect(saveModifierApplies({ target: 'd20', effect: 'restore_balance' }, ...baseArgs)).toBe(false);
+    expect(saveModifierApplies({ target: 'saving_throw', effect: 'restore_balance' }, ...baseArgs)).toBe(false);
+    expect(saveModifierApplies({ target: 'attack_roll', effect: 'restore_balance' }, ...baseArgs)).toBe(false);
+    const effects = {};
+    applySaveModifiers(effects, [
+      { source: 'Restore Balance', target: 'd20', condition: '', effect: 'restore_balance' },
+      { source: 'Restore Balance', target: 'saving_throw', condition: '', effect: 'restore_balance' },
+    ]);
+    expect(effects.restoreBalance).toBeUndefined();
+  });
 });
 
 // ---------------------------------------------------------------------------

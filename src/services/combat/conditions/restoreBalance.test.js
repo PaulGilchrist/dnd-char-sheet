@@ -14,8 +14,8 @@ import {
 } from './conditionEffects.js';
 
 describe('restore_balance feature', () => {
-  describe('collectSaveModifiers extracts restore_balance', () => {
-    it('extracts a restore_balance modifier from a feature with single automation', () => {
+  describe('collectSaveModifiers never collects restore_balance (CLA-295)', () => {
+    it('does not collect a passive restore_balance modifier — reaction must be spent', () => {
       const features = [{
         name: 'Restore Balance',
         automation: { type: 'restore_balance', target: 'd20', range: '60_ft' },
@@ -23,15 +23,10 @@ describe('restore_balance feature', () => {
 
       const result = collectSaveModifiers(features);
 
-      expect(result).toHaveLength(1);
-      expect(result[0]).toMatchObject({
-        source: 'Restore Balance',
-        target: 'd20',
-        effect: 'restore_balance',
-      });
+      expect(result.filter(m => m.effect === 'restore_balance')).toEqual([]);
     });
 
-    it('extracts restore_balance when automation is an array', () => {
+    it('does not collect restore_balance when automation is an array', () => {
       const features = [{
         name: 'Restore Balance',
         automation: [
@@ -42,42 +37,18 @@ describe('restore_balance feature', () => {
 
       const result = collectSaveModifiers(features);
 
-      const balanceMods = result.filter(m => m.effect === 'restore_balance');
-      expect(balanceMods).toHaveLength(1);
-      expect(balanceMods[0].source).toBe('Restore Balance');
+      expect(result.filter(m => m.effect === 'restore_balance')).toEqual([]);
     });
 
-    it('extracts restore_balance with default target when not specified', () => {
-      const features = [{
-        name: 'Restore Balance',
-        automation: { type: 'restore_balance' },
-      }];
-
-      const result = collectSaveModifiers(features);
-
-      expect(result[0].target).toBe('d20');
-    });
-
-    it('ignores features without automation', () => {
+    it('still ignores features without automation', () => {
       const features = [
         { name: 'Restore Balance' },
-        { name: 'Restore Balance', automation: { type: 'restore_balance' } },
+        { name: 'Other', automation: { type: 'conditional_advantage', target: 'saving_throw', condition: 'magic', effect: 'advantage' } },
       ];
 
       const result = collectSaveModifiers(features);
 
-      expect(result).toHaveLength(1);
-    });
-
-    it('ignores features with null automation', () => {
-      const features = [
-        { name: 'Restore Balance', automation: null },
-        { name: 'Restore Balance', automation: { type: 'restore_balance' } },
-      ];
-
-      const result = collectSaveModifiers(features);
-
-      expect(result).toHaveLength(1);
+      expect(result.filter(m => m.effect === 'restore_balance')).toEqual([]);
     });
 
     it('returns empty array when features is null', () => {
@@ -136,8 +107,8 @@ describe('restore_balance feature', () => {
     });
   });
 
-  describe('computeConditionEffects sets restoreBalance flag', () => {
-    it('sets restoreBalance to true when a restore_balance modifier is present', () => {
+  describe('computeConditionEffects never sets restoreBalance passively (CLA-295)', () => {
+    it('does not set restoreBalance even if a stray restore_balance modifier is present', () => {
       const saveModifiers = [{
         source: 'Restore Balance',
         target: 'd20',
@@ -147,7 +118,20 @@ describe('restore_balance feature', () => {
 
       const effects = computeConditionEffects([], saveModifiers);
 
-      expect(effects.restoreBalance).toBe(true);
+      expect(effects.restoreBalance).toBe(false);
+    });
+
+    it('does not set restoreBalance for attack_roll-targeted restore_balance modifier', () => {
+      const saveModifiers = [{
+        source: 'Restore Balance',
+        target: 'attack_roll',
+        condition: '',
+        effect: 'restore_balance',
+      }];
+
+      const effects = computeConditionEffects([], saveModifiers);
+
+      expect(effects.restoreBalance).toBe(false);
     });
 
     it('sets restoreBalance to false when no restore_balance modifier exists', () => {

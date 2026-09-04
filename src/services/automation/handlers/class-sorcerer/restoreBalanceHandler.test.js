@@ -197,4 +197,52 @@ describe('restoreBalanceHandler.handle', () => {
             expect(result.payload.name).toBe('Restore Balance');
         });
     });
+
+    describe('arming (CLA-295)', () => {
+        function mockKeys({ uses, armed }) {
+            getRuntimeValue.mockImplementation((name, prop) => {
+                if (prop === 'restorebalanceUses') return uses;
+                if (prop === 'restoreBalanceArmed') return armed;
+                return null;
+            });
+        }
+
+        it('arms the restoreBalanceArmed runtime flag when spending a use', async () => {
+            mockKeys({ uses: 1, armed: null });
+
+            const result = await handle(makeAction(), makePlayerStats(), campaignName);
+
+            expect(result.type).toBe('popup');
+            expect(setRuntimeValue).toHaveBeenCalledWith(
+                'TestSorcerer',
+                'restorebalanceUses',
+                0,
+                campaignName,
+            );
+            const armedCall = setRuntimeValue.mock.calls.find(
+                (c) => c[1] === 'restoreBalanceArmed',
+            );
+            expect(armedCall).toBeTruthy();
+            expect(JSON.parse(armedCall[2]).armedAt).toEqual(expect.any(Number));
+            expect(armedCall[3]).toBe(campaignName);
+        });
+
+        it('refuses to arm twice without spending a second use', async () => {
+            mockKeys({ uses: 1, armed: JSON.stringify({ armedAt: 123 }) });
+
+            const result = await handle(makeAction(), makePlayerStats(), campaignName);
+
+            expect(result.payload.description).toContain('already armed');
+            expect(setRuntimeValue).not.toHaveBeenCalled();
+            expect(addEntry).not.toHaveBeenCalled();
+        });
+
+        it('does not arm when no uses remain', async () => {
+            mockKeys({ uses: 0, armed: null });
+
+            await handle(makeAction(), makePlayerStats(), campaignName);
+
+            expect(setRuntimeValue).not.toHaveBeenCalled();
+        });
+    });
 });
