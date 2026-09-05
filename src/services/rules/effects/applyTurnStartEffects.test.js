@@ -110,7 +110,7 @@ describe('applyTurnStartEffects', () => {
     });
   });
 
-  describe('condition_removal effect', () => {
+  describe('condition_removal effect (CLA-307: must NOT run at turn start)', () => {
     function setupConditions(conditions) {
       getRuntimeValue.mockImplementation((name, prop) => {
         if (prop === 'activeConditions') return conditions;
@@ -119,7 +119,7 @@ describe('applyTurnStartEffects', () => {
       });
     }
 
-    it('removes specified conditions from activeConditions', async () => {
+    it('does NOT remove conditions at turn start — removal moved to owner turn end', async () => {
       setupConditions(['charmed', 'poisoned', 'blinded']);
 
       await applyTurnStartEffects('TestCharacter', {
@@ -130,29 +130,10 @@ describe('applyTurnStartEffects', () => {
         }]
       }, 'TestCampaign');
 
-      expect(setRuntimeValue).toHaveBeenCalledWith(
+      expect(setRuntimeValue).not.toHaveBeenCalledWith(
         'TestCharacter',
         'activeConditions',
-        ['blinded'],
-        'TestCampaign'
-      );
-    });
-
-    it('handles case-insensitive condition matching', async () => {
-      setupConditions(['CHARMED', 'Poisoned', 'Blinded']);
-
-      await applyTurnStartEffects('TestCharacter', {
-        turnStartEffects: [{
-          type: 'condition_removal',
-          name: 'Self-Restoration',
-          conditions: ['charmed', 'frightened', 'poisoned']
-        }]
-      }, 'TestCampaign');
-
-      expect(setRuntimeValue).toHaveBeenCalledWith(
-        'TestCharacter',
-        'activeConditions',
-        ['Blinded'],
+        expect.anything(),
         'TestCampaign'
       );
     });

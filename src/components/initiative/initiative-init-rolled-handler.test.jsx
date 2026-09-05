@@ -67,6 +67,7 @@ vi.mock('../../services/encounters/npcStatBlockUtils.js', () => ({ npcToMonsterF
 vi.mock('../../services/rules/effects/expirations.js', () => ({
     expireStaleEffects: vi.fn(),
     applyTurnStartEffects: vi.fn(),
+    applyTurnEndConditionRemoval: vi.fn(() => Promise.resolve()),
     clearExpirationEffects: vi.fn(),
 }));
 vi.mock('../../services/encounters/combatData.js', () => {

@@ -3,7 +3,7 @@ import { setRuntimeValue } from '../../hooks/runtime/useRuntimeState.js'
 import storage from '../../services/ui/storage.js'
 import { getNextCreatureName, getPreviousCreatureName } from '../../services/encounters/initiativeService.js'
 import { clearPerRoundMajestyTrackers } from '../../services/combat/auras/unbreakableMajesty.js'
-import { expireStaleEffects, applyTurnStartEffects } from '../../services/rules/effects/expirations.js'
+import { expireStaleEffects, applyTurnStartEffects, applyTurnEndConditionRemoval } from '../../services/rules/effects/expirations.js'
 import { getCombatSummary } from '../../services/encounters/combatData.js'
 
 // Turn-start effects must re-apply each round, so the dedupe key is round-scoped.
@@ -61,6 +61,15 @@ export function createNextCreatureHandler({
         }
         storage.set('activeCreatureName', newActiveName, campaignName)
         setActiveCreatureName(newActiveName)
+        // BUG CLA-307: run the OUTGOING owner's turn-END pass (Self-Restoration
+        // condition_removal) BEFORE the new active creature's turn-start effects, so the
+        // owner's Charmed/Frightened/Poisoned vanish at the end of their own turn, not at
+        // their next turn start. Sync POST here (GM client is the writer of truth).
+        if (activeCreatureName) {
+            const outgoingChar = characters.find(ch => ch.name === activeCreatureName || ch.name.startsWith(activeCreatureName + ' '))
+            applyTurnEndConditionRemoval(activeCreatureName, outgoingChar?.computedStats || outgoingChar, campaignName)
+                .catch((e) => { console.error('[navigationHandlers] CLA-307 turn-end removal failed:', e) })
+        }
         expireStaleEffects(campaignName, newActiveName)
         // BUG CLA-198: turn-start effects must run for EVERY newly active creature, not just
         // the round-wrap creature at index 0 — owner-centric auras (Inner Radiance) tick on the
@@ -117,6 +126,9 @@ export function createPreviousCreatureHandler({
             setCombatSummary(updatedSummary)
         }
         expireStaleEffects(campaignName, newActiveName)
+        // BUG CLA-307: no turn-END pass here — rewinding is not a real turn end.
+        // The owner's Self-Restoration removal already fired on the forward Next step
+        // that passed this boundary; running it again on rewind would double-log.
         // BUG CLA-198: mirror the next-handler — turn-start effects run on every
         // turn step, deduped by the round-scoped gate key.
         const gateKey = turnStartGateKey(roundToSet, newActiveName)

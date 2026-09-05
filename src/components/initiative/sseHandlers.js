@@ -1,7 +1,7 @@
 import { cloneDeep } from 'lodash'
 import { setRuntimeValue } from '../../hooks/runtime/useRuntimeState.js'
 import { getActiveCreatureName, getCombatSummary, setCombatSummaryCache } from '../../services/encounters/combatData.js'
-import { expireStaleEffects, applyTurnStartEffects } from '../../services/rules/effects/expirations.js'
+import { expireStaleEffects, applyTurnStartEffects, applyTurnEndConditionRemoval } from '../../services/rules/effects/expirations.js'
 
 /**
  * SSE overlay event handler - manages spell-overlay events
@@ -100,6 +100,14 @@ export function createSseEventHandler({
                 setCombatSummaryCache(cs, campaignName)
             }
             setActiveCreatureNameG(newActive)
+            // BUG CLA-307: mirror the owner turn-END pass for the OUTGOING creature
+            // (Self-Restoration condition_removal). skipSync=true — the GM client already
+            // POSTed the removal; re-POSTing here would SSE-echo-loop.
+            if (prevActive && prevActive !== newActive) {
+                const outgoingChar = characters.find(ch => ch.name === prevActive || ch.name.startsWith(prevActive + ' '))
+                applyTurnEndConditionRemoval(prevActive, outgoingChar?.computedStats || outgoingChar, campaignName, true)
+                    .catch((e) => { console.error('[sseHandlers] CLA-307 turn-end removal failed:', e) })
+            }
             expireStaleEffects(campaignName, newActive)
 
             // Only apply turn-start effects when the active creature actually changes.

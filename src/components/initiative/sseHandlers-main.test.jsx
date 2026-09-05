@@ -18,6 +18,7 @@ vi.mock('../../services/encounters/combatData.js', () => ({
 vi.mock('../../services/rules/effects/expirations.js', () => ({
     expireStaleEffects: vi.fn(),
     applyTurnStartEffects: vi.fn(),
+    applyTurnEndConditionRemoval: vi.fn(() => Promise.resolve()),
 }));
 
 describe('createSseEventHandler', () => {
@@ -233,6 +234,20 @@ describe('createSseEventHandler', () => {
             expect(expirations.applyTurnStartEffects).toHaveBeenCalledWith(
                 'Unknown', undefined, campaignName, characters,
             );
+        });
+
+        it('BUG CLA-307: runs outgoing owner turn-END condition removal with skipSync on echo', async () => {
+            refs.activeCreatureNameRef.current = 'Alice';
+            await handler({ key: 'change-test-campaign-activeCreatureName', data: 'Bob' });
+            expect(expirations.applyTurnEndConditionRemoval).toHaveBeenCalledWith(
+                'Alice', { hitPoints: 20 }, campaignName, true,
+            );
+        });
+
+        it('BUG CLA-307: does NOT run turn-END removal when prevActive === newActive (no dupes)', async () => {
+            refs.activeCreatureNameRef.current = 'Alice';
+            await handler({ key: 'change-test-campaign-activeCreatureName', data: 'Alice' });
+            expect(expirations.applyTurnEndConditionRemoval).not.toHaveBeenCalled();
         });
 
         it('should get combatSummary from getCombatSummary when ref is null', () => {

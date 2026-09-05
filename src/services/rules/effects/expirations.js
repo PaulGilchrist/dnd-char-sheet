@@ -9,6 +9,7 @@
  *   - clearAllExpirationEffects.js  — clearAllExpirationEffects (rest/initiative cleanup)
  *   - auraDamageService.js          — applyAuraDamage, applyHolyNimbusDamage
  *   - toppleCleanup.js              — cleanUpToppleConditions
+ *   - turnEndConditionRemoval.js    — applyTurnEndConditionRemoval (CLA-307 owner turn-end)
  *
  * This file re-exports all public APIs so existing consumers continue to work.
  */
@@ -41,3 +42,7 @@ export {
     applyAuraDamage,
     applyHolyNimbusDamage,
 } from './auraDamageService.js';
+
+export {
+    applyTurnEndConditionRemoval,
+} from './turnEndConditionRemoval.js';

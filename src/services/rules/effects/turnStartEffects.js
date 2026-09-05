@@ -70,21 +70,12 @@ export async function applyTurnStartEffects(activeName, playerStats, campaignNam
                 setRuntimeValue(activeName, 'hasInspiration', true, campaignName);
             }
         }
-        if (effect.type === 'condition_removal') {
-            // Null-safe read (mirrors applySteadyAimClearTurnStart): now that turn-start
-            // effects run for EVERY creature each round (BUG CLA-198), creatures that have
-            // never written activeConditions must skip removal instead of aborting the loop.
-            const storedConds = getRuntimeValue(activeName, 'activeConditions');
-            const conditions = Array.isArray(storedConds) ? storedConds : [];
-            const removalConditions = new Set(effect.conditions.map(c => c.toLowerCase()));
-            const filtered = conditions.filter(c => {
-                const condName = String(c).toLowerCase();
-                return !removalConditions.has(condName);
-            });
-            if (filtered.length !== conditions.length) {
-                setRuntimeValue(activeName, 'activeConditions', filtered, campaignName);
-            }
-        }
+        // BUG CLA-307: the `condition_removal` branch (Self-Restoration) was consumed
+        // HERE, i.e. at the owner's NEXT turn START — a full round late vs RAW "end of
+        // each turn" — and silently. It now runs at the owner's turn END via
+        // applyTurnEndConditionRemoval (turnEndConditionRemoval.js), invoked from
+        // navigationHandlers.handleNextCreature and the sseHandlers activeCreatureName
+        // echo for the OUTGOING active creature.
         if (effect.type === 'flurry_healing_harm') {
             await applyFlurryHealingHarmTurnStart(activeName, playerStats, effect, campaignName);
         }

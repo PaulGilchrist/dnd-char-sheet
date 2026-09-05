@@ -58,6 +58,7 @@ vi.mock('../../services/combat/auras/unbreakableMajesty.js', () => ({
 vi.mock('../../services/rules/effects/expirations.js', () => ({
     expireStaleEffects: vi.fn(),
     applyTurnStartEffects: vi.fn(),
+    applyTurnEndConditionRemoval: vi.fn(() => Promise.resolve()),
 }));
 
 vi.mock('../../hooks/runtime/useRuntimeState.js', () => ({
@@ -304,6 +305,34 @@ describe('navigationHandlers.js', () => {
             expect(storage.set).toHaveBeenLastCalledWith('combatSummary', expect.objectContaining({ round: 3 }), campaignName);
         });
 
+        it('BUG CLA-307: runs outgoing owner turn-END condition removal before new turn-start effects', async () => {
+            initiativeService.getNextCreatureName.mockReturnValue({
+                newActiveName: 'Bob',
+                roundIncrement: false,
+            });
+
+            const handler = createNextCreatureHandler({
+                combatSummaryRef,
+                activeCreatureName: 'Alice',
+                campaignName,
+                characters: baseCharacters,
+                roundRef,
+                lastAppliedTurnStartCreatureRef,
+                setCombatSummary,
+                setActiveCreatureName,
+                setRuntimeStateTick,
+            });
+
+            await handler();
+
+            // Pass runs for the OUTGOING creature with its computed stats, sync (skipSync=false)
+            expect(expirations.applyTurnEndConditionRemoval).toHaveBeenCalledWith('Alice', baseCharacters[0].computedStats, campaignName);
+            // ...and BEFORE the new active creature's turn-start effects
+            const removalOrder = expirations.applyTurnEndConditionRemoval.mock.invocationCallOrder[0];
+            const startOrder = expirations.applyTurnStartEffects.mock.invocationCallOrder[0];
+            expect(removalOrder).toBeLessThan(startOrder);
+        });
+
         it('should handle empty characters array during round increment', () => {
             initiativeService.getNextCreatureName.mockReturnValue({
                 newActiveName: 'Unknown',
@@ -499,6 +528,30 @@ describe('navigationHandlers.js', () => {
             expect(runtimeState.setRuntimeValue).not.toHaveBeenCalledWith('__initiative__', 'lastAppliedTurnStartCreature', 'Bob', campaignName);
             expect(expirations.applyTurnStartEffects).not.toHaveBeenCalled();
             expect(setRuntimeStateTick).not.toHaveBeenCalled();
+        });
+
+        it('BUG CLA-307: previous/rewind does NOT run the turn-END condition removal pass', async () => {
+            initiativeService.getPreviousCreatureName.mockReturnValue({
+                newActiveName: 'Alice',
+                roundDecrement: false,
+            });
+
+            const handler = createPreviousCreatureHandler({
+                combatSummaryRef,
+                activeCreatureName: 'Bob',
+                campaignName,
+                characters: baseCharacters,
+                roundRef,
+                lastAppliedTurnStartCreatureRef,
+                setCombatSummary,
+                setActiveCreatureName,
+                setRuntimeStateTick,
+                isPreviousDisabled: false,
+            });
+
+            await handler();
+
+            expect(expirations.applyTurnEndConditionRemoval).not.toHaveBeenCalled();
         });
 
         it('should NOT decrement round when currentRound is 1', () => {
