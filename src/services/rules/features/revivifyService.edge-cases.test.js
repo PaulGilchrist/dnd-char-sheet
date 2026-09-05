@@ -9,6 +9,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 
 vi.mock('../../../hooks/runtime/useRuntimeState.js', () => ({
     setRuntimeValue: vi.fn(),
+    getRuntimeValue: vi.fn((_name, key) => (key === 'currentHitPoints' ? 0 : null)),
 }));
 
 vi.mock('../../../services/ui/logService.js', () => ({
@@ -39,8 +40,9 @@ function makePlayerStats(casterName) {
     return { name: casterName || 'Cleric' };
 }
 
+// getCombatContext reads data.combatSummary from the change-data endpoint.
 function mockCombatSummary(creatures) {
-    return { round: 1, creatures };
+    return { combatSummary: { round: 1, creatures } };
 }
 
 // ── Tests ──────────────────────────────────────────────────────
@@ -53,7 +55,7 @@ describe('triggerRevivify - edge cases', () => {
     describe('event dispatch', () => {
         it('dispatches combat-summary-updated event on success', async () => {
             vi.mocked(consumeMaterial).mockResolvedValue(true);
-            global.fetch.mockResolvedValueOnce({
+            global.fetch.mockResolvedValueOnce({ ok: true,
                 json: () => Promise.resolve(
                     mockCombatSummary([
                         { name: 'Ally', maxHp: 30, currentHp: 0, type: 'player' },
@@ -81,7 +83,7 @@ describe('triggerRevivify - edge cases', () => {
     describe('error handling', () => {
         it('logs console.error when addEntry rejects but still returns success', async () => {
             vi.mocked(consumeMaterial).mockResolvedValue(true);
-            global.fetch.mockResolvedValueOnce({
+            global.fetch.mockResolvedValueOnce({ ok: true,
                 json: () => Promise.resolve(
                     mockCombatSummary([
                         { name: 'Ally', maxHp: 30, currentHp: 0, type: 'player' },
@@ -125,7 +127,7 @@ describe('triggerRevivify - edge cases', () => {
     describe('edge cases', () => {
         it('handles target creature with no maxHp field', async () => {
             vi.mocked(consumeMaterial).mockResolvedValue(true);
-            global.fetch.mockResolvedValueOnce({
+            global.fetch.mockResolvedValueOnce({ ok: true,
                 json: () => Promise.resolve(
                     mockCombatSummary([
                         { name: 'Unknown', currentHp: 0, type: 'player' },
@@ -156,9 +158,9 @@ describe('triggerRevivify - edge cases', () => {
             });
         });
 
-        it('handles target creature with no currentHp field', async () => {
+        it('refuses a monster with no currentHp field (cannot confirm dead)', async () => {
             vi.mocked(consumeMaterial).mockResolvedValue(true);
-            global.fetch.mockResolvedValueOnce({
+            global.fetch.mockResolvedValueOnce({ ok: true,
                 json: () => Promise.resolve(
                     mockCombatSummary([
                         { name: 'Unknown', maxHp: 50, type: 'monster' },
@@ -166,27 +168,24 @@ describe('triggerRevivify - edge cases', () => {
                 ),
             });
 
-            await triggerRevivify(
+            const consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+            const result = await triggerRevivify(
                 makeSpell('Revivify'),
                 {},
                 makePlayerStats(),
                 CAMPAIGN,
                 'Unknown',
             );
+            consoleErrorSpy.mockRestore();
 
-            expect(addEntry).toHaveBeenCalledWith(
-                CAMPAIGN,
-                expect.objectContaining({
-                    delta: 1,
-                    currentHp: 1,
-                    maxHp: 50,
-                }),
-            );
+            expect(result.payload.type).toBe('automation_info');
+            expect(consumeMaterial).not.toHaveBeenCalled();
+            expect(addEntry).not.toHaveBeenCalled();
         });
 
-        it('handles target not found in combat summary', async () => {
+        it('refuses target not found in combat summary (no material consumed)', async () => {
             vi.mocked(consumeMaterial).mockResolvedValue(true);
-            global.fetch.mockResolvedValueOnce({
+            global.fetch.mockResolvedValueOnce({ ok: true,
                 json: () => Promise.resolve(
                     mockCombatSummary([
                         { name: 'Other', maxHp: 30, currentHp: 0, type: 'player' },
@@ -194,6 +193,7 @@ describe('triggerRevivify - edge cases', () => {
                 ),
             });
 
+            const consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
             const result = await triggerRevivify(
                 makeSpell('Revivify'),
                 {},
@@ -201,20 +201,11 @@ describe('triggerRevivify - edge cases', () => {
                 CAMPAIGN,
                 'Target',
             );
+            consoleErrorSpy.mockRestore();
 
-            expect(result).toEqual({
-                type: 'popup',
-                payload: {
-                    type: 'heal',
-                    name: 'Revivify',
-                    targetName: 'Target',
-                    finalHeal: 1,
-                    total: 1,
-                    formula: '1 HP (revived)',
-                    rolls: [],
-                    rawTotal: 1,
-                },
-            });
+            expect(result.payload.type).toBe('automation_info');
+            expect(consumeMaterial).not.toHaveBeenCalled();
+            expect(addEntry).not.toHaveBeenCalled();
         });
     });
 });

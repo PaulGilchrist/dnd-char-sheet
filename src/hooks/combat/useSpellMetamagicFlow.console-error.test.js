@@ -224,7 +224,6 @@ describe('useSpellMetamagicFlow — null creatures behavior', () => {
     'Globe of Invulnerability',
     'Regenerate',
     'Cure Wounds',
-    'Revivify',
   ];
 
   for (const spellName of gateSpellNames) {
@@ -251,6 +250,29 @@ describe('useSpellMetamagicFlow — null creatures behavior', () => {
       spy.mockRestore();
     });
   }
+
+  // SP-100: Revivify is handled even with no creatures — it refuses instead of
+  // falling through (a fall-through would spend the slot + diamond untargeted).
+  it('blocks Revivify (no pendingMetamagic fall-through) when creatures is null', () => {
+    const spy = vi.spyOn(console, 'error');
+    getCombatSummary.mockReturnValueOnce({ creatures: null });
+
+    const { result } = renderHook(() =>
+      useSpellMetamagicFlow(makePlayerStats(), 'TestCampaign', vi.fn())
+    );
+
+    act(() => {
+      result.current.gateMetamagic(makeSpell({ name: 'Revivify' }));
+    });
+
+    expect(spy).toHaveBeenCalledWith(
+      'Creature targets empty for unknown: cs=exists, characters.length=undefined'
+    );
+    expect(result.current.pendingMetamagic).toBeNull();
+    expect(result.current.pendingRevivify).toBeNull();
+
+    spy.mockRestore();
+  });
 
   // ── Non-gated spells fall through to Sorcerer metamagic flow ──────────────
 

@@ -31,6 +31,7 @@ export async function gateMetamagic(spell, metaCtx, {
     playerStats,
     characters,
     isSorcerer,
+    setPopupHtml,
   });
   if (handled) return;
 

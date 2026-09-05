@@ -1,40 +1,59 @@
-import { setRuntimeValue } from '../../../hooks/runtime/useRuntimeState.js';
+import { getRuntimeValue } from '../../../hooks/runtime/useRuntimeState.js';
 import { addEntry } from '../../../services/ui/logService.js';
 import { consumeMaterial } from '../spells/materialComponents.js';
+import { applyHealingToTarget } from '../combat/applyHealing.js';
+import { getCombatContext } from '../combat/damageUtils.js';
+import { isCreatureDead } from '../../shared/hpModifier.js';
+
+function refusalPopup(spell, description) {
+    return {
+        type: 'popup',
+        payload: {
+            type: 'automation_info',
+            name: spell.name,
+            automationType: 'revivify',
+            description,
+        },
+    };
+}
 
 export async function triggerRevivify(spell, metaCtx, playerStats, campaignName, targetName) {
-    const consumed = await consumeMaterial(playerStats, 'Diamond (300 gp)', campaignName);
-    if (!consumed) {
-        return {
-            type: 'popup',
-            payload: {
-                type: 'automation_info',
-                name: spell.name,
-                automationType: 'revivify',
-                description: 'Revivify requires a diamond worth 300+ GP, which the spell consumes.',
-            },
-        };
+    // Canonical combatSummary source (change-data) — the /combat-summary key is
+    // never written and always returned {value:null}, so the old fetch saw no creatures.
+    const combatSummary = await getCombatContext(campaignName);
+    const targetCreature = combatSummary?.creatures?.find(c => c.name === targetName);
+
+    if (!targetCreature) {
+        console.error(`[revivify] Target ${targetName} not found in combat summary`);
+        return refusalPopup(spell, `${targetName} is not present in combat. Revivify can only target a creature that has died within the last minute.`);
     }
 
-    const combatSummary = await (await fetch(`/api/campaigns/${encodeURIComponent(campaignName)}/combat-summary`)).json().catch(() => null);
-    const targetCreature = combatSummary?.creatures?.find(c => c.name === targetName);
-    const isPlayer = targetCreature?.type === 'player';
-    const maxHp = isPlayer ? (targetCreature?.maxHp || 1) : (targetCreature?.maxHp || 1);
-    const oldHp = isPlayer ? 0 : (targetCreature?.currentHp || 0);
+    // Re-validate the dead-target gate BEFORE consuming the diamond or writing HP.
+    if (!isCreatureDead(combatSummary, targetName)) {
+        console.error(`[revivify] Living target refused: ${targetName}`);
+        return refusalPopup(spell, `${targetName} is not dead. Revivify can only target a creature that has died within the last minute.`);
+    }
 
-    // Update target's runtime store (HP/death saves are transient, not persisted to character JSON)
-    setRuntimeValue(targetName, 'currentHitPoints', 1, campaignName);
-    setRuntimeValue(targetName, 'deathSaves', [false, false, false], campaignName);
-    setRuntimeValue(targetName, 'deathFailures', [false, false, false], campaignName);
-    setRuntimeValue(targetName, 'isDead', 0, campaignName);
+    const consumed = await consumeMaterial(playerStats, 'Diamond (300 gp)', campaignName);
+    if (!consumed) {
+        return refusalPopup(spell, 'Revivify requires a diamond worth 300+ GP, which the spell consumes.');
+    }
 
-    const actualHeal = 1 - oldHp;
+    // Canonical heal path: runtime currentHitPoints/isDead/deathSaves for PCs,
+    // combatSummary currentHp + persisted summary for monsters.
+    const isPlayer = targetCreature.type === 'player';
+    const oldHp = isPlayer ? (getRuntimeValue(targetName, 'currentHitPoints') ?? 0) : (targetCreature.currentHp ?? 0);
+    const applied = applyHealingToTarget(combatSummary, targetName, 1 - oldHp, campaignName);
+
+    const newHp = applied ? applied.newHp : 1;
+    const actualHeal = applied ? applied.actualHeal : 1;
+    const maxHp = applied ? applied.maxHp : (targetCreature.maxHp ?? 0);
 
     addEntry(campaignName, {
         type: 'hp_change',
         targetName,
         delta: actualHeal,
-        currentHp: 1,
+        currentHp: newHp,
         maxHp,
         isHealing: true,
         sourceName: playerStats.name,
@@ -42,7 +61,7 @@ export async function triggerRevivify(spell, metaCtx, playerStats, campaignName,
         timestamp: Date.now(),
     }).catch((e) => { console.error('[revivify] Error logging heal:', e); });
 
-    window.dispatchEvent(new CustomEvent('combat-summary-updated'));
+    // applyHealingToTarget already dispatches 'combat-summary-updated' on a non-zero delta.
 
     return {
         type: 'popup',

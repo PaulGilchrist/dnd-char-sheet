@@ -28,6 +28,7 @@ import { confirmRemoveCurse } from '../../../services/rules/features/removeCurse
 import { confirmRegenerate } from '../../../services/rules/features/regenerateService.js'
 import { consumeMaterial } from '../../../services/rules/spells/materialComponents.js'
 import { addEntry } from '../../../services/ui/logService.js'
+import { rollbackSpellSlot } from '../useConfirmableFlow.js'
 import { getRuntimeValue, setRuntimeValue } from '../../runtime/useRuntimeState.js'
 import { isFreeCastAuthorized } from '../../../services/rules/spells/spellPreparationService.js'
 import { prepareSpellCast } from '../../../services/rules/spells/spellPreparationService.js'
@@ -549,10 +550,15 @@ export function useSimpleSpellHandlers(createConfirmHandler, createSkipHandler, 
       campaignName,
       targetName
     )
+    // SP-100: createConfirmHandler spends the slot before applyFn — refund it
+    // when the trigger refuses (target no longer dead / material gone).
+    if (popup?.payload?.type === 'automation_info') {
+      rollbackSpellSlot(playerStats.name, pending.spellName, pending.spellLevel || 0, playerStats, campaignName)
+    }
     if (popup && setPopupHtml) {
       setPopupHtml(popup.payload)
     }
-  }, (pending) => pending.creatureTargets)
+  }, (pending, sel) => (sel?.targetName ? [sel.targetName] : pending.creatureTargets))
   const handleRevivifySkip = createSkipHandler('revivify', (pending) => pending.creatureTargets)
 
   const handleStinkingCloudConfirm = createConfirmHandler('stinkingCloud', async (pending, result) => {

@@ -34,7 +34,8 @@ vi.mock('../../services/encounters/combatData.js', () => ({
     creatures: [
       { name: 'Goblin A' },
       { name: 'Goblin B' },
-      { name: 'Goblin C' },
+      // Dead so the SP-100 Revivify dead-target gate arms pending.
+      { name: 'Goblin C', type: 'monster', currentHp: 0 },
     ],
   })),
 }));

@@ -366,7 +366,7 @@ describe('materialComponents', () => {
 
     it('formats message correctly for Heroes Feast', () => {
       const message = getMaterialRequirementMessage(mockSpell("Heroes' Feast"));
-      expect(message).toBe("Heroes' Feast requires a gem-encrusted bowl worth 1,000+ GP, which the spell consumes, which the spell consumes.");
+      expect(message).toBe("Heroes' Feast requires a gem-encrusted bowl worth 1,000+ GP, which the spell consumes.");
     });
 
     it('formats message correctly for Create Undead', () => {
@@ -379,9 +379,15 @@ describe('materialComponents', () => {
       expect(message).toMatch(/^True Resurrection requires/);
     });
 
-    it('ends message with "which the spell consumes."', () => {
+    it('ends message with a single "which the spell consumes." suffix', () => {
       const message = getMaterialRequirementMessage(mockSpell('Clone'));
-      expect(message).toBe('Clone requires a diamond worth 1,000+ GP, which the spell consumes, which the spell consumes.');
+      expect(message).toBe('Clone requires a diamond worth 1,000+ GP, which the spell consumes.');
+      expect(message.match(/which the spell consumes/g)).toHaveLength(1);
+    });
+
+    it('does not duplicate the consume suffix for Revivify', () => {
+      const message = getMaterialRequirementMessage(mockSpell('Revivify'));
+      expect(message).toBe('Revivify requires a diamond worth 300+ GP, which the spell consumes.');
     });
   });
 });

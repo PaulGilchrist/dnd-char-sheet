@@ -97,5 +97,6 @@ export async function consumeMaterial(playerStats, itemName, campaignName) {
 export function getMaterialRequirementMessage(spell) {
     const material = getConsumedMaterial(spell);
     if (!material) return null;
-    return `${spell.name} requires ${material.required}, which the spell consumes.`;
+    const alreadyConsumes = /which the spell consumes/i.test(material.required);
+    return `${spell.name} requires ${material.required}${alreadyConsumes ? '.' : ', which the spell consumes.'}`;
 }

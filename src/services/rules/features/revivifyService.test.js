@@ -9,6 +9,9 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 
 vi.mock('../../../hooks/runtime/useRuntimeState.js', () => ({
     setRuntimeValue: vi.fn(),
+    // PCs are canonical via the runtime store: dead at currentHitPoints 0,
+    // hitPoints null so maxHp falls back to the combatSummary entry.
+    getRuntimeValue: vi.fn((_name, key) => (key === 'currentHitPoints' ? 0 : null)),
 }));
 
 vi.mock('../../../services/ui/logService.js', () => ({
@@ -40,8 +43,9 @@ function makePlayerStats(casterName) {
     return { name: casterName || 'Cleric' };
 }
 
+// getCombatContext reads data.combatSummary from the change-data endpoint.
 function mockCombatSummary(creatures) {
-    return { round: 1, creatures };
+    return { combatSummary: { round: 1, creatures } };
 }
 
 // ── Tests ──────────────────────────────────────────────────────
@@ -54,6 +58,13 @@ describe('triggerRevivify', () => {
     describe('material component check', () => {
         it('returns popup when diamond material is not available', async () => {
             vi.mocked(consumeMaterial).mockResolvedValue(false);
+            global.fetch.mockResolvedValueOnce({ ok: true,
+                json: () => Promise.resolve(
+                    mockCombatSummary([
+                        { name: 'Target', maxHp: 30, currentHp: 0, type: 'player' },
+                    ]),
+                ),
+            });
 
             const result = await triggerRevivify(
                 makeSpell('Revivify'),
@@ -78,8 +89,10 @@ describe('triggerRevivify', () => {
 
         it('calls consumeMaterial with correct diamond item name', async () => {
             vi.mocked(consumeMaterial).mockResolvedValue(true);
-            global.fetch.mockResolvedValueOnce({
-                json: () => Promise.resolve(mockCombatSummary([])),
+            global.fetch.mockResolvedValueOnce({ ok: true,
+                json: () => Promise.resolve(mockCombatSummary([
+                    { name: 'Target', maxHp: 30, currentHp: 0, type: 'player' },
+                ])),
             });
 
             await triggerRevivify(
@@ -99,48 +112,56 @@ describe('triggerRevivify', () => {
     });
 
     describe('target resolution', () => {
-        it('fetches combat summary from correct campaign endpoint', async () => {
+        it('resolves combat summary via canonical change-data combat context', async () => {
             vi.mocked(consumeMaterial).mockResolvedValue(true);
             global.fetch.mockResolvedValueOnce({
+                ok: true,
                 json: () => Promise.resolve(mockCombatSummary([])),
             });
 
-            await triggerRevivify(
+            const consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+            const result = await triggerRevivify(
                 makeSpell('Revivify'),
                 {},
                 makePlayerStats(),
                 CAMPAIGN,
                 'Target',
             );
+            consoleErrorSpy.mockRestore();
 
             expect(global.fetch).toHaveBeenCalledWith(
-                `/api/campaigns/${encodeURIComponent(CAMPAIGN)}/combat-summary`,
+                `/api/campaigns/${encodeURIComponent(CAMPAIGN)}/change-data`,
             );
+            expect(result.payload.type).toBe('automation_info');
         });
 
-        it('propagates fetch rejection since .catch is on .json() not fetch', async () => {
+        it('refuses (does not throw) when the fetch rejects', async () => {
             vi.mocked(consumeMaterial).mockResolvedValue(true);
             global.fetch.mockImplementationOnce(() =>
                 Promise.reject(new Error('Network error')),
             );
 
-            await expect(
-                triggerRevivify(
-                    makeSpell('Revivify'),
-                    {},
-                    makePlayerStats(),
-                    CAMPAIGN,
-                    'Target',
-                ),
-            ).rejects.toThrow('Network error');
+            const consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+            const result = await triggerRevivify(
+                makeSpell('Revivify'),
+                {},
+                makePlayerStats(),
+                CAMPAIGN,
+                'Target',
+            );
+            consoleErrorSpy.mockRestore();
+
+            expect(result.payload.type).toBe('automation_info');
+            expect(consumeMaterial).not.toHaveBeenCalled();
         });
 
-        it('handles missing combat summary gracefully', async () => {
+        it('refuses when combat summary is missing (cannot validate target is dead)', async () => {
             vi.mocked(consumeMaterial).mockResolvedValue(true);
-            global.fetch.mockResolvedValueOnce({
+            global.fetch.mockResolvedValueOnce({ ok: true,
                 json: () => Promise.resolve(null),
             });
 
+            const consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
             const result = await triggerRevivify(
                 makeSpell('Revivify'),
                 {},
@@ -148,28 +169,20 @@ describe('triggerRevivify', () => {
                 CAMPAIGN,
                 'Target',
             );
+            consoleErrorSpy.mockRestore();
 
-            expect(result).toEqual({
-                type: 'popup',
-                payload: {
-                    type: 'heal',
-                    name: 'Revivify',
-                    targetName: 'Target',
-                    finalHeal: 1,
-                    total: 1,
-                    formula: '1 HP (revived)',
-                    rolls: [],
-                    rawTotal: 1,
-                },
-            });
+            expect(result.payload.type).toBe('automation_info');
+            expect(consumeMaterial).not.toHaveBeenCalled();
+            expect(setRuntimeValue).not.toHaveBeenCalled();
         });
 
-        it('handles empty creatures list', async () => {
+        it('refuses with empty creatures list (target not present)', async () => {
             vi.mocked(consumeMaterial).mockResolvedValue(true);
-            global.fetch.mockResolvedValueOnce({
+            global.fetch.mockResolvedValueOnce({ ok: true,
                 json: () => Promise.resolve(mockCombatSummary([])),
             });
 
+            const consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
             const result = await triggerRevivify(
                 makeSpell('Revivify'),
                 {},
@@ -177,25 +190,16 @@ describe('triggerRevivify', () => {
                 CAMPAIGN,
                 'Target',
             );
+            consoleErrorSpy.mockRestore();
 
-            expect(result).toEqual({
-                type: 'popup',
-                payload: {
-                    type: 'heal',
-                    name: 'Revivify',
-                    targetName: 'Target',
-                    finalHeal: 1,
-                    total: 1,
-                    formula: '1 HP (revived)',
-                    rolls: [],
-                    rawTotal: 1,
-                },
-            });
+            expect(result.payload.type).toBe('automation_info');
+            expect(consumeMaterial).not.toHaveBeenCalled();
+            expect(setRuntimeValue).not.toHaveBeenCalled();
         });
 
         it('finds target by name in creatures array', async () => {
             vi.mocked(consumeMaterial).mockResolvedValue(true);
-            global.fetch.mockResolvedValueOnce({
+            global.fetch.mockResolvedValueOnce({ ok: true,
                 json: () => Promise.resolve(
                     mockCombatSummary([
                         { name: 'Goblin', maxHp: 7, currentHp: 0, type: 'monster' },
@@ -225,7 +229,7 @@ describe('triggerRevivify', () => {
     describe('player vs monster target handling', () => {
         it('sets oldHp to 0 for player targets', async () => {
             vi.mocked(consumeMaterial).mockResolvedValue(true);
-            global.fetch.mockResolvedValueOnce({
+            global.fetch.mockResolvedValueOnce({ ok: true,
                 json: () => Promise.resolve(
                     mockCombatSummary([
                         { name: 'Ally', maxHp: 30, currentHp: 5, type: 'player' },
@@ -254,12 +258,12 @@ describe('triggerRevivify', () => {
             );
         });
 
-        it('sets oldHp from currentHp for monster targets', async () => {
+        it('revives a dead monster at 1 HP from combatSummary currentHp', async () => {
             vi.mocked(consumeMaterial).mockResolvedValue(true);
-            global.fetch.mockResolvedValueOnce({
+            global.fetch.mockResolvedValueOnce({ ok: true,
                 json: () => Promise.resolve(
                     mockCombatSummary([
-                        { name: 'Goblin', maxHp: 7, currentHp: 3, type: 'monster' },
+                        { name: 'Goblin', maxHp: 7, currentHp: 0, type: 'monster' },
                     ]),
                 ),
             });
@@ -276,7 +280,7 @@ describe('triggerRevivify', () => {
                 CAMPAIGN,
                 expect.objectContaining({
                     targetName: 'Goblin',
-                    delta: -2,
+                    delta: 1,
                     currentHp: 1,
                     maxHp: 7,
                     isHealing: true,
@@ -284,12 +288,70 @@ describe('triggerRevivify', () => {
             );
         });
 
-        it('handles target with no type field as monster', async () => {
+        it('refuses an ALIVE monster (no material consumed, no HP write)', async () => {
             vi.mocked(consumeMaterial).mockResolvedValue(true);
-            global.fetch.mockResolvedValueOnce({
+            global.fetch.mockResolvedValueOnce({ ok: true,
                 json: () => Promise.resolve(
                     mockCombatSummary([
-                        { name: 'Unknown', maxHp: 20, currentHp: 5 },
+                        { name: 'Goblin', maxHp: 7, currentHp: 3, type: 'monster' },
+                    ]),
+                ),
+            });
+
+            const consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+            const result = await triggerRevivify(
+                makeSpell('Revivify'),
+                {},
+                makePlayerStats(),
+                CAMPAIGN,
+                'Goblin',
+            );
+            consoleErrorSpy.mockRestore();
+
+            expect(result.payload.type).toBe('automation_info');
+            expect(consumeMaterial).not.toHaveBeenCalled();
+            expect(setRuntimeValue).not.toHaveBeenCalled();
+            expect(addEntry).not.toHaveBeenCalled();
+        });
+
+        it('refuses an ALIVE player (runtime currentHitPoints above 0) — no diamond, no HP write', async () => {
+            const { getRuntimeValue } = await import('../../../hooks/runtime/useRuntimeState.js');
+            vi.mocked(getRuntimeValue).mockImplementation((name, key) => (key === 'currentHitPoints' ? 12 : null));
+            vi.mocked(consumeMaterial).mockResolvedValue(true);
+            global.fetch.mockResolvedValueOnce({ ok: true,
+                json: () => Promise.resolve(
+                    mockCombatSummary([
+                        { name: 'Ally', maxHp: 12, currentHp: 1, type: 'player' },
+                    ]),
+                ),
+            });
+
+            const consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+            const result = await triggerRevivify(
+                makeSpell('Revivify'),
+                {},
+                makePlayerStats(),
+                CAMPAIGN,
+                'Ally',
+            );
+            consoleErrorSpy.mockRestore();
+
+            expect(result.payload.type).toBe('automation_info');
+            expect(result.payload.description).toContain('not dead');
+            expect(consumeMaterial).not.toHaveBeenCalled();
+            expect(setRuntimeValue).not.toHaveBeenCalled();
+            expect(addEntry).not.toHaveBeenCalled();
+
+            // clearAllMocks does not reset implementations — restore the dead-PC default.
+            vi.mocked(getRuntimeValue).mockImplementation((name, key) => (key === 'currentHitPoints' ? 0 : null));
+        });
+
+        it('treats target with no type field as monster', async () => {
+            vi.mocked(consumeMaterial).mockResolvedValue(true);
+            global.fetch.mockResolvedValueOnce({ ok: true,
+                json: () => Promise.resolve(
+                    mockCombatSummary([
+                        { name: 'Unknown', maxHp: 20, currentHp: 0 },
                     ]),
                 ),
             });
@@ -306,19 +368,43 @@ describe('triggerRevivify', () => {
                 CAMPAIGN,
                 expect.objectContaining({
                     targetName: 'Unknown',
-                    delta: -4,
+                    delta: 1,
                     currentHp: 1,
                     maxHp: 20,
                     isHealing: true,
                 }),
             );
         });
+
+        it('refuses an ALIVE target with no type field', async () => {
+            vi.mocked(consumeMaterial).mockResolvedValue(true);
+            global.fetch.mockResolvedValueOnce({ ok: true,
+                json: () => Promise.resolve(
+                    mockCombatSummary([
+                        { name: 'Unknown', maxHp: 20, currentHp: 5 },
+                    ]),
+                ),
+            });
+
+            const consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+            const result = await triggerRevivify(
+                makeSpell('Revivify'),
+                {},
+                makePlayerStats(),
+                CAMPAIGN,
+                'Unknown',
+            );
+            consoleErrorSpy.mockRestore();
+
+            expect(result.payload.type).toBe('automation_info');
+            expect(consumeMaterial).not.toHaveBeenCalled();
+        });
     });
 
     describe('runtime store updates', () => {
         it('sets currentHitPoints to 1 for the target', async () => {
             vi.mocked(consumeMaterial).mockResolvedValue(true);
-            global.fetch.mockResolvedValueOnce({
+            global.fetch.mockResolvedValueOnce({ ok: true,
                 json: () => Promise.resolve(
                     mockCombatSummary([
                         { name: 'Ally', maxHp: 30, currentHp: 0, type: 'player' },
@@ -344,7 +430,7 @@ describe('triggerRevivify', () => {
 
         it('resets deathSaves to all false', async () => {
             vi.mocked(consumeMaterial).mockResolvedValue(true);
-            global.fetch.mockResolvedValueOnce({
+            global.fetch.mockResolvedValueOnce({ ok: true,
                 json: () => Promise.resolve(
                     mockCombatSummary([
                         { name: 'Ally', maxHp: 30, currentHp: 0, type: 'player' },
@@ -370,7 +456,7 @@ describe('triggerRevivify', () => {
 
         it('resets deathFailures to all false', async () => {
             vi.mocked(consumeMaterial).mockResolvedValue(true);
-            global.fetch.mockResolvedValueOnce({
+            global.fetch.mockResolvedValueOnce({ ok: true,
                 json: () => Promise.resolve(
                     mockCombatSummary([
                         { name: 'Ally', maxHp: 30, currentHp: 0, type: 'player' },
@@ -396,7 +482,7 @@ describe('triggerRevivify', () => {
 
         it('sets isDead to 0', async () => {
             vi.mocked(consumeMaterial).mockResolvedValue(true);
-            global.fetch.mockResolvedValueOnce({
+            global.fetch.mockResolvedValueOnce({ ok: true,
                 json: () => Promise.resolve(
                     mockCombatSummary([
                         { name: 'Ally', maxHp: 30, currentHp: 0, type: 'player' },
@@ -422,7 +508,7 @@ describe('triggerRevivify', () => {
 
         it('sets all four runtime values in correct order', async () => {
             vi.mocked(consumeMaterial).mockResolvedValue(true);
-            global.fetch.mockResolvedValueOnce({
+            global.fetch.mockResolvedValueOnce({ ok: true,
                 json: () => Promise.resolve(
                     mockCombatSummary([
                         { name: 'Ally', maxHp: 30, currentHp: 0, type: 'player' },
@@ -456,7 +542,7 @@ describe('triggerRevivify', () => {
     describe('result structure', () => {
         it('returns correct result structure for player target', async () => {
             vi.mocked(consumeMaterial).mockResolvedValue(true);
-            global.fetch.mockResolvedValueOnce({
+            global.fetch.mockResolvedValueOnce({ ok: true,
                 json: () => Promise.resolve(
                     mockCombatSummary([
                         { name: 'Ally', maxHp: 30, currentHp: 0, type: 'player' },
@@ -487,12 +573,12 @@ describe('triggerRevivify', () => {
             });
         });
 
-        it('returns correct result structure for monster target with old HP', async () => {
+        it('returns correct result structure for dead monster target', async () => {
             vi.mocked(consumeMaterial).mockResolvedValue(true);
-            global.fetch.mockResolvedValueOnce({
+            global.fetch.mockResolvedValueOnce({ ok: true,
                 json: () => Promise.resolve(
                     mockCombatSummary([
-                        { name: 'Goblin', maxHp: 7, currentHp: 3, type: 'monster' },
+                        { name: 'Goblin', maxHp: 7, currentHp: 0, type: 'monster' },
                     ]),
                 ),
             });
@@ -511,7 +597,7 @@ describe('triggerRevivify', () => {
                     type: 'heal',
                     name: 'Revivify',
                     targetName: 'Goblin',
-                    finalHeal: -2,
+                    finalHeal: 1,
                     total: 1,
                     formula: '1 HP (revived)',
                     rolls: [],
@@ -522,7 +608,7 @@ describe('triggerRevivify', () => {
 
         it('includes targetName in result', async () => {
             vi.mocked(consumeMaterial).mockResolvedValue(true);
-            global.fetch.mockResolvedValueOnce({
+            global.fetch.mockResolvedValueOnce({ ok: true,
                 json: () => Promise.resolve(
                     mockCombatSummary([
                         { name: 'TargetName', maxHp: 50, currentHp: 0, type: 'player' },
@@ -543,7 +629,7 @@ describe('triggerRevivify', () => {
 
         it('includes spell name in result', async () => {
             vi.mocked(consumeMaterial).mockResolvedValue(true);
-            global.fetch.mockResolvedValueOnce({
+            global.fetch.mockResolvedValueOnce({ ok: true,
                 json: () => Promise.resolve(
                     mockCombatSummary([
                         { name: 'Target', maxHp: 50, currentHp: 0, type: 'player' },
@@ -564,7 +650,7 @@ describe('triggerRevivify', () => {
 
         it('always sets total and rawTotal to 1', async () => {
             vi.mocked(consumeMaterial).mockResolvedValue(true);
-            global.fetch.mockResolvedValueOnce({
+            global.fetch.mockResolvedValueOnce({ ok: true,
                 json: () => Promise.resolve(
                     mockCombatSummary([
                         { name: 'Target', maxHp: 50, currentHp: 0, type: 'player' },
@@ -586,7 +672,7 @@ describe('triggerRevivify', () => {
 
         it('always sets formula to "1 HP (revived)"', async () => {
             vi.mocked(consumeMaterial).mockResolvedValue(true);
-            global.fetch.mockResolvedValueOnce({
+            global.fetch.mockResolvedValueOnce({ ok: true,
                 json: () => Promise.resolve(
                     mockCombatSummary([
                         { name: 'Target', maxHp: 50, currentHp: 0, type: 'player' },

@@ -9,6 +9,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 
 vi.mock('../../../hooks/runtime/useRuntimeState.js', () => ({
     setRuntimeValue: vi.fn(),
+    getRuntimeValue: vi.fn((_name, key) => (key === 'currentHitPoints' ? 0 : null)),
 }));
 
 vi.mock('../../../services/ui/logService.js', () => ({
@@ -39,8 +40,9 @@ function makePlayerStats(casterName) {
     return { name: casterName || 'Cleric' };
 }
 
+// getCombatContext reads data.combatSummary from the change-data endpoint.
 function mockCombatSummary(creatures) {
-    return { round: 1, creatures };
+    return { combatSummary: { round: 1, creatures } };
 }
 
 // ── Tests ──────────────────────────────────────────────────────
@@ -53,7 +55,7 @@ describe('triggerRevivify - logging', () => {
     describe('log entry', () => {
         it('posts an hp_change log entry for successful revival', async () => {
             vi.mocked(consumeMaterial).mockResolvedValue(true);
-            global.fetch.mockResolvedValueOnce({
+            global.fetch.mockResolvedValueOnce({ ok: true,
                 json: () => Promise.resolve(
                     mockCombatSummary([
                         { name: 'Ally', maxHp: 30, currentHp: 0, type: 'player' },
@@ -87,7 +89,7 @@ describe('triggerRevivify - logging', () => {
 
         it('includes sourceName from playerStats', async () => {
             vi.mocked(consumeMaterial).mockResolvedValue(true);
-            global.fetch.mockResolvedValueOnce({
+            global.fetch.mockResolvedValueOnce({ ok: true,
                 json: () => Promise.resolve(
                     mockCombatSummary([
                         { name: 'Ally', maxHp: 30, currentHp: 0, type: 'player' },
@@ -111,7 +113,7 @@ describe('triggerRevivify - logging', () => {
 
         it('uses spell name in the note field', async () => {
             vi.mocked(consumeMaterial).mockResolvedValue(true);
-            global.fetch.mockResolvedValueOnce({
+            global.fetch.mockResolvedValueOnce({ ok: true,
                 json: () => Promise.resolve(
                     mockCombatSummary([
                         { name: 'Ally', maxHp: 30, currentHp: 0, type: 'player' },
@@ -133,12 +135,12 @@ describe('triggerRevivify - logging', () => {
             );
         });
 
-        it('logs with correct delta when target had HP above 0 (monster)', async () => {
+        it('logs delta +1 for a revived dead monster', async () => {
             vi.mocked(consumeMaterial).mockResolvedValue(true);
-            global.fetch.mockResolvedValueOnce({
+            global.fetch.mockResolvedValueOnce({ ok: true,
                 json: () => Promise.resolve(
                     mockCombatSummary([
-                        { name: 'Goblin', maxHp: 7, currentHp: 2, type: 'monster' },
+                        { name: 'Goblin', maxHp: 7, currentHp: 0, type: 'monster' },
                     ]),
                 ),
             });
@@ -153,8 +155,33 @@ describe('triggerRevivify - logging', () => {
 
             expect(addEntry).toHaveBeenCalledWith(
                 CAMPAIGN,
-                expect.objectContaining({ delta: -1 }),
+                expect.objectContaining({ delta: 1, currentHp: 1, maxHp: 7 }),
             );
+        });
+
+        it('refuses an alive monster and logs nothing', async () => {
+            vi.mocked(consumeMaterial).mockResolvedValue(true);
+            global.fetch.mockResolvedValueOnce({ ok: true,
+                json: () => Promise.resolve(
+                    mockCombatSummary([
+                        { name: 'Goblin', maxHp: 7, currentHp: 2, type: 'monster' },
+                    ]),
+                ),
+            });
+
+            const consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+            const result = await triggerRevivify(
+                makeSpell('Revivify'),
+                {},
+                makePlayerStats(),
+                CAMPAIGN,
+                'Goblin',
+            );
+            consoleErrorSpy.mockRestore();
+
+            expect(result.payload.type).toBe('automation_info');
+            expect(addEntry).not.toHaveBeenCalled();
+            expect(consumeMaterial).not.toHaveBeenCalled();
         });
     });
 });

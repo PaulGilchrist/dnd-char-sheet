@@ -1,5 +1,19 @@
 import { getRuntimeValue, setRuntimeValue } from '../../hooks/runtime/useRuntimeState.js';
 
+// Canonical dead detection: PC truth is the runtime store (combatSummary player
+// entries are 1/1 placeholders — pitfall 37); monsters carry real HP on the
+// combatSummary entry (CLA-303).
+export function isCreatureDead(combatSummary, creatureName) {
+  const creature = combatSummary?.creatures?.find(c => c.name === creatureName);
+  if (!creature) return false;
+  if (creature.type === 'player') {
+    const isDead = getRuntimeValue(creature.name, 'isDead');
+    const currentHp = getRuntimeValue(creature.name, 'currentHitPoints');
+    return !!isDead || (currentHp != null && Number(currentHp) <= 0);
+  }
+  return creature.currentHp != null && Number(creature.currentHp) <= 0;
+}
+
 export function modifyHitPoints(combatSummary, targetName, delta, campaignName) {
   if (!combatSummary || !combatSummary.creatures) {
     return null;

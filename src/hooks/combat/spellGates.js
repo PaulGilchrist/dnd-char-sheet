@@ -1,6 +1,7 @@
 import { getCombatSummary } from '../../services/encounters/combatData.js';
 import { getAllyList } from '../useAllySelection.js';
 import { getCsAndTargets, extractMaxTargets, resolveHumanoids, resolveBeasts, makePending } from './spellGateHelpers.js';
+import { isCreatureDead } from '../../services/shared/hpModifier.js';
 
 // ── Spell gate handlers ──────────────────────────────────────────────────────
 
@@ -556,13 +557,29 @@ function gateCureWounds(spell, campaignName, cfSetPending, _playerStats, _metaCt
   return false;
 }
 
-function gateRevivify(spell, campaignName, cfSetPending, playerStats, _metaCtx, _characters, _isSorcerer) {
-  const { creatureTargets } = getCsAndTargets(campaignName, { excludeCaster: true, casterName: playerStats.name });
-  if (creatureTargets.length > 0) {
-    cfSetPending('revivify', makePending('revivify', spell, { range: spell.range || 'Touch', creatureTargets }));
+// SP-100: Revivify only targets creatures that have died within the last minute.
+// PCs are dead per the runtime store (isDead / currentHitPoints — combatSummary
+// player stubs are 1/1 placeholders, pitfall 37); monsters are dead per their
+// combatSummary currentHp (real HP is carried there, CLA-303). Monsters are
+// INCLUDED: Revivify RAW works on any creature reduced to 0 Hit Points.
+// Returns true even when no dead creature exists (refusal popup) so the cast
+// never falls through to the generic path that would spend the slot + diamond.
+function gateRevivify(spell, campaignName, cfSetPending, playerStats, _metaCtx, _characters, _isSorcerer, setPopupHtml) {
+  const { cs, creatureTargets } = getCsAndTargets(campaignName, { excludeCaster: true, casterName: playerStats.name });
+  const deadTargets = creatureTargets.filter(name => isCreatureDead(cs, name));
+  if (deadTargets.length > 0) {
+    cfSetPending('revivify', makePending('revivify', spell, { range: spell.range || 'Touch', creatureTargets: deadTargets }));
     return true;
   }
-  return false;
+  if (setPopupHtml) {
+    setPopupHtml({
+      type: 'automation_info',
+      name: spell.name,
+      automationType: 'revivify',
+      description: 'No creature has died within the last minute. Revivify can only target a creature that has died.',
+    });
+  }
+  return true;
 }
 
 function gateAuraOfLife(spell, campaignName, cfSetPending, _playerStats, _metaCtx, _characters, _isSorcerer) {
@@ -718,6 +735,6 @@ export function tryGateSpell(spellName, campaignName, cfSetPending, extra = {}) 
   const handler = spellGateMap[normalized];
   if (!handler) return false;
 
-  const { spell, metaCtx, playerStats, characters, isSorcerer } = extra;
-  return handler(spell, campaignName, cfSetPending, playerStats, metaCtx, characters, isSorcerer);
+  const { spell, metaCtx, playerStats, characters, isSorcerer, setPopupHtml } = extra;
+  return handler(spell, campaignName, cfSetPending, playerStats, metaCtx, characters, isSorcerer, setPopupHtml);
 }

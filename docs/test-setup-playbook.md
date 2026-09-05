@@ -200,3 +200,9 @@ Cancel refunds via `cancelSacredWeapon`; verify spends/refunds against
 - **PITFALL:** Resistance reduction on low damage floors to 0 — the popup `-1d4 [Resistance]` line, not the HP delta, is the decisive re-arm evidence.
 - **PITFALL:** `.mc-overlay` dice-links match by text ("+2" collides with STR-save "+2") — locate inside the "Mace."/"Heavy Crossbow." row text; match cards by `img.alt` not textContent (target-dropdown pollution).
 - **VITEST:** new `turnStartEffects.resistancePerTurn.test.js` (6) + `handlePlainDamage.resistanceReArm.test.js` (2). Full suite 31174 pass.
+
+### SP-100 Revivify dead-target gate FIXED (2026-09-05)
+- **FIXED:** canonical `isCreatureDead(combatSummary,name)` in `hpModifier.js` (PCs via runtime `isDead`/`currentHitPoints` — pitfall-37 1/1 stubs ignored; monsters via cs `currentHp`, missing=alive). `gateRevivify` filters picker to dead only; no-dead → `automation_info` refusal handled (no fall-through spend). `revivifyService` re-validates BEFORE `consumeMaterial`; revives via `applyHealingToTarget` (PC runtime + monster cs — monster revive previously never worked); real `hp_change.maxHp` (old `/combat-summary` endpoint always `{value:null}` — use `getCombatContext`). `spell` log targetName = chosen target; confirm-time refusal triggers `rollbackSpellSlot`. Material refusal suffix deduped. Monsters included per RAW.
+- **PITFALL:** refuses at confirm still write the `spell` log before applyFn (generic `createConfirmHandler` seam) — slot refunded, log artifact remains; picker-time gate is the real contract.
+- **PITFALL:** gate changes need fixtures dead-stamped across ALL `useSpellMetamagicFlow.*` suites or the generic path skips them.
+- **VITEST:** new `spellGates.revivify.test.js` + `useSpellMetamagicFlow.revivifyRefusal.test.js`; full suite 31188 pass. Cleric backpack diamonds mutate/restore via edit UI + document pre-session count.

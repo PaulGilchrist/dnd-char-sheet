@@ -28,7 +28,8 @@ vi.mock('../../services/npcs/monsterUtils.js', () => ({
 
 vi.mock('../../services/encounters/combatData.js', () => ({
   getCombatSummary: vi.fn(() => ({
-    creatures: [{ name: 'Goblin A' }, { name: 'Goblin B' }, { name: 'Goblin C' }],
+    // Goblin C dead (0 HP) so the SP-100 Revivify dead-target gate arms pending.
+    creatures: [{ name: 'Goblin A' }, { name: 'Goblin B' }, { name: 'Goblin C', type: 'monster', currentHp: 0 }],
   })),
 }));
 
