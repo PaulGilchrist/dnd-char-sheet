@@ -1,8 +1,9 @@
 import { useState } from 'react';
 import { applyDamageTypeChoice } from '../../../../services/automation/handlers/class-cleric-paladin/sacredWeaponHandler.js';
 import '../../CharSheet.css';
+import './SacredWeaponModal.css';
 
-function SacredWeaponModal({ action, playerStats, campaignName, onClose }) {
+function SacredWeaponModal({ action, playerStats, campaignName, onClose, onCancel }) {
     const [selected, setSelected] = useState(null);
     const [applied, setApplied] = useState(false);
     const [result, setResult] = useState(null);
@@ -16,15 +17,23 @@ function SacredWeaponModal({ action, playerStats, campaignName, onClose }) {
         setApplied(true);
     };
 
+    const handleCancel = () => {
+        if (onCancel) {
+            onCancel();
+        } else {
+            onClose?.();
+        }
+    };
+
     if (applied && result) {
         return (
             <div className="sp-overlay" onClick={(e) => {
-        if (e.target.closest('.sp-modal')) return;
-        onClose?.();
-    }}>
+                if (e.target.closest('.sp-modal')) return;
+                onClose?.();
+            }}>
                 <div className="sp-modal">
                     <div className="sp-header">
-                        <i className="fa-solid fa-h"></i> {action.name}
+                        <i className="fa-solid fa-sun"></i> {action.name}
                     </div>
                     <div className="sp-body" dangerouslySetInnerHTML={{ __html: result.payload.description }}>
                     </div>
@@ -38,26 +47,25 @@ function SacredWeaponModal({ action, playerStats, campaignName, onClose }) {
 
     return (
         <div className="sp-overlay" onClick={(e) => {
-        if (e.target.closest('.sp-modal')) return;
-        onClose?.();
-    }}>
+            if (e.target.closest('.sp-modal')) return;
+            handleCancel();
+        }}>
             <div className="sp-modal">
                 <div className="sp-header">
-                    <i className="fa-solid fa-h"></i> {action.name}
+                    <i className="fa-solid fa-sun"></i> {action.name}
                 </div>
                 <div className="sp-body">
                     <p>Choose the damage type for Sacred Weapon:</p>
-                    <div style={{ textAlign: 'left', marginTop: '12px' }}>
+                    <div className="sacred-weapon-options">
                         {options.map((opt, i) => {
                             const isSelected = selected === opt.name;
                             return (
-                                <label key={i} style={{ display: 'block', padding: '8px 12px', margin: '4px 0', borderRadius: '6px', cursor: 'pointer', background: isSelected ? 'rgba(255,255,255,0.15)' : 'transparent', border: isSelected ? '1px solid var(--color-link)' : '1px solid transparent' }}>
+                                <label key={i} className={`sacred-weapon-option${isSelected ? ' selected' : ''}`}>
                                     <input
                                         type="radio"
                                         name="sacredWeaponOption"
                                         checked={isSelected}
                                         onChange={() => setSelected(opt.name)}
-                                        style={{ marginRight: '8px' }}
                                     />
                                     <strong>{opt.name}</strong>
                                 </label>
@@ -67,9 +75,9 @@ function SacredWeaponModal({ action, playerStats, campaignName, onClose }) {
                 </div>
                 <div className="sp-actions">
                     <button className="sp-roll-btn" onClick={handleApply} disabled={!selected}>
-                        <i className="fa-solid fa-h"></i> Activate Sacred Weapon
+                        <i className="fa-solid fa-sun"></i> Activate Sacred Weapon
                     </button>
-                    <button className="sp-dismiss-btn" onClick={onClose}>Cancel</button>
+                    <button className="sp-dismiss-btn" onClick={handleCancel}>Cancel</button>
                 </div>
             </div>
         </div>

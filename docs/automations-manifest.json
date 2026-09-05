@@ -5448,7 +5448,7 @@
       "handler": "src/services/combat/automation/handlers/classFeatureHandler.js",
       "router": "src/services/combat/automation/routers/classFeatureRouter.js",
       "infoBuilder": "src/services/combat/automation/infoBuilders/classFeatureInfoBuilder.js",
-      "verified": "broken — see .opencode/plans/bug-CLA-301-sacred-weapon-generic-buff-no-cd-spend.md",
+      "verified": "verified",
       "class": "Paladin",
       "triggerConditions": "Action: 1 action; Range: self",
       "expectedBehavior": "CANONICAL (2024, Oath of DEVOTION lv3 major; manifest class/Oath + 1-action casting_time WRONG - data casting_time also says 1 action): Expend one use of Channel Divinity (Bonus Action) to imbue one Melee weapon with positive energy for 10 minutes. Add Charisma modifier to attack rolls (minimum +1). Hit deals normal damage type or Radiant damage. Weapon emits Bright Light in 20-foot radius and Dim Light 20 feet beyond."

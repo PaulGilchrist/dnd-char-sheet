@@ -412,3 +412,24 @@ describe('tempHandlers – large_form', () => {
         expect(result).toMatchObject({ duration: '1_minute', casting_time: '1 action', resourceCost: 'wild shape' })
     })
 })
+
+// ── CLA-301: temp_buff options passthrough ─────────────────────────
+
+describe('tempHandlers – temp_buff options passthrough (CLA-301)', () => {
+    it('preserves options for choice-picker temp_buff features (Sacred Weapon)', () => {
+        const options = [
+            { name: 'Normal Damage Type', damageType: 'normal' },
+            { name: 'Radiant Damage', damageType: 'Radiant' },
+        ]
+        const result = tempHandlers.temp_buff(makeFeature({
+            type: 'temp_buff', effect: 'sacred_weapon', options, resourceCost: 'channel_divinity',
+        }), BASE_STATS)
+        expect(result.options).toEqual(options)
+        expect(result.effect).toBe('sacred_weapon')
+    })
+
+    it('defaults options to empty array when absent', () => {
+        const result = tempHandlers.temp_buff(makeFeature({ type: 'temp_buff' }), BASE_STATS)
+        expect(result.options).toEqual([])
+    })
+})

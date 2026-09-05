@@ -1,0 +1,23 @@
+.sacred-weapon-options {
+    text-align: left;
+    margin-top: 12px;
+}
+
+.sacred-weapon-option {
+    display: block;
+    padding: 8px 12px;
+    margin: 4px 0;
+    border-radius: 6px;
+    cursor: pointer;
+    border: 1px solid transparent;
+    background: transparent;
+}
+
+.sacred-weapon-option.selected {
+    background: rgba(255, 255, 255, 0.15);
+    border-color: var(--color-link);
+}
+
+.sacred-weapon-option input {
+    margin-right: 8px;
+}

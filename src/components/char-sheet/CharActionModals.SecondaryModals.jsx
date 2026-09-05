@@ -19,6 +19,7 @@ import ArcaneChargeModal from './modals/arcane/ArcaneChargeModal.jsx';
 import WarMagicCantripModal from './modals/WarMagicCantripModal.jsx';
 import WarMagicSpellModal from './modals/WarMagicSpellModal.jsx';
 import SacredWeaponModal from './modals/divine/SacredWeaponModal.jsx';
+import { cancelSacredWeapon } from '../../services/automation/handlers/class-cleric-paladin/sacredWeaponHandler.js';
 import PrimalCompanionBonusActionModal from './modals/PrimalCompanionBonusActionModal.jsx';
 import PrimalCompanionSummonModal from './modals/PrimalCompanionSummonModal.jsx';
 import MistyWandererModal from './modals/MistyWandererModal.jsx';
@@ -282,6 +283,12 @@ function SecondaryModals({
                 <SacredWeaponModal
                     {...mergedModalState.sacredWeaponModal}
                     onClose={() => setModalState({ sacredWeaponModal: null })}
+                    onCancel={async () => {
+                        // CLA-301: refund the Channel Divinity charge spent before the picker opened.
+                        const payload = mergedModalState.sacredWeaponModal;
+                        await cancelSacredWeapon(payload.action, payload.playerStats, payload.campaignName);
+                        setModalState({ sacredWeaponModal: null });
+                    }}
                 />
             )}
             {mergedModalState.primalCompanionBonusActionModal && (

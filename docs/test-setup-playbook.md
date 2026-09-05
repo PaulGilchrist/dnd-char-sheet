@@ -47,6 +47,13 @@ Feats step: tick feat via `.list-item-checkbox-trigger` → Abilities step `.bg-
 
 ## RECIPES
 
+### Orchestrator playbook rules (append-only; subagents MUST NOT rewrite existing entries)
+- Edit the playbook with surgical appends only — full-file rewrites have silently dropped prior entries twice.
+- Manifest edits: surgical text edits to the single row's block only; never `json.dump` the whole file (unescapes \u across unrelated lines). Set `verified` to exactly `"verified"` when fixed — no custom prose in that field.
+
+### Phantom-row house standard (CLA-284, 2026-09-04)
+Phantom/misattributed row = manifest data bug, not code: fix the row IN PLACE (keep the id), retype to `feat`/`featBenefit`, add CANONICAL/misattributed annotation to expectedBehavior with real router/handler paths (cited feat/classFeature handler paths are systematically fictitious — verify against automationRouter.js/automation/index.js). `verified:"verified"` may rest on the handler's passing vitest suite when no live character holds the prerequisite (state the basis). Widen the owning feat row's expectedBehavior to cover the full benefit set.
+
 ### CLA-297 Retaliation reaction gates FIXED (2026-09-04 — `.opencode/plans/bug-CLA-297-retaliation-no-reaction-or-range-gates.md`)
 
 - **FIXED:** `reactionDamageHandler.js` generic no-save branch gained `gateAdjacentDamageReaction()` for trigger `damage_from_adjacent_creature` ONLY (Guardian `creature_disengages_or_hits_other_within_5ft` + Reactive Strike polearm share the branch — un-gated by design). Gates in order: no lastAttack → holder-not-target → self-attacker (`attackerName === playerStats.name`, kills stale self-overwrite re-fire) → `totalDamage <= 0` (findLastAttack computes `actualDamage ?? primary+secondary`) → `attackEvent.weaponType === 'ranged'` → `isWithinRange(holder, attacker, 5)` (lenient no-map=true) → round latch `_Retaliation_usedRound` vs `getCombatContext(cs).round` (CLA-274/CLA-298 interception consumption precedent). Refusals = `automation_info` popups (CharReactions renders via `setPopupHtml(result.payload)`), no roll, no stamp, no log. On pass: stamp round + `ability_use` "X used Retaliation (Reaction) — melee attack against Y…" then `attack_roll`. Round-wrap clears added to navigationHandlers.js + initiative.jsx next-turn lists.
@@ -106,3 +113,20 @@ Edit-wizard Spells step: dismiss lingering `.mi-overlay` via `.mi-skip` first �
 - **NOTE:** 2024 wizard `spells[]` on disk is bare names; castable/prepared state comes from computed playerStats — the Spells-table row renders clickable when prepared.
 - **MODEL:** success-branch (`disadvantage_next_attack` te + 1-round expiration, no concentration record written by handler — spellPreparation's dc-10 record stands) untouched, per house model; badge-click remains the app-wide end-of-turn repeat-save consumer (SP-066/CLA-175 family).
 - **TESTS:** new `CharSpells.getTargetInfo.sp-sp097.test.jsx` (executor seam: real function resolves armed target/overlay-name/null); new cases in `rayOfEnfeeblementService.test.js` (saveDc threading from metaCtx + spellAbilities fallback), `rayOfEnfeeblementHandler.test.js` (DC 17 prompt, te carries dc, activeConditionMeta merge/null, concentration persisted/skipped), `createRollConditionSaveHandler.test.jsx` (ray cleanup: te+conc cleared + save-ends logs, unrelated caster conc preserved, failed keeps te + "continues" log, no-effect no-op), `ConditionEffectBadges.spell-effects.test.jsx` (badge click → con repeat save with te dc). Lint zero, scoped suites (features/ handlers/ char-sheet/ initiative/) 15310 pass.
+
+## Pitfall: attack damage formula string is pre-built before featureRiders mutate damageType
+
+Sheet attack pipelines build the damage formula (e.g. `1d8+5 [slashing]`) in
+`buildRollBaseDamageStep` *before* `buildFeatureRidersStep` runs. A rider that swaps
+`ctx.attack.damageType` (e.g. Sacred Weapon radiant) correctly changes the applied/logged
+damage type (`rollDamage` ctx reads `attack.damageType` via `contextBuilder-sync`), but the
+already-built formula string in the popup still shows the old `[type]` token. Verify radiant
+conversion via the campaign log's `damageType` field, not the formula text.
+
+## Pitfall: Sacred Weapon CD display lags modal-open
+
+`sacredWeaponHandler.handle` spends the Channel Divinity charge *before* returning the
+damage-type picker modal, so the sheet's "X/3" counter can briefly show the pre-spend value
+while the picker is open, and the post-spend value is only correct after the next SSE sync.
+Cancel refunds via `cancelSacredWeapon`; verify spends/refunds against
+`GET /api/campaigns/test-campaign/change-data` (10s debounce), not the instant UI counter.

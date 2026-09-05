@@ -36,6 +36,9 @@ export const tempHandlers = {
             targets: auto.targets || null,
             resourceCost: auto.resourceCost || '',
             freeFirstUseAfterLongRest: !!auto.freeFirstUseAfterLongRest,
+            // CLA-301: preserve options so choice-pickers (e.g. Sacred Weapon
+            // Normal/Radiant damage type) reach the row handler.
+            options: auto.options || [],
             hasAutomation: true
         }
     },

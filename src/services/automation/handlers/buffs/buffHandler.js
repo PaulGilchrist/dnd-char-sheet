@@ -2,6 +2,7 @@ import { toggleBuff, isBuffActive } from '../../common/buffToggle.js';
 import { addExpiration } from '../../../rules/effects/expirations.js';
 import { handle as handleTeleport } from '../class-warlock/tempTeleportHandler.js';
 import { handle as handleVowOfEnmity } from '../class-cleric-paladin/vowOfEnmityHandler.js';
+import { handle as handleSacredWeapon } from '../class-cleric-paladin/sacredWeaponHandler.js';
 import { getTargetFromAttacker } from '../../../rules/combat/damageUtils.js';
 import { getCombatSummary, loadCombatSummary } from '../../../encounters/combatData.js';
 import { evaluateAutoExpression } from '../../../combat/automation/automationService.js';
@@ -27,6 +28,13 @@ export async function handle(action, playerStats, campaignName, _mapName) {
     // Vow of Enmity: delegate to dedicated handler
     if (auto?.effect === 'vow_of_enmity') {
         return handleVowOfEnmity(action, playerStats, campaignName, _mapName);
+    }
+
+    // Sacred Weapon (CLA-301): delegate to dedicated Channel Divinity spend +
+    // damage-type picker handler — the generic temp_buff path granted the buff
+    // for free and dropped the options picker.
+    if (auto?.effect === 'sacred_weapon') {
+        return handleSacredWeapon(action, playerStats, campaignName, _mapName);
     }
 
     // Handle Adrenaline Rush: bonus action dash with temp HP, uses = proficiency_bonus, short_rest recharge

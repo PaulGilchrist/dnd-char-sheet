@@ -81,6 +81,17 @@ export function collectAutomationFromFeatures(features, playerStats) {
                 })
                 continue
             }
+            // CLA-301: Sacred Weapon — the feature-held passive marker that gates
+            // the steps/features/sacredWeapon.js damage-type-swap consumer. The row
+            // itself stays routed as a temp_buff special action (fall through below).
+            if (auto?.type === 'temp_buff' && auto?.effect === 'sacred_weapon') {
+                result.passives.push({
+                    type: 'passive_buff',
+                    name: feature.name,
+                    effect: 'sacred_weapon',
+                    hasAutomation: true,
+                })
+            }
             const info = buildAttackInfo({ ...feature, automation: auto }, playerStats)
             if (!info) continue
 

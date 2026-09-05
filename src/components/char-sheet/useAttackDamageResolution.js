@@ -149,6 +149,7 @@ export default function useAttackDamageResolution({
     let pendingCtxOverrides = {};
 
     const proceedWithDamage = (attack, formula, total, rolls, modifier, critLabels, pipelineCtx) => {
+        console.log('[sw-debug] proceedWithDamage attack.damageType=', attack?.damageType, 'formula=', formula);
         if (buildCtxSync) {
             (mapName ? buildCtx(attack) : buildCtxSync(attack)).then(ctx => {
                 const merged = {
@@ -162,6 +163,7 @@ export default function useAttackDamageResolution({
                     dcSuccess: pipelineCtx?.dcSuccess || pendingCtxOverrides?.dcSuccess || null,
                     tavernBrawlerRerolls: pipelineCtx?.tavernBrawlerRerolls || null,
                 };
+                console.log('[sw-debug] rollDamage ctx.damageType=', merged.damageType);
                 rollDamage(attack.name, formula, total, rolls, modifier, { ...merged, ...critLabels });
             }).catch((e) => { console.error("[useAttackDamageResolution] Error:", e); });
         } else {
