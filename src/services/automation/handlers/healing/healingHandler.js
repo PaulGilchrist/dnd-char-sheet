@@ -264,6 +264,36 @@ export async function handle(action, playerStats, campaignName, _mapName, _chara
             }
         }
 
+        const gateMaxHp = playerStats.maxHitPoints ?? playerStats.hitPoints ?? 0;
+        const storedCurrentHp = getRuntimeValue(playerStats.name, 'currentHitPoints', campaignName);
+        const gateCurrentHp = (storedCurrentHp != null && storedCurrentHp !== '') ? Number(storedCurrentHp) : (playerStats.currentHitPoints ?? gateMaxHp);
+        const hasHpTruth = gateMaxHp > 0 && !Number.isNaN(gateCurrentHp);
+
+        if (hasHpTruth && gateCurrentHp <= 0) {
+            return {
+                type: 'popup',
+                payload: {
+                    type: 'automation_info',
+                    name: action.name,
+                    automationType: auto.type,
+                    description: `${action.name} can't be used while unconscious at 0 Hit Points.`,
+                },
+            };
+        }
+
+        if (hasHpTruth && gateCurrentHp >= gateMaxHp) {
+            const refusalUses = (isHitDieRoll && isSelf) ? undefined : ` (${currentUses} use${currentUses === 1 ? '' : 's'} remaining)`;
+            return {
+                type: 'popup',
+                payload: {
+                    type: 'automation_info',
+                    name: action.name,
+                    automationType: auto.type,
+                    description: `${action.name}: Already at full HP${refusalUses ?? ''}. No use spent.`,
+                },
+            };
+        }
+
         let resolvedExpression = resolveDiceExpression(auto.healExpression, playerStats, slotLevel)
             .replace(/\bfighter level\b/gi, String(playerStats.level || 1));
 
@@ -292,7 +322,9 @@ export async function handle(action, playerStats, campaignName, _mapName, _chara
             const conBonus = playerStats.abilities?.find(a => a.name === 'Constitution')?.bonus || 0;
             healAmount = computeHitDieRecovery(rollResult.total, conBonus);
         } else {
-            ({ totalBonus: healAmount, details: bonusDetails } = resolveHealingBonusesWithDetails(playerStats, playerStats.proficiency || 0, playerStats.level || 1, slotLevel, campaignName));
+            const { totalBonus, details } = resolveHealingBonusesWithDetails(playerStats, playerStats.proficiency || 0, playerStats.level || 1, slotLevel, campaignName);
+            bonusDetails = details;
+            healAmount = rollResult.total + totalBonus;
         }
 
         const { newHp, maxHp, actualHeal } = applyHealingDirectly(playerStats, playerStats.name, healAmount, campaignName);
@@ -311,7 +343,7 @@ export async function handle(action, playerStats, campaignName, _mapName, _chara
             await setRuntimeValue(playerStats.name, 'shortRestHitDice', remainingHitDice, campaignName, true);
         }
 
-        if (!(isHitDieRoll && isSelf)) {
+        if (!(isHitDieRoll && isSelf) && actualHeal > 0) {
             await setRuntimeValue(playerStats.name, usesKey, currentUses - 1, campaignName, true);
         }
 
@@ -328,7 +360,7 @@ export async function handle(action, playerStats, campaignName, _mapName, _chara
             maximize,
             healingName: action.name,
             remainingHitDice: (isHitDieRoll && isSelf) ? remainingHitDice : undefined,
-            remainingUses: (isHitDieRoll && isSelf) ? undefined : currentUses - 1,
+            remainingUses: (isHitDieRoll && isSelf) ? undefined : (actualHeal > 0 ? currentUses - 1 : currentUses),
             maxUses,
             bonusDetails,
         });
@@ -336,9 +368,10 @@ export async function handle(action, playerStats, campaignName, _mapName, _chara
         const healDesc = actualHeal > 0
             ? `Regained ${actualHeal} HP`
             : 'Already at full HP';
+        const remainingUses = actualHeal > 0 ? currentUses - 1 : currentUses;
         const description = (isHitDieRoll && isSelf)
             ? `${action.name}: ${rollInfo} — ${healDesc} (${remainingHitDice} hit dice remaining).`
-            : `${action.name}: ${rollInfo} — ${healDesc} (${currentUses - 1} use${currentUses - 1 > 1 ? 's' : ''} remaining).`;
+            : `${action.name}: ${rollInfo} — ${healDesc} (${remainingUses} use${remainingUses === 1 ? '' : 's'} remaining)${actualHeal > 0 ? '' : '. No use spent'}.`;
 
         return {
             type: 'popup',
