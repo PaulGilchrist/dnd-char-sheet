@@ -111,6 +111,15 @@ describe('computeDamageAfterSave', () => {
 describe('rollSaveForCreature', () => {
   beforeEach(() => vi.clearAllMocks());
 
+  it('CLA-303: resolves bonus for uppercase saveType against lowercase saveBonuses keys', async () => {
+    rollD20.mockReturnValueOnce(10);
+    const creature = { saveBonuses: { wis: -2 } };
+    const result = rollSaveForCreature(creature, 'WIS', 17);
+    expect(result.bonus).toBe(-2);
+    expect(result.total).toBe(8);
+    expect(result.success).toBe(false);
+  });
+
   it('returns correct shape with single roll', async () => {
     rollD20.mockReturnValueOnce(15);
     const creature = { saveBonuses: { dex: 3 } };

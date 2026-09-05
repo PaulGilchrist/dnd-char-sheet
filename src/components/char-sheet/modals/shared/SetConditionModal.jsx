@@ -68,6 +68,13 @@ function SetConditionModal({ combatSummary, attackerName, attackerPos, saveDc, c
 
         if (channelDivinityCharges != null && channelDivinityCharges > 0) {
             setRuntimeValue(attackerName, 'channelDivinityCharges', channelDivinityCharges - 1, campaignName);
+            addEntry(campaignName, {
+                type: 'ability_use',
+                characterName: attackerName,
+                abilityName: featureName,
+                description: `${attackerName} spent 1 Channel Divinity charge to use ${featureName} — Channel Divinity: ${channelDivinityCharges - 1} remaining.`,
+                timestamp: Date.now(),
+            }).catch((e) => { console.error('[SetConditionModal] Channel Divinity spend log error:', e); });
         }
 
         const npcResults = [];
@@ -179,7 +186,7 @@ function SetConditionModal({ combatSummary, attackerName, attackerPos, saveDc, c
                     {!(isTurnUndead && ctx.eligibleTargets.length === 0) && (
                         <p>Select creatures within {rangeFeet} feet. Each must make a <strong>{saveType}</strong> saving throw (DC {saveDc}) or become <strong>{conditionLabel}</strong> for 1 minute.</p>
                     )}
-                    <p className="sp-note">Targets selected: {ctx.selected.size}/{ctx.eligibleTargets.length} (max {maxTargets})</p>
+                    <p className="sp-note">Targets selected: {ctx.selected.size}/{ctx.eligibleTargets.length}{Number.isFinite(maxTargets) ? ` (max ${maxTargets})` : ' (all undead in range)'}</p>
                     {renderTargetList({ eligibleTargets: ctx.eligibleTargets, selected: ctx.selected, toggleTarget: ctx.toggleTarget })}
                 </>
             );

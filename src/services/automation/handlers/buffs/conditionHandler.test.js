@@ -650,5 +650,72 @@ describe('conditionHandler.handle', () => {
 
       expect(result.payload.maxTargets).toBe(5);
     });
+
+    it('CLA-303: maxTargets "all" (Turn Undead RAW) opens the cap to Infinity', async () => {
+      const ps = makePlayerStats();
+      const action = {
+        name: 'Turn Undead',
+        automation: {
+          type: 'set_condition',
+          saveType: 'WIS',
+          saveAbility: 'WIS',
+          resourceCost: 'channel_divinity',
+          maxTargets: 'all',
+        },
+      };
+
+      getRuntimeValue.mockReturnValue(2);
+      getAbilityModifier.mockReturnValue(1);
+
+      const result = await handle(action, ps, CAMPAIGN_NAME, null);
+
+      expect(result.payload.maxTargets).toBe(Infinity);
+      const logDesc = addEntry.mock.calls.find(c => String(c[1]?.description).includes('activated'))[1].description;
+      expect(logDesc).toContain('up to all targets');
+    });
+
+    it('CLA-303: resourceCost channel_divinity gates set_condition features at 0 charges', async () => {
+      const ps = makePlayerStats();
+      const action = {
+        name: 'Turn Undead',
+        automation: {
+          type: 'set_condition',
+          saveType: 'WIS',
+          saveAbility: 'WIS',
+          resourceCost: 'channel_divinity',
+          maxTargets: 'all',
+        },
+      };
+
+      getRuntimeValue.mockImplementation((name, key) => (key === 'channelDivinityCharges' ? 0 : null));
+
+      const result = await handle(action, ps, CAMPAIGN_NAME, null);
+
+      expect(result.type).toBe('popup');
+      expect(result.payload.description).toBe('No Channel Divinity charges remaining.');
+    });
+
+    it('CLA-303: CD-gated feature with explicit saveAbility WIS builds WIS-based DC (not CHA)', async () => {
+      const ps = makePlayerStats({ proficiency: 4 });
+      const action = {
+        name: 'Turn Undead',
+        automation: {
+          type: 'set_condition',
+          saveType: 'WIS',
+          saveAbility: 'WIS',
+          resourceCost: 'channel_divinity',
+          maxTargets: 'all',
+        },
+      };
+
+      getRuntimeValue.mockImplementation((name, key) => (key === 'channelDivinityCharges' ? 2 : null));
+      getAbilityModifier.mockImplementation((abilities, ability) => (ability === 'WIS' ? 5 : 0));
+
+      const result = await handle(action, ps, CAMPAIGN_NAME, null);
+
+      expect(result.type).toBe('modal');
+      expect(result.payload.saveDc).toBe(17);
+      expect(result.payload.channelDivinityCharges).toBe(2);
+    });
   });
 });

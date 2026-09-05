@@ -391,6 +391,20 @@ describe('initiativeService', () => {
       await applyNpcMonsterData(combatSummary, 0, monster, campaignNpcs);
       expect(combatSummary.creatures[0].imagePath).toBeUndefined();
     });
+
+    it('CLA-303: carries monsterType from monster data (MN-015 size precedent)', async () => {
+      const combatSummary = makeCombatSummary([{ name: 'Skeleton 1', type: 'npc' }]);
+      const monster = { armor_class: 12, hit_points: 13, type: 'Undead' };
+      await applyNpcMonsterData(combatSummary, 0, monster, []);
+      expect(combatSummary.creatures[0].monsterType).toBe('Undead');
+    });
+
+    it('CLA-303: keeps existing monsterType when monster data has none', async () => {
+      const combatSummary = makeCombatSummary([{ name: 'Zombie 1', type: 'npc', monsterType: 'Undead' }]);
+      const monster = { armor_class: 8 };
+      await applyNpcMonsterData(combatSummary, 0, monster, []);
+      expect(combatSummary.creatures[0].monsterType).toBe('Undead');
+    });
   });
 
   describe('renameNpc', () => {

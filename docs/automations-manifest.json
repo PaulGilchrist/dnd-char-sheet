@@ -5547,7 +5547,7 @@
       "handler": "src/services/combat/automation/handlers/classFeatureHandler.js",
       "router": "src/services/combat/automation/routers/classFeatureRouter.js",
       "infoBuilder": "src/services/combat/automation/infoBuilders/classFeatureInfoBuilder.js",
-      "verified": "broken — see .opencode/plans/bug-CLA-303-turn-undead-inert-eb-targets.md",
+      "verified": "verified",
       "class": "Cleric",
       "triggerConditions": "Trigger: turn_undead_fail; Once per turn: no",
       "expectedBehavior": "Whenever you use Turn Undead, you can roll a number of d8s equal to your Wisdom modifier (minimum of 1d8) and add the rolls together. Each Undead that fails its saving throw against that use of Turn Undead takes Radiant damage equal to the roll's total."

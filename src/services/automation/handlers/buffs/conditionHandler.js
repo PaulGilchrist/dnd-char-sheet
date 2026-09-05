@@ -24,7 +24,10 @@ export async function handle(action, playerStats, campaignName, _mapName) {
     const rangeFeet = rangeToFeet(auto.range) || 60;
 
     const chaMod = getAbilityModifier(playerStats.abilities, 'CHA');
-    const maxTargets = Math.max(1, chaMod);
+    // CLA-303: RAW Turn Undead targets all chosen undead in range — data opts out
+    // of the Abjure-Foes CHA cap via maxTargets:"all".
+    const maxTargets = auto.maxTargets === 'all' ? Infinity : Math.max(1, chaMod);
+    const maxTargetsText = Number.isFinite(maxTargets) ? maxTargets : 'all';
 
     const storedCharges = getRuntimeValue(playerStats.name, 'channelDivinityCharges');
     const classLevel = playerStats.class?.class_levels?.[playerStats.level - 1];
@@ -67,7 +70,7 @@ export async function handle(action, playerStats, campaignName, _mapName) {
         type: 'ability_use',
         characterName: playerStats.name,
         abilityName: action.name,
-        description: `${action.name} activated — ${saveType} save DC ${saveDc}, up to ${maxTargets} targets within ${rangeFeet} ft.`,
+        description: `${action.name} activated — ${saveType} save DC ${saveDc}, up to ${maxTargetsText} targets within ${rangeFeet} ft.`,
      }).catch((e) => { console.error("[conditionHandler:log-error]", e); });
 
     return {

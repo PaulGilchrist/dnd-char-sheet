@@ -54,6 +54,8 @@ vi.mock('../../../../services/ui/storage.js', () => ({
 
 import * as diceRoller from '../../../../services/dice/diceRoller.js';
 import * as savePromptService from '../../../../services/combat/conditions/savePromptService.js';
+import { setRuntimeValue } from '../../../../hooks/runtime/useRuntimeState.js';
+import { addEntry } from '../../../../services/ui/logService.js';
 
 // ── Test fixtures ──
 
@@ -169,6 +171,58 @@ describe('SetConditionModal - Turn Undead', () => {
     expect(getModalChecks(container)).toHaveLength(0);
     const applyButton = screen.getByRole('button', { name: /Turn Undead/ });
     expect(applyButton).toBeDisabled();
+  });
+
+  // ── CLA-303: EB suffixed names + CD spend ──
+
+  it('CLA-303: makes EB suffixed creatures eligible via monsterType carried at join, excludes dead', () => {
+    const combatSummary = {
+      creatures: [
+        { name: 'Attacker', type: 'player' },
+        { name: 'Skeleton 1', type: 'npc', monsterType: 'Undead', currentHp: 13, maxHp: 13 },
+        { name: 'Zombie 1', type: 'npc', monsterType: 'Undead', currentHp: 15, maxHp: 15 },
+        { name: 'Thug 1', type: 'npc', monsterType: 'Humanoid', currentHp: 15, maxHp: 15 },
+        { name: 'Skeleton 2', type: 'npc', monsterType: 'Undead', currentHp: 0, maxHp: 13 },
+      ],
+    };
+
+    const { container } = render(<SetConditionModal {...makeProps({
+      featureName: 'Turn Undead',
+      combatSummary,
+      monsters: [],
+    })} />);
+
+    expect(getCheckboxByCreature(container, 'Skeleton 1')).toBeInTheDocument();
+    expect(getCheckboxByCreature(container, 'Zombie 1')).toBeInTheDocument();
+    expect(getCheckboxByCreature(container, 'Thug 1')).toBeUndefined();
+    expect(getCheckboxByCreature(container, 'Skeleton 2')).toBeUndefined();
+  });
+
+  it('CLA-303: spends 1 Channel Divinity charge on apply and logs the spend', async () => {
+    diceRoller.rollD20.mockReturnValue(5);
+
+    const { container } = render(<SetConditionModal {...makeProps({
+      featureName: 'Turn Undead',
+      channelDivinityCharges: 3,
+    })} />);
+    fireEvent.click(getCheckboxByCreature(container, 'Skeleton A'));
+    fireEvent.click(screen.getByRole('button', { name: /Turn Undead \(1 target\)/ }));
+
+    await waitFor(() => {
+      expect(setRuntimeValue).toHaveBeenCalledWith('Attacker', 'channelDivinityCharges', 2, 'test-campaign');
+    });
+    expect(addEntry).toHaveBeenCalledWith('test-campaign', expect.objectContaining({
+      type: 'ability_use',
+      description: expect.stringContaining('spent 1 Channel Divinity charge to use Turn Undead'),
+    }));
+  });
+
+  it('CLA-303: unlimited maxTargets renders without a numeric cap', () => {
+    render(<SetConditionModal {...makeProps({
+      featureName: 'Turn Undead',
+      maxTargets: Infinity,
+    })} />);
+    expect(screen.getByText(/Targets selected: 0\/3 \(all undead in range\)/)).toBeInTheDocument();
   });
 
   // ── turn-undead-result event dispatch ──

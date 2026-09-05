@@ -454,7 +454,7 @@ export default function useInitiativeEffects(playerStats, campaignName, rollDama
 
     // Apply Searing Undead Radiant damage when Turn Undead resolves
     useEffect(() => {
-        const handleTurnUndeadResult = (e) => {
+        const handleTurnUndeadResult = async (e) => {
             if (!playerStats || !e.detail) return;
             const { failedTargets, attackerName, campaignName: eventCampaign } = e.detail;
             if (attackerName !== playerStats.name) return;
@@ -471,16 +471,19 @@ export default function useInitiativeEffects(playerStats, campaignName, rollDama
             const result = rollExpression(expr);
             if (!result) return;
 
+            // CLA-303: the Turn Undead save is already resolved by SetConditionModal —
+            // do NOT pass saveDc/saveType here or handleNpcSaveDamage re-rolls a phantom
+            // second save that can null the damage. Plain-damage path applies full total.
             const baseContext = {
                 damageType: searingUndead.damageType || 'Radiant',
                 attackerName: playerStats.name,
-                saveDc: e.detail.saveDc,
-                saveType: e.detail.saveType,
-                dcSuccess: false,
             };
 
+            // CLA-303: sequential awaits — concurrent rollDamage calls each POST the
+            // FULL combatSummary snapshot and the earlier POST can land last,
+            // silently reverting another target's damage (pitfall 21).
             for (const targetName of failedTargets) {
-                rollDamage(
+                await rollDamage(
                     searingUndead.name,
                     expr,
                     result.total,

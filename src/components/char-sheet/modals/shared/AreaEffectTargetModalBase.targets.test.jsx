@@ -107,6 +107,77 @@ describe('AreaEffectTargetModalBase - Eligible Targets', () => {
       expect(targetNames2).toContain('Goblin');
     });
 
+    describe('CLA-303: EB suffixed names + monsterType-at-join + dead exclusion', () => {
+      function capture(turnUndeadProps) {
+        getRuntimeValue.mockReturnValue([]);
+        let capturedCtx = null;
+        const renderBody = vi.fn(() => {
+          capturedCtx = renderBody.mock.calls.at(-1)[0];
+          return <div>Captured</div>;
+        });
+        render(<AreaEffectTargetModalBase {...baseProps} turnUndead={true} renderBody={renderBody} {...turnUndeadProps} />);
+        return capturedCtx.eligibleTargets.map(t => t.name);
+      }
+
+      it('makes EB suffixed creatures eligible via monsterType carried at join time', () => {
+        const combatSummary = {
+          creatures: [
+            { name: 'Thug 1', type: 'npc', monsterType: 'Humanoid', currentHp: 15, maxHp: 15 },
+            { name: 'Skeleton 1', type: 'npc', monsterType: 'Undead', currentHp: 13, maxHp: 13 },
+            { name: 'Zombie 1', type: 'npc', monsterType: 'Undead', currentHp: 15, maxHp: 15 },
+          ],
+        };
+        const names = capture({ combatSummary, monsters: [] });
+        expect(names).toEqual(['Skeleton 1', 'Zombie 1']);
+      });
+
+      it('falls back to suffix-strip monsters.json lookup when monsterType is absent', () => {
+        const combatSummary = {
+          creatures: [
+            { name: 'Skeleton 1', type: 'npc', currentHp: 13, maxHp: 13 },
+            { name: 'Thug 1', type: 'npc', currentHp: 15, maxHp: 15 },
+          ],
+        };
+        const monsters = [
+          { name: 'Skeleton', type: 'Undead' },
+          { name: 'Thug', type: 'Humanoid' },
+        ];
+        const names = capture({ combatSummary, monsters });
+        expect(names).toEqual(['Skeleton 1']);
+      });
+
+      it('excludes undead creatures at 0 hit points', () => {
+        const combatSummary = {
+          creatures: [
+            { name: 'Skeleton 1', type: 'npc', monsterType: 'Undead', currentHp: 13, maxHp: 13 },
+            { name: 'Zombie 1', type: 'npc', monsterType: 'Undead', currentHp: 0, maxHp: 15 },
+          ],
+        };
+        const names = capture({ combatSummary, monsters: [] });
+        expect(names).toEqual(['Skeleton 1']);
+      });
+
+      it('keeps undead eligible when currentHp is undefined (players/minimal creatures)', () => {
+        const combatSummary = {
+          creatures: [
+            { name: 'Skeleton', type: 'npc' },
+          ],
+        };
+        const names = capture({ combatSummary, monsters: [{ name: 'Skeleton', type: 'Undead' }] });
+        expect(names).toEqual(['Skeleton']);
+      });
+
+      it('matches monsterType case-insensitively', () => {
+        const combatSummary = {
+          creatures: [
+            { name: 'Zombie 1', type: 'npc', monsterType: 'undead', currentHp: 15, maxHp: 15 },
+          ],
+        };
+        const names = capture({ combatSummary, monsters: [] });
+        expect(names).toEqual(['Zombie 1']);
+      });
+    });
+
     it.each([
       { label: 'no creatures property', combatSummary: {} },
       { label: 'null combatSummary', combatSummary: null },

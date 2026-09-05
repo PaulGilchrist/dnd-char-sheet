@@ -75,6 +75,12 @@ describe('useInitiativeEffects - turn-undead-result event', () => {
         );
     }
 
+    // CLA-303: multi-target damage is applied via sequential awaits — flush
+    // microtasks so all rollDamage calls have landed before asserting.
+    async function flushSequentialDamage() {
+        await new Promise(resolve => setTimeout(resolve, 0));
+    }
+
     describe('guard clauses', () => {
         it('does nothing when playerStats is null', () => {
             const rollDamage = vi.fn();
@@ -234,7 +240,7 @@ describe('useInitiativeEffects - turn-undead-result event', () => {
     });
 
     describe('successful damage application', () => {
-        it('applies radiant damage to each failed target', () => {
+        it('applies radiant damage to each failed target', async () => {
             const rollDamage = vi.fn();
             const stats = createClericStats();
             rollExpression.mockReturnValue({
@@ -252,6 +258,7 @@ describe('useInitiativeEffects - turn-undead-result event', () => {
                 saveDc: 13,
                 saveType: 'WIS',
             });
+            await flushSequentialDamage();
             expect(rollDamage).toHaveBeenCalledTimes(2);
             expect(rollDamage).toHaveBeenCalledWith(
                 'Searing Undead',
@@ -263,9 +270,6 @@ describe('useInitiativeEffects - turn-undead-result event', () => {
                     damageType: 'Radiant',
                     attackerName: 'Cleric',
                     targetName: 'Goblin',
-                    saveDc: 13,
-                    saveType: 'WIS',
-                    dcSuccess: false,
                 })
             );
             expect(rollDamage).toHaveBeenCalledWith(
@@ -380,7 +384,7 @@ describe('useInitiativeEffects - turn-undead-result event', () => {
             );
         });
 
-        it('sets dcSuccess to false in the context for all targets', () => {
+        it('CLA-303: sends plain damage — no saveDc/saveType/dcSuccess (save already resolved by the modal)', async () => {
             const rollDamage = vi.fn();
             rollExpression.mockReturnValue({
                 total: 4,
@@ -397,10 +401,13 @@ describe('useInitiativeEffects - turn-undead-result event', () => {
                 saveDc: 11,
                 saveType: 'CHA',
             });
+            await flushSequentialDamage();
             const contextArg = rollDamage.mock.calls[0][5];
-            expect(contextArg.dcSuccess).toBe(false);
-            expect(contextArg.saveDc).toBe(11);
-            expect(contextArg.saveType).toBe('CHA');
+            expect(contextArg.dcSuccess).toBeUndefined();
+            expect(contextArg.saveDc).toBeUndefined();
+            expect(contextArg.saveType).toBeUndefined();
+            // full roll total must be passed as damage for every failed target
+            expect(rollDamage.mock.calls[1][2]).toBe(4);
         });
 
         it('sets attackerName to player name in context', () => {
@@ -422,7 +429,7 @@ describe('useInitiativeEffects - turn-undead-result event', () => {
             expect(contextArg.attackerName).toBe('Cleric');
         });
 
-        it('sets targetName in context for each target', () => {
+        it('sets targetName in context for each target', async () => {
             const rollDamage = vi.fn();
             rollExpression.mockReturnValue({
                 total: 4,
@@ -437,6 +444,7 @@ describe('useInitiativeEffects - turn-undead-result event', () => {
                 campaignName,
                 failedTargets: ['Goblin', 'Zombie'],
             });
+            await flushSequentialDamage();
             expect(rollDamage.mock.calls[0][5].targetName).toBe('Goblin');
             expect(rollDamage.mock.calls[1][5].targetName).toBe('Zombie');
         });

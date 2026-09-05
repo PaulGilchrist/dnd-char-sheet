@@ -116,8 +116,15 @@ function AreaEffectTargetModalBase({
     return combatSummary.creatures.filter(c => {
       if (!includeCaster && c.name === attackerName) return false;
       if (turnUndead) {
-        const monster = Array.isArray(monsters) ? monsters.find(m => m.name === c.name) : undefined;
-        if (!monster || monster.type.toLowerCase() !== 'undead') return false;
+        // CLA-303: dead creatures are not valid Turn Undead targets.
+        if ((c.currentHp ?? 1) <= 0) return false;
+        // CLA-303 (MN-015 precedent): monsterType rides on combatSummary at join
+        // time — trust it first. Fall back to a suffix-strip monsters.json lookup
+        // ("Skeleton 1" -> "Skeleton") for legacy combatSummaries.
+        if (c.monsterType) return String(c.monsterType).toLowerCase() === 'undead';
+        const baseName = (c.name || '').replace(/\s+\d+$/, '');
+        const monster = Array.isArray(monsters) ? monsters.find(m => m.name?.toLowerCase() === baseName.toLowerCase()) : undefined;
+        if (!monster || String(monster.type).toLowerCase() !== 'undead') return false;
       }
       if (getForcecageBlocked(c.name)) return false;
       if (getMazeBlocked(c.name)) return false;

@@ -2193,17 +2193,20 @@
             "description": "As a Action, you present your Holy Symbol and censure Undead creatures. Each Undead of your choice within 30 feet of you must make a Wisdom saving throw. If the creature fails its save, it has the Frightened and Incapacitated conditions for 1 minute.",
             "level": 2,
             "type": "class_feature",
-            "automation": {
-              "type": "set_condition",
-              "saveType": "WIS",
-              "condition": "frightened",
-              "additionalCondition": "incapacitated",
-              "range": "30 ft",
-              "duration": "1_minute",
-              "target": "undead_in_range",
-              "effect": "add_condition",
-              "casting_time": "1 action"
-            }
+             "automation": {
+               "type": "set_condition",
+               "saveType": "WIS",
+               "saveAbility": "WIS",
+               "condition": "frightened",
+               "additionalCondition": "incapacitated",
+               "range": "30 ft",
+               "duration": "1_minute",
+               "target": "undead_in_range",
+               "effect": "add_condition",
+               "maxTargets": "all",
+               "resourceCost": "channel_divinity",
+               "casting_time": "1 action"
+             }
           }
         ],
         "spellcasting": {

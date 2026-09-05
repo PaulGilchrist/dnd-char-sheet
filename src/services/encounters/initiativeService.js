@@ -139,6 +139,9 @@ async function applyNpcMonsterData(combatSummary, creatureIndex, monster, campai
     creature.saveBonuses = getMonsterSaveBonuses(monster)
     // MN-015: keep size in sync with monster data so maneuver size gates work on +NPC creatures.
     creature.size = monster.size || creature.size
+    // CLA-303: keep monsterType in sync with monster data so Turn Undead
+    // eligibility resolves without a client-side name lookup.
+    creature.monsterType = monster.type || creature.monsterType
     const matchedNpc = campaignNpcs.find(n => n.name?.toLowerCase() === creature.name.toLowerCase())
     if (matchedNpc?.imagePath) {
         creature.imagePath = matchedNpc.imagePath

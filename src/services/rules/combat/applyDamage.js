@@ -106,7 +106,10 @@ export function computeDamageAfterEvasion(rawDamage, saveSuccess, dcSuccess, eva
 }
 
 export function rollSaveForCreature(creature, saveType, saveDc, disadvantage = false, advantage = false) {
-  const bonus = creature?.saveBonuses?.[saveType] ?? 0;
+  // CLA-303: saveBonuses keys are lowercase (getMonsterSaveBonuses contract);
+  // callers pass uppercase ('WIS') — normalize so the bonus is never silently +0.
+  const bonusKey = String(saveType ?? '').toLowerCase();
+  const bonus = creature?.saveBonuses?.[bonusKey] ?? creature?.saveBonuses?.[saveType] ?? 0;
   const roll1 = rollD20();
   const roll2 = disadvantage || advantage ? rollD20() : roll1;
   const finalRoll = disadvantage ? Math.min(roll1, roll2) : advantage ? Math.max(roll1, roll2) : roll1;
