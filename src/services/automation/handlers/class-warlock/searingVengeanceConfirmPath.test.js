@@ -34,6 +34,10 @@ vi.mock('../../../rules/combat/applyDamage.js', () => ({
   applyDamageToTarget: vi.fn(),
 }));
 
+vi.mock('../../../rules/combat/applyHealing.js', () => ({
+  applyHealingToTarget: vi.fn(() => ({ actualHeal: 25, oldHp: 0, newHp: 25, maxHp: 50 })),
+}));
+
 vi.mock('../../../rules/effects/expirations.js', () => ({
   addExpiration: vi.fn(async () => {}),
 }));
@@ -363,7 +367,7 @@ describe('confirmSearingVengeance - edge cases', () => {
       );
     });
 
-    it('uses CHA modifier from abilityModifiers when computedStats is missing', async () => {
+    it('resolves CHA modifier from abilities bonus (canonical PlayerStats shape)', async () => {
       mockRuntimeValues({ searingvengeanceUses: 1, activeConditions: [] });
       damageUtils.getCombatContext.mockResolvedValue({
         creatures: [
@@ -380,7 +384,7 @@ describe('confirmSearingVengeance - edge cases', () => {
 
       const playerStats = {
         name: 'TestWarlock',
-        abilityModifiers: { CHA: 5 },
+        abilities: [{ name: 'Charisma', bonus: 5 }],
       };
 
       const payload = {
@@ -400,6 +404,79 @@ describe('confirmSearingVengeance - edge cases', () => {
       );
 
       expect(diceRoller.rollExpression).toHaveBeenCalledWith('2d8+5');
+    });
+
+    it('formats negative CHA modifier without a double sign', async () => {
+      mockRuntimeValues({ searingvengeanceUses: 1, activeConditions: [] });
+      damageUtils.getCombatContext.mockResolvedValue({
+        creatures: [
+          { name: 'Goblin', type: 'npc', currentHp: 10, maxHp: 20 },
+        ],
+      });
+      diceRoller.rollExpression.mockReturnValue({ total: 4, rolls: [1, 3] });
+
+      const automation = {
+        damageExpression: '2d8 + CHA modifier',
+        damageType: 'Radiant',
+        usesMax: 1,
+      };
+
+      const playerStats = {
+        name: 'TestWarlock',
+        abilities: [{ name: 'Charisma', bonus: -2 }],
+      };
+
+      const payload = {
+        name: 'Searing Vengeance',
+        targetName: 'Ally',
+        healAmount: 25,
+        selectedTargets: ['Goblin'],
+      };
+
+      await confirmSearingVengeance(
+        automation,
+        playerStats,
+        campaignName,
+        null,
+        [],
+        payload
+      );
+
+      expect(diceRoller.rollExpression).toHaveBeenCalledWith('2d8-2');
+    });
+
+    it('resolves zero CHA modifier when abilities are missing', async () => {
+      mockRuntimeValues({ searingvengeanceUses: 1, activeConditions: [] });
+      damageUtils.getCombatContext.mockResolvedValue({
+        creatures: [
+          { name: 'Goblin', type: 'npc', currentHp: 10, maxHp: 20 },
+        ],
+      });
+      diceRoller.rollExpression.mockReturnValue({ total: 7, rolls: [3, 4] });
+
+      const automation = {
+        damageExpression: '2d8 + CHA modifier',
+        damageType: 'Radiant',
+        usesMax: 1,
+      };
+
+      const payload = {
+        name: 'Searing Vengeance',
+        targetName: 'Ally',
+        healAmount: 25,
+        selectedTargets: ['Goblin'],
+      };
+
+      await confirmSearingVengeance(
+        automation,
+        makePlayerStats(),
+        campaignName,
+        null,
+        [],
+        payload
+      );
+
+      expect(diceRoller.rollExpression).toHaveBeenCalledWith('2d8+0');
     });
 
     it('handles multiple targets by applying damage to each', async () => {

@@ -5559,7 +5559,7 @@
       "handler": "src/services/combat/automation/handlers/classFeatureHandler.js",
       "router": "src/services/combat/automation/routers/classFeatureRouter.js",
       "infoBuilder": "src/services/combat/automation/infoBuilders/classFeatureInfoBuilder.js",
-      "verified": "broken — see .opencode/plans/bug-CLA-304-searing-vengeance-zero-heal-no-cha.md",
+      "verified": "verified",
       "class": "Warlock",
       "triggerConditions": "Trigger: death_save_by_ally_or_self; Action: 1 reaction; Range: 30_ft",
       "expectedBehavior": "When you or ally within 60 feet is about to make a Death Saving Throw, unleash radiant energy. Creature regains HP equal to half its Hit Point maximum, ends Pending condition. Each creature within 30 feet takes 2d8 + Charisma modifier Radiant damage and has Blinded condition until end of current turn. Once per Long Rest."

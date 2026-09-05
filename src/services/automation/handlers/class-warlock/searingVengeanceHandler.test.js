@@ -38,6 +38,10 @@ vi.mock('../../../rules/combat/applyDamage.js', () => ({
   applyDamageToTarget: vi.fn(),
 }));
 
+vi.mock('../../../rules/combat/applyHealing.js', () => ({
+  applyHealingToTarget: vi.fn(() => ({ actualHeal: 25, oldHp: 0, newHp: 25, maxHp: 50 })),
+}));
+
 vi.mock('../../../rules/effects/expirations.js', () => ({
   addExpiration: vi.fn(async () => {}),
 }));
@@ -151,12 +155,12 @@ describe('searingVengeanceHandler.handle', () => {
           rangeMock: true,
         },
         {
-          name: 'warlock is the only creature at 0 HP',
+          name: 'only creature at 0 HP is dead',
           creatures: [
-            { name: 'TestWarlock', type: 'player', currentHp: 0, maxHp: 70 },
-            { name: 'Ally', type: 'player', currentHp: 30, maxHp: 50 },
+            { name: 'Ally', type: 'player', currentHp: 0, maxHp: 50 },
           ],
-          mockHp: 'TestWarlock',
+          mockHp: 'Ally',
+          mockDead: true,
           rangeMock: true,
         },
         {
@@ -174,6 +178,13 @@ describe('searingVengeanceHandler.handle', () => {
 
         if (scenario.mockHp) {
           mockCreatureHp(scenario.mockHp, 0);
+          if (scenario.mockDead) {
+            useRuntimeState.getRuntimeValue.mockImplementation((subject, key, _campaign) => {
+              if (key === 'searingvengeanceUses') return 1;
+              if (key === 'isDead' && subject === scenario.mockHp) return 1;
+              return null;
+            });
+          }
         } else {
           mockRuntimeValues({ searingvengeanceUses: 1 });
         }
@@ -214,12 +225,12 @@ describe('searingVengeanceHandler.handle', () => {
       expect(result.payload.automation).toEqual(makeAction().automation);
     });
 
-    it('excludes the warlock themselves from creature targets', async () => {
+    it('excludes warlock and healed target from burst creature targets', async () => {
       mockCreatureHp('Ally', 0);
       damageUtils.getCombatContext.mockResolvedValue({
         creatures: [
-          { name: 'TestWarlock', type: 'player', currentHp: 0, maxHp: 70 },
           { name: 'Ally', type: 'player', currentHp: 0, maxHp: 50 },
+          { name: 'TestWarlock', type: 'player', currentHp: 50, maxHp: 70 },
           { name: 'Goblin', type: 'npc', currentHp: 5, maxHp: 20 },
         ],
       });
@@ -231,6 +242,32 @@ describe('searingVengeanceHandler.handle', () => {
       expect(result.payload.targetName).toBe('Ally');
       expect(result.payload.creatureTargets).toEqual([
         { name: 'Goblin', type: 'npc', currentHp: 5, maxHp: 20 },
+      ]);
+    });
+
+    it('includes the warlock themselves as a 0 HP heal target (RAW: you or ally)', async () => {
+      useRuntimeState.getRuntimeValue.mockImplementation((subject, key, _campaign) => {
+        if (key === 'searingvengeanceUses') return 1;
+        if (key === 'currentHitPoints' && subject === 'TestWarlock') return 0;
+        if (key === 'hitPoints' && subject === 'TestWarlock') return 70;
+        return null;
+      });
+      damageUtils.getCombatContext.mockResolvedValue({
+        creatures: [
+          { name: 'TestWarlock', type: 'player', currentHp: 1, maxHp: 1 },
+          { name: 'Ally', type: 'player', currentHp: 30, maxHp: 50 },
+        ],
+      });
+      rangeCheck.isWithinRange.mockResolvedValue(true);
+
+      const result = await handle(makeAction(), makePlayerStats(), campaignName, null);
+
+      expect(result.type).toBe('modal');
+      expect(result.payload.targetName).toBe('TestWarlock');
+      expect(result.payload.healAmount).toBe(35);
+      // healed target (self) excluded from burst, ally remains a valid burst target
+      expect(result.payload.creatureTargets).toEqual([
+        { name: 'Ally', type: 'player', currentHp: 30, maxHp: 50 },
       ]);
     });
   });
@@ -287,7 +324,7 @@ describe('confirmSearingVengeance', () => {
 
     const playerStats = {
       ...makePlayerStats(),
-      computedStats: { chaMod: 3 },
+      abilities: [{ name: 'Charisma', bonus: 3 }],
     };
 
     const payload = {
@@ -308,6 +345,8 @@ describe('confirmSearingVengeance', () => {
 
     expect(result.type).toBe('popup');
     expect(result.payload.description).toContain('12 radiant damage');
+    expect(result.payload.description).toContain('regains 25 HP');
+    expect(diceRoller.rollExpression).toHaveBeenCalledWith('2d8+3');
     expect(useRuntimeState.setRuntimeValue).toHaveBeenCalledWith(
       'TestWarlock',
       'searingvengeanceUses',
@@ -315,10 +354,16 @@ describe('confirmSearingVengeance', () => {
       campaignName
     );
     expect(applyDamage.applyDamageToTarget).toHaveBeenCalled();
-    expect(expirations.addExpiration).toHaveBeenCalled();
+    expect(expirations.addExpiration).toHaveBeenCalledWith(
+      'TestWarlock',
+      'Goblin',
+      [{ type: 'condition', condition: 'blinded' }],
+      campaignName,
+      1
+    );
   });
 
-  it('logs ability_use entry', async () => {
+  it('logs ability_use entry with heal and burst amounts', async () => {
     mockRuntimeValues({ searingvengeanceUses: 1 });
     damageUtils.getCombatContext.mockResolvedValue({
       creatures: [
@@ -355,15 +400,18 @@ describe('confirmSearingVengeance', () => {
       characterName: 'TestWarlock',
       abilityName: 'Searing Vengeance',
     }));
+    expect(addEntry).toHaveBeenCalledWith(campaignName, expect.objectContaining({
+      type: 'ability_use',
+      description: expect.stringContaining('healed for 25 HP'),
+    }));
+    expect(addEntry).toHaveBeenCalledWith(campaignName, expect.objectContaining({
+      type: 'ability_use',
+      description: expect.stringContaining('10 radiant damage'),
+    }));
   });
 
-  it('still heals the target and consumes a use', async () => {
+  it('declining (skip) heals nothing and consumes no use', async () => {
     mockRuntimeValues({ searingvengeanceUses: 1 });
-    damageUtils.getCombatContext.mockResolvedValue({
-      creatures: [
-        { name: 'Ally', type: 'player', currentHp: 0, maxHp: 50 },
-      ],
-    });
 
     const automation = {
       damageExpression: '2d8 + CHA modifier',
@@ -385,25 +433,15 @@ describe('confirmSearingVengeance', () => {
     );
 
     expect(result.type).toBe('popup');
-    expect(result.payload.description).toContain('heals for 25 HP');
-    expect(useRuntimeState.setRuntimeValue).toHaveBeenCalledWith(
-      'TestWarlock',
-      'searingvengeanceUses',
-      0,
-      campaignName
-    );
-    expect(useRuntimeState.setRuntimeValue).toHaveBeenCalledWith(
-      'Ally',
-      'currentHitPoints',
-      25,
-      campaignName
-    );
-    expect(useRuntimeState.setRuntimeValue).toHaveBeenCalledWith(
-      'Ally',
-      'activeConditions',
-      [],
-      campaignName
-    );
+    expect(result.payload.description).toContain('declined');
+    expect(result.payload.description).toContain('no use expended');
+    expect(useRuntimeState.setRuntimeValue).not.toHaveBeenCalled();
+    expect(damageUtils.getCombatContext).not.toHaveBeenCalled();
+    expect(applyDamage.applyDamageToTarget).not.toHaveBeenCalled();
     expect(expirations.addExpiration).not.toHaveBeenCalled();
+    expect(addEntry).toHaveBeenCalledWith(campaignName, expect.objectContaining({
+      type: 'ability_use',
+      description: expect.stringContaining('no use expended'),
+    }));
   });
 });

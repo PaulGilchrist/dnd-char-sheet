@@ -4,10 +4,27 @@ import { getCombatContext } from '../../../rules/combat/damageUtils.js';
 import { rollExpression } from '../../../dice/diceRoller.js';
 import { isWithinRange } from '../../../rules/combat/rangeCheck.js';
 import { applyDamageToTarget } from '../../../rules/combat/applyDamage.js';
-import storage from '../../../ui/storage.js';
+import { applyHealingToTarget } from '../../../rules/combat/applyHealing.js';
 import { addExpiration } from '../../../rules/effects/expirations.js';
+import { evaluateAutoExpression } from '../../../combat/automation/automationExpressions.js';
 
 const USES_KEY = 'searingvengeanceUses';
+
+function getRealMaxHp(creature, campaignName) {
+    if (creature.type === 'player') {
+        // combatSummary player entries are 1/1 placeholders — runtime hitPoints is real max HP
+        return getRuntimeValue(creature.name, 'hitPoints', campaignName) ?? creature.maxHp ?? 0;
+    }
+    return creature.maxHp || 0;
+}
+
+function getRealCurrentHp(creature, campaignName) {
+    if (creature.type === 'player') {
+        // runtime currentHitPoints is HP truth; combatSummary player entries are 1/1 placeholders
+        return getRuntimeValue(creature.name, 'currentHitPoints', campaignName) ?? creature.currentHp ?? 0;
+    }
+    return creature.currentHp ?? 0;
+}
 
 export async function handle(action, playerStats, campaignName, _mapName) {
     const auto = action.automation;
@@ -42,14 +59,12 @@ export async function handle(action, playerStats, campaignName, _mapName) {
         };
     }
 
-    // 3. Find creatures at 0 HP (within ally range)
+    // 3. Find creatures at 0 HP within ally range — RAW: "you or ally within 60 feet", self included
     const allyRangeFt = auto.allyRange ? rangeToFeet(auto.allyRange) : 60;
     const creaturesAtZero = [];
     for (const creature of cs.creatures) {
-        const creatureHp = creature.type === 'player'
-            ? (getRuntimeValue(creature.name, 'currentHitPoints', campaignName) ?? creature.maxHp ?? 0)
-            : (creature.currentHp ?? 0);
-        if (creatureHp <= 0 && creature.name !== playerName) {
+        if (Number(getRuntimeValue(creature.name, 'isDead', campaignName) || 0) > 0) continue;
+        if (getRealCurrentHp(creature, campaignName) <= 0) {
             const inRange = await isWithinRange(playerName, creature.name, allyRangeFt);
             if (inRange) {
                 creaturesAtZero.push(creature);
@@ -63,42 +78,36 @@ export async function handle(action, playerStats, campaignName, _mapName) {
             payload: {
                 type: 'automation_info',
                 name: action.name,
-                description: 'No creatures within 60 feet are at 0 HP.',
+                description: `No creatures within ${allyRangeFt} feet are at 0 HP.`,
                 automation: auto,
             },
         };
     }
 
-    // 4. Heal the first creature at 0 HP (half max HP)
+    // 4. Heal target: first creature at 0 HP, half its real max HP (regular HP, applied on confirm)
     const target = creaturesAtZero[0];
-    const targetMaxHp = target.maxHp || (target.type === 'player'
-        ? (getRuntimeValue(target.name, 'hitPoints', campaignName) ?? 1)
-        : 1);
+    const targetMaxHp = getRealMaxHp(target, campaignName);
+    if (targetMaxHp <= 0) {
+        console.error('[searingVengeance] Cannot resolve real max HP for', target.name);
+        return {
+            type: 'popup',
+            payload: {
+                type: 'automation_info',
+                name: action.name,
+                description: `Cannot determine ${target.name}'s maximum Hit Points — Searing Vengeance not used.`,
+                automation: auto,
+            },
+        };
+    }
     const healAmount = Math.floor(targetMaxHp / 2);
 
-    if (target.type === 'player') {
-        await setRuntimeValue(target.name, 'currentHitPoints', healAmount, campaignName);
-    } else {
-        target.currentHp = healAmount;
-        if (target.maxHp) {
-            target.maxHp = targetMaxHp;
-        }
-        const updatedCs = await getCombatContext(campaignName);
-        if (updatedCs) {
-            storage.set('combatSummary', updatedCs, campaignName);
-        }
-    }
-
-    // Clear conditions from healed target
-    await setRuntimeValue(target.name, 'activeConditions', [], campaignName);
-
-    // 5. Build creature targets within 30 feet (all creatures except the healed target and the warlock)
+    // 5. Burst targets within 30 feet, centered on the healed creature ("Creature regains HP... Each creature within 30 feet")
     const rangeFt = auto.range ? rangeToFeet(auto.range) : 30;
     const creatureTargets = [];
     for (const creature of cs.creatures) {
         if (creature.name === target.name) continue;
         if (creature.name === playerName) continue;
-        const inRange = await isWithinRange(playerName, creature.name, rangeFt);
+        const inRange = await isWithinRange(target.name, creature.name, rangeFt);
         if (inRange) {
             creatureTargets.push({
                 name: creature.name,
@@ -116,6 +125,7 @@ export async function handle(action, playerStats, campaignName, _mapName) {
             name: action.name,
             creatureTargets: creatureTargets,
             targetName: target.name,
+            targetMaxHp: targetMaxHp,
             healAmount: healAmount,
             automation: auto,
         },
@@ -124,14 +134,13 @@ export async function handle(action, playerStats, campaignName, _mapName) {
 
 function rangeToFeet(rangeStr) {
     if (!rangeStr) return 30;
-    const match = String(rangeStr).match(/^(\d+)\s*ft$/i);
+    const match = String(rangeStr).match(/^(\d+)[_ ]?ft$/i);
     return match ? parseInt(match[1], 10) : 30;
 }
 
 export async function confirmSearingVengeance(automation, playerStats, campaignName, mapName, characters, payload) {
     const playerName = playerStats.name;
     const targetName = payload.targetName;
-    const healAmount = payload.healAmount;
     const name = payload.name;
 
     const selectedTargets = payload.selectedTargets;
@@ -147,23 +156,7 @@ export async function confirmSearingVengeance(automation, playerStats, campaignN
         };
     }
 
-    // Consume the resource
-    const storedUses = getRuntimeValue(playerName, USES_KEY, campaignName);
-    const currentUses = storedUses != null ? Number(storedUses) : (automation.usesMax || 1);
-    await setRuntimeValue(playerName, USES_KEY, currentUses - 1, campaignName);
-
-    // Roll damage
-    const damageExpr = automation.damageExpression || '2d8 + CHA modifier';
-    // Resolve variable expressions (e.g. "2d8 + CHA modifier" -> "2d8+2")
-    const chaMod = playerStats?.computedStats?.chaMod ?? playerStats?.abilityModifiers?.CHA ?? 0;
-    const resolvedExpression = damageExpr
-        .replace(/\bCHA modifier\b/gi, String(chaMod))
-        .replace(/\s+/g, '');
-    const damageResult = rollExpression(resolvedExpression);
-    const damageAmount = damageResult?.total || 0;
-    const rollDisplay = damageResult?.rolls?.length > 0 ? `(${damageResult.rolls.join(', ')})` : '';
-
-    // Get combat context for damage application
+    // Get combat context for heal + damage application
     const cs = await getCombatContext(campaignName);
     if (!cs) {
         return {
@@ -177,13 +170,37 @@ export async function confirmSearingVengeance(automation, playerStats, campaignN
         };
     }
 
-    // Apply damage and blinded condition to each selected creature
+    // Consume the resource
+    const storedUses = getRuntimeValue(playerName, USES_KEY, campaignName);
+    const currentUses = storedUses != null ? Number(storedUses) : (automation.usesMax || 1);
+    await setRuntimeValue(playerName, USES_KEY, currentUses - 1, campaignName);
 
+    // Heal the target half its real max HP (canonical heal path: resets death saves 0→positive)
+    const targetMaxHp = payload.targetMaxHp ?? getRealMaxHp(cs.creatures.find(c => c.name === targetName) || {}, campaignName);
+    const healAmount = payload.healAmount ?? Math.floor(targetMaxHp / 2);
+    const healResult = applyHealingToTarget(cs, targetName, healAmount, campaignName);
+    const actualHeal = healResult?.actualHeal ?? 0;
+
+    // "ends Pending condition" — clear conditions on the healed creature
+    await setRuntimeValue(targetName, 'activeConditions', [], campaignName);
+
+    // Roll damage once: 2d8 + CHA modifier (canonical CHA resolution via abilities bonus)
+    const damageExpr = automation.damageExpression || '2d8 + CHA modifier';
+    const chaModRaw = evaluateAutoExpression('CHA modifier', playerStats);
+    const chaMod = typeof chaModRaw === 'number' && !isNaN(chaModRaw) ? chaModRaw : 0;
+    if (typeof chaModRaw !== 'number') {
+        console.error('[searingVengeance] CHA modifier did not resolve to a number:', chaModRaw);
+    }
+    const diceBase = damageExpr.replace(/\s*\+?\s*CHA modifier\b/i, '').trim() || '2d8';
+    const resolvedExpression = chaMod >= 0 ? `${diceBase}+${chaMod}` : `${diceBase}${chaMod}`;
+    const damageResult = rollExpression(resolvedExpression);
+    const damageAmount = damageResult?.total || 0;
+    const rollDisplay = damageResult?.rolls?.length > 0 ? `(${damageResult.rolls.join(', ')})` : '';
+
+    // Apply damage and blinded condition to each selected creature
     for (const creatureName of selectedTargets) {
-        // Apply radiant damage
         applyDamageToTarget(cs, creatureName, damageAmount, ['Radiant'], campaignName, characters || [], false, playerName);
 
-        // Apply blinded condition
         const storedConditions = getRuntimeValue(creatureName, 'activeConditions', campaignName) || [];
         const conditions = Array.isArray(storedConditions) ? storedConditions : [];
         const hasBlinded = conditions.some(c => String(c).toLowerCase() === 'blinded');
@@ -191,10 +208,10 @@ export async function confirmSearingVengeance(automation, playerStats, campaignN
             await setRuntimeValue(creatureName, 'activeConditions', [...conditions, 'blinded'], campaignName);
         }
 
-        // Register expiration: blinded lasts until end of the warlock's next turn (2 rounds)
+        // Blinded lasts until end of the current turn (expires next round) per conditionDuration: until_end_of_current_turn
         await addExpiration(playerName, creatureName, [
             { type: 'condition', condition: 'blinded' },
-        ], campaignName, 2);
+        ], campaignName, 1);
 
         // Log damage roll
         await addEntry(campaignName, {
@@ -227,27 +244,27 @@ export async function confirmSearingVengeance(automation, playerStats, campaignN
             characterName: creatureName,
             condition: 'blinded',
             source: name,
-            description: `${creatureName} is Blinded until end of ${playerName}'s next turn.`,
+            description: `${creatureName} is Blinded until end of the current turn.`,
         }).catch((e) => { console.error("[searingVengeance] Error:", e); });
     }
-
-    // Log ability use
-    await addEntry(campaignName, {
-        type: 'ability_use',
-        characterName: playerName,
-        abilityName: name,
-        description: `${name} used on ${targetName} — healed for ${healAmount} HP. ${selectedTargets.length} creatures take ${damageAmount} radiant damage and are Blinded until end of turn.`,
-    }).catch((e) => { console.error("[searingVengeance] Error:", e); });
 
     // Log healing
     await addEntry(campaignName, {
         type: 'hp_change',
         characterName: playerName,
         targetName: targetName,
-        delta: healAmount,
-        currentHp: getRuntimeValue(targetName, 'currentHitPoints', campaignName) ?? 0,
-        maxHp: getRuntimeValue(targetName, 'hitPoints', campaignName) ?? 0,
+        delta: actualHeal,
+        currentHp: healResult?.newHp ?? getRuntimeValue(targetName, 'currentHitPoints', campaignName) ?? 0,
+        maxHp: healResult?.maxHp ?? targetMaxHp,
         isHealing: true,
+    }).catch((e) => { console.error("[searingVengeance] Error:", e); });
+
+    // Log ability use with heal + burst amounts
+    await addEntry(campaignName, {
+        type: 'ability_use',
+        characterName: playerName,
+        abilityName: name,
+        description: `${name} used on ${targetName} — healed for ${actualHeal} HP. ${selectedTargets.length} creatures take ${damageAmount} radiant damage and are Blinded until end of the current turn.`,
     }).catch((e) => { console.error("[searingVengeance] Error:", e); });
 
     return {
@@ -256,7 +273,7 @@ export async function confirmSearingVengeance(automation, playerStats, campaignN
             type: 'automation_info',
             name,
             automationType: automation.type,
-            description: `${playerName} unleashes Searing Vengeance! ${targetName} regains ${healAmount} HP. ${selectedTargets.length} creatures take ${damageAmount} radiant damage ${rollDisplay} and are Blinded until end of ${playerName}'s next turn.`,
+            description: `${playerName} unleashes Searing Vengeance! ${targetName} regains ${actualHeal} HP. ${selectedTargets.length} creatures take ${damageAmount} radiant damage ${rollDisplay} and are Blinded until end of the current turn.`,
             automation,
         },
     };
@@ -264,49 +281,14 @@ export async function confirmSearingVengeance(automation, playerStats, campaignN
 
 export async function skipSearingVengeance(automation, playerStats, campaignName, payload) {
     const playerName = playerStats.name;
-    const targetName = payload.targetName;
-    const healAmount = payload.healAmount;
     const name = payload.name;
 
-    // Still consume the use even on skip
-    const storedUses = getRuntimeValue(playerName, USES_KEY, campaignName);
-    const currentUses = storedUses != null ? Number(storedUses) : (automation.usesMax || 1);
-    await setRuntimeValue(playerName, USES_KEY, currentUses - 1, campaignName);
-
-    const cs = await getCombatContext(campaignName);
-    if (cs) {
-        const target = cs.creatures.find(c => c.name === targetName);
-        if (target) {
-            if (target.type === 'player') {
-                await setRuntimeValue(targetName, 'currentHitPoints', healAmount, campaignName);
-            } else {
-                target.currentHp = healAmount;
-                if (target.maxHp) {
-                    target.maxHp = targetName ? (getRuntimeValue(targetName, 'hitPoints', campaignName) ?? 0) : 0;
-                }
-                storage.set('combatSummary', cs, campaignName);
-            }
-        }
-    }
-
-    // Clear conditions
-    await setRuntimeValue(targetName, 'activeConditions', [], campaignName);
-
+    // Declining the reaction: RAW the reaction is not taken — no heal, no damage, no use expended
     await addEntry(campaignName, {
         type: 'ability_use',
         characterName: playerName,
         abilityName: name,
-        description: `${name} used on ${targetName} — healed for ${healAmount} HP. No creatures selected for damage.`,
-    }).catch((e) => { console.error("[searingVengeance] Error:", e); });
-
-    await addEntry(campaignName, {
-        type: 'hp_change',
-        characterName: playerName,
-        targetName: targetName,
-        delta: healAmount,
-        currentHp: getRuntimeValue(targetName, 'currentHitPoints', campaignName) ?? 0,
-        maxHp: getRuntimeValue(targetName, 'hitPoints', campaignName) ?? 0,
-        isHealing: true,
+        description: `${playerName} declined ${name} — reaction not taken, no use expended.`,
     }).catch((e) => { console.error("[searingVengeance] Error:", e); });
 
     return {
@@ -314,7 +296,7 @@ export async function skipSearingVengeance(automation, playerStats, campaignName
         payload: {
             type: 'automation_info',
             name,
-            description: `${playerName} uses Searing Vengeance on ${targetName} — heals for ${healAmount} HP but skips the damage.`,
+            description: `${playerName} declined ${name} — no use expended.`,
             automation,
         },
     };
