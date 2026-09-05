@@ -24,6 +24,23 @@ export async function applyTurnStartEffects(activeName, playerStats, campaignNam
     // Must run before the playerStats check since active creature may be an NPC
     await applyHolyNimbusDamage(activeName, characters, campaignName);
 
+    // BUG SP-099: Resistance is "once per TURN" — the benefit re-arms for EVERY
+    // protected creature at EVERY creature's turn start, not only the active
+    // creature's own turn (which degraded it to once-per-round). Clear the
+    // resistanceUsedThisTurn flag for all resistance_damage_reduction te holders
+    // at every turn boundary. Runs before the playerStats guard since EB monster
+    // turns never carry playerStats (Holy Nimbus precedent). Sequential awaits —
+    // each setRuntimeValue POSTs the full store snapshot (pitfall 21).
+    if (activeName) {
+        const resistanceEffects = getRuntimeValue('campaign', 'targetEffects') || [];
+        for (const te of resistanceEffects) {
+            if (!te || te.effect !== 'resistance_damage_reduction' || !te.target) continue;
+            if (getRuntimeValue(te.target, 'resistanceUsedThisTurn', campaignName)) {
+                await setRuntimeValue(te.target, 'resistanceUsedThisTurn', false, campaignName);
+            }
+        }
+    }
+
     if (!activeName || !playerStats) {
         return;
     }
@@ -164,14 +181,6 @@ export async function applyTurnStartEffects(activeName, playerStats, campaignNam
         const regenerateActive = getRuntimeValue(activeName, 'regenerateActive', campaignName);
         if (regenerateActive) {
             await applyRegenerateBuffHeal(activeName, playerStats, campaignName);
-        }
-    }
-
-    // Clear Resistance once-per-turn flag at start of each creature's turn
-    if (activeName) {
-        const resistanceUsed = getRuntimeValue(activeName, 'resistanceUsedThisTurn', campaignName);
-        if (resistanceUsed) {
-            setRuntimeValue(activeName, 'resistanceUsedThisTurn', false, campaignName);
         }
     }
 

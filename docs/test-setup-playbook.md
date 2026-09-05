@@ -194,3 +194,9 @@ Cancel refunds via `cancelSacredWeapon`; verify spends/refunds against
 - **PITFALL:** lastAttack self-overwrite — a riposte that hits stamps the riposter as attacker, so an immediate re-click hits the "cannot attack yourself" gate BEFORE the round latch; same-window re-click refusals naming "yourself" are correct CLA-297-family behavior, not a latch failure.
 - **PITFALL:** Relentless (CLA-286) auto-free-d8 keeps the pool FLAT on Riposte for latched holders — pool-flat + die-rolled evidence must be read as Relentless-free (`(Relentless)` in log); paid pool-- is vitest-locked separately.
 - **VITEST:** new `executeActionManeuvers.riposte.test.js` (14) + `attackPostProcessing.riposte.test.js` (4) + `CharReactions.riposte.test.jsx` (3); combatSuperiorityActionManeuvers fixture updated to miss-trigger. Full suite 31166 pass (one flake on first run, clean twice).
+
+### SP-099 Resistance per-turn re-arm FIXED (2026-09-05)
+- **FIXED:** `turnStartEffects.js` now clears `resistanceUsedThisTurn` for ALL `resistance_damage_reduction` te holders at EVERY turn boundary (loop sits BEFORE the `!playerStats` guard — EB-monster turns carry no stats, a post-guard loop stays dead; pitfall 12 root was doubled), sequential awaits (pitfall 21); old activeName-only reset deleted; `resistance_clear_turn` te stays writer-less, no new te types. Consumer same-turn-once + type gate untouched.
+- **PITFALL:** Resistance reduction on low damage floors to 0 — the popup `-1d4 [Resistance]` line, not the HP delta, is the decisive re-arm evidence.
+- **PITFALL:** `.mc-overlay` dice-links match by text ("+2" collides with STR-save "+2") — locate inside the "Mace."/"Heavy Crossbow." row text; match cards by `img.alt` not textContent (target-dropdown pollution).
+- **VITEST:** new `turnStartEffects.resistancePerTurn.test.js` (6) + `handlePlainDamage.resistanceReArm.test.js` (2). Full suite 31174 pass.
