@@ -1,5 +1,6 @@
 import { getRuntimeValue, setRuntimeValue } from '../../../../hooks/runtime/useRuntimeState.js';
 import { resolveTarget } from '../../common/targetResolver.js';
+import { findLastAttack } from '../../common/damageRollback.js';
 import { evaluateAutoExpression } from '../../../combat/automation/automationService.js';
 import { getCurrentCombatRound } from '../../../../services/encounters/combatData.js';
 import { addEntry } from '../../../ui/logService.js';
@@ -330,6 +331,76 @@ export async function executeSkillCheckManeuver(action, playerStats, campaignNam
 
 // ── Reaction Maneuvers ──────────────────────────────────────────────────
 
+// MN-017: Riposte ("when a creature misses you with a melee attack roll") —
+// gated arm-then-row per the CLA-297 Retaliation / CLA-310 Shadowy Dodge house
+// standard. Attack-instance latch (_Riposte_appliedAttack) closes "same lastAttack
+// reusable forever"; round latch (_Riposte_usedRound) is the Reaction economy
+// (cleared at round wrap in initiative.jsx / navigationHandlers.js). Refusals are
+// automation_info popups: no roll, no spend, no stamp, no log.
+const RIPOSTE_APPLIED_ATTACK_KEY = '_Riposte_appliedAttack';
+const RIPOSTE_USED_ROUND_KEY = '_Riposte_usedRound';
+
+function buildRiposteRefusalPopup(maneuverName, description) {
+    return {
+        type: 'popup',
+        payload: {
+            type: 'automation_info',
+            name: maneuverName,
+            description,
+        },
+    };
+}
+
+// Identity of the triggering attack instance: campaign lastAttack is the single
+// source of truth; misses may lack a timestamp, so fall back to roll signature +
+// attacker (CLA-310 attackIdentity shape).
+function riposteAttackIdentity(attackEvent, attackerName) {
+    if (attackEvent?.timestamp != null) return String(attackEvent.timestamp);
+    return `d20:${attackEvent?.d20 ?? '?'}+${attackEvent?.bonus ?? 0}:${attackerName ?? ''}`;
+}
+
+async function gateRiposteReaction(maneuver, playerStats, campaignName) {
+    const playerName = playerStats.name;
+    const name = maneuver.name;
+    const lastAttackResult = await findLastAttack(campaignName);
+    const attackEvent = lastAttackResult.attackEvent;
+    const attackerName = lastAttackResult.attackerName;
+
+    if (!attackEvent || !attackerName) {
+        return { refusal: buildRiposteRefusalPopup(name, `${name}: No recent attack found. ${name} triggers when a creature misses you with a melee attack roll.`) };
+    }
+    if (attackerName === playerName) {
+        return { refusal: buildRiposteRefusalPopup(name, `${name}: you cannot attack yourself — the triggering attack must come from another creature.`) };
+    }
+    if (lastAttackResult.targetName !== playerName) {
+        return { refusal: buildRiposteRefusalPopup(name, `You were not the target of the last attack (${lastAttackResult.targetName} was). ${name} only triggers when a creature misses you.`) };
+    }
+    if (attackEvent.hit !== false) {
+        return { refusal: buildRiposteRefusalPopup(name, `The last attack against you was not a miss. ${name} triggers only when a creature misses you with a melee attack roll.`) };
+    }
+    if (attackEvent.weaponType === 'ranged') {
+        return { refusal: buildRiposteRefusalPopup(name, `The last attack was a Ranged attack. ${name} triggers only when a creature misses you with a melee attack roll.`) };
+    }
+    const within5ft = await isWithinRange(playerName, attackerName, 5);
+    if (!within5ft) {
+        return { refusal: buildRiposteRefusalPopup(name, `${attackerName} is not within 5 feet of you. ${name} requires the attacker to be adjacent.`) };
+    }
+    const combatContext = await getCombatContext(campaignName);
+    if (combatContext?.activeCreatureName === playerName) {
+        return { refusal: buildRiposteRefusalPopup(name, `${name} is a Reaction — you cannot use it on your own turn.`) };
+    }
+    const identity = riposteAttackIdentity(attackEvent, attackerName);
+    if (getRuntimeValue(playerName, RIPOSTE_APPLIED_ATTACK_KEY, campaignName) === identity) {
+        return { refusal: buildRiposteRefusalPopup(name, `Reaction already used — you have already riposted this attack roll. Your Reaction is spent until your next turn.`) };
+    }
+    const currentRound = combatContext?.round || 1;
+    const usedRound = Number(getRuntimeValue(playerName, RIPOSTE_USED_ROUND_KEY, campaignName) ?? 0);
+    if (usedRound === currentRound) {
+        return { refusal: buildRiposteRefusalPopup(name, `You have already used ${name} this round — your Reaction is spent until your next turn.`) };
+    }
+    return { attackerName, identity, currentRound };
+}
+
 export async function executeReactionManeuver(action, playerStats, campaignName, maneuverName) {
     const maneuver = await findManeuver(maneuverName, playerStats.rules);
 
@@ -341,6 +412,47 @@ export async function executeReactionManeuver(action, playerStats, campaignName,
 
     if (!hasDiceRemaining) {
         return buildNoDiceRemainingPopup(maneuver.name);
+    }
+
+    // MN-017: Riposte — trigger-gated reaction. Attack the creature that just
+    // missed the holder with a melee attack, never resolveTarget.
+    if (maneuver.effect === 'melee_attack_reaction') {
+        const gate = await gateRiposteReaction(maneuver, playerStats, campaignName);
+        if (gate.refusal) return gate.refusal;
+
+        const meleeAttacks = filterMeleeAttacks(playerStats.attacks);
+        const attack = meleeAttacks.length > 0 ? meleeAttacks[0] : (playerStats.attacks || [])[0];
+
+        if (!attack) {
+            return buildRiposteRefusalPopup(maneuver.name, `${maneuver.name}: No melee attack available.`);
+        }
+
+        const { dieValue, dieDescription, expendedDie } = rollManeuverDie(maneuver, playerStats, campaignName);
+        await expendSuperiorityDie(playerStats, campaignName, expendedDie, superiorityDice);
+
+        // Reaction consumed: arm the die and stamp both latches — sequential
+        // awaits (pitfall 21: concurrent full-store POSTs race).
+        await setRuntimeValue(playerStats.name, 'pendingRiposteDieValue', dieValue, campaignName);
+        await setRuntimeValue(playerStats.name, RIPOSTE_APPLIED_ATTACK_KEY, gate.identity, campaignName);
+        await setRuntimeValue(playerStats.name, RIPOSTE_USED_ROUND_KEY, gate.currentRound, campaignName);
+
+        const logEntry = {
+            type: 'ability_use',
+            characterName: playerStats.name,
+            abilityName: maneuver.name,
+            description: `${playerStats.name} used ${maneuver.name} (Reaction) — melee attack against ${gate.attackerName} after their melee attack missed. ${dieDescription} Superiority Die expended.`,
+            targetName: gate.attackerName,
+            timestamp: Date.now(),
+        };
+
+        return {
+            type: 'attack_roll',
+            payload: {
+                attack,
+                targetName: gate.attackerName,
+            },
+            logEntries: [logEntry],
+        };
     }
 
     const targetInfo = await resolveTarget(campaignName, playerStats.name);
@@ -360,34 +472,6 @@ export async function executeReactionManeuver(action, playerStats, campaignName,
 
     if (targetName && maneuver.effect !== 'damage_reduction') {
         description += ` Target: ${targetName}.`;
-    }
-
-    if (maneuver.effect === 'melee_attack_reaction') {
-        await setRuntimeValue(playerStats.name, 'pendingRiposteDieValue', dieValue, campaignName);
-
-        const meleeAttacks = filterMeleeAttacks(playerStats.attacks);
-        const attack = meleeAttacks.length > 0 ? meleeAttacks[0] : (playerStats.attacks || [])[0];
-
-        if (!attack) {
-            return {
-                type: 'popup',
-                payload: {
-                    type: 'automation_info',
-                    name: maneuver.name,
-                    description: `${maneuver.name}: No melee attack available.`,
-                },
-                logEntries: [logEntry],
-            };
-        }
-
-        return {
-            type: 'attack_roll',
-            payload: {
-                attack,
-                targetName,
-            },
-            logEntries: [logEntry],
-        };
     }
 
     if (maneuver.effect === 'damage_reduction') {

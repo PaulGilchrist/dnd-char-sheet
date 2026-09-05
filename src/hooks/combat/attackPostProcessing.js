@@ -81,6 +81,24 @@ export async function processAttackAfterResult(hit, isAutoMiss, targetName, char
             setRuntimeValue('campaign', 'lastAttack', lastAttackData, campaignName);
         }
 
+        // MN-017: a Riposte attack that misses must not leave a stale Superiority
+        // Die armed — the damage pipeline (pendingRiposteDieValue consumer) only
+        // runs on hits, so clear the armed die here and log the spent reaction.
+        if (finalHit === false) {
+            const pendingRiposteDie = getRuntimeValue(characterName, 'pendingRiposteDieValue', campaignName);
+            if (pendingRiposteDie != null && Number(pendingRiposteDie) > 0) {
+                setRuntimeValue(characterName, 'pendingRiposteDieValue', null, campaignName);
+                addEntry(campaignName, {
+                    type: 'ability_use',
+                    characterName,
+                    abilityName: 'Riposte',
+                    description: `${characterName}'s Riposte attack against ${targetName || 'unknown target'} missed — Superiority Die expended, no damage dealt.`,
+                    targetName: targetName || null,
+                    timestamp: Date.now(),
+                }).catch((e) => { console.error('[MN-017 Riposte] Error logging miss:', e); });
+            }
+        }
+
         setRuntimeValue(characterName, '_lastRollContext', {
             type: 'attack',
             attackName: context.name,

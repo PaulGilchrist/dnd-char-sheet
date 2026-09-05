@@ -192,6 +192,8 @@ describe('executeReactionManeuver', () => {
         getRuntimeValue.mockImplementation((_playerName, key, _campaignName) => {
             if (key === 'superiorityDice') return 4;
             if (key === SELECTION_KEY) return ['Riposte'];
+            // MN-017: valid miss trigger — Goblin melee attack missed TestFighter
+            if (key === 'lastAttack') return { attackerName: 'Goblin', targetName: 'TestFighter', hit: false, weaponType: 'melee', d20: 3, bonus: 5 };
             return undefined;
         });
 
@@ -204,7 +206,11 @@ describe('executeReactionManeuver', () => {
 
         expect(result.type).toBe('attack_roll');
         expect(result.payload.attack).toBeDefined();
+        expect(result.payload.targetName).toBe('Goblin');
         expect(setRuntimeValue).toHaveBeenCalledWith('TestFighter', 'pendingRiposteDieValue', expect.any(Number), 'test-campaign');
+        expect(setRuntimeValue).toHaveBeenCalledWith('TestFighter', '_Riposte_appliedAttack', expect.any(String), 'test-campaign');
+        expect(setRuntimeValue).toHaveBeenCalledWith('TestFighter', '_Riposte_usedRound', 1, 'test-campaign');
+        expect(result.logEntries[0].description).toContain('Goblin');
     });
 });
 

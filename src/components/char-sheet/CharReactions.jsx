@@ -240,6 +240,12 @@ function CharReactions({ playerStats, campaignName, cannotAct, mapName, characte
             return;
         }
 
+        // MN-017/MN-013: handlers return logEntries that must reach the campaign
+        // log (mirrors the MN-016 Rally flush in useCharActionsModalHandlers).
+        if (Array.isArray(result.logEntries)) {
+            result.logEntries.forEach(entry => addEntry(campaignName, entry).catch((e) => { console.error('[CharReactions] Error flushing logEntries:', e); }));
+        }
+
         if (result.type === 'attack_roll') {
             const { attack, targetName } = result.payload;
             const autoDamageFormula = attack.damage || null;
