@@ -48,6 +48,8 @@ export function createNextCreatureHandler({
                     setRuntimeValue(creature.name, '_PsychicBlade_attack_round', null, campaignName)
                     setRuntimeValue(creature.name, '_PsychicBlade_secondBlade_round', null, campaignName)
                     setRuntimeValue(creature.name, '_Retaliation_usedRound', null, campaignName)
+                    setRuntimeValue(creature.name, '_ShadowyDodge_usedRound', null, campaignName)
+                    setRuntimeValue(creature.name, '_ShadowyDodge_appliedAttack', null, campaignName)
                     setRuntimeValue(creature.name, 'surgeUsedRound', null, campaignName)
                     setRuntimeValue(creature.name, 'illusoryRealityUsedRound', null, campaignName)
                     setRuntimeValue(creature.name, 'portentUsedThisTurn', null, campaignName)

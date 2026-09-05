@@ -121,7 +121,7 @@ import { handle as handlePrimalCompanionSpellShare, applySpellShare as applyPrim
 import { handle as handleBeguilingTwist } from './handlers/class-ranger/beguilingTwistHandler.js';
 import { handle as handleFeyReinforcements, confirmFeyReinforcement as handleFeyReinforcementsConfirm } from './handlers/class-warlock/feyReinforcementsHandler.js';
 import { handle as handleMistyWanderer, confirmMistyWanderer as handleMistyWandererConfirm } from './handlers/class-warlock/mistyWandererHandler.js';
-import { handle as handleShadowyDodge } from './handlers/class-warlock/shadowyDodgeHandler.js';
+import { handle as handleShadowyDodge } from './handlers/class-ranger/shadowyDodgeHandler.js';
 import { handle as handleMistyEscape } from './handlers/class-warlock/mistyEscapeHandler.js';
 import { handle as handleHunterPrey } from './handlers/class-ranger/hunterPreyHandler.js';
 import { handle as handleDefensiveTactics } from './handlers/class-ranger/defensiveTacticsHandler.js';

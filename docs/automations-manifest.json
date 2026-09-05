@@ -5651,10 +5651,10 @@
       "id": "CLA-310",
       "name": "Shadowy Dodge",
       "type": "classFeature",
-      "handler": "src/services/combat/automation/handlers/classFeatureHandler.js",
+      "handler": "src/services/automation/handlers/class-ranger/shadowyDodgeHandler.js",
       "router": "src/services/combat/automation/routers/classFeatureRouter.js",
       "infoBuilder": "src/services/combat/automation/infoBuilders/classFeatureInfoBuilder.js",
-      "verified": "broken — see .opencode/plans/bug-cla-310-shadowy-dodge-no-reaction-gate-retroactive-sim.md",
+      "verified": "verified",
       "class": "Ranger",
       "triggerConditions": "Trigger: after_attack_roll_against_you; Action: 1 reaction; Range: 30_ft",
       "expectedBehavior": "When a creature makes an attack roll against you, take Reaction to impose Disadvantage. Whether hit or miss, teleport up to 30 feet to unoccupied space you can see."
