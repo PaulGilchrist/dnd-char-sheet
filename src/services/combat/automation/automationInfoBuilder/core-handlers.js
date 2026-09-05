@@ -625,6 +625,25 @@ export const coreHandlers = {
         }
     },
 
+    // CLA-308: Shadow Arts (2024 Warrior of Shadow lv3) — per-spell slotless free
+    // casts, once per Long Rest each. Passive marker mirrors phantasmal_creatures
+    // (CLA-252): spellCalc2024 stamps the grants, spellPreparationService gates and
+    // consumes the per-spell counters, restRules-longRest re-arms them.
+    'shadow_arts': (feature, _playerStats) => {
+        const auto = feature.automation
+        return {
+            type: 'shadow_arts',
+            name: feature.name,
+            effect: 'shadow_arts',
+            casting_time: auto.casting_time || 'passive',
+            hasAutomation: true,
+            freeCastSpells: auto.freeCastSpells || [],
+            usesMax: auto.usesMax || 1,
+            recharge: auto.recharge || 'long_rest',
+            saveAbility: auto.saveAbility || 'WIS',
+        }
+    },
+
     'illusory_reality': (feature, _playerStats) => {
         const auto = feature.automation
         return {

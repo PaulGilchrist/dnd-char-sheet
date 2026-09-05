@@ -6616,7 +6616,20 @@
           {
             "name": "Shadow Arts",
             "description": "You can cast the Darkness, Darkvision, Pass Without Trace, and Silence spells without expending spell slots or preparing them, using Wisdom as your spellcasting ability. Each of these spells can be cast in this way once per Long Rest.",
-            "level": 3
+            "level": 3,
+            "automation": {
+              "type": "shadow_arts",
+              "casting_time": "passive",
+              "freeCastSpells": [
+                "Darkness",
+                "Darkvision",
+                "Pass Without Trace",
+                "Silence"
+              ],
+              "usesMax": 1,
+              "recharge": "long_rest",
+              "saveAbility": "WIS"
+            }
           },
           {
             "name": "Shadow Step",

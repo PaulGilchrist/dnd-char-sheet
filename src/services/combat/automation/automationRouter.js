@@ -663,7 +663,12 @@ export function routeAutomation(info, auto, result) {
         result.passives.push(info);
         break;
     case 'phantasmal_creatures':
-        result.passives.push(info);
+        result.passives.push(info)
+        break;
+    // CLA-308: Shadow Arts passive marker (passive row — consumption rides the
+    // spell rows via spellPreparationService, never an interactive row click).
+    case 'shadow_arts':
+        result.passives.push(info)
         break;
     case 'meta':
         if (info.effect === 'heroic_inspiration_on_long_rest') {

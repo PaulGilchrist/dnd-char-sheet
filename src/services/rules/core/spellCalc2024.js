@@ -63,6 +63,24 @@ export function getSpellAbilities(allSpells, playerStats, playerSummary) {
             spells_known: 0,
         };
     }
+
+    // CLA-308: Shadow Arts (2024 Warrior of Shadow lv3 Monk) — slotless free casts of
+    // major.spells (Darkness, Darkvision, Pass Without Trace, Silence), once per Long
+    // Rest each. The Monk class has no spellcasting table, so spellAbilities stays null
+    // and the half-caster fallback below would wrongly grant lv17 slots (4×L1/3×L2/3×L3)
+    // if any spells were ever persisted. Create a SLOTLESS container here (lineage
+    // pattern above) BEFORE the fallback: no spell_slots_level_* keys, so the cast flow
+    // never expends slots; the free-cast gate lives in spellPreparationService.
+    const hasShadowArtsGrant = (playerStats.automation?.passives || []).some(
+        f => f.type === 'shadow_arts'
+    );
+    if (!spellAbilities && hasShadowArtsGrant) {
+        spellAbilities = {
+            cantrips_known: 0,
+            spells: [],
+            spells_known: 0,
+        };
+    }
     
     // Fallback: if no spellcasting from class/major but character has spells from feats/races/etc
     if (!spellAbilities && playerStats.spells && playerStats.spells.length > 0) {
@@ -390,6 +408,18 @@ export function getSpellAbilities(allSpells, playerStats, playerSummary) {
                 }
             }
 
+            // CLA-308: Shadow Arts free-cast spells are always castable (major.spells are
+            // already stamped above; this keeps the row set driven by the passive itself).
+            const hasShadowArtsPassive = playerStats.automation?.passives?.some(p => p.type === 'shadow_arts');
+            if (hasShadowArtsPassive) {
+                const shadowArtsPassive = playerStats.automation.passives.find(p => p.type === 'shadow_arts');
+                for (const spellName of (shadowArtsPassive?.freeCastSpells || [])) {
+                    if (!spellAbilities.spells.find(s => s.name === spellName)) {
+                        spellAbilities.spells.push({ name: spellName, prepared: 'Always' });
+                    }
+                }
+            }
+
             // Signature Spells: read runtime state for player-chosen signature spells and always prepare them
             const signatureSpellsSelection = getRuntimeValue(playerStats.name, 'SignatureSpells_selection', campaignName);
             if (signatureSpellsSelection) {
@@ -544,6 +574,30 @@ export function getSpellAbilities(allSpells, playerStats, playerSummary) {
                     spell._ritualFeature = ritualFeature;
                     if (wildHeartAbility) {
                         spell.spellCastingAbility = wildHeartAbility;
+                    }
+                });
+            }
+
+            // CLA-308: Shadow Arts grants are slotless free casts (per-spell
+            // _Shadow_Arts_<Spell>_used counters in spellPreparationService) — stamp
+            // Wisdom as the casting ability (CLA-212/234 carry pattern) plus the
+            // free-cast marker so the popup, authorization and cast resolution honour it.
+            // Stamped BEFORE the slot-level filter below so the rows survive with no
+            // slot table at all.
+            const shadowArtsPassiveForStamp = playerStats.automation?.passives?.find(p => p.type === 'shadow_arts');
+            if (shadowArtsPassiveForStamp) {
+                const shadowArtsAbility = shadowArtsPassiveForStamp.saveAbility
+                    || playerStats.class?.major?.spell_casting_ability
+                    || playerStats.class?.spell_casting_ability;
+                if (!shadowArtsAbility) {
+                    console.error('[spellCalc2024] Shadow Arts is missing a spellcasting ability');
+                }
+                const shadowArtsSpellNames = new Set(shadowArtsPassiveForStamp.freeCastSpells || []);
+                spellAbilities.spells.forEach(spell => {
+                    if (!shadowArtsSpellNames.has(spell.name)) return;
+                    spell._shadowArtsFreeCast = true;
+                    if (shadowArtsAbility) {
+                        spell.spellCastingAbility = shadowArtsAbility;
                     }
                 });
             }

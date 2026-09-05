@@ -5616,13 +5616,13 @@
       "id": "CLA-308",
       "name": "Shadow Arts",
       "type": "classFeature",
-      "handler": "src/services/combat/automation/handlers/classFeatureHandler.js",
-      "router": "src/services/combat/automation/routers/classFeatureRouter.js",
-      "infoBuilder": "src/services/combat/automation/infoBuilders/classFeatureInfoBuilder.js",
-      "verified": "broken — see .opencode/plans/bug-CLA-308-shadow-arts-inert-no-castable-row.md",
+      "handler": "src/services/rules/spells/spellPreparationService.js",
+      "router": "src/services/combat/automation/automationRouter.js",
+      "infoBuilder": "src/services/combat/automation/automationInfoBuilder/core-handlers.js",
+      "verified": "verified",
       "class": "Monk",
       "triggerConditions": "",
-      "expectedBehavior": "You can cast the Darkness, Darkvision, Pass Without Trace, and Silence spells without expending spell slots or preparing them, using Wisdom as your spellcasting ability. Each of these spells can be cast in this way once per Long Rest."
+      "expectedBehavior": "You can cast the Darkness, Darkvision, Pass Without Trace, and Silence spells without expending spell slots or preparing them, using Wisdom as your spellcasting ability. Each of these spells can be cast in this way once per Long Rest. automation type shadow_arts → passive marker; spellCalc2024 stamps slotless spellAbilities + freeCastSpells as prepared (WIS, CLA-308); isFreeCastAuthorized/prepareSpellCast gate + consume per-spell _Shadow_Arts_<Spell>_freeCastCount (null=fresh); restRules-longRest re-arms; cast flows through generic Spells-table pipeline (Pass Without Trace wired via pendingPassWithoutTrace gate)."
     },
     {
       "id": "CLA-309",

@@ -58,6 +58,20 @@ function isFreeCastAuthorized(playerName, spellName, spellLevel, playerStats, ca
     if (count > 0) return true;
   }
 
+  // CLA-308: Shadow Arts (2024 Warrior of Shadow lv3) — slotless free casts of the
+  // major's spell list (Darkness, Darkvision, Pass Without Trace, Silence), one free
+  // cast PER SPELL per Long Rest. Counters keyed per spell; null = fresh/re-armed.
+  // No spell slot is ever consulted for these — they are always cast "without
+  // expending spell slots" and Wisdom (stamped by spellCalc2024) is the ability.
+  const shadowArtsPassive = playerStats?.automation?.passives?.find(p => p.type === 'shadow_arts');
+  if (shadowArtsPassive && (shadowArtsPassive.freeCastSpells || []).includes(spellName)) {
+    const freeCastCountKey = `_Shadow_Arts_${spellName.replace(/\s+/g, '_')}_freeCastCount`;
+    const usesMax = shadowArtsPassive.usesMax ?? 1;
+    const stored = getRuntimeValue(playerName, freeCastCountKey, campaignName);
+    const count = stored != null ? Number(stored) : usesMax;
+    if (count > 0) return true;
+  }
+
   const actions = playerStats?.automation?.actions || [];
   for (const entry of actions) {
     if (entry.type !== 'free_spell' && entry.type !== 'fey_reinforcements' && entry.type !== 'misty_wanderer' && entry.type !== 'dragon_companion') continue;
@@ -279,6 +293,27 @@ function decrementFreeCastResource(playerName, spellName, spellLevel, playerStat
     }
   }
 
+  // CLA-308: Shadow Arts — consume the per-spell free-cast counter (one per spell
+  // per Long Rest) and log the slotless cast with its source and resource note.
+  const shadowArtsPassive = playerStats?.automation?.passives?.find(p => p.type === 'shadow_arts');
+  if (shadowArtsPassive && (shadowArtsPassive.freeCastSpells || []).includes(spellName)) {
+    const freeCastCountKey = `_Shadow_Arts_${spellName.replace(/\s+/g, '_')}_freeCastCount`;
+    const usesMax = shadowArtsPassive.usesMax ?? 1;
+    const stored = getRuntimeValue(playerName, freeCastCountKey, campaignName);
+    const count = stored != null ? Number(stored) : usesMax;
+    if (count > 0) {
+      setRuntimeValue(playerName, freeCastCountKey, count - 1, campaignName);
+      addEntry(campaignName, {
+        type: 'ability_use',
+        characterName: playerName,
+        abilityName: shadowArtsPassive.name || 'Shadow Arts',
+        spellName: spellName,
+        note: `Shadow Arts free cast of ${spellName} — no spell slot consumed. ${spellName} is spent until your next Long Rest.`,
+        timestamp: Date.now(),
+      }).catch((e) => { console.error('[spellPreparationService:log-error]', e); });
+    }
+  }
+
   const arcanums = playerStats?.class?.arcanums || [];
   if (arcanums.includes(spellName)) {
     // CLA-231: decrement the counter keyed by the cast spell's own level.
@@ -383,6 +418,18 @@ function incrementFreeCastResource(playerName, spellName, spellLevel, playerStat
   if (phantasmalPassive && (phantasmalPassive.freeCastSpells || []).includes(spellName)) {
     const freeCastCountKey = `_Phantasmal_Creatures_${spellName.replace(/\s+/g, '_')}_freeCastCount`;
     const usesMax = phantasmalPassive.usesMax ?? 1;
+    const stored = getRuntimeValue(playerName, freeCastCountKey, campaignName);
+    if (stored != null && Number(stored) < usesMax) {
+      setRuntimeValue(playerName, freeCastCountKey, Number(stored) + 1, campaignName);
+    }
+  }
+
+  // CLA-308: Shadow Arts — roll back the per-spell free-cast counter (one per spell
+  // per Long Rest) when a cast is cancelled/skipped.
+  const shadowArtsPassive = playerStats?.automation?.passives?.find(p => p.type === 'shadow_arts');
+  if (shadowArtsPassive && (shadowArtsPassive.freeCastSpells || []).includes(spellName)) {
+    const freeCastCountKey = `_Shadow_Arts_${spellName.replace(/\s+/g, '_')}_freeCastCount`;
+    const usesMax = shadowArtsPassive.usesMax ?? 1;
     const stored = getRuntimeValue(playerName, freeCastCountKey, campaignName);
     if (stored != null && Number(stored) < usesMax) {
       setRuntimeValue(playerName, freeCastCountKey, Number(stored) + 1, campaignName);

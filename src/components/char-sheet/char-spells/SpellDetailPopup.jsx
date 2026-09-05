@@ -21,6 +21,15 @@ function SpellDetailPopup({ spell, playerStats, campaignName, onClose, onCast, u
   const phantasmalPassive = playerStats?.automation?.passives?.find(p => p.type === 'phantasmal_creatures');
   const isPhantasmalFreeCast = freeCastAuthorized && !!phantasmalPassive && (phantasmalPassive.freeCastSpells || []).includes(spell.name);
 
+  // CLA-308: Shadow Arts — per-spell once-per-Long-Rest slotless free cast counter
+  // (null = fresh) for the remaining-uses note on the popup.
+  const isShadowArtsFreeCast = spell._shadowArtsFreeCast === true;
+  const shadowArtsFreeCastCount = useMemo(() => {
+    if (!isShadowArtsFreeCast) return null;
+    const stored = getRuntimeValue(playerStats.name, `_Shadow_Arts_${spell.name.replace(/\s+/g, '_')}_freeCastCount`, campaignName);
+    return stored != null ? Number(stored) : 1;
+  }, [isShadowArtsFreeCast, playerStats.name, spell.name, campaignName]);
+
   const _psionicSorceryAvailable = (() => {
     const isSorcerer = playerStats.class?.name === 'Sorcerer';
     if (!isSorcerer) return 0;
@@ -277,13 +286,19 @@ function SpellDetailPopup({ spell, playerStats, campaignName, onClose, onCast, u
           {freeCastAuthorized && spell._ritualOnly && (
             <p className="spell-detail-free-cast"><i className="fa-solid fa-scroll"></i> Ritual Cast — cast as a Ritual, no spell slot consumed</p>
           )}
-          {freeCastAuthorized && !spell._ritualOnly && (
+          {freeCastAuthorized && !spell._ritualOnly && !isShadowArtsFreeCast && (
             <p className="spell-detail-free-cast"><i className="fa-solid fa-bolt"></i> Free Cast — no spell slot consumed</p>
+          )}
+          {freeCastAuthorized && isShadowArtsFreeCast && (
+            <p className="spell-detail-free-cast"><i className="fa-solid fa-moon"></i> Shadow Arts free cast — no spell slot consumed ({shadowArtsFreeCastCount} use{shadowArtsFreeCastCount === 1 ? '' : 's'} of {spell.name} left until your next Long Rest)</p>
           )}
           {isPhantasmalFreeCast && (
             <p className="spell-detail-free-cast"><i className="fa-solid fa-ghost"></i> Phantasmal Creatures free cast — spectral Illusion version, half HP</p>
           )}
-          {!canCast && !isCantrip && !freeCastAuthorized && (
+          {!canCast && !isCantrip && !freeCastAuthorized && isShadowArtsFreeCast && (
+          <p className="spell-detail-no-slots"><i className="fa-solid fa-moon"></i> Shadow Arts: {spell.name} already cast — finish a Long Rest to regain it.</p>
+        )}
+          {!canCast && !isCantrip && !freeCastAuthorized && !isShadowArtsFreeCast && (
           <p className="spell-detail-no-slots">No spell slots available for this level.</p>
         )}
       </div>

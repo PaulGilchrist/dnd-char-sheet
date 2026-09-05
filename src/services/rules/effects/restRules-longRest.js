@@ -11,6 +11,21 @@ import { endInvisibility, endGreaterInvisibility } from '../features/invisibilit
 import { clearHuntersMarkConcentration } from './restRules.js'
 import { getLongRestResources, spellSlotLevels, getLevelAfterLongRest } from './restRules-constants.js'
 
+// CLA-252 + CLA-308: reset passive per-spell free-cast counters on long rest (one
+// free cast PER SPELL per long rest — each freeCastSpells counter re-arms to null).
+function resetPerSpellFreeCastCounters(name, playerStats, campaignName) {
+  const passives = playerStats.automation?.passives ?? []
+  const phantasmalPassive = passives.find(p => p.type === 'phantasmal_creatures')
+  if (phantasmalPassive) {
+    (phantasmalPassive.freeCastSpells ?? []).forEach(spellName => setRuntimeValue(name, `_Phantasmal_Creatures_${spellName.replace(/\s+/g, '_')}_freeCastCount`, null, campaignName, true))
+    setRuntimeValue(name, '_phantasmalCreatures_list', [], campaignName, true)
+  }
+  const shadowArtsPassive = passives.find(p => p.type === 'shadow_arts')
+  if (shadowArtsPassive) {
+    (shadowArtsPassive.freeCastSpells ?? []).forEach(spellName => setRuntimeValue(name, `_Shadow_Arts_${spellName.replace(/\s+/g, '_')}_freeCastCount`, null, campaignName, true))
+  }
+}
+
 export async function applyLongRest(playerStats, campaignName) {
   const name = playerStats.name
 
@@ -499,13 +514,10 @@ export async function applyLongRest(playerStats, campaignName) {
       setRuntimeValue(name, 'portentUsedThisTurn', null, campaignName, true)
     }
 
-    // Reset Phantasmal Creatures free casts on long rest (CLA-252: one free cast PER SPELL
-    // per long rest — reset each freeCastSpells counter to null; null = re-armed/available).
-    const phantasmalPassive = (playerStats.automation?.passives ?? []).find(p => p.type === 'phantasmal_creatures')
-    if (phantasmalPassive) {
-      (phantasmalPassive.freeCastSpells ?? []).forEach(spellName => setRuntimeValue(name, `_Phantasmal_Creatures_${spellName.replace(/\s+/g, '_')}_freeCastCount`, null, campaignName, true))
-      setRuntimeValue(name, '_phantasmalCreatures_list', [], campaignName, true)
-    }
+    // Reset per-spell free-cast counters on long rest — CLA-252 Phantasmal Creatures +
+    // CLA-308 Shadow Arts (one free cast PER SPELL per long rest — each freeCastSpells
+    // counter re-arms to null; null = re-armed/available).
+    resetPerSpellFreeCastCounters(name, playerStats, campaignName)
 
     // Reset Favored Enemy free cast count on long rest
     setRuntimeValue(name, '_Favored_Enemy_freeCastCount', null, campaignName, true)
