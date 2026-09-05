@@ -25,6 +25,21 @@ export async function getExpertiseLimits(formData, allFeats) {
 
   // Search through class levels for expertise features
   let totalCount = 0;
+  const classExpertiseSkillLists = [];
+  let hasUnrestrictedClassSource = false;
+
+  const consumeExpertiseFeature = (feature) => {
+    const featureCount = countExpertiseFromFeature(feature);
+    if (featureCount <= 0) return;
+    totalCount += featureCount;
+    const restrictedList = parseClassExpertiseSkillList(feature);
+    if (restrictedList) {
+      classExpertiseSkillLists.push(restrictedList);
+    } else {
+      hasUnrestrictedClassSource = true;
+    }
+  };
+
   for (const classLevel of classData.class_levels) {
     if (classLevel.level > level) {
       break;
@@ -33,7 +48,7 @@ export async function getExpertiseLimits(formData, allFeats) {
     // Check features in this level
     const features = classLevel.features || [];
     for (const feature of features) {
-      totalCount += countExpertiseFromFeature(feature);
+      consumeExpertiseFeature(feature);
     }
   }
 
@@ -45,7 +60,7 @@ export async function getExpertiseLimits(formData, allFeats) {
       if (subclassData?.features) {
         for (const feature of subclassData.features) {
           if (feature.level <= level) {
-            totalCount += countExpertiseFromFeature(feature);
+            consumeExpertiseFeature(feature);
           }
         }
       }
@@ -62,7 +77,7 @@ export async function getExpertiseLimits(formData, allFeats) {
           if (classLevel.level <= level) {
             const features = classLevel.features || [];
             for (const feature of features) {
-              totalCount += countExpertiseFromFeature(feature);
+              consumeExpertiseFeature(feature);
             }
           }
         }
@@ -70,7 +85,38 @@ export async function getExpertiseLimits(formData, allFeats) {
     }
   }
 
-  return buildExpertiseResult(formData, allFeats, className, totalCount, level);
+  const restrictedLists = (!hasUnrestrictedClassSource && classExpertiseSkillLists.length > 0)
+    ? classExpertiseSkillLists
+    : null;
+
+  return buildExpertiseResult(formData, allFeats, totalCount, restrictedLists);
+}
+
+/**
+ * Parses a restricted skill list from a class feature description that grants
+ * expertise from an enumerated set (e.g., Wizard 2024 Scholar: "Choose one of
+ * the following skills in which you have proficiency: Arcana, History, ...")
+ * @param {object} feature - The feature data object
+ * @returns {Array<string>|null} Restricted skill names, or null if unrestricted
+ */
+export function parseClassExpertiseSkillList(feature) {
+  const explicitList = feature?.feature_specific?.expertise?.skills;
+  if (Array.isArray(explicitList) && explicitList.length > 0) {
+    return explicitList.map(s => String(s).trim()).filter(s => s.length > 0);
+  }
+
+  const desc = feature?.description || '';
+  if (!/\bexpertise\b/i.test(desc)) return null;
+
+  const match = desc.match(/choose\s+(?:one|two|three|\d+)\s+of\s+the\s+following\s+skills[^:]*:\s*(.+?)\./i);
+  if (!match) return null;
+
+  const skills = match[1]
+    .split(/,\s*(?:(?:and|or)\s+)?|(?:\s+and\s+|\s+or\s+)/)
+    .map(s => s.trim())
+    .filter(s => s.length > 0);
+
+  return skills.length > 0 ? skills : null;
 }
 
 /**
@@ -137,6 +183,7 @@ async function getExpertiseLimitsNoClass(formData, allFeats) {
       count: featSlots,
       classCount: 0,
       featCount: featSlots,
+      classExpertiseSkillLists: null,
       featExpertiseSkillLists,
       details,
     };
@@ -146,6 +193,7 @@ async function getExpertiseLimitsNoClass(formData, allFeats) {
     count: 0,
     classCount: 0,
     featCount: 0,
+    classExpertiseSkillLists: null,
     featExpertiseSkillLists: null,
     details: 'No class selected'
   };
@@ -170,6 +218,7 @@ async function getExpertiseLimitsNoClassData(formData, allFeats, className) {
       count: featSlots,
       classCount: 0,
       featCount: featSlots,
+      classExpertiseSkillLists: null,
       featExpertiseSkillLists,
       details,
     };
@@ -179,6 +228,7 @@ async function getExpertiseLimitsNoClassData(formData, allFeats, className) {
     count: 0,
     classCount: 0,
     featCount: 0,
+    classExpertiseSkillLists: null,
     featExpertiseSkillLists: null,
     details: `Expertise is not available for ${className}`
   };
@@ -187,7 +237,9 @@ async function getExpertiseLimitsNoClassData(formData, allFeats, className) {
 /**
  * Builds the final expertise result object
  */
-async function buildExpertiseResult(formData, allFeats, className, totalCount, level) {
+async function buildExpertiseResult(formData, allFeats, totalCount, classExpertiseSkillLists) {
+  const className = formData.class?.name || '';
+  const level = formData.level || 1;
   const featSlots = await countFeatExpertiseSlots(formData, allFeats);
   const featExpertiseSkillLists = await getFeatExpertiseSkillLists(formData, allFeats);
 
@@ -195,6 +247,9 @@ async function buildExpertiseResult(formData, allFeats, className, totalCount, l
   let details = `${className} can have expertise in ${totalCount} skill(s) at level ${level}`;
   if (featSlots > 0) {
     details += ` + ${featSlots} from feats`;
+  }
+  if (classExpertiseSkillLists) {
+    details += `. Class expertise is limited to: ${classExpertiseSkillLists.flat().join(', ')}`;
   }
   if (featExpertiseSkillLists) {
     const featDetails = formatFeatExpertiseDetails(formData.feats || [], allFeats);
@@ -208,6 +263,7 @@ async function buildExpertiseResult(formData, allFeats, className, totalCount, l
     count: totalCount + featSlots,
     classCount: totalCount,
     featCount: featSlots,
+    classExpertiseSkillLists: classExpertiseSkillLists || null,
     featExpertiseSkillLists: featExpertiseSkillLists,
     details
   };

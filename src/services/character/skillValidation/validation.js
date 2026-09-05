@@ -177,6 +177,25 @@ export async function validateSkills(formData, allFeats) {
         });
       }
     }
+
+    // Check that class-restricted expertise skills (e.g., Scholar's six skills) are from the allowed lists
+    if (expertiseLimits?.classExpertiseSkillLists) {
+      const allClassSkills = new Set(expertiseLimits.classExpertiseSkillLists.flat().map(s => s.trim()));
+      const allFeatSkills = new Set((expertiseLimits.featExpertiseSkillLists || []).flat().map(s => s.trim()));
+      const hasFreeFeatSlots = (expertiseLimits.featCount || 0) > (expertSkills.filter(skill => allFeatSkills.has(skill)).length);
+      const invalidClassExperts = expertSkills.filter(skill => !allClassSkills.has(skill) && !allFeatSkills.has(skill));
+      if (invalidClassExperts.length > 0 && !hasFreeFeatSlots) {
+        warnings.push({
+          message: `Class expertise is limited to: ${[...allClassSkills].join(', ')}. Not eligible: ${invalidClassExperts.join(', ')}`,
+          type: 'warning'
+        });
+      } else if (invalidClassExperts.length > 0) {
+        warnings.push({
+          message: `${invalidClassExperts.join(', ')} is not in your class expertise list (${[...allClassSkills].join(', ')}); it can only use a feat expertise slot.`,
+          type: 'warning'
+        });
+      }
+    }
   }
 
   // Check for duplicate skills in selection

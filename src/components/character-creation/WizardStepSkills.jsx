@@ -32,12 +32,21 @@ const WizardStepSkills = React.memo(function WizardStepSkills({ formData, errors
   const expertiseData = useMemo(() => {
     const expertSkills = formData.expertSkills || [];
     const featExpertiseSkillLists = expertiseLimits?.featExpertiseSkillLists;
+    const classExpertiseSkillLists = expertiseLimits?.classExpertiseSkillLists;
 
     // Build the set of feat-restricted skill names
     let featRestrictedSkills = null;
     if (featExpertiseSkillLists && featExpertiseSkillLists.length > 0) {
       featRestrictedSkills = new Set(
         featExpertiseSkillLists.flat().map(s => s.trim()).filter(Boolean)
+      );
+    }
+
+    // Build the set of class-restricted skill names (e.g., Scholar's six skills)
+    let classRestrictedSkills = null;
+    if (classExpertiseSkillLists && classExpertiseSkillLists.length > 0) {
+      classRestrictedSkills = new Set(
+        classExpertiseSkillLists.flat().map(s => s.trim()).filter(Boolean)
       );
     }
 
@@ -51,6 +60,7 @@ const WizardStepSkills = React.memo(function WizardStepSkills({ formData, errors
 
     return {
       featRestrictedSkills,
+      classRestrictedSkills,
       featSlotsUsed,
       featCount: expertiseLimits?.featCount || 0,
       classSlotsAvailable,
@@ -92,8 +102,14 @@ const WizardStepSkills = React.memo(function WizardStepSkills({ formData, errors
           }
         } else {
           // Non-restricted skills can use class slots or feat slots
-          const hasClassSlots = expertiseLimits?.classCount && expertiseLimits.classCount > 0 && expertiseData.classSlotsAvailable > 0;
+          const inClassList = !expertiseData.classRestrictedSkills || expertiseData.classRestrictedSkills.has(skill);
+          const hasClassSlots = inClassList && expertiseLimits?.classCount && expertiseLimits.classCount > 0 && expertiseData.classSlotsAvailable > 0;
           const hasFeatSlots = expertiseLimits?.featCount && expertiseLimits.featCount > 0 && expertiseData.featSlotsUsed < expertiseLimits.featCount;
+          if (!inClassList && !hasFeatSlots) {
+            setShowExpertiseFeedback(`Class expertise is limited to: ${[...expertiseData.classRestrictedSkills].join(', ')}`);
+            setTimeout(() => setShowExpertiseFeedback(null), 3000);
+            return;
+          }
           if (!hasClassSlots && !hasFeatSlots) {
             if (!expertiseLimits?.classCount || expertiseLimits.classCount <= 0) {
               if (!expertiseLimits?.featCount || expertiseLimits.featCount <= 0) {
@@ -118,6 +134,11 @@ const WizardStepSkills = React.memo(function WizardStepSkills({ formData, errors
 
 	const isSkillExpert = (skill) => (formData.expertSkills || []).includes(skill);
 	const isSkillProficient = (skill) => (formData.skillProficiencies || []).includes(skill);
+	const expertiseButtonTitle = (skill) => {
+		if (isSkillExpert(skill)) return 'Click to remove Expert status';
+		if (!isSkillProficient(skill)) return 'Select proficient first';
+		return 'Click to elevate to Expert';
+	};
 	const handleProficiencyToggle = (skill) => {
 		const isCurrentlyProficient = (formData.skillProficiencies || []).includes(skill);
 		const isCurrentlyExpert = (formData.expertSkills || []).includes(skill);
@@ -293,11 +314,7 @@ const WizardStepSkills = React.memo(function WizardStepSkills({ formData, errors
 							className={`expertise-toggle-btn ${isSkillExpert(skill.name) ? 'active' : ''}`}
 							onClick={() => handleExpertiseToggle(skill.name)}
 							disabled={isSkillExpert(skill.name) ? false : !isSkillProficient(skill.name)}
-							title={
-								isSkillExpert(skill.name) ? 'Click to remove Expert status'
-								: !isSkillProficient(skill.name) ? 'Select proficient first'
-								: 'Click to elevate to Expert'
-							}
+							title={expertiseButtonTitle(skill.name)}
 							>
 								{isSkillExpert(skill.name) ? '✓ Expert' : 'Elevate'}
 							</button>

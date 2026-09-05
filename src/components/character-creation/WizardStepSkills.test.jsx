@@ -597,6 +597,120 @@ describe('WizardStepSkills', () => {
     });
   });
 
+  describe('class-restricted expertise (Scholar six-skill list)', () => {
+    const scholarLimits = {
+      allowed: true,
+      count: 1,
+      classCount: 1,
+      featCount: 0,
+      classExpertiseSkillLists: [['Acrobatics', 'Stealth']],
+    };
+
+    it('should keep Elevate clickable but present the class list refusal for non-list skills', async () => {
+      const mockOnSkillExpertiseToggle = vi.fn();
+      render(<WizardStepSkills
+        {...baseProps}
+        formData={{ skillProficiencies: ['Acrobatics', 'Perception'], expertSkills: [] }}
+        expertiseLimits={scholarLimits}
+        onSkillExpertiseToggle={mockOnSkillExpertiseToggle}
+      />);
+      await waitForSkillsLoaded();
+
+      const labels = document.querySelectorAll('.multi-select-item');
+      const perceptionLabel = Array.from(labels).find(l => l.textContent.includes('Perception'));
+      const button = perceptionLabel.querySelector('.expertise-toggle-btn');
+      expect(button).not.toBeDisabled();
+      expect(button).toHaveAttribute('title', 'Click to elevate to Expert');
+      fireEvent.click(button);
+
+      expect(mockOnSkillExpertiseToggle).not.toHaveBeenCalled();
+      await waitFor(() => {
+        const feedback = document.querySelector('.expertise-feedback');
+        expect(feedback).toBeInTheDocument();
+        expect(feedback.textContent).toBe('Class expertise is limited to: Acrobatics, Stealth');
+      });
+    });
+
+    it('should allow elevation of a proficient skill inside the class list', async () => {
+      const mockOnSkillExpertiseToggle = vi.fn();
+      render(<WizardStepSkills
+        {...baseProps}
+        formData={{ skillProficiencies: ['Acrobatics', 'Perception'], expertSkills: [] }}
+        expertiseLimits={scholarLimits}
+        onSkillExpertiseToggle={mockOnSkillExpertiseToggle}
+      />);
+      await waitForSkillsLoaded();
+
+      const labels = document.querySelectorAll('.multi-select-item');
+      const acrobaticsLabel = Array.from(labels).find(l => l.textContent.includes('Acrobatics'));
+      const button = acrobaticsLabel.querySelector('.expertise-toggle-btn');
+      expect(button).not.toBeDisabled();
+      fireEvent.click(button);
+
+      expect(mockOnSkillExpertiseToggle).toHaveBeenCalledWith('Acrobatics', true);
+    });
+
+    it('should keep the count gate for in-list skills when class slots are exhausted', async () => {
+      const mockOnSkillExpertiseToggle = vi.fn();
+      render(<WizardStepSkills
+        {...baseProps}
+        formData={{ skillProficiencies: ['Acrobatics', 'Stealth'], expertSkills: ['Acrobatics'] }}
+        expertiseLimits={scholarLimits}
+        onSkillExpertiseToggle={mockOnSkillExpertiseToggle}
+      />);
+      await waitForSkillsLoaded();
+
+      const labels = document.querySelectorAll('.multi-select-item');
+      const stealthLabel = Array.from(labels).find(l => l.textContent.includes('Stealth'));
+      const button = stealthLabel.querySelector('.expertise-toggle-btn');
+      fireEvent.click(button);
+
+      expect(mockOnSkillExpertiseToggle).not.toHaveBeenCalled();
+      await waitFor(() => {
+        const feedback = document.querySelector('.expertise-feedback');
+        expect(feedback).toBeInTheDocument();
+        expect(feedback.textContent).toContain('All class expertise slots are used');
+      });
+    });
+
+    it('should allow a non-list skill when a feat expertise slot is still free', async () => {
+      const mockOnSkillExpertiseToggle = vi.fn();
+      render(<WizardStepSkills
+        {...baseProps}
+        formData={{ skillProficiencies: ['Acrobatics', 'Perception'], expertSkills: [] }}
+        expertiseLimits={{ ...scholarLimits, count: 2, featCount: 1 }}
+        onSkillExpertiseToggle={mockOnSkillExpertiseToggle}
+      />);
+      await waitForSkillsLoaded();
+
+      const labels = document.querySelectorAll('.multi-select-item');
+      const perceptionLabel = Array.from(labels).find(l => l.textContent.includes('Perception'));
+      const button = perceptionLabel.querySelector('.expertise-toggle-btn');
+      expect(button).not.toBeDisabled();
+      fireEvent.click(button);
+
+      expect(mockOnSkillExpertiseToggle).toHaveBeenCalledWith('Perception', true);
+    });
+
+    it('should not gate any skill when classExpertiseSkillLists is absent', async () => {
+      const mockOnSkillExpertiseToggle = vi.fn();
+      render(<WizardStepSkills
+        {...baseProps}
+        formData={{ skillProficiencies: ['Acrobatics', 'Perception'], expertSkills: [] }}
+        expertiseLimits={{ allowed: true, count: 1, classCount: 1, featCount: 0 }}
+        onSkillExpertiseToggle={mockOnSkillExpertiseToggle}
+      />);
+      await waitForSkillsLoaded();
+
+      const labels = document.querySelectorAll('.multi-select-item');
+      const perceptionLabel = Array.from(labels).find(l => l.textContent.includes('Perception'));
+      const button = perceptionLabel.querySelector('.expertise-toggle-btn');
+      expect(button).not.toBeDisabled();
+      fireEvent.click(button);
+      expect(mockOnSkillExpertiseToggle).toHaveBeenCalledWith('Perception', true);
+    });
+  });
+
   describe('skill limits breakdown', () => {
     it('should display skill choice sources breakdown', async () => {
       const propsWithBreakdown = {
