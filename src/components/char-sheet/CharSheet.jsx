@@ -16,7 +16,7 @@ import CharSummary from './char-summary/CharSummary.jsx'
 import { computeAuraComboEffects } from '../../services/combat/auras/auraComboEffects.js';
 import { getCombatSummary } from '../../services/encounters/combatData.js';
 import { computeCharConditionEffects } from './CharSheet.conditionEffects';
-import { handleReroll, handleStrokeOfLuck, handleBardicInspiration, handleBiDefenseCombatSummary, handleBardicInspirationOffense, handleEmpoweredSpell, handlePuncture, handleSavageAttacker, handleTacticalMind, handleDarkOnesLuck, handleSuperiorityManeuver, handlePsiBolsteredKnack } from './CharSheet.handlers';
+import { handleReroll, handleStrokeOfLuck, handleBardicInspiration, handleBiDefenseCombatSummary, handleBardicInspirationOffense, handleEmpoweredSpell, handlePuncture, handleSavageAttacker, handleSavageAttackerChoice, handleTacticalMind, handleDarkOnesLuck, handleSuperiorityManeuver, handlePsiBolsteredKnack } from './CharSheet.handlers';
 import { ShieldOfFaithTargetSelectionModal, renderPopup } from './CharSheet.modals.jsx';
 import { activateWildShape } from '../../services/automation/handlers/class-druid/wildShapeCreatureBuilder.js'
 import { confirmPolymorphTransform } from '../../services/automation/handlers/spells/polymorphService.js'
@@ -435,6 +435,10 @@ function CharSheetContent({
         return await handleSavageAttacker(playerStats, campaignName, characters, popupHtml, setPopupHtml, savageData);
     }, [playerStats, campaignName, characters, popupHtml, setPopupHtml]);
 
+    const handleSavageAttackerChoiceWrapped = React.useCallback(async (choiceData) => {
+        return await handleSavageAttackerChoice(playerStats, campaignName, characters, popupHtml, setPopupHtml, choiceData);
+    }, [playerStats, campaignName, characters, popupHtml, setPopupHtml]);
+
     const handleTacticalMindWrapped = React.useCallback(async (dieResult) => {
         await handleTacticalMind(playerStats, campaignName, { ...popupHtml, tacticalMindDie: dieResult });
     }, [playerStats, campaignName, popupHtml]);
@@ -516,6 +520,7 @@ function CharSheetContent({
         onEmpoweredSpell: handleEmpoweredSpellWrapped,
         onPuncture: handlePunctureWrapped,
         onSavageAttacker: handleSavageAttackerWrapped,
+        onSavageAttackerChoice: handleSavageAttackerChoiceWrapped,
         onBiDefenseCombatSummary: handleBiDefenseCombatSummaryWrapped,
         onStrokeOfLuck: handleStrokeOfLuckWrapped,
         onReroll: handleRerollWrapped,

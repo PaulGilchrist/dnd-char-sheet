@@ -184,6 +184,7 @@ export const renderPopup = (popupHtml, setPopupHtml, isLocalhost, playerStats, c
         onEmpoweredSpell={popupHtml?.empoweredSpell ? popupHandlers.onEmpoweredSpell : undefined}
         onPuncture={popupHtml?.piercerPuncture ? popupHandlers.onPuncture : undefined}
         onSavageAttacker={popupHtml?.savageAttacker ? popupHandlers.onSavageAttacker : undefined}
+        onSavageAttackerChoice={popupHtml?.savageAttacker ? popupHandlers.onSavageAttackerChoice : undefined}
         onAfterBiDefense={popupHandlers.onBiDefenseCombatSummary}
         onStrokeOfLuck={popupHandlers.onStrokeOfLuck}
         onReroll={popupHtml?.autoReroll ? popupHandlers.onReroll : undefined}

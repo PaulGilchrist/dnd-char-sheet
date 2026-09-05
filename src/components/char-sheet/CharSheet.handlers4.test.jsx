@@ -29,6 +29,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import {
   handlePuncture,
   handleSavageAttacker,
+  handleSavageAttackerChoice,
   handleTacticalMind,
   handleDarkOnesLuck,
   handleSuperiorityManeuver,
@@ -237,13 +238,11 @@ describe('handleSavageAttacker', () => {
     vi.clearAllMocks();
   });
 
-  it('applies damage difference and sets used flag', async () => {
-    const { getRuntimeValue } = await import('../../hooks/runtime/useRuntimeState.js');
+  it('reroll click stamps used flag, logs, and defers damage to the player choice', async () => {
+    const { getRuntimeValue, setRuntimeValue } = await import('../../hooks/runtime/useRuntimeState.js');
     const { applyDamageToTarget } = await import('../../services/rules/combat/applyDamage.js');
-    const { getCombatContext } = await import('../../services/rules/combat/damageUtils.js');
 
     getRuntimeValue.mockReturnValue(null);
-    getCombatContext.mockResolvedValue({ creatures: [] });
     applyDamageToTarget.mockReturnValue({});
 
     const setPopupHtml = vi.fn();
@@ -264,6 +263,47 @@ describe('handleSavageAttacker', () => {
       savageData
     );
 
+    expect(applyDamageToTarget).not.toHaveBeenCalled();
+    expect(setPopupHtml).not.toHaveBeenCalled();
+    expect(setRuntimeValue).toHaveBeenCalledWith('Test Character', '_Savage_Attacker_usedRound', true, mockCampaignName);
+
+    const { addEntry } = await import('../../services/ui/logService.js');
+    expect(addEntry).toHaveBeenCalled();
+    expect(addEntry.mock.calls[0][1].abilityName).toBe('Savage Attacker');
+
+    expect(result).toBeDefined();
+    expect(result.better).toBe(true);
+    expect(result.awaitingChoice).toBe(true);
+  });
+
+  it('keep-reroll choice applies only a positive damage difference', async () => {
+    const { applyDamageToTarget } = await import('../../services/rules/combat/applyDamage.js');
+    const { getCombatContext } = await import('../../services/rules/combat/damageUtils.js');
+    const { addEntry } = await import('../../services/ui/logService.js');
+
+    getCombatContext.mockResolvedValue({ creatures: [] });
+    applyDamageToTarget.mockReturnValue({});
+
+    const setPopupHtml = vi.fn();
+    const result = await handleSavageAttackerChoice(
+      mockPlayerStats,
+      mockCampaignName,
+      [],
+      { modifier: 0, damageType: 'Slashing', finalDamage: 10, targetCurrentHp: 22 },
+      setPopupHtml,
+      {
+        keep: 'reroll',
+        originalRolls: [4, 6],
+        newRolls: [6, 6],
+        originalTotal: 10,
+        newTotal: 12,
+        rawDamage: 10,
+        modifier: 0,
+        targetName: 'Orc',
+        damageTypes: ['Slashing'],
+      }
+    );
+
     expect(applyDamageToTarget).toHaveBeenCalledWith(
       expect.anything(),
       'Orc',
@@ -276,25 +316,76 @@ describe('handleSavageAttacker', () => {
     );
     expect(setPopupHtml).toHaveBeenCalled();
     expect(setPopupHtml.mock.calls[0][0].rolls).toEqual([6, 6]);
+    expect(setPopupHtml.mock.calls[0][0].total).toBe(12);
+    expect(setPopupHtml.mock.calls[0][0].finalDamage).toBe(12);
+    expect(setPopupHtml.mock.calls[0][0].targetCurrentHp).toBe(20);
 
-    const { addEntry } = await import('../../services/ui/logService.js');
     expect(addEntry).toHaveBeenCalled();
-    expect(addEntry.mock.calls[0][1].abilityName).toBe('Savage Attacker');
+    expect(addEntry.mock.calls[0][1].description).toContain('kept Savage Attacker reroll total 12');
+    expect(result).toEqual({ kept: 'reroll', damageDifference: 2 });
+  });
 
-    expect(result).toBeDefined();
-    expect(result.better).toBe(true);
+  it('keep-original choice never touches target hp', async () => {
+    const { applyDamageToTarget } = await import('../../services/rules/combat/applyDamage.js');
+    const { addEntry } = await import('../../services/ui/logService.js');
+
+    const result = await handleSavageAttackerChoice(
+      mockPlayerStats,
+      mockCampaignName,
+      [],
+      { modifier: 0 },
+      vi.fn(),
+      {
+        keep: 'original',
+        originalRolls: [4, 6],
+        newRolls: [1, 2],
+        originalTotal: 10,
+        newTotal: 3,
+        rawDamage: 10,
+        modifier: 0,
+        targetName: 'Orc',
+        damageTypes: ['Slashing'],
+      }
+    );
+
+    expect(applyDamageToTarget).not.toHaveBeenCalled();
+    expect(addEntry.mock.calls[0][1].description).toContain('kept original Savage Attacker total 10');
+    expect(result).toEqual({ kept: 'original', damageDifference: 0 });
+  });
+
+  it('a lower-reroll keep-reroll request can never heal (negative diff refused)', async () => {
+    const { applyDamageToTarget } = await import('../../services/rules/combat/applyDamage.js');
+
+    const result = await handleSavageAttackerChoice(
+      mockPlayerStats,
+      mockCampaignName,
+      [],
+      { modifier: 0 },
+      vi.fn(),
+      {
+        keep: 'reroll',
+        originalRolls: [6],
+        newRolls: [2],
+        originalTotal: 6,
+        newTotal: 2,
+        rawDamage: 6,
+        modifier: 0,
+        targetName: 'Orc',
+        damageTypes: ['Slashing'],
+      }
+    );
+
+    expect(applyDamageToTarget).not.toHaveBeenCalled();
+    expect(result).toEqual({ kept: 'original', damageDifference: 0 });
   });
 
   it('does not apply damage when difference is zero', async () => {
     const { getRuntimeValue } = await import('../../hooks/runtime/useRuntimeState.js');
     const { applyDamageToTarget } = await import('../../services/rules/combat/applyDamage.js');
-    const { getCombatContext } = await import('../../services/rules/combat/damageUtils.js');
 
     getRuntimeValue.mockReturnValue(null);
-    getCombatContext.mockResolvedValue({ creatures: [] });
     applyDamageToTarget.mockReturnValue({});
 
-    const setPopupHtml = vi.fn();
     const savageData = {
       rawDamage: 10,
       targetName: 'Orc',
@@ -303,16 +394,42 @@ describe('handleSavageAttacker', () => {
       newRolls: [4, 6],
     };
 
-    await handleSavageAttacker(
+    const result = await handleSavageAttacker(
       mockPlayerStats,
       mockCampaignName,
       [],
       { modifier: 0, damageType: 'Slashing' },
-      setPopupHtml,
+      vi.fn(),
       savageData
     );
 
     expect(applyDamageToTarget).not.toHaveBeenCalled();
+    expect(result.awaitingChoice).toBe(false);
+  });
+
+  it('gates a second same-turn savage attacker after the flag is written', async () => {
+    const { getRuntimeValue } = await import('../../hooks/runtime/useRuntimeState.js');
+    const { addEntry } = await import('../../services/ui/logService.js');
+
+    getRuntimeValue.mockReturnValue(true);
+
+    const result = await handleSavageAttacker(
+      mockPlayerStats,
+      mockCampaignName,
+      [],
+      { modifier: 0 },
+      vi.fn(),
+      {
+        rawDamage: 10,
+        targetName: 'Orc',
+        damageTypes: ['Slashing'],
+        originalRolls: [4, 6],
+        newRolls: [6, 6],
+      }
+    );
+
+    expect(result).toBeNull();
+    expect(addEntry).not.toHaveBeenCalled();
   });
 });
 

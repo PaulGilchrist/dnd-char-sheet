@@ -31,6 +31,7 @@ import {
   handleEmpoweredSpell,
   handlePuncture,
   handleSavageAttacker,
+  handleSavageAttackerChoice,
   handleTacticalMind,
   handleDarkOnesLuck,
   handleSuperiorityManeuver,
@@ -361,7 +362,7 @@ describe('handleSavageAttacker', () => {
     mockStore.clear();
   });
 
-  it('applies damage difference and marks used when valid', async () => {
+  it('marks used and logs without applying damage on reroll click', async () => {
     const { addEntry } = await import('../../services/ui/logService.js');
     const { applyDamageToTarget } = await import('../../services/rules/combat/applyDamage.js');
 
@@ -376,11 +377,83 @@ describe('handleSavageAttacker', () => {
       newRolls: [6, 6],
     };
 
-    await handleSavageAttacker(stats, campaignName, [], popupHtml, setPopupHtml, savageData);
+    const result = await handleSavageAttacker(stats, campaignName, [], popupHtml, setPopupHtml, savageData);
 
-    expect(applyDamageToTarget).toHaveBeenCalled();
+    expect(applyDamageToTarget).not.toHaveBeenCalled();
     expect(mockStore.get('Test Character:_Savage_Attacker_usedRound')).toBe(true);
     expect(addEntry).toHaveBeenCalled();
+    expect(result.awaitingChoice).toBe(true);
+  });
+
+  it('keeps-reroll choice applies the positive difference exactly once', async () => {
+    const { addEntry } = await import('../../services/ui/logService.js');
+    const { applyDamageToTarget } = await import('../../services/rules/combat/applyDamage.js');
+
+    const stats = createPlayerStats();
+    const setPopupHtml = vi.fn();
+
+    await handleSavageAttackerChoice(stats, campaignName, [], { modifier: 3, damageType: 'Slashing' }, setPopupHtml, {
+      keep: 'reroll',
+      originalRolls: [4, 4],
+      newRolls: [6, 6],
+      originalTotal: 8,
+      newTotal: 12,
+      rawDamage: 11,
+      modifier: 3,
+      targetName: 'Goblin',
+      damageTypes: ['Slashing'],
+    });
+
+    expect(applyDamageToTarget).toHaveBeenCalledTimes(1);
+    expect(applyDamageToTarget.mock.calls[0][2]).toBe(4);
+    expect(addEntry).toHaveBeenCalled();
+  });
+
+  it('keep-original choice writes no damage and logs no change', async () => {
+    const { addEntry } = await import('../../services/ui/logService.js');
+    const { applyDamageToTarget } = await import('../../services/rules/combat/applyDamage.js');
+
+    const stats = createPlayerStats();
+    const setPopupHtml = vi.fn();
+
+    const result = await handleSavageAttackerChoice(stats, campaignName, [], { modifier: 0 }, setPopupHtml, {
+      keep: 'original',
+      originalRolls: [4, 4],
+      newRolls: [6, 6],
+      originalTotal: 8,
+      newTotal: 12,
+      rawDamage: 8,
+      modifier: 0,
+      targetName: 'Goblin',
+      damageTypes: ['Slashing'],
+    });
+
+    expect(applyDamageToTarget).not.toHaveBeenCalled();
+    expect(setPopupHtml).not.toHaveBeenCalled();
+    expect(result).toEqual({ kept: 'original', damageDifference: 0 });
+    expect(addEntry).toHaveBeenCalled();
+    expect(addEntry.mock.calls[0][1].description).toContain('kept original');
+  });
+
+  it('never applies a negative difference when the reroll is lower', async () => {
+    const { applyDamageToTarget } = await import('../../services/rules/combat/applyDamage.js');
+
+    const stats = createPlayerStats();
+
+    const result = await handleSavageAttackerChoice(stats, campaignName, [], { modifier: 0 }, vi.fn(), {
+      keep: 'reroll',
+      originalRolls: [5],
+      newRolls: [2],
+      originalTotal: 5,
+      newTotal: 2,
+      rawDamage: 5,
+      modifier: 0,
+      targetName: 'Goblin',
+      damageTypes: ['Piercing'],
+    });
+
+    expect(applyDamageToTarget).not.toHaveBeenCalled();
+    expect(result).toEqual({ kept: 'original', damageDifference: 0 });
   });
 });
 

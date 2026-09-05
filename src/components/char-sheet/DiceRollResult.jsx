@@ -92,6 +92,7 @@ function DiceRollResult(props) {
         critLabels,
         onQuickRoll, onStrokeOfLuck, onLuckyAdvantage, onLuckyDisadvantage,
         onPsiBolsteredKnack,
+        onSavageAttackerChoice,
         onDone,
         resistanceNotice, hunterLoreNotice, advantageReason, forcedMode,
     } = props;
@@ -123,7 +124,7 @@ function DiceRollResult(props) {
     const {
         handleReroll, handleTacticalMind, handleDarkOnesLuck,
         handleBardicInspiration, handleBardicInspirationDefense, handleBardicInspirationOffense,
-        handleEmpoweredSpell, handlePuncture, handleSavageAttacker, handleSuperiorityManeuver,
+        handleEmpoweredSpell, handlePuncture, handleSavageAttacker, handleSavageAttackerKeep, handleSuperiorityManeuver,
     } = handlers;
 
     const critDiceRolls = isCritDamage && rolls ? rolls.map((r, i) => {
@@ -614,7 +615,17 @@ function DiceRollResult(props) {
             {savageAttackerUsed && savageAttackerResult && (
               <div className="dice-roll-reroll-result">
                 <i className="fa-solid fa-arrows-spin"></i> Savage Attacker: {savageAttackerResult.original} → {savageAttackerResult.rerolled}
-                {savageAttackerResult.better ? ` (+${savageAttackerResult.newTotal - savageAttackerResult.originalTotal})` : ' — Original kept'}
+                {savageAttackerResult.awaitingChoice ? ` — choose which total to keep (${savageAttackerResult.originalTotal} or ${savageAttackerResult.newTotal})` : savageAttackerResult.kept === 'reroll' ? ` — Reroll kept (+${savageAttackerResult.newTotal - savageAttackerResult.originalTotal})` : ' — Original kept'}
+                {savageAttackerResult.awaitingChoice && onSavageAttackerChoice && (
+                  <div className="dice-roll-reroll">
+                    <button className="dice-roll-reroll-btn" onClick={() => handleSavageAttackerKeep('original')} type="button">
+                      <i className="fa-solid fa-check"></i> Keep First ({savageAttackerResult.originalTotal})
+                    </button>
+                    <button className="dice-roll-reroll-btn" onClick={() => handleSavageAttackerKeep('reroll')} type="button">
+                      <i className="fa-solid fa-dice"></i> Keep Reroll ({savageAttackerResult.newTotal})
+                    </button>
+                  </div>
+                )}
               </div>
             )}
 

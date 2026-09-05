@@ -208,57 +208,99 @@ export async function handlePuncture(playerStats, campaignName, characters, popu
 
 export async function handleSavageAttacker(playerStats, campaignName, characters, popupHtml, setPopupHtml, savageData) {
     if (!playerStats || !campaignName || !savageData) return null;
-    
+
     const playerName = playerStats.name;
     const usedKey = '_Savage_Attacker_usedRound';
     const stored = getRuntimeValue(playerName, usedKey, campaignName);
     if (stored) return null;
-    
-    const { rawDamage, targetName, damageTypes, originalRolls, newRolls } = savageData;
-    
-    const combatSummary = await getCombatContext(campaignName);
-    if (!combatSummary || !targetName) return null;
-    
-    const newTotal = newRolls.reduce((sum, r) => sum + r, 0) + (popupHtml?.modifier || 0);
-    const damageDifference = newTotal - rawDamage;
-    
-    if (damageDifference !== 0) {
-        applyDamageToTarget(
-            combatSummary,
-            targetName,
-            damageDifference,
-            damageTypes || [popupHtml?.damageType || 'Slashing'],
-            campaignName,
-            characters,
-            false,
-            playerName
-        );
-    }
-    
+
+    const { targetName, originalRolls, newRolls } = savageData;
+    if (!targetName) return null;
+
+    const originalTotal = originalRolls.reduce((s, r) => s + r, 0);
+    const newTotal = newRolls.reduce((s, r) => s + r, 0);
+    const better = newTotal > originalTotal;
+
     await setRuntimeValue(playerName, usedKey, true, campaignName);
-    
+
     await addEntry(campaignName, {
         type: 'ability_use',
         characterName: playerName,
         abilityName: 'Savage Attacker',
-        description: `${playerName} used Savage Attacker: rerolled damage dice ${originalRolls.join(', ')} → ${newRolls.join(', ')} (${newRolls.reduce((s, r) => s + r, 0)} vs ${originalRolls.reduce((s, r) => s + r, 0)}).`,
+        description: better
+            ? `${playerName} used Savage Attacker against ${targetName}: rolled ${originalRolls.join(', ')} (${originalTotal}) then rerolled ${newRolls.join(', ')} (${newTotal}). Awaiting choice of which total to keep.`
+            : `${playerName} used Savage Attacker against ${targetName}: rolled ${originalRolls.join(', ')} (${originalTotal}) then rerolled ${newRolls.join(', ')} (${newTotal}) — kept original total ${originalTotal}.`,
         timestamp: Date.now(),
     });
-    
-    setPopupHtml({
-        ...popupHtml,
-        total: newTotal,
-        adjustedTotal: newTotal,
-        rolls: newRolls,
-    });
-    
+
     return {
         original: originalRolls.join(', '),
         rerolled: newRolls.join(', '),
-        originalTotal: originalRolls.reduce((s, r) => s + r, 0),
-        newTotal: newRolls.reduce((s, r) => s + r, 0),
-        better: newRolls.reduce((s, r) => s + r, 0) > originalRolls.reduce((s, r) => s + r, 0),
+        originalTotal,
+        newTotal,
+        better,
+        awaitingChoice: better,
     };
+}
+
+export async function handleSavageAttackerChoice(playerStats, campaignName, characters, popupHtml, setPopupHtml, choiceData) {
+    if (!playerStats || !campaignName || !choiceData) return null;
+
+    const playerName = playerStats.name;
+    const { keep, originalRolls, newRolls, rawDamage, modifier, targetName, damageTypes } = choiceData;
+
+    const originalTotal = originalRolls.reduce((s, r) => s + r, 0);
+    const newTotal = newRolls.reduce((s, r) => s + r, 0);
+
+    if (keep === 'reroll' && newTotal > originalTotal) {
+        const combatSummary = await getCombatContext(campaignName);
+        if (!combatSummary || !targetName) return null;
+
+        const damageDifference = (newTotal + (modifier || 0)) - rawDamage;
+        if (damageDifference > 0) {
+            applyDamageToTarget(
+                combatSummary,
+                targetName,
+                damageDifference,
+                damageTypes || [popupHtml?.damageType || 'Slashing'],
+                campaignName,
+                characters,
+                false,
+                playerName
+            );
+        }
+
+        await addEntry(campaignName, {
+            type: 'ability_use',
+            characterName: playerName,
+            abilityName: 'Savage Attacker',
+            description: `${playerName} kept Savage Attacker reroll total ${newTotal} over original ${originalTotal} (+${Math.max(0, damageDifference)} damage to ${targetName}).`,
+            timestamp: Date.now(),
+        });
+
+        const newPopupTotal = rawDamage + Math.max(0, damageDifference);
+        const updatedPopup = {
+            ...popupHtml,
+            total: newPopupTotal,
+            adjustedTotal: newPopupTotal,
+            rolls: newRolls,
+        };
+        if (popupHtml?.finalDamage !== undefined) updatedPopup.finalDamage = popupHtml.finalDamage + Math.max(0, damageDifference);
+        if (popupHtml?.targetCurrentHp !== undefined) updatedPopup.targetCurrentHp = popupHtml.targetCurrentHp - Math.max(0, damageDifference);
+        setPopupHtml(updatedPopup);
+
+        return { kept: 'reroll', damageDifference };
+    }
+
+    await addEntry(campaignName, {
+        type: 'ability_use',
+        characterName: playerName,
+        abilityName: 'Savage Attacker',
+        description: `${playerName} kept original Savage Attacker total ${originalTotal} (reroll was ${newTotal}). No damage change.`,
+        timestamp: Date.now(),
+    });
+
+    return { kept: 'original', damageDifference: 0 };
 }
 
 export async function handleTacticalMind(playerStats, campaignName, popupHtml) {

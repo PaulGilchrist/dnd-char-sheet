@@ -6,7 +6,7 @@ export function createDiceRollHandlers(props, state) {
         bardicInspirationDie, bardicInspirationOffenseDieSize, autoDamage,
         bardicInspirationDefenseDieSize, spellName, onReroll, onTacticalMind, onDarkOnesLuck,
         onBardicInspiration, onBardicInspirationDefense, onBardicInspirationOffense,
-        onEmpoweredSpell, onPuncture, onSavageAttacker, onSuperiorityManeuver,
+        onEmpoweredSpell, onPuncture, onSavageAttacker, onSavageAttackerChoice, onSuperiorityManeuver,
         playerStats,
     } = props;
 
@@ -21,6 +21,7 @@ export function createDiceRollHandlers(props, state) {
         setDarkOnesLuckResult, setDarkOnesLuckUsed,
         setPunctureResult, setPunctureUsed,
         setSavageAttackerResult, setSavageAttackerUsed,
+        savageAttackerResult,
         finalRoll,
     } = state;
 
@@ -166,20 +167,41 @@ export function createDiceRollHandlers(props, state) {
         setSavageAttackerResult({
             original: originalRolls.join(', '),
             rerolled: newRolls.join(', '),
+            originalRolls,
+            newRolls,
             originalTotal,
             newTotal,
             better: newTotal > originalTotal,
+            awaitingChoice: newTotal > originalTotal,
         });
         setSavageAttackerUsed(true);
 
         onSavageAttacker({
             damageFormula: formula,
-            rolls: newTotal > originalTotal ? newRolls : originalRolls,
+            rolls: originalRolls,
             rawDamage: total,
             targetName: targetName,
             damageTypes: damageType ? [damageType] : [],
             originalRolls,
             newRolls,
+        });
+    };
+
+    const handleSavageAttackerKeep = (keep) => {
+        if (!savageAttackerResult || !savageAttackerResult.awaitingChoice || !onSavageAttackerChoice) return;
+
+        setSavageAttackerResult({ ...savageAttackerResult, awaitingChoice: false, kept: keep });
+
+        onSavageAttackerChoice({
+            keep,
+            originalRolls: savageAttackerResult.originalRolls,
+            newRolls: savageAttackerResult.newRolls,
+            originalTotal: savageAttackerResult.originalTotal,
+            newTotal: savageAttackerResult.newTotal,
+            rawDamage: total,
+            modifier: modifier || 0,
+            targetName: targetName,
+            damageTypes: damageType ? [damageType] : [],
         });
     };
 
@@ -207,6 +229,7 @@ export function createDiceRollHandlers(props, state) {
         handleEmpoweredSpell,
         handlePuncture,
         handleSavageAttacker,
+        handleSavageAttackerKeep,
         handleSuperiorityManeuver,
     };
 }
