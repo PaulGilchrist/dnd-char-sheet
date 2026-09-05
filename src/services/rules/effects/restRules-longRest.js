@@ -13,6 +13,10 @@ import { getLongRestResources, spellSlotLevels, getLevelAfterLongRest } from './
 
 // CLA-252 + CLA-308: reset passive per-spell free-cast counters on long rest (one
 // free cast PER SPELL per long rest — each freeCastSpells counter re-arms to null).
+// FT-070 also resets per-spell-tracking free_spell feature counters (Shadow Touched's
+// Shadow Magic: chosen spell + Invisibility) — consumer keys in spellPreparationService
+// are `_${feature}_${Spell}_freeCastCount`; the old `_shadowTouchedSpell_freeCastCount`
+// reset matched no writer/consumer, leaving those free casts permanently spent.
 function resetPerSpellFreeCastCounters(name, playerStats, campaignName) {
   const passives = playerStats.automation?.passives ?? []
   const phantasmalPassive = passives.find(p => p.type === 'phantasmal_creatures')
@@ -23,6 +27,18 @@ function resetPerSpellFreeCastCounters(name, playerStats, campaignName) {
   const shadowArtsPassive = passives.find(p => p.type === 'shadow_arts')
   if (shadowArtsPassive) {
     (shadowArtsPassive.freeCastSpells ?? []).forEach(spellName => setRuntimeValue(name, `_Shadow_Arts_${spellName.replace(/\s+/g, '_')}_freeCastCount`, null, campaignName, true))
+  }
+  const perSpellFreeCastFeatures = [
+    ...(playerStats.automation?.actions ?? []),
+    ...(playerStats.automation?.bonusActions ?? []),
+    ...(playerStats.automation?.specialActions ?? []),
+  ].filter(e => e.type === 'free_spell' && e.perSpellTracking)
+  for (const feature of perSpellFreeCastFeatures) {
+    const featureSpells = Array.isArray(feature.spell) ? feature.spell : [feature.spell]
+    featureSpells.forEach(spellName => {
+      if (!spellName) return
+      setRuntimeValue(name, `_${feature.name.replace(/\s+/g, '_')}_${spellName.replace(/\s+/g, '_')}_freeCastCount`, null, campaignName, true)
+    })
   }
 }
 
@@ -412,10 +428,8 @@ export async function applyLongRest(playerStats, campaignName) {
        setRuntimeValue(name, '_feyTouchedSpell_freeCastCount', null, campaignName, true)
      }
 
-     // Reset Shadow Touched free cast counter on long rest
-     if (playerStats.shadowTouchedSpell) {
-       setRuntimeValue(name, '_shadowTouchedSpell_freeCastCount', null, campaignName, true)
-     }
+     // FT-070: Shadow Touched per-spell free-cast counter resets moved into
+     // resetPerSpellFreeCastCounters (aligned consumer keys, shared machinery).
 
      // FT-068: Reset Ritual Master Quick Ritual counter on long rest
      const hasRitualMasterGrant = (playerStats.automation?.ritualSpells || []).some(f => f.chosenSpells)

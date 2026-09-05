@@ -141,21 +141,27 @@ describe('incrementFreeCastResource — free spell actions', () => {
     expect(setRuntimeValue).toHaveBeenCalledWith('TestWizard', '_Test_Feature_freeCastCount', 2, 'camp');
   });
 
-  it('resets perSpellTracking used flag', async () => {
+  it('rolls back the perSpellTracking per-spell free-cast counter (FT-070)', async () => {
     const playerStats = makePlayerStats({
       automation: {
         actions: [{
           type: 'free_spell',
           name: 'Test Feature',
           spell: 'Fireball',
+          uses: 1,
+          recharge: 'long_rest',
           perSpellTracking: true,
         }],
       },
     });
+    getRuntimeValue.mockImplementation((_key1, key2) => {
+      if (key2 === '_Test_Feature_Fireball_freeCastCount') return 0;
+      return undefined;
+    });
 
     incrementFreeCastResource('TestWizard', 'Fireball', 3, playerStats, 'camp');
 
-    expect(setRuntimeValue).toHaveBeenCalledWith('TestWizard', '_Test_Feature_Fireball_used', false, 'camp');
+    expect(setRuntimeValue).toHaveBeenCalledWith('TestWizard', '_Test_Feature_Fireball_freeCastCount', 1, 'camp');
   });
 });
 

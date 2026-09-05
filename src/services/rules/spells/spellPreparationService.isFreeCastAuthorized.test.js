@@ -600,20 +600,21 @@ describe('isFreeCastAuthorized — free spell actions', () => {
     expect(authorized).toBe(false);
   });
 
-  it('handles perSpellTracking actions', async () => {
+  it('handles perSpellTracking actions (FT-070 per-spell counter, null = fresh)', async () => {
     const playerStats = makePlayerStats({
       automation: {
         actions: [{
           type: 'free_spell',
           name: 'Test Feature',
           spell: 'Fireball',
+          uses: 1,
+          recharge: 'long_rest',
           perSpellTracking: true,
         }],
       },
     });
     getRuntimeValue.mockImplementation((_key1, key2) => {
-      if (key2 === '_Test_Feature_Fireball_freeCast') return true;
-      if (key2 === '_Test_Feature_Fireball_used') return false;
+      if (key2 === '_Test_Feature_Fireball_freeCastCount') return undefined;
       return undefined;
     });
 
@@ -621,20 +622,21 @@ describe('isFreeCastAuthorized — free spell actions', () => {
     expect(authorized).toBe(true);
   });
 
-  it('returns false for perSpellTracking when already used', async () => {
+  it('returns false for perSpellTracking when the spell counter is spent', async () => {
     const playerStats = makePlayerStats({
       automation: {
         actions: [{
           type: 'free_spell',
           name: 'Test Feature',
           spell: 'Fireball',
+          uses: 1,
+          recharge: 'long_rest',
           perSpellTracking: true,
         }],
       },
     });
     getRuntimeValue.mockImplementation((_key1, key2) => {
-      if (key2 === '_Test_Feature_Fireball_freeCast') return true;
-      if (key2 === '_Test_Feature_Fireball_used') return true;
+      if (key2 === '_Test_Feature_Fireball_freeCastCount') return 0;
       return undefined;
     });
 

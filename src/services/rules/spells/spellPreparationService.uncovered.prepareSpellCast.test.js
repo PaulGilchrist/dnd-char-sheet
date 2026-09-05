@@ -31,7 +31,7 @@ vi.mock('../../../services/ui/storage.js', () => ({
 }));
 
 vi.mock('../../../services/ui/logService.js', () => ({
-  addEntry: vi.fn(),
+  addEntry: vi.fn(() => Promise.resolve({})),
 }));
 
 vi.mock('./metamagicRules.js', () => ({
@@ -361,13 +361,15 @@ describe('prepareSpellCast — free cast decrement with uses_expression', () => 
     expect(setRuntimeValue).toHaveBeenCalledWith('TestWizard', '_Spell_Feature_freeCastCount', 1, 'test-campaign');
   });
 
-  it('handles perSpellTracking decrement in free cast', async () => {
+  it('handles perSpellTracking decrement in free cast (FT-070 per-spell counter)', async () => {
     const playerStats = makePlayerStats({
       automation: {
         actions: [{
           type: 'free_spell',
           name: 'PerSpell Feature',
           spell: 'Fireball',
+          uses: 1,
+          recharge: 'long_rest',
           perSpellTracking: true,
         }],
       },
@@ -382,7 +384,8 @@ describe('prepareSpellCast — free cast decrement with uses_expression', () => 
     });
 
     expect(result.freeCastUsed).toBe(true);
-    expect(setRuntimeValue).toHaveBeenCalledWith('TestWizard', '_PerSpell_Feature_Fireball_used', true, 'test-campaign');
+    expect(setRuntimeValue).toHaveBeenCalledWith('TestWizard', '_PerSpell_Feature_Fireball_freeCastCount', 0, 'test-campaign');
+    expect(setRuntimeValue).not.toHaveBeenCalledWith('TestWizard', 'spell_slots_level_3', expect.anything(), 'test-campaign');
   });
 
   it('handles recharge non-uses_expression decrement in free cast', async () => {

@@ -97,20 +97,24 @@ function isFreeCastAuthorized(playerName, spellName, spellLevel, playerStats, ca
     }
 
     const spells = Array.isArray(entry.spell) ? entry.spell : [entry.spell];
+
+    // FT-070: per-spell-tracking free_spell entries (e.g. Shadow Touched's Shadow Magic:
+    // chosen spell + Invisibility) keep one free cast PER SPELL per Long Rest, keyed
+    // per spell (CLA-308 _Shadow_Arts_<Spell>_freeCastCount naming). Null = fresh.
+    // Checked BEFORE the generic uses/recharge branch so a multi-spell entry can never
+    // share one feature-keyed counter between its spells.
+    if (entry.perSpellTracking) {
+      if (!spells.includes(spellName)) continue;
+      const freeCastCountKey = `_${entry.name.replace(/\s+/g, '_')}_${spellName.replace(/\s+/g, '_')}_freeCastCount`;
+      const stored = getRuntimeValue(playerName, freeCastCountKey, campaignName);
+      const count = stored != null ? Number(stored) : (entry.usesMax ?? entry.uses ?? 1);
+      return count > 0;
+    }
+
     if (spells.includes(spellName) && entry.uses != null && entry.recharge && !entry.uses_expression) {
       const freeCastCountKey = `_${entry.name.replace(/\s+/g, '_')}_freeCastCount`;
       const count = Number(getRuntimeValue(playerName, freeCastCountKey) ?? entry.uses);
       if (count > 0) return true;
-    }
-
-    if (entry.perSpellTracking) {
-      const spells = Array.isArray(entry.spell) ? entry.spell : [entry.spell];
-      if (!spells.includes(spellName)) continue;
-      const freeKey = `_${entry.name.replace(/\s+/g, '_')}_${spellName.replace(/\s+/g, '_')}_freeCast`;
-      const usedKey = `_${entry.name.replace(/\s+/g, '_')}_${spellName.replace(/\s+/g, '_')}_used`;
-      const hasFreeCast = !!getRuntimeValue(playerName, freeKey);
-      const isUsed = !!getRuntimeValue(playerName, usedKey);
-      return hasFreeCast && !isUsed;
     }
 
     const sharedKey = `_${entry.name.replace(/\s+/g, '_')}_freeCast`;
@@ -146,20 +150,20 @@ function isFreeCastAuthorized(playerName, spellName, spellLevel, playerStats, ca
     }
 
     const spells = Array.isArray(entry.spell) ? entry.spell : [entry.spell];
+
+    // FT-070: per-spell free-cast counters (see actions scan above).
+    if (entry.perSpellTracking) {
+      if (!spells.includes(spellName)) continue;
+      const freeCastCountKey = `_${entry.name.replace(/\s+/g, '_')}_${spellName.replace(/\s+/g, '_')}_freeCastCount`;
+      const stored = getRuntimeValue(playerName, freeCastCountKey, campaignName);
+      const count = stored != null ? Number(stored) : (entry.usesMax ?? entry.uses ?? 1);
+      return count > 0;
+    }
+
     if (spells.includes(spellName) && entry.uses != null && entry.recharge && !entry.uses_expression) {
       const freeCastCountKey = `_${entry.name.replace(/\s+/g, '_')}_freeCastCount`;
       const count = Number(getRuntimeValue(playerName, freeCastCountKey) ?? entry.uses);
       if (count > 0) return true;
-    }
-
-    if (entry.perSpellTracking) {
-      const spells = Array.isArray(entry.spell) ? entry.spell : [entry.spell];
-      if (!spells.includes(spellName)) continue;
-      const freeKey = `_${entry.name.replace(/\s+/g, '_')}_${spellName.replace(/\s+/g, '_')}_freeCast`;
-      const usedKey = `_${entry.name.replace(/\s+/g, '_')}_${spellName.replace(/\s+/g, '_')}_used`;
-      const hasFreeCast = !!getRuntimeValue(playerName, freeKey);
-      const isUsed = !!getRuntimeValue(playerName, usedKey);
-      return hasFreeCast && !isUsed;
     }
 
     const sharedKey = `_${entry.name.replace(/\s+/g, '_')}_freeCast`;
@@ -196,20 +200,20 @@ function isFreeCastAuthorized(playerName, spellName, spellLevel, playerStats, ca
     }
 
     const spells = Array.isArray(entry.spell) ? entry.spell : [entry.spell];
+
+    // FT-070: per-spell free-cast counters (see actions scan above).
+    if (entry.perSpellTracking) {
+      if (!spells.includes(spellName)) continue;
+      const freeCastCountKey = `_${entry.name.replace(/\s+/g, '_')}_${spellName.replace(/\s+/g, '_')}_freeCastCount`;
+      const stored = getRuntimeValue(playerName, freeCastCountKey, campaignName);
+      const count = stored != null ? Number(stored) : (entry.usesMax ?? entry.uses ?? 1);
+      return count > 0;
+    }
+
     if (spells.includes(spellName) && entry.uses != null && entry.recharge && !entry.uses_expression) {
       const freeCastCountKey = `_${entry.name.replace(/\s+/g, '_')}_freeCastCount`;
       const count = Number(getRuntimeValue(playerName, freeCastCountKey) ?? entry.uses);
       if (count > 0) return true;
-    }
-
-    if (entry.perSpellTracking) {
-      const spells = Array.isArray(entry.spell) ? entry.spell : [entry.spell];
-      if (!spells.includes(spellName)) continue;
-      const freeKey = `_${entry.name.replace(/\s+/g, '_')}_${spellName.replace(/\s+/g, '_')}_freeCast`;
-      const usedKey = `_${entry.name.replace(/\s+/g, '_')}_${spellName.replace(/\s+/g, '_')}_used`;
-      const hasFreeCast = !!getRuntimeValue(playerName, freeKey);
-      const isUsed = !!getRuntimeValue(playerName, usedKey);
-      return hasFreeCast && !isUsed;
     }
 
     const sharedKey = `_${entry.name.replace(/\s+/g, '_')}_freeCast`;
@@ -362,22 +366,31 @@ function decrementFreeCastResource(playerName, spellName, spellLevel, playerStat
     const spells = Array.isArray(entry.spell) ? entry.spell : [entry.spell];
     if (!spells.includes(spellName)) continue;
 
+    // FT-070: per-spell free-cast counters (see isFreeCastAuthorized scan). Consume the
+    // cast spell's own counter and log the slotless cast with its feature name.
+    if (entry.perSpellTracking) {
+      const freeCastCountKey = `_${entry.name.replace(/\s+/g, '_')}_${spellName.replace(/\s+/g, '_')}_freeCastCount`;
+      const stored = getRuntimeValue(playerName, freeCastCountKey, campaignName);
+      const count = stored != null ? Number(stored) : (entry.usesMax ?? entry.uses ?? 1);
+      if (count > 0) {
+        setRuntimeValue(playerName, freeCastCountKey, count - 1, campaignName);
+        addEntry(campaignName, {
+          type: 'ability_use',
+          characterName: playerName,
+          abilityName: entry.name,
+          spellName: spellName,
+          note: `${entry.name} free cast of ${spellName} — no spell slot consumed. ${spellName} is spent this way until your next Long Rest.`,
+          timestamp: Date.now(),
+        }).catch((e) => { console.error('[spellPreparationService:log-error]', e); });
+      }
+      break;
+    }
+
     if (entry.uses != null && entry.recharge && !entry.uses_expression) {
       const freeCastCountKey = `_${entry.name.replace(/\s+/g, '_')}_freeCastCount`;
       const count = Number(getRuntimeValue(playerName, freeCastCountKey) ?? entry.uses);
       if (count > 0) {
         setRuntimeValue(playerName, freeCastCountKey, count - 1, campaignName);
-      }
-      break;
-    }
-
-    if (entry.perSpellTracking) {
-      const usedKey = `_${entry.name.replace(/\s+/g, '_')}_${spellName.replace(/\s+/g, '_')}_used`;
-      setRuntimeValue(playerName, usedKey, true, campaignName);
-      const entrySpells = Array.isArray(entry.spell) ? entry.spell : [entry.spell];
-      for (const s of entrySpells) {
-        const freeKey = `_${entry.name.replace(/\s+/g, '_')}_${s.replace(/\s+/g, '_')}_freeCast`;
-        setRuntimeValue(playerName, freeKey, null, campaignName);
       }
       break;
     }
@@ -484,18 +497,23 @@ function incrementFreeCastResource(playerName, spellName, spellLevel, playerStat
     const spells = Array.isArray(entry.spell) ? entry.spell : [entry.spell];
     if (!spells.includes(spellName)) continue;
 
+    // FT-070: roll back the cast spell's own per-spell free-cast counter.
+    if (entry.perSpellTracking) {
+      const freeCastCountKey = `_${entry.name.replace(/\s+/g, '_')}_${spellName.replace(/\s+/g, '_')}_freeCastCount`;
+      const stored = getRuntimeValue(playerName, freeCastCountKey, campaignName);
+      const usesMax = entry.usesMax ?? entry.uses ?? 1;
+      if (stored != null && Number(stored) < usesMax) {
+        setRuntimeValue(playerName, freeCastCountKey, Number(stored) + 1, campaignName);
+      }
+      break;
+    }
+
     if (entry.uses != null && entry.recharge && !entry.uses_expression) {
       const freeCastCountKey = `_${entry.name.replace(/\s+/g, '_')}_freeCastCount`;
       const count = Number(getRuntimeValue(playerName, freeCastCountKey) ?? entry.uses);
       if (count < entry.uses) {
         setRuntimeValue(playerName, freeCastCountKey, count + 1, campaignName);
       }
-      break;
-    }
-
-    if (entry.perSpellTracking) {
-      const usedKey = `_${entry.name.replace(/\s+/g, '_')}_${spellName.replace(/\s+/g, '_')}_used`;
-      setRuntimeValue(playerName, usedKey, false, campaignName);
       break;
     }
   }

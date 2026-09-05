@@ -31,7 +31,7 @@ vi.mock('../../../services/ui/storage.js', () => ({
 }));
 
 vi.mock('../../../services/ui/logService.js', () => ({
-  addEntry: vi.fn(),
+  addEntry: vi.fn(() => Promise.resolve({})),
 }));
 
 vi.mock('./metamagicRules.js', () => ({
@@ -385,20 +385,21 @@ describe('isFreeCastAuthorized — uses_expression level-matching', () => {
     expect(authorized).toBe(true);
   });
 
-  it('checks specialActions perSpellTracking path', async () => {
+  it('checks specialActions perSpellTracking path (FT-070 per-spell counter)', async () => {
     const playerStats = makePlayerStats({
       automation: {
         specialActions: [{
           type: 'free_spell',
           name: 'PerSpell Feature',
           spell: 'Fireball',
+          uses: 1,
+          recharge: 'long_rest',
           perSpellTracking: true,
         }],
       },
     });
     getRuntimeValue.mockImplementation((_key1, key2) => {
-      if (key2 === '_PerSpell_Feature_Fireball_freeCast') return true;
-      if (key2 === '_PerSpell_Feature_Fireball_used') return false;
+      if (key2 === '_PerSpell_Feature_Fireball_freeCastCount') return 1;
       return undefined;
     });
 
@@ -425,20 +426,21 @@ describe('isFreeCastAuthorized — uses_expression level-matching', () => {
     expect(authorized).toBe(true);
   });
 
-  it('checks bonusActions perSpellTracking path', async () => {
+  it('checks bonusActions perSpellTracking path (FT-070 per-spell counter)', async () => {
     const playerStats = makePlayerStats({
       automation: {
         bonusActions: [{
           type: 'free_spell',
           name: 'Bonus PerSpell Feature',
           spell: 'Fireball',
+          uses: 1,
+          recharge: 'long_rest',
           perSpellTracking: true,
         }],
       },
     });
     getRuntimeValue.mockImplementation((_key1, key2) => {
-      if (key2 === '_Bonus_PerSpell_Feature_Fireball_freeCast') return true;
-      if (key2 === '_Bonus_PerSpell_Feature_Fireball_used') return false;
+      if (key2 === '_Bonus_PerSpell_Feature_Fireball_freeCastCount') return 1;
       return undefined;
     });
 
@@ -651,16 +653,22 @@ describe('isFreeCastAuthorized — uses_expression level-matching', () => {
             type: 'free_spell',
             name: 'Free Feature',
             spell: 'Fireball',
+            uses: 1,
+            recharge: 'long_rest',
             perSpellTracking: true,
           },
         ],
       },
     });
+    getRuntimeValue.mockImplementation((_key1, key2) => {
+      if (key2 === '_Free_Feature_Fireball_freeCastCount') return 0;
+      return undefined;
+    });
 
     const { incrementFreeCastResource } = await import('./spellPreparationService.js');
     incrementFreeCastResource('TestWizard', 'Fireball', 3, playerStats, 'test-campaign');
 
-    expect(setRuntimeValue).toHaveBeenCalledWith('TestWizard', '_Free_Feature_Fireball_used', false, 'test-campaign');
+    expect(setRuntimeValue).toHaveBeenCalledWith('TestWizard', '_Free_Feature_Fireball_freeCastCount', 1, 'test-campaign');
   });
 
   it('skips non-free_spell types in decrementFreeCastResource via prepareSpellCast', async () => {
@@ -676,6 +684,8 @@ describe('isFreeCastAuthorized — uses_expression level-matching', () => {
             type: 'free_spell',
             name: 'Free Feature',
             spell: 'Fireball',
+            uses: 1,
+            recharge: 'long_rest',
             perSpellTracking: true,
           },
         ],
@@ -690,7 +700,8 @@ describe('isFreeCastAuthorized — uses_expression level-matching', () => {
       freeCastAuthorized: true,
     });
 
-    expect(setRuntimeValue).toHaveBeenCalledWith('TestWizard', '_Free_Feature_Fireball_used', true, 'test-campaign');
+    expect(setRuntimeValue).toHaveBeenCalledWith('TestWizard', '_Free_Feature_Fireball_freeCastCount', 0, 'test-campaign');
+    expect(setRuntimeValue).not.toHaveBeenCalledWith('TestWizard', 'spell_slots_level_3', expect.anything(), 'test-campaign');
   });
 
   it('skips non-matching spells in incrementFreeCastResource (line 403)', async () => {
@@ -706,16 +717,23 @@ describe('isFreeCastAuthorized — uses_expression level-matching', () => {
             type: 'free_spell',
             name: 'Free Feature',
             spell: 'Fireball',
+            uses: 1,
+            recharge: 'long_rest',
             perSpellTracking: true,
           },
         ],
       },
     });
+    getRuntimeValue.mockImplementation((_key1, key2) => {
+      if (key2 === '_Free_Feature_Fireball_freeCastCount') return 0;
+      return undefined;
+    });
 
     const { incrementFreeCastResource } = await import('./spellPreparationService.js');
     incrementFreeCastResource('TestWizard', 'Fireball', 3, playerStats, 'test-campaign');
 
-    expect(setRuntimeValue).toHaveBeenCalledWith('TestWizard', '_Free_Feature_Fireball_used', false, 'test-campaign');
+    expect(setRuntimeValue).toHaveBeenCalledWith('TestWizard', '_Free_Feature_Fireball_freeCastCount', 1, 'test-campaign');
+    expect(setRuntimeValue).not.toHaveBeenCalledWith('TestWizard', '_Spell_Feature_freeCastCount', expect.anything(), 'test-campaign');
   });
 
   it('calls cleanupBuffsByName when casting Spiritual Weapon with WGB', async () => {

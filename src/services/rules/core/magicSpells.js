@@ -111,38 +111,36 @@ export function addFeyTouchedSpell(playerStats) {
 }
 
 /**
- * Add Shadow Touched level 1 spell free_spell feature
+ * Add Shadow Touched level 1 spell free_spell feature.
+ * FT-070: covers BOTH the chosen spell and Invisibility with perSpellTracking so each
+ * keeps its own free-cast counter per Long Rest (mirrors the live builder in rules.js).
  */
 export function addShadowTouchedSpell(playerStats) {
     const stSpell = playerStats.shadowTouchedSpell;
     if (stSpell) {
+        const stSpells = [...new Set([stSpell, 'Invisibility'])];
         const stAutomation = playerStats.automation?.specialActions || [];
         const stAlreadyAdded = stAutomation.some(a =>
-            a.type === 'free_spell' &&
-            (a.spell === stSpell || (Array.isArray(a.spell) && a.spell.includes(stSpell)))
+            a.type === 'free_spell' && a.name === 'Shadow Magic'
         );
         if (!stAlreadyAdded) {
             const stFeatureName = 'Shadow Magic';
-            const newStFeature = {
-                name: stFeatureName,
-                description: `Shadow Touched: Cast ${stSpell} once for free. Recharges on long rest.`,
+            const stAutomationEntry = {
                 type: 'free_spell',
-                automation: {
-                    type: 'free_spell',
-                    spell: stSpell,
-                    name: stFeatureName,
-                    uses: 1,
-                    recharge: 'long_rest',
-                },
-            };
-            playerStats.specialActions.push(newStFeature);
-            playerStats.automation.specialActions.push({
-                type: 'free_spell',
-                spell: stSpell,
+                spell: stSpells,
                 name: stFeatureName,
                 uses: 1,
                 recharge: 'long_rest',
-            });
+                perSpellTracking: true,
+            };
+            const newStFeature = {
+                name: stFeatureName,
+                description: `Shadow Touched: Cast ${stSpells.join(' or ')} once each for free. Recharges on long rest.`,
+                type: 'free_spell',
+                automation: stAutomationEntry,
+            };
+            playerStats.specialActions.push(newStFeature);
+            playerStats.automation.specialActions.push(stAutomationEntry);
         }
     }
 }

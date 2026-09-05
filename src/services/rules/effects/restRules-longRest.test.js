@@ -595,6 +595,19 @@ describe('applyLongRest', () => {
       const stats = makeStats({
         feyTouchedSpell: 'Misty Step',
         shadowTouchedSpell: 'Shadow of Moil',
+        automation: {
+          actions: [],
+          bonusActions: [],
+          specialActions: [{
+            type: 'free_spell',
+            name: 'Shadow Magic',
+            spell: ['Shadow of Moil', 'Invisibility'],
+            uses: 1,
+            recharge: 'long_rest',
+            perSpellTracking: true,
+          }],
+          passives: [],
+        },
       })
       await applyLongRest(stats, CAMPAIGN)
       expect(setRuntimeValue).toHaveBeenCalledWith(
@@ -603,8 +616,12 @@ describe('applyLongRest', () => {
       expect(setRuntimeValue).toHaveBeenCalledWith(
         'Test Hero', '_feyTouchedSpell_freeCastCount', null, CAMPAIGN, true,
       )
+      // FT-070: per-spell Shadow Magic counters reset to null (fresh) on long rest
       expect(setRuntimeValue).toHaveBeenCalledWith(
-        'Test Hero', '_shadowTouchedSpell_freeCastCount', null, CAMPAIGN, true,
+        'Test Hero', '_Shadow_Magic_Shadow_of_Moil_freeCastCount', null, CAMPAIGN, true,
+      )
+      expect(setRuntimeValue).toHaveBeenCalledWith(
+        'Test Hero', '_Shadow_Magic_Invisibility_freeCastCount', null, CAMPAIGN, true,
       )
     })
   })

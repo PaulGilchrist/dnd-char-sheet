@@ -417,36 +417,38 @@ const rules = {
         }
       }
 
-      // Add Shadow Touched level 1 spell free_spell feature
+      // FT-070: Shadow Touched free casts — BOTH the chosen spell and Invisibility,
+      // one free cast PER SPELL per Long Rest (RAW: "cast each of these spells… can't
+      // cast that spell in this way again until you finish a Long Rest"). The entry is
+      // built with perSpellTracking so spellPreparationService consumes a per-spell
+      // counter (`_Shadow_Magic_<Spell>_freeCastCount`, CLA-308 naming) — the previous
+      // chosen-spell-only entry left Invisibility inert (slot always consumed) and a
+      // shared feature counter let either spell steal the other's free cast.
       const stSpell = playerStats.shadowTouchedSpell;
       if (stSpell) {
+        const stSpells = [...new Set([stSpell, 'Invisibility'])];
         const stAutomation = playerStats.automation?.specialActions || [];
         const stAlreadyAdded = stAutomation.some(a =>
-          a.type === 'free_spell' &&
-          (a.spell === stSpell || (Array.isArray(a.spell) && a.spell.includes(stSpell)))
+          a.type === 'free_spell' && a.name === 'Shadow Magic'
         );
         if (!stAlreadyAdded) {
           const stFeatureName = 'Shadow Magic';
-          const newStFeature = {
-            name: stFeatureName,
-            description: `Shadow Touched: Cast ${stSpell} once for free. Recharges on long rest.`,
+          const stAutomationEntry = {
             type: 'free_spell',
-            automation: {
-              type: 'free_spell',
-              spell: stSpell,
-              name: stFeatureName,
-              uses: 1,
-              recharge: 'long_rest',
-            },
-          };
-          playerStats.specialActions.push(newStFeature);
-          playerStats.automation.specialActions.push({
-            type: 'free_spell',
-            spell: stSpell,
+            spell: stSpells,
             name: stFeatureName,
             uses: 1,
             recharge: 'long_rest',
-          });
+            perSpellTracking: true,
+          };
+          const newStFeature = {
+            name: stFeatureName,
+            description: `Shadow Touched: Cast ${stSpells.join(' or ')} once each for free. Recharges on long rest.`,
+            type: 'free_spell',
+            automation: stAutomationEntry,
+          };
+          playerStats.specialActions.push(newStFeature);
+          playerStats.automation.specialActions.push(stAutomationEntry);
         }
       }
 
