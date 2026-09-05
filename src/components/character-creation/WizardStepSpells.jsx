@@ -6,6 +6,7 @@ import { getSpellValidationInfo } from '../../services/rules/spells/spellValidat
 import { renderMarkdown } from '../../services/ui/sanitize.js';
 import MagicInitiateModal from './MagicInitiateModal.jsx';
 import FeyTouchedModal, { ShadowTouchedModal } from './FeyTouchedModal.jsx';
+import RitualMasterModal from './RitualMasterModal.jsx';
 import './WizardStepSpells.css';
 
 // Mystic Arcanum level requirements for Warlock
@@ -30,6 +31,7 @@ function WizardStepSpells({ formData, allSpells, onArrayFieldChange, preSelected
   const [showMagicInitiateModal, setShowMagicInitiateModal] = useState(false);
   const [showFeyTouchedModal, setShowFeyTouchedModal] = useState(false);
   const [showShadowTouchedModal, setShowShadowTouchedModal] = useState(false);
+  const [showRitualMasterModal, setShowRitualMasterModal] = useState(false);
   const miSpells = useMemo(() => {
     const spells = new Set();
     (formData.magicInitiateInstances || []).forEach(inst => {
@@ -144,6 +146,19 @@ function WizardStepSpells({ formData, allSpells, onArrayFieldChange, preSelected
       setShowShadowTouchedModal(true);
     }
   }, [formData.feats, formData.shadowTouchedSpell]);
+
+  // FT-068: Show Ritual Master modal when feat is selected and no ritual spells chosen yet
+  useEffect(() => {
+    const feats = formData.feats || [];
+    const hasRitualMaster = feats.some(f => f === 'Ritual Master' || (typeof f === 'object' && (f.name === 'Ritual Master' || f.index === 'ritual-master')));
+    if (!hasRitualMaster) {
+      return;
+    }
+    const chosen = formData.ritualMasterSpells;
+    if (!chosen || !Array.isArray(chosen) || chosen.length === 0) {
+      setShowRitualMasterModal(true);
+    }
+  }, [formData.feats, formData.ritualMasterSpells]);
 
     // Calculate spell counts by level (excluding pre-selected spells and Magic Initiate spells)
     useEffect(() => {   
@@ -523,6 +538,8 @@ function WizardStepSpells({ formData, allSpells, onArrayFieldChange, preSelected
     const hasMagicInitiate = magicInitiateFeats.length > 0;
     const hasFeyTouched = (formData.feats || []).some(f => f === 'Fey Touched' || (typeof f === 'object' && f.name === 'Fey Touched'));
     const hasShadowTouched = (formData.feats || []).some(f => f === 'Shadow Touched' || (typeof f === 'object' && f.name === 'Shadow Touched'));
+    const hasRitualMaster = (formData.feats || []).some(f => f === 'Ritual Master' || (typeof f === 'object' && (f.name === 'Ritual Master' || f.index === 'ritual-master')));
+    const ritualMasterChosenCount = (formData.ritualMasterSpells || []).length;
 
     return (
         <div className="wizard-step-spells">
@@ -548,6 +565,14 @@ function WizardStepSpells({ formData, allSpells, onArrayFieldChange, preSelected
           allSpells={allSpells}
           onArrayFieldChange={onArrayFieldChange}
           onClose={() => setShowShadowTouchedModal(false)}
+        />
+      )}
+      {showRitualMasterModal && (
+        <RitualMasterModal
+          formData={formData}
+          allSpells={allSpells}
+          onArrayFieldChange={onArrayFieldChange}
+          onClose={() => setShowRitualMasterModal(false)}
         />
       )}
       {renderArcanumSelection()}
@@ -581,6 +606,17 @@ function WizardStepSpells({ formData, allSpells, onArrayFieldChange, preSelected
             onClick={() => setShowShadowTouchedModal(true)}
           >
             <i className="fa-solid fa-mask"></i> Edit Shadow Magic
+          </button>
+        </div>
+      )}
+      {hasRitualMaster && ritualMasterChosenCount > 0 && !showRitualMasterModal && (
+        <div className="mi-wizard-banner">
+          <button
+            type="button"
+            className="mi-wizard-edit-btn"
+            onClick={() => setShowRitualMasterModal(true)}
+          >
+            <i className="fa-solid fa-scroll"></i> Edit Ritual Spells ({ritualMasterChosenCount})
           </button>
         </div>
       )}

@@ -81,6 +81,20 @@ export function getSpellAbilities(allSpells, playerStats, playerSummary) {
             spells_known: 0,
         };
     }
+
+    // FT-068: Ritual Master feat — mirror the Shadow Arts container pattern so a holder
+    // with no class spellcasting table still gets the chosen ritual spell rows (castable
+    // slot-free via Quick Ritual; slot casting stays gated on actual slots).
+    const hasRitualMasterGrant = (playerStats.automation?.ritualSpells || []).some(
+        f => f.chosenSpells
+    );
+    if (!spellAbilities && hasRitualMasterGrant) {
+        spellAbilities = {
+            cantrips_known: 0,
+            spells: [],
+            spells_known: 0,
+        };
+    }
     
     // Fallback: if no spellcasting from class/major but character has spells from feats/races/etc
     if (!spellAbilities && playerStats.spells && playerStats.spells.length > 0) {
@@ -487,12 +501,25 @@ export function getSpellAbilities(allSpells, playerStats, playerSummary) {
             }
 
             // Ritual Adept (wizard class feature): the wizard's known ritual spells are already in their
-            // spell list, so do NOT inject every ritual spell in the game. Other ritual_spells features
-            // (e.g. the Ritual Caster feat) still grant the full ritual list.
+            // spell list, so do NOT inject every ritual spell in the game. FT-068 Ritual Master feat
+            // (chosenSpells) injects ONLY the player-chosen level 1 ritual spells, always prepared.
+            // Other ritual_spells features (e.g. the Ritual Caster feat) still grant the full ritual list.
             const ritualSpellsPassives = playerStats.automation.ritualSpells || [];
             if (ritualSpellsPassives.length > 0 && allSpells) {
                 ritualSpellsPassives.forEach(ritualFeature => {
                     if (ritualFeature.name === 'Ritual Adept') return;
+                    if (ritualFeature.chosenSpells) {
+                        const chosen = Array.isArray(playerStats.ritualMasterSpells) ? playerStats.ritualMasterSpells : [];
+                        if (chosen.length === 0) {
+                            console.error('[spellCalc2024] Ritual Master has no chosen ritual spells (ritualMasterSpells missing)');
+                        }
+                        chosen.forEach(spellName => {
+                            if (!spellAbilities.spells.find(s => s.name === spellName)) {
+                                spellAbilities.spells.push({ name: spellName, prepared: 'Always' });
+                            }
+                        });
+                        return;
+                    }
                     allSpells.forEach(spellDetail => {
                         if (spellDetail.ritual && !spellAbilities.spells.find(s => s.name === spellDetail.name)) {
                             spellAbilities.spells.push({ ...spellDetail, prepared: 'Always' });
@@ -598,6 +625,30 @@ export function getSpellAbilities(allSpells, playerStats, playerSummary) {
                     spell._shadowArtsFreeCast = true;
                     if (shadowArtsAbility) {
                         spell.spellCastingAbility = shadowArtsAbility;
+                    }
+                });
+            }
+
+            // FT-068: Ritual Master feat — the player-chosen level 1 ritual spells are
+            // always prepared and castable with spell slots, using the ability increased
+            // by the feat as their spellcasting ability (CLA-212/234 carry pattern).
+            // Stamp _ritualMasterRitual AFTER the detail remap so the flag survives;
+            // Quick Ritual (once per Long Rest, slot-free) is gated on this flag plus the
+            // _Ritual_Master_quickRitualUsed counter in spellPreparationService and is
+            // re-armed by restRules-longRest.
+            const ritualMasterPassive = (playerStats.automation?.ritualSpells || []).find(f => f.chosenSpells);
+            if (ritualMasterPassive) {
+                const ritualMasterAbility = ritualMasterPassive.spellCastingAbility;
+                if (!ritualMasterAbility) {
+                    console.error('[spellCalc2024] Ritual Master is missing a spellcasting ability (featAbilityChoices unresolved)');
+                }
+                const ritualMasterChosen = Array.isArray(playerStats.ritualMasterSpells) ? playerStats.ritualMasterSpells : [];
+                spellAbilities.spells.forEach(spell => {
+                    if (!ritualMasterChosen.includes(spell.name)) return;
+                    spell.prepared = 'Always';
+                    spell._ritualMasterRitual = true;
+                    if (ritualMasterAbility) {
+                        spell.spellCastingAbility = ritualMasterAbility;
                     }
                 });
             }

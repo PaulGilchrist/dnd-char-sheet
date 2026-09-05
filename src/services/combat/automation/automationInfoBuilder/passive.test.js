@@ -239,3 +239,34 @@ describe('passiveHandlers – ignore_loading_crossbows', () => {
         expect(result.weapons).toEqual(['heavy crossbow', 'light crossbow'])
     })
 })
+
+// ── FT-068 ritual_spells markers ───────────────────────────────────
+
+describe('passiveHandlers – ritual_spells chosen-spell markers (FT-068)', () => {
+    it('passes through chosenSpells, quickRitual, and spellCastingAbility', () => {
+        const feature = makeFeature(
+            {
+                type: 'ritual_spells',
+                chosenSpells: true,
+                quickRitual: true,
+                spellCastingAbility: 'Charisma'
+            },
+            'Ritual Spells'
+        )
+        const result = passiveHandlers.ritual_spells(feature, BASE_STATS)
+
+        expect(result.effect).toBe('ritual_spells')
+        expect(result.chosenSpells).toBe(true)
+        expect(result.quickRitual).toBe(true)
+        expect(result.spellCastingAbility).toBe('Charisma')
+    })
+
+    it('defaults chosenSpells, quickRitual, and spellCastingAbility for Ritual Adept', () => {
+        const feature = makeFeature({ type: 'ritual_spells', casting_time: 'passive' }, 'Ritual Adept')
+        const result = passiveHandlers.ritual_spells(feature, BASE_STATS)
+
+        expect(result.chosenSpells).toBe(false)
+        expect(result.quickRitual).toBe(false)
+        expect(result.spellCastingAbility).toBe('')
+    })
+})

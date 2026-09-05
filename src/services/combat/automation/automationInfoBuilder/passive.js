@@ -137,6 +137,9 @@ export const passiveHandlers = {
             name: feature.name,
             effect: 'ritual_spells',
             casting_time: auto.casting_time || 'passive',
+            chosenSpells: !!auto.chosenSpells,
+            quickRitual: !!auto.quickRitual,
+            spellCastingAbility: auto.spellCastingAbility || '',
             hasAutomation: true
         }
     },

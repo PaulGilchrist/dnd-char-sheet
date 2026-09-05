@@ -612,6 +612,12 @@ export function computeAllFeatBuffs(formData, allFeats) {
 
   // Resolve save_proficiency saveType from featAbilityChoices for feats like Resilient
   aggregated.features.forEach(feature => {
+    if (feature.automation?.effect === 'ritual_spells' && feature.automation?.chosenSpells) {
+      const resolved = resolveSaveTypeFromChoices(feature.featName, formData.featAbilityChoices);
+      if (resolved && feature.automation.spellCastingAbility !== resolved) {
+        feature.automation = { ...feature.automation, spellCastingAbility: resolved };
+      }
+    }
     if (feature.automation?.type === 'save_proficiency' &&
         feature.automation.saveType &&
         feature.automation.fallbackTypes &&

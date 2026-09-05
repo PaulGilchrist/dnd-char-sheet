@@ -5421,13 +5421,13 @@
       "id": "FT-068",
       "name": "Ritual Master",
       "type": "feat",
-      "handler": "src/services/combat/automation/handlers/featHandler.js",
-      "router": "src/services/combat/automation/routers/featRouter.js",
-      "infoBuilder": "src/services/combat/automation/infoBuilders/featInfoBuilder.js",
-      "verified": "broken — see .opencode/plans/bug-ft-068-ritual-master-ritual-benefits-no-consumers.md",
+      "handler": "src/services/rules/spells/spellPreparationService.js",
+      "router": "src/services/combat/automation/automationRouter.js",
+      "infoBuilder": "src/services/combat/automation/automationInfoBuilder/passive.js",
+      "verified": "verified",
       "class": "Feat",
-      "triggerConditions": "",
-      "expectedBehavior": "Ability Score Increase. Increase your Intelligence, Wisdom, or Charisma score by 1, to a maximum of 20. Ritual Spells. Choose a number of level 1 spells equal to your Proficiency Bonus that have the Ritual tag. You always have those spells prepared, and you can cast them with any spell slots you have. The spells' spellcasting ability is the ability increased by this feat. Whenever your Proficiency Bonus increases thereafter, you can add an additional level 1 spell with the Ritual tag to the spells always prepared with this feature. Quick Ritual. With this benefit, you can cast a Ritual spell that you have prepared using its regular casting time rather than the extended time for a Ritual. Doing so doesn't require a spell slot. Once you cast the spell in this way, you can't use this benefit again until you finish a Long Rest."
+      "triggerConditions": "Passive (Ritual Spells benefit automation type ritual_spells, chosenSpells+quickRitual markers); wizard Spells-step picker; Quick Ritual opt-in checkbox in SpellDetailPopup",
+      "expectedBehavior": "Ability Score Increase. Increase your Intelligence, Wisdom, or Charisma score by 1, to a maximum of 20. Ritual Spells. Choose a number of level 1 spells equal to your Proficiency Bonus that have the Ritual tag. You always have those spells prepared, and you can cast them with any spell slots you have. The spells' spellcasting ability is the ability increased by this feat. Whenever your Proficiency Bonus increases thereafter, you can add an additional level 1 spell with the Ritual tag to the spells always prepared with this feature. Quick Ritual. With this benefit, you can cast a Ritual spell that you have prepared using its regular casting time rather than the extended time for a Ritual. Doing so doesn't require a spell slot. Once you cast the spell in this way, you can't use this benefit again until you finish a Long Rest. automation: spell benefit automation ritual_spells{chosenSpells,quickRitual} → passive.js ritual_spells handler → automationRouter ritualSpells bucket; featBuffService threads featAbilityChoices ASI into spellCastingAbility; RitualMasterModal (wizard Spells step) persists ritualMasterSpells to character JSON; spellCalc2024 injects ONLY chosen spells prepared Always stamped _ritualMasterRitual + ASI ability (never full list — pitfall 24); SpellDetailPopup Quick Ritual checkbox once-per-LR slot-free opt-in; prepareSpellCast consumes _Ritual_Master_quickRitualUsed + logs ability_use, refuses when spent (slot payment applies); restRules-longRest re-arms."
     },
     {
       "id": "CLA-300",

@@ -626,6 +626,15 @@ export async function prepareSpellCast(spell, metaCtx, { playerName, playerStats
     }
   }
 
+  // FT-068: Ritual Master Quick Ritual — a prepared ritual spell granted by the feat is
+  // cast using its regular casting time (the spell never had its casting time changed)
+  // WITHOUT expending a spell slot, once per Long Rest. Opt-in via spell.quickRitual
+  // (popup checkbox); consumed here, refused (falls through to normal slot payment) when
+  // spent, re-armed by restRules-longRest.
+  const quickRitualHold = (playerStats.automation?.ritualSpells || []).some(f => f.chosenSpells && f.quickRitual);
+  const quickRitualUsed = getRuntimeValue(playerName, '_Ritual_Master_quickRitualUsed', campaignName);
+  const isQuickRitualCast = spell.quickRitual === true && spell._ritualMasterRitual === true && quickRitualHold && quickRitualUsed == null && !isUpcast;
+
   // Resource consumption
   if (isWgbSpell && spell.name === 'Spiritual Weapon') {
     cleanupBuffsByName(playerName, 'Shield of Faith', campaignName);
@@ -640,6 +649,18 @@ export async function prepareSpellCast(spell, metaCtx, { playerName, playerStats
       setRuntimeValue(playerName, slotKey, availableSlots - 1, campaignName);
       result.slotConsumed = true;
     }
+  } else if (isQuickRitualCast) {
+    setRuntimeValue(playerName, '_Ritual_Master_quickRitualUsed', Date.now(), campaignName);
+    result.freeCastUsed = true;
+    result.metaCtx.quickRitualUsed = true;
+    addEntry(campaignName, {
+      type: 'ability_use',
+      characterName: playerName,
+      abilityName: 'Ritual Master (Quick Ritual)',
+      spellName: spell.name,
+      note: `Quick Ritual: cast ${spell.name} using its regular casting time — no spell slot consumed. You can't use Quick Ritual again until you finish a Long Rest.`,
+      timestamp: Date.now(),
+    }).catch((e) => { console.error('[spellPreparationService:log-error]', e); });
   } else if (isFreeCast) {
     decrementFreeCastResource(playerName, spell.name, spell.level, playerStats, campaignName);
     result.freeCastUsed = true;

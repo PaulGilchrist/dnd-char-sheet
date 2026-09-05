@@ -3504,7 +3504,14 @@
       {
         "name": "Ritual Spells",
         "description": "Choose a number of level 1 spells equal to your Proficiency Bonus that have the Ritual tag. You always have those spells prepared, and you can cast them with any spell slots you have. The spells' spellcasting ability is the ability increased by this feat. Whenever your Proficiency Bonus increases thereafter, you can add an additional level 1 spell with the Ritual tag to the spells always prepared with this feature.",
-        "type": "spell"
+        "type": "spell",
+        "automation": {
+          "type": "ritual_spells",
+          "effect": "ritual_spells",
+          "chosenSpells": true,
+          "quickRitual": true,
+          "casting_time": "passive"
+        }
       },
       {
         "name": "Quick Ritual",

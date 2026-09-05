@@ -417,6 +417,13 @@ export async function applyLongRest(playerStats, campaignName) {
        setRuntimeValue(name, '_shadowTouchedSpell_freeCastCount', null, campaignName, true)
      }
 
+     // FT-068: Reset Ritual Master Quick Ritual counter on long rest
+     const hasRitualMasterGrant = (playerStats.automation?.ritualSpells || []).some(f => f.chosenSpells)
+       || (playerStats.feats || []).includes('Ritual Master')
+     if (hasRitualMasterGrant) {
+       setRuntimeValue(name, '_Ritual_Master_quickRitualUsed', null, campaignName, true)
+     }
+
      // Reset Undying Sentinel (Oath of Glory level 15) on long rest
      setRuntimeValue(name, 'undyingSentinelUsed', false, campaignName, true)
 

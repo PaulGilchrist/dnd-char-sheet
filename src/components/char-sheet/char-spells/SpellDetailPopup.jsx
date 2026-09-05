@@ -30,6 +30,15 @@ function SpellDetailPopup({ spell, playerStats, campaignName, onClose, onCast, u
     return stored != null ? Number(stored) : 1;
   }, [isShadowArtsFreeCast, playerStats.name, spell.name, campaignName]);
 
+  // FT-068: Ritual Master Quick Ritual — a prepared granted ritual spell castable at
+  // its regular casting time without a spell slot, once per Long Rest
+  // (_Ritual_Master_quickRitualUsed, reset by restRules-longRest).
+  const isRitualMasterSpell = spell._ritualMasterRitual === true && !!spell.ritual;
+  const quickRitualUsedTrigger = useRuntimeValue(playerStats.name, '_Ritual_Master_quickRitualUsed', campaignName);
+  const quickRitualUsed = useMemo(() => !!quickRitualUsedTrigger, [quickRitualUsedTrigger]);
+  const [useQuickRitual, setUseQuickRitual] = useState(false);
+  const quickRitualActive = isRitualMasterSpell && useQuickRitual && !quickRitualUsed;
+
   const _psionicSorceryAvailable = (() => {
     const isSorcerer = playerStats.class?.name === 'Sorcerer';
     if (!isSorcerer) return 0;
@@ -122,16 +131,16 @@ function SpellDetailPopup({ spell, playerStats, campaignName, onClose, onCast, u
       return;
     }
 
-    onCast({ ...spell, isUpcast, upcastLevel, freeCastAuthorized, usePsionicPayment, usePsychicDamage, overchannel: useOverchannel }, metaCtx);
+    onCast({ ...spell, isUpcast, upcastLevel, freeCastAuthorized, usePsionicPayment, usePsychicDamage, overchannel: useOverchannel, quickRitual: quickRitualActive }, metaCtx);
   };
 
   const isRaging = getActiveBuffs(playerStats.name, campaignName).some(b => b.name === 'Rage');
-  const canCast = !isRaging && (isCantrip || (isUpcastable ? hasAnySlots : ((freeCastAuthorized || (() => {
+  const canCast = !isRaging && (isCantrip || (quickRitualActive || (isUpcastable ? hasAnySlots : ((freeCastAuthorized || (() => {
     const baseKey = `spell_slots_level_${spell.level}`;
     const stored = getRuntimeValue(playerStats.name, baseKey);
     const max = (playerStats.spellAbilities && playerStats.spellAbilities[baseKey]) || 0;
     return (stored != null ? stored : max) > 0;
-  })() || (isWarlock && warlockSlotLevel !== null)) || (_psionicSorceryAvailable >= spell.level))));
+  })() || (isWarlock && warlockSlotLevel !== null)) || (_psionicSorceryAvailable >= spell.level)))));
 
   const showUpcastSelector = isUpcastable && upcastLevels.length > 1;
 
@@ -247,6 +256,22 @@ function SpellDetailPopup({ spell, playerStats, campaignName, onClose, onCast, u
               <div className="spell-detail-overchannel-info">
                 <i className="fa-solid fa-shield-halved"></i> First use: no necrotic damage
               </div>
+            )}
+          </div>
+        )}
+        {isRitualMasterSpell && (
+          <div className="spell-detail-upcast">
+            <label>
+              <input
+                type="checkbox"
+                checked={quickRitualActive}
+                disabled={quickRitualUsed}
+                onChange={() => setUseQuickRitual(!useQuickRitual)}
+              />
+              <span><i className="fa-solid fa-bolt"></i> Quick Ritual — regular casting time, no spell slot (once per Long Rest)</span>
+            </label>
+            {quickRitualUsed && (
+              <p className="spell-detail-no-slots"><i className="fa-solid fa-moon"></i> Quick Ritual already used — finish a Long Rest to regain it.</p>
             )}
           </div>
         )}

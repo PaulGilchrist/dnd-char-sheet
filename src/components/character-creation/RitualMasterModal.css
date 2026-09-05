@@ -1,0 +1,47 @@
+/* RitualMasterModal — FT-068 Ritual Master spell choice picker.
+   Outer shell reuses mi-overlay/mi-modal styles from MagicInitiateModal.css;
+   these classes are scoped to .ritual-master-modal to prevent global bleed. */
+
+.ritual-master-modal .ritual-master-spell-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+  max-height: 40vh;
+  overflow-y: auto;
+  margin-top: 0.3rem;
+}
+
+.ritual-master-modal .ritual-master-spell-row {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.25rem 0.5rem;
+  border: 1px solid var(--border-color, #444);
+  border-radius: 0.35rem;
+  cursor: pointer;
+}
+
+.ritual-master-modal .ritual-master-spell-row.selected {
+  border-color: var(--accent-color, #7b5cd6);
+  background: rgba(123, 92, 214, 0.12);
+}
+
+.ritual-master-modal .ritual-master-spell-name {
+  flex: 1;
+}
+
+.ritual-master-modal .ritual-master-spell-tag {
+  font-size: 0.75rem;
+  opacity: 0.8;
+}
+
+.ritual-master-modal .ritual-master-info-btn {
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: inherit;
+}
+
+.ritual-master-modal .ritual-master-spell-details {
+  padding: 0.25rem 0.5rem 0.5rem 1.75rem;
+}
