@@ -7,10 +7,16 @@ import { getRuntimeValue, setRuntimeValue } from '../../../hooks/runtime/useRunt
  * D&D 5e "once per turn" / "once per round" mean the same thing:
  * usable again after this character's next turn starts.
  *
- * We store the round number + creature name when the feature is used.
- * The feature becomes available again when round > storedRound AND
- * activeCreature === storedActiveCreature — i.e., one full round has
- * passed and this character's turn has come around again.
+ * We store the round number + holder name when the feature is used.
+ * The feature becomes available again when round > storedRound — i.e., a
+ * new round has started (the earliest point the holder's next turn can
+ * begin, matching the round-wrap latch convention in navigationHandlers).
+ *
+ * FT-082: the cs.activeCreatureName mirror goes stale mid-combat (pitfall
+ * 30 / FT-074 family), so re-arm must NEVER depend on it. The used-flag is
+ * stored under the holder's own store (playerStats.name), which already
+ * scopes the latch to the holder — the mirror comparison only ever caused
+ * false refusals on the holder's own next turn.
  *
  * IMPORTANT: Always pass characterName (not null) as the 3rd argument so
  * checkOncePerTurn reads from the same store that markOncePerTurn writes to.
@@ -24,7 +30,6 @@ import { getRuntimeValue, setRuntimeValue } from '../../../hooks/runtime/useRunt
 export async function checkOncePerTurn(featureName, usedKey, characterName, campaignName) {
     const cs = await getCombatContext(campaignName);
     const currentRound = cs?.round || 1;
-    const currentCreature = cs?.activeCreatureName || null;
     const stored = getRuntimeValue(characterName, usedKey);
 
     if (!stored) return null;
@@ -44,11 +49,12 @@ export async function checkOncePerTurn(featureName, usedKey, characterName, camp
         return null;
     }
 
-    // New format: stored is { round, activeCreature }
+    // New format: stored is { round, activeCreature }. FT-082: availability
+    // is round-scoped off the holder's own store — never off the (stale)
+    // cs.activeCreatureName mirror.
     const storedRound = stored?.round;
-    const storedCreature = stored?.activeCreature;
 
-    if ((currentRound === storedRound + 1 && currentCreature === storedCreature) || currentRound > storedRound + 1) {
+    if (currentRound > storedRound) {
         return null;
     }
 
@@ -75,7 +81,6 @@ export async function checkOncePerTurn(featureName, usedKey, characterName, camp
 export async function checkOncePerTurnWithSkip(featureName, usedKey, skipKey, playerStats, campaignName) {
     const cs = await getCombatContext(campaignName);
     const currentRound = cs?.round || 1;
-    const currentCreature = cs?.activeCreatureName || null;
     const stored = getRuntimeValue(playerStats.name, usedKey, campaignName);
     const skipped = getRuntimeValue(playerStats.name, skipKey, campaignName);
 
@@ -93,10 +98,11 @@ export async function checkOncePerTurnWithSkip(featureName, usedKey, skipKey, pl
                 };
             }
         } else {
-            // New format: stored is { round, activeCreature }
+            // New format: stored is { round, activeCreature }. FT-082:
+            // round-scoped re-arm off the holder's store only — the
+            // cs.activeCreatureName mirror is stale mid-combat (pitfall 30).
             const storedRound = stored?.round;
-            const storedCreature = stored?.activeCreature;
-            if (!((currentRound === storedRound + 1 && currentCreature === storedCreature) || currentRound > storedRound + 1)) {
+            if (!(currentRound > storedRound)) {
                 return {
                     type: 'popup',
                     payload: {
@@ -123,10 +129,9 @@ export async function checkOncePerTurnWithSkip(featureName, usedKey, skipKey, pl
                 };
             }
         } else {
-            // New format: skipped is { round, activeCreature }
+            // New format: skipped is { round, activeCreature } — round-scoped.
             const skippedRound = skipped?.round;
-            const skippedCreature = skipped?.activeCreature;
-            if (!(currentRound > skippedRound && currentCreature === skippedCreature)) {
+            if (!(currentRound > skippedRound)) {
                 return {
                     type: 'popup',
                     payload: {
@@ -143,7 +148,10 @@ export async function checkOncePerTurnWithSkip(featureName, usedKey, skipKey, pl
 }
 
 /**
- * Mark a feature as used. Stores the current round + active creature.
+ * Mark a feature as used. Stores the current round + the HOLDER's name.
+ *
+ * FT-082 / FT-074 (pitfall 30): never stamp cs.activeCreatureName from the
+ * combatSummary mirror — it goes stale mid-combat and corrupts re-arm.
  *
  * @param {string} featureName
  * @param {string} usedKey
@@ -154,20 +162,19 @@ export async function checkOncePerTurnWithSkip(featureName, usedKey, skipKey, pl
 export async function markOncePerTurn(featureName, usedKey, playerStats, campaignName) {
     const cs = await getCombatContext(campaignName);
     const currentRound = cs?.round || 1;
-    const currentCreature = cs?.activeCreatureName || playerStats.name;
-    const stored = { round: currentRound, activeCreature: currentCreature };
+    const stored = { round: currentRound, activeCreature: playerStats.name };
     await setRuntimeValue(playerStats.name, usedKey, stored, campaignName);
     return stored;
 }
 
 /**
  * Set the skip flag for features that support user cancellation.
+ * Stamps the holder's name (FT-074 recipe), never the cs mirror.
  */
 export async function setSkipFlag(skipKey, playerStats, campaignName) {
     const cs = await getCombatContext(campaignName);
     const currentRound = cs?.round || 1;
-    const currentCreature = cs?.activeCreatureName || playerStats.name;
-    const stored = { round: currentRound, activeCreature: currentCreature };
+    const stored = { round: currentRound, activeCreature: playerStats.name };
     await setRuntimeValue(playerStats.name, skipKey, stored, campaignName);
     return stored;
 }

@@ -102,20 +102,16 @@ describe('checkOncePerTurn', () => {
         });
     });
 
-    it('returns null when stored new-format round+1 but creature does not match', async () => {
+    // FT-082: re-arm is round-scoped off the holder's own store. A stale
+    // cs.activeCreatureName mirror must NOT block re-arm on the holder's
+    // next turn (old behavior degraded once-per-turn to once-per-2-rounds).
+    it('returns null when stored new-format round+1 but mirror creature does not match (stale mirror)', async () => {
         mockCombatContext({ round: 4, activeCreatureName: 'OtherCreature' });
         runtimeState.getRuntimeValue.mockReturnValue({ round: 3, activeCreature: 'TestCharacter' });
 
         const result = await checkOncePerTurn('Cunning Strike', '_CunningStrike_usedRound', 'TestCharacter', CAMPAIGN);
 
-        expect(result).toEqual({
-            type: 'popup',
-            payload: {
-                type: 'automation_info',
-                name: 'Cunning Strike',
-                description: 'Cunning Strike can only be used once per turn.',
-            },
-        });
+        expect(result).toBeNull();
     });
 
     it('returns null when current round > stored round + 1', async () => {
@@ -236,7 +232,9 @@ describe('checkOncePerTurnWithSkip', () => {
         });
     });
 
-    it('returns null when stored new-format round+1 but creature does not match', async () => {
+    // FT-082: round-scoped re-arm — a stale cs.activeCreatureName mirror
+    // must not block re-arm in a later round.
+    it('returns null when stored new-format round+1 but mirror creature does not match (stale mirror)', async () => {
         mockCombatContext({ round: 4, activeCreatureName: 'OtherCreature' });
         runtimeState.getRuntimeValue
             .mockReturnValueOnce({ round: 3, activeCreature: 'TestCharacter' })
@@ -250,14 +248,7 @@ describe('checkOncePerTurnWithSkip', () => {
             CAMPAIGN
         );
 
-        expect(result).toEqual({
-            type: 'popup',
-            payload: {
-                type: 'automation_info',
-                name: 'Feature',
-                description: 'Feature can only be used once per turn.',
-            },
-        });
+        expect(result).toBeNull();
     });
 
     it('returns null when current round > stored round + 1', async () => {
@@ -318,7 +309,9 @@ describe('checkOncePerTurnWithSkip', () => {
         expect(result).toBeNull();
     });
 
-    it('returns popup when skip flag is new-format round not past or creature mismatch', async () => {
+    // FT-082: skip-flag re-arm is round-scoped; creature mismatch no longer
+    // blocks once the round has advanced.
+    it('returns popup when skip flag is new-format same round (creature mismatch)', async () => {
         mockCombatContext({ round: 3, activeCreatureName: 'OtherCreature' });
         runtimeState.getRuntimeValue
             .mockReturnValueOnce(null)
@@ -440,6 +433,39 @@ describe('markOncePerTurn', () => {
             { round: 1, activeCreature: 'TestCharacter' },
             CAMPAIGN
         );
+    });
+
+    // FT-082: the cs.activeCreatureName mirror goes stale mid-combat
+    // (pitfall 30) — the stamp must always carry the holder's name.
+    it('stamps playerStats.name even when the cs mirror is stale', async () => {
+        mockCombatContext({ round: 2, activeCreatureName: 'AasimarTest' });
+
+        const result = await markOncePerTurn('Hamstring', '_Hamstring_usedRound', { name: 'EvasiveFighter' }, CAMPAIGN);
+
+        expect(result).toEqual({ round: 2, activeCreature: 'EvasiveFighter' });
+        expect(runtimeState.setRuntimeValue).toHaveBeenCalledWith(
+            'EvasiveFighter',
+            '_Hamstring_usedRound',
+            { round: 2, activeCreature: 'EvasiveFighter' },
+            CAMPAIGN
+        );
+    });
+
+    // FT-082 end-to-end latch semantics (same module, real functions):
+    // stamp in round 2 → refuse for the rest of round 2 → re-arm in round 3
+    // even while the mirror stays stale.
+    it('refuses in the stamped round and re-arms in the next round despite stale mirror', async () => {
+        mockCombatContext({ round: 2, activeCreatureName: 'AasimarTest' });
+        runtimeState.getRuntimeValue.mockReturnValue(null);
+        const stamp = await markOncePerTurn('Hamstring', '_Hamstring_usedRound', { name: 'EvasiveFighter' }, CAMPAIGN);
+        runtimeState.getRuntimeValue.mockReturnValue(stamp);
+
+        const refused = await checkOncePerTurn('Hamstring', '_Hamstring_usedRound', 'EvasiveFighter', CAMPAIGN);
+        expect(refused?.payload?.description).toContain('once per turn');
+
+        mockCombatContext({ round: 3, activeCreatureName: 'AasimarTest' });
+        const available = await checkOncePerTurn('Hamstring', '_Hamstring_usedRound', 'EvasiveFighter', CAMPAIGN);
+        expect(available).toBeNull();
     });
 });
 

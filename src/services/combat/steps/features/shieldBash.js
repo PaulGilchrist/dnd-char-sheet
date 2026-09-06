@@ -7,6 +7,21 @@ import { checkOncePerTurnWithSkip } from '../../../automation/common/oncePerTurn
 import { addCondition } from '../../../../services/combat/conditions/conditionSaveService.js';
 import { isWithinRange } from '../../../rules/combat/rangeCheck.js';
 
+// FT-082 collateral: restore the stashed base weapon attack as campaign
+// lastAttack after the Shield Bash save resolution clobbered it with a
+// save record ({attackName:'Shield Bash', damageType:null}). Without this,
+// Slasher Hamstring (slashing_damage_hit) falsely refuses on shield holders
+// within the same turn. Clears the stash afterwards.
+export async function restoreBaseAttackAfterBash(playerStats, campaignName) {
+  const stash = getRuntimeValue(playerStats.name, '_shieldBashBaseAttack', campaignName);
+  // A valid stash is the base attack object; ignore null/arrays/empty.
+  if (!stash || typeof stash !== 'object' || Array.isArray(stash) || !stash.attackName) return;
+  if (stash.attackName !== 'Shield Bash') {
+    await setRuntimeValue('campaign', 'lastAttack', stash, campaignName);
+  }
+  await setRuntimeValue(playerStats.name, '_shieldBashBaseAttack', null, campaignName);
+}
+
 export const shieldBash = {
   name: 'shieldBash',
   condition: (ctx) => !!ctx.playerStats.automation?.passives,
@@ -60,6 +75,13 @@ export const shieldBash = {
       ? buildSaveDc(shieldBashPassive.automation, ctx.playerStats)
       : 8 + (ctx.playerStats.abilities?.find(a => a.name === 'Strength')?.bonus || 0) + (ctx.playerStats.proficiency || 0);
 
+    // FT-082 collateral: resolving the bash save overwrites campaign lastAttack
+    // with a save record ({attackName:'Shield Bash', damageType:null}), which
+    // makes same-turn slashing riders (Slasher Hamstring) falsely refuse on
+    // shield holders. Stash the base weapon attack here and restore it after
+    // the bash resolves (step success path below / applyShieldBashEffect).
+    await setRuntimeValue(ctx.playerStats.name, '_shieldBashBaseAttack', lastAttack, ctx.campaignName);
+
     // Create STR save prompt
     const { promise } = createSaveListener(ctx.campaignName, {
       targetName,
@@ -102,6 +124,8 @@ export const shieldBash = {
     }).catch((e) => { console.error("[shieldBash:log-error]", e); });
 
     if (success) {
+      // FT-082 collateral: put the base slashing attack back as lastAttack.
+      await restoreBaseAttackAfterBash(ctx.playerStats, ctx.campaignName);
       return { data: prevData };
     }
 
@@ -132,6 +156,12 @@ export async function applyShieldBashEffect(action, playerStats, campaignName, t
   const auto = action.automation || {};
   const effs = getRuntimeValue('campaign', 'targetEffects') || [];
   const storedEffects = [...effs];
+
+  // FT-082 collateral: the bash save resolution clobbered campaign
+  // lastAttack — restore the base weapon attack so same-turn slashing
+  // riders (Slasher Hamstring) stay correctly gated on shield holders.
+  // Runs for every modal outcome (skip/Push/Prone).
+  await restoreBaseAttackAfterBash(playerStats, campaignName);
 
   if (chosenOption === 'skip') {
     addEntry(campaignName, {

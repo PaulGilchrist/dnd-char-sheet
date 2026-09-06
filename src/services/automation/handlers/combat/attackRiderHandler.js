@@ -8,6 +8,8 @@ import { applyDamageToTarget } from '../../../rules/combat/applyDamage.js';
 import { rollExpression } from '../../../dice/diceRoller.js';
 import { checkOncePerTurn, checkOncePerTurnWithSkip, markOncePerTurn } from '../../common/oncePerTurn.js';
 import { parseMagicItemName } from '../../../rules/core/attackCalc.js';
+import { addExpiration } from '../../../rules/effects/expirations.js';
+import { restoreBaseAttackAfterBash } from '../../../combat/steps/features/shieldBash.js';
 import { resolveMassFear } from './massFearHandler.js';
 import { validateCunningStrikeOption, getCombatContextSync, applyCunningStrikeCost } from './cunningStrikeUtils.js';
 
@@ -153,6 +155,11 @@ export async function handle(action, playerStats, campaignName, _mapName) {
             ? buildSaveDc(auto, playerStats)
             : (auto.saveDc || (8 + (playerStats.abilities?.find(a => a.name === 'Strength')?.bonus || 0) + (playerStats.proficiency || 0)));
 
+        // FT-082 collateral: stash the base weapon attack; the save
+        // resolution clobbers campaign lastAttack, which would falsely block
+        // same-turn Slasher Hamstring. Restored on success / applyShieldBashEffect.
+        await setRuntimeValue(playerStats.name, '_shieldBashBaseAttack', lastAttack, campaignName);
+
         // Create save prompt
 
         const { promise } = createSaveListener(campaignName, {
@@ -196,6 +203,7 @@ export async function handle(action, playerStats, campaignName, _mapName) {
         }).catch((e) => { console.error("[attackRiderHandler:log-error]", e); });
 
         if (success) {
+            await restoreBaseAttackAfterBash(playerStats, campaignName);
             return {
                 type: 'popup',
                 payload: {
@@ -549,6 +557,20 @@ async function applyRiderEffect(action, playerStats, campaignName, targetName, o
             description: `${playerStats.name} used Hamstring on ${targetName}: target's Speed reduced by ${speedValue} ft until the start of ${playerStats.name}'s next turn`,
             targetName: targetName,
         }).catch((e) => { console.error("[attackRiderHandler:log-error]", e); });
+
+        // FT-082: register expiry so "until the start of your next turn" is
+        // enforced. Drain seam: expireStaleEffects phase 1 (navigationHandlers
+        // / sseHandlers turn boundaries) expires entries whose
+        // expireOnCreatureName matches the newly active store owner once the
+        // round has advanced — i.e. at the holder's next turn start (same
+        // verified pattern as slasher.js slasher_enhanced_critical).
+        // Scoped by effect+source+option+target so other speed_reduction
+        // writers (Slow mastery, giant ancestry) are untouched.
+        if (!option.saveType) {
+            addExpiration(playerStats.name, targetName, [
+                { type: 'remove_target_effect', effectKey: 'speed_reduction', source: playerStats.name, option: option.name, target: targetName }
+            ], campaignName, undefined, playerStats.name);
+        }
     }
 
     if (option.saveType) {

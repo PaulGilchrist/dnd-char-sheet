@@ -393,6 +393,10 @@ export function clearExpirationEffects(effects, targetName, attackerName, campai
                         if (te.effect !== effect.effectKey) return true;
                         if (te.source !== effect.source) return true;
                         if (effect.target && te.target !== effect.target) return true;
+                        // FT-082: optional option scoping so multi-rider sources
+                        // (e.g. Slasher Hamstring vs other riders from the same
+                        // holder) are not collateral-removed.
+                        if (effect.option && te.option !== effect.option) return true;
                         return false;
                     }),
                     campaignName

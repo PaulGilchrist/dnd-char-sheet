@@ -54,6 +54,10 @@ vi.mock('../../common/oncePerTurn.js', () => ({
     markOncePerTurn: vi.fn().mockResolvedValue(undefined),
 }));
 
+vi.mock('../../../rules/effects/expirations.js', () => ({
+    addExpiration: vi.fn(),
+}));
+
 // ── Re-import after mocking ────────────────────────────────────
 
 import { getRuntimeValue, setRuntimeValue } from '../../../../hooks/runtime/useRuntimeState.js';
@@ -62,6 +66,7 @@ import { getCombatContext } from '../../../rules/combat/damageUtils.js';
 import { isWithinRange } from '../../../rules/combat/rangeCheck.js';
 import { checkOncePerTurn } from '../../common/oncePerTurn.js';
 import { rollExpression } from '../../../dice/diceRoller.js';
+import { addExpiration } from '../../../rules/effects/expirations.js';
 
 // ── Helpers ────────────────────────────────────────────────────
 
@@ -328,8 +333,8 @@ describe('attackRiderHandler', () => {
     });
 
     describe('slashing_damage_hit trigger (Slasher feat)', () => {
-        it('should apply effect when lastAttack is player slashing hit', async () => {
-            const action = {
+        function hamstringAction() {
+            return {
                 name: 'Hamstring',
                 automation: {
                     type: 'attack_rider',
@@ -338,11 +343,70 @@ describe('attackRiderHandler', () => {
                     options: [{ name: 'Hamstring', effect: 'speed_reduction', value: 10 }],
                 },
             };
-            const result = await handle(action, makePlayerStats(), 'campaign', 'map');
+        }
+
+        it('should apply effect when lastAttack is player slashing hit', async () => {
+            vi.mocked(checkOncePerTurn).mockResolvedValue(null);
+            getRuntimeValue.mockImplementation((key, prop) => {
+                if (key === 'campaign' && prop === 'lastAttack') {
+                    return { hit: true, attackerName: 'TestHero', damageType: 'Slashing', targetName: 'Goblin' };
+                }
+                if (prop === 'targetEffects') return [];
+                return null;
+            });
+
+            const result = await handle(hamstringAction(), makePlayerStats(), 'campaign', 'map');
 
             expect(result.type).toBe('popup');
             expect(result.payload.type).toBe('automation_info');
             expect(result.payload.description).toContain('Hamstring');
+            expect(result.payload.description).toContain("Speed reduced by 10 ft");
+
+            // te written EXACT
+            expect(setRuntimeValue).toHaveBeenCalledWith('campaign', 'targetEffects',
+                [expect.objectContaining({
+                    target: 'Goblin',
+                    source: 'TestHero',
+                    option: 'Hamstring',
+                    effect: 'speed_reduction',
+                    value: 10,
+                    duration: 'until_start_of_next_turn',
+                })], 'campaign');
+
+            // FT-082: expiration must be registered so the te expires at the
+            // holder's next turn start (drained by expireStaleEffects phase 1).
+            expect(addExpiration).toHaveBeenCalledWith(
+                'TestHero',
+                'Goblin',
+                [{ type: 'remove_target_effect', effectKey: 'speed_reduction', source: 'TestHero', option: 'Hamstring', target: 'Goblin' }],
+                'campaign',
+                undefined,
+                'TestHero'
+            );
+        });
+
+        it('should NOT register expiration for save-based speed_reduction options', async () => {
+            vi.mocked(checkOncePerTurn).mockResolvedValue(null);
+            getRuntimeValue.mockImplementation((key, prop) => {
+                if (key === 'campaign' && prop === 'lastAttack') {
+                    return { hit: true, attackerName: 'TestHero', damageType: 'Slashing', targetName: 'Goblin' };
+                }
+                if (prop === 'targetEffects') return [];
+                return null;
+            });
+
+            const action = {
+                name: 'Rider',
+                automation: {
+                    type: 'attack_rider',
+                    trigger: 'slashing_damage_hit',
+                    oncePerTurn: true,
+                    options: [{ name: 'Chill', effect: 'speed_reduction', value: 10, saveType: 'CON' }],
+                },
+            };
+            await handle(action, makePlayerStats(), 'campaign', 'map');
+
+            expect(addExpiration).not.toHaveBeenCalled();
         });
 
         it.each([

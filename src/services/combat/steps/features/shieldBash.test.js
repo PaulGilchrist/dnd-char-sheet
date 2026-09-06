@@ -43,7 +43,7 @@ vi.mock('../../../rules/combat/rangeCheck.js', () => ({
 
 // ── Imports ──────────────────────────────────────────────────────
 
-import { shieldBash, applyShieldBashEffect } from './shieldBash.js';
+import { shieldBash, applyShieldBashEffect, restoreBaseAttackAfterBash } from './shieldBash.js';
 
 import { getRuntimeValue, setRuntimeValue } from '../../../../hooks/runtime/useRuntimeState.js';
 import { getCombatContext } from '../../../rules/combat/damageUtils.js';
@@ -452,6 +452,56 @@ describe('shieldBash', () => {
         expect(result.modal.props.campaignName).toBe('test-campaign');
       });
     });
+  });
+});
+
+// FT-082 collateral: the bash save resolution clobbers campaign lastAttack;
+// the base weapon attack must be restored so Slasher Hamstring gating works
+// on shield holders within the same turn.
+describe('restoreBaseAttackAfterBash (FT-082 collateral)', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  const stats = { name: 'EvasiveFighter' };
+
+  it('restores stashed base attack as campaign lastAttack and clears stash', async () => {
+    const baseAttack = { attackName: 'Scimitar', hit: true, damageType: 'Slashing', attackerName: 'EvasiveFighter', targetName: 'Zombie 1' };
+    getRuntimeValue.mockImplementation((name, key) => (key === '_shieldBashBaseAttack' ? baseAttack : null));
+
+    await restoreBaseAttackAfterBash(stats, 'test-campaign');
+
+    expect(setRuntimeValue).toHaveBeenCalledWith('campaign', 'lastAttack', baseAttack, 'test-campaign');
+    expect(setRuntimeValue).toHaveBeenCalledWith('EvasiveFighter', '_shieldBashBaseAttack', null, 'test-campaign');
+  });
+
+  it('is a silent no-op when nothing was stashed', async () => {
+    getRuntimeValue.mockReturnValue(null);
+    await restoreBaseAttackAfterBash(stats, 'test-campaign');
+    expect(setRuntimeValue).not.toHaveBeenCalled();
+  });
+
+  it('does not restore junk stashes (arrays / bash records)', async () => {
+    getRuntimeValue.mockImplementation((name, key) => {
+      if (key === '_shieldBashBaseAttack') return [{ junk: true }];
+      return null;
+    });
+    await restoreBaseAttackAfterBash(stats, 'test-campaign');
+    expect(setRuntimeValue).not.toHaveBeenCalledWith('campaign', 'lastAttack', expect.anything(), 'test-campaign');
+  });
+
+  it('applyShieldBashEffect restores the base attack after Push (shield-holder hamstring gate)', async () => {
+    const baseAttack = { attackName: 'Scimitar', hit: true, damageType: 'Slashing', attackerName: 'EvasiveFighter', targetName: 'Zombie 1' };
+    getRuntimeValue.mockImplementation((name, key) => {
+      if (key === '_shieldBashBaseAttack') return baseAttack;
+      if (key === 'targetEffects') return [];
+      return null;
+    });
+    getCombatContext.mockResolvedValue({ round: 4, activeCreatureName: 'EvasiveFighter' });
+
+    await applyShieldBashEffect({ automation: {} }, { name: 'EvasiveFighter' }, 'test-campaign', 'Zombie 1', 'Push', 15);
+
+    expect(setRuntimeValue).toHaveBeenCalledWith('campaign', 'lastAttack', baseAttack, 'test-campaign');
   });
 });
 

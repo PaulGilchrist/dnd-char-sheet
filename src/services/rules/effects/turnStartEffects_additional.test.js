@@ -495,6 +495,62 @@ describe('applyTurnStartEffects — additional effect types', () => {
       ]);
     });
 
+    // FT-082: Slasher Hamstring te ("until the start of your next turn")
+    // registered via addExpiration(expireOnCreatureName=holder) must drain
+    // exactly at the holder's next turn start (round advanced), and the
+    // option-scoped remove_target_effect must not collateral-remove other
+    // speed_reduction te from the same holder or other sources.
+    it('FT-082: clears Hamstring speed_reduction at holder next-turn start only', () => {
+      const hamstringEntry = {
+        target: 'Zombie 1',
+        effects: [{ type: 'remove_target_effect', effectKey: 'speed_reduction', source: 'EvasiveFighter', option: 'Hamstring', target: 'Zombie 1' }],
+        appliedRound: 2,
+        expiryRounds: Infinity,
+        expireOnCreatureName: 'EvasiveFighter',
+      };
+      const hamstringTe = { effect: 'speed_reduction', source: 'EvasiveFighter', option: 'Hamstring', target: 'Zombie 1', value: 10 };
+      const otherRiderTe = { effect: 'speed_reduction', source: 'EvasiveFighter', option: 'OtherRider', target: 'Skeleton' };
+      const slowTe = { effect: 'speed_reduction', source: 'Slow', target: 'Zombie 1' };
+
+      const campaignTe = () => [
+        { ...hamstringTe },
+        { ...otherRiderTe },
+        { ...slowTe },
+      ];
+
+      getCombatSummary.mockReturnValue({ creatures: [{ name: 'EvasiveFighter' }, { name: 'Skeleton' }] });
+      getRuntimeValue.mockImplementation((name, key) => {
+        if (key === KEY && name === 'EvasiveFighter') return [{ ...hamstringEntry }];
+        if (key === KEY) return [];
+        if (name === 'campaign' && key === 'targetEffects') return campaignTe();
+        return null;
+      });
+
+      // Same round, holder turn — must NOT expire yet.
+      getCurrentCombatRound.mockReturnValue(2);
+      setRuntimeValue.mockClear();
+      expireStaleEffects('TestCampaign', 'EvasiveFighter');
+      let effectCalls = setRuntimeValue.mock.calls.filter(c => c[0] === 'campaign' && c[1] === 'targetEffects');
+      expect(effectCalls.length).toBe(0);
+
+      // Next round, a different creature's turn — must NOT expire yet.
+      getCurrentCombatRound.mockReturnValue(3);
+      setRuntimeValue.mockClear();
+      expireStaleEffects('TestCampaign', 'Skeleton');
+      effectCalls = setRuntimeValue.mock.calls.filter(c => c[0] === 'campaign' && c[1] === 'targetEffects');
+      expect(effectCalls.length).toBe(0);
+
+      // Next round, holder's turn start — expires, scoped to option+target.
+      setRuntimeValue.mockClear();
+      expireStaleEffects('TestCampaign', 'EvasiveFighter');
+      effectCalls = setRuntimeValue.mock.calls.filter(c => c[0] === 'campaign' && c[1] === 'targetEffects');
+      expect(effectCalls.length).toBeGreaterThan(0);
+      expect(effectCalls[0][2]).toEqual([
+        { ...otherRiderTe },
+        { ...slowTe },
+      ]);
+    });
+
     it('clears speed_reduction from Slow weapon mastery via expireStaleEffects', () => {
       getCombatSummary.mockReturnValue({ creatures: [{ name: 'TestCharacter' }] });
       getRuntimeValue.mockImplementation((name, key) => {

@@ -5805,7 +5805,7 @@
       "handler": "src/services/combat/automation/handlers/featHandler.js",
       "router": "src/services/combat/automation/routers/featRouter.js",
       "infoBuilder": "src/services/combat/automation/infoBuilders/featInfoBuilder.js",
-      "verified": "broken — see .opencode/plans/bug-FT-082-slasher.md",
+      "verified": "verified",
       "triggerConditions": "Trigger: slashing_damage_hit; Once per turn: yes",
       "expectedBehavior": "Once per turn when you hit a creature with an attack that deals Slashing damage, you can reduce the Speed of that creature by 10 feet until the start of your next turn."
     },
