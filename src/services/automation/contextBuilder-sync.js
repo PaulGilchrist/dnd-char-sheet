@@ -17,6 +17,16 @@ import { collectWeaponMastery } from '../combat/automation/automationService.js'
 import { selectBrutalStrikeRiders } from '../combat/brutalStrikeSelection.js';
 import { resolveDiceExpression } from '../combat/automation/automationExpressions.js';
 import { isResilientSphereActive } from '../combat/automation/automationPassives.js';
+import { CONDITIONS_THAT_CANNOT_ACT } from '../combat/conditions/conditionEffects.js';
+
+// Canonical sneak-attack ally clause: the ally must not have the Incapacitated condition.
+function allyIsIncapacitated(c) {
+    const conds = [...(getRuntimeValue(c.name, 'activeConditions') || []), ...(c.conditions || [])];
+    return conds.some(cond => {
+        const key = typeof cond === 'object' ? String(cond.key || cond.name || '') : String(cond);
+        return CONDITIONS_THAT_CANNOT_ACT.has(key.toLowerCase());
+    });
+}
 
 export async function buildAttackContextSync(attack, playerStats, campaignName, conditionAttackMode, _featRangeEffects) {
     const playerName = playerStats.name;
@@ -687,6 +697,7 @@ export async function buildAttackContextSync(attack, playerStats, campaignName, 
                                 for (const c of combatSummary.creatures) {
                                     if (c.name === playerName || c.name === targetName) continue;
                                     if (c.type === 'player' || (c.type === 'npc' && c.attitude !== 'hostile')) {
+                                        if (allyIsIncapacitated(c)) continue;
                                         const inRange = await isWithinRange(targetName, c.name, 5);
                                         if (inRange) return true;
                                     }

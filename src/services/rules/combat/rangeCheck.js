@@ -19,11 +19,15 @@ export async function isWithinRange(sourceName, targetName, inRangeDistance) {
   try {
     const data = await loadMapData(campaignName, activeMapName);
     if (!data) return true;
-    const source = data.players?.find(p => p.name === sourceName)
-      ?? data.placedItems?.find(p => p.name === sourceName);
-    const target = data.players?.find(p => p.name === targetName)
-      ?? data.placedItems?.find(p => p.name === targetName);
-    if (!source || !target) return true;
+    const tokens = [...(data.players || []), ...(data.placedItems || [])];
+    const hasPosition = t => !!t && Number.isFinite(t.gridX) && Number.isFinite(t.gridY);
+    // Gridless fallback: an active map with no positioned tokens cannot measure distance.
+    if (!tokens.some(hasPosition)) return true;
+    const source = tokens.find(t => t.name === sourceName);
+    const target = tokens.find(t => t.name === targetName);
+    // Once the active map tracks token positions, unplaced creatures cannot
+    // satisfy a range check (no phantom adjacency).
+    if (!hasPosition(source) || !hasPosition(target)) return false;
     const dist = getDistanceFeet(source, target);
     if (dist == null) return true;
     return dist <= inRangeDistance;

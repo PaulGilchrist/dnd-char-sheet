@@ -21,6 +21,7 @@ import useCampaignManagement from './hooks/management/useCampaignManagement.js';
 import { useCharacterWizard } from './hooks/wizard/useCharacterWizard.js';
 import rulesFactory from './services/rules/rulesFactory.js';
 import Subscriber from './components/common/Subscriber.jsx';
+import MapContextSync from './components/common/MapContextSync.jsx';
 import { setRuntimeObject, seedTrackedResources, getStore, notify } from './hooks/runtime/useRuntimeState.js';
 import { applyServerOverride, trackedResourcesToStoreEntries } from './services/rules/trackedResources.js';
 import { useBattleMasterSelectionVersion, battleMasterSelectionSerial } from './hooks/combat/battleMaster.js';
@@ -625,6 +626,7 @@ function App() {
         <BardicInspirationReactionModal campaignName={campaignName} characters={computedCharacters} />
         <ConditionChoiceModal />
         <Subscriber campaignName={campaignName} handleEvent={handleRuntimeEvent} />
+        <MapContextSync campaignName={campaignName} activeMapName={activeMapName} />
         {processingCharacters && <div className="loading-overlay"><div className="loading-spinner">Loading party stats...</div></div>}
       </div>
     </div>

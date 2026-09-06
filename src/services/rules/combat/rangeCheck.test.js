@@ -10,14 +10,20 @@ vi.mock('../../maps/mapsService.js', () => ({
   loadMapData: vi.fn(),
 }));
 
-vi.mock('../../../hooks/runtime/useRuntimeState.js', () => ({
-  getRuntimeValue: vi.fn((key, prop) => {
-    if (key === '__map__' && prop === 'activeMapName') return 'test-map';
-    if (key === '__campaign__' && prop === 'campaignName') return 'test-campaign';
-    return null;
-  }),
-  getStore: vi.fn(() => ({ keys: () => [] })),
-}));
+vi.mock('../../../hooks/runtime/useRuntimeState.js', () => {
+  const state = { activeMapName: 'test-map', campaignName: 'test-campaign' };
+  return {
+    getRuntimeValue: vi.fn((key, prop) => {
+      if (key === '__map__' && prop === 'activeMapName') return state.activeMapName;
+      if (key === '__campaign__' && prop === 'campaignName') return state.campaignName;
+      return null;
+    }),
+    setRuntimeMockState: (patch) => Object.assign(state, patch),
+    getStore: vi.fn(() => ({ keys: () => [] })),
+  };
+});
+
+const { setRuntimeMockState } = await import('../../../hooks/runtime/useRuntimeState.js');
 
 describe('rangeCheck', () => {
   beforeEach(() => {
@@ -43,28 +49,86 @@ describe('rangeCheck', () => {
       expect(await isWithinRange('Alice', 'Bob', 30)).toBe(true);
     });
 
-    it('returns true when source not found on map', async () => {
+    it('returns false when source not found on a tracked map', async () => {
       mapsService.loadMapData.mockResolvedValue({
         players: [{ name: 'Bob', gridX: 1, gridY: 1 }],
         placedItems: [],
       });
-      expect(await isWithinRange('Alice', 'Bob', 30)).toBe(true);
+      expect(await isWithinRange('Alice', 'Bob', 30)).toBe(false);
     });
 
-    it('returns true when target not found on map', async () => {
+    it('returns false when target not found on a tracked map', async () => {
       mapsService.loadMapData.mockResolvedValue({
         players: [{ name: 'Alice', gridX: 1, gridY: 1 }],
         placedItems: [],
       });
-      expect(await isWithinRange('Alice', 'Bob', 30)).toBe(true);
+      expect(await isWithinRange('Alice', 'Bob', 30)).toBe(false);
     });
 
-    it('returns true when source found in placedItems but not players', async () => {
+    it('returns false when source unplaced even if other tokens are tracked', async () => {
       mapsService.loadMapData.mockResolvedValue({
         players: [],
         placedItems: [{ name: 'Alice', gridX: 1, gridY: 1 }],
       });
-      expect(await isWithinRange('Alice', 'Bob', 30)).toBe(true);
+      expect(await isWithinRange('Alice', 'Bob', 30)).toBe(false);
+    });
+
+    it('returns true when no map is active (gridless lenient)', async () => {
+      setRuntimeMockState({ activeMapName: null });
+      mapsService.loadMapData.mockResolvedValue({
+        players: [{ name: 'Alice', gridX: 1, gridY: 1 }],
+        placedItems: [],
+      });
+      expect(await isWithinRange('Alice', 'Unplaced', 5)).toBe(true);
+      setRuntimeMockState({ activeMapName: 'test-map' });
+    });
+
+    it('returns true when active map has no positioned tokens (gridless lenient)', async () => {
+      mapsService.loadMapData.mockResolvedValue({
+        players: [{ name: 'Alice' }, { name: 'Bob' }],
+        placedItems: [],
+      });
+      expect(await isWithinRange('Alice', 'Bob', 5)).toBe(true);
+    });
+
+    it('returns true when active map has no tokens at all', async () => {
+      mapsService.loadMapData.mockResolvedValue({
+        players: [],
+        placedItems: [],
+      });
+      expect(await isWithinRange('Alice', 'Bob', 5)).toBe(true);
+    });
+
+    it('returns true for orthogonally adjacent tokens within 5 ft', async () => {
+      mapsService.loadMapData.mockResolvedValue({
+        players: [{ name: 'Ally', gridX: 6, gridY: 10 }],
+        placedItems: [{ name: 'Thug 1', gridX: 7, gridY: 10 }],
+      });
+      expect(await isWithinRange('Thug 1', 'Ally', 5)).toBe(true);
+    });
+
+    it('returns false for diagonally adjacent tokens beyond 5 ft', async () => {
+      mapsService.loadMapData.mockResolvedValue({
+        players: [{ name: 'Ally', gridX: 6, gridY: 9 }],
+        placedItems: [{ name: 'Thug 1', gridX: 7, gridY: 10 }],
+      });
+      expect(await isWithinRange('Thug 1', 'Ally', 5)).toBe(false);
+    });
+
+    it('returns false for 25 ft apart tokens against a 5 ft check', async () => {
+      mapsService.loadMapData.mockResolvedValue({
+        players: [{ name: 'ElderPaladin', gridX: 4, gridY: 5 }],
+        placedItems: [{ name: 'Thug 1', gridX: 7, gridY: 10 }],
+      });
+      expect(await isWithinRange('Thug 1', 'ElderPaladin', 5)).toBe(false);
+    });
+
+    it('returns false for unplaced creature when other tokens are tracked', async () => {
+      mapsService.loadMapData.mockResolvedValue({
+        players: [{ name: 'NPC 1' }],
+        placedItems: [{ name: 'Thug 1', gridX: 7, gridY: 10 }],
+      });
+      expect(await isWithinRange('Thug 1', 'NPC 1', 5)).toBe(false);
     });
 
     it('returns true when target found in placedItems but not players', async () => {

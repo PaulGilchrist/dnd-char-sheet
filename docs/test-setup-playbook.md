@@ -70,7 +70,7 @@ GM-authorized condensation of the 418-line accumulated log into durable operatin
 
 ## 7. Current state-of-the-engine map (known seams, as of 2026-09-06)
 Spatial/visibility:
-- `isWithinRange` (`rangeCheck.js`) reads runtime `__map__.activeMapName`/`__campaign__.campaignName` which have ZERO prod writers → always lenient true. ALL "within X ft" gates (Sneak ally-gate, share/zone radii) are unenforceable; any cs creature counts as adjacent.
+- `isWithinRange` (`rangeCheck.js`) FIXED 2026-09-05 (CLA-317): `MapContextSync.jsx` (mounted in App.jsx) is now the prod writer for `__campaign__`/`__map__` runtime keys (forced stamps survive Admin clear); strict real-token distances whenever an active map has positioned tokens, unplaced creatures excluded; lenient true ONLY when gridless/no positions. "within X ft" gates (Sneak ally-gate, share/zone radii) are now enforceable on mapped rigs; gridless combat still assumes adjacency.
 - No light-level/unseen model; PC-side Blindsight/Blur/Foresight attacker-disadv = display+state only (contextBuilder-sync `dis++` runs after mode resolution; monster-only cancels in conditionEffects).
 - No fall-damage producer anywhere; "reduce fall damage" rows can only be probed with a bludgeoning monster-attack proxy (trigger gate then fails-open = typically the bug).
 - Zones: `_sleetStorm_<caster>` per-creature te lists, mapName null, duration often never forwarded (`remove_*` expiration types may lack cases in clearExpirationEffects.js → effects persist until rest).
