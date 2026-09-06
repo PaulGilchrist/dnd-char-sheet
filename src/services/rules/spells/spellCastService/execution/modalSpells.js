@@ -105,6 +105,33 @@ function handleHypnoticPatternEarly(fullSpell, spellSaveDc, playerStats, campaig
     return { handled: false };
 }
 
+function handleSleep(fullSpell, spellSaveDc, playerStats, campaignName, metaCtx, characters) {
+    if (fullSpell.name && fullSpell.name.toLowerCase() === 'sleep' && fullSpell.dc) {
+        const sleepModalPayload = {
+            action: { name: 'Sleep', automation: { type: 'sleep' } },
+            spell: fullSpell,
+            playerStats,
+            campaignName,
+            saveType: 'WIS',
+            saveDc: spellSaveDc,
+            characters: characters || null,
+            metamagicCareful: metaCtx?.metamagicCareful || false,
+            metamagicHeighten: metaCtx?.metamagicHeighten,
+        };
+        return {
+            handled: true,
+            result: {
+                automationPopup: {
+                    type: 'modal',
+                    modalName: 'sleep',
+                    payload: sleepModalPayload,
+                },
+            },
+        };
+    }
+    return { handled: false };
+}
+
 function handleConfusionEarly(fullSpell, spell, metaCtx, spellSaveDc, playerStats, campaignName, mapName, triggerConfusion) {
     if (fullSpell.name && fullSpell.name.toLowerCase() === 'confusion' && fullSpell.dc) {
         return {
@@ -237,4 +264,5 @@ export {
     handleFear,
     handleConjureVolley,
     handleSilence,
+    handleSleep,
 };

@@ -10,6 +10,7 @@ import { getDamageReduction, getDamageResistances } from '../../combat/automatio
 import { computeAuraComboEffects } from '../../combat/auras/auraComboEffects.js';
 import { isCreatureInSilenceZone } from '../../rules/features/silenceService.js';
 import { applyWardingBond } from '../../rules/features/wardingBondService.js';
+import { wakeSleepOnDamage } from '../../rules/features/sleepService.js';
 import { checkPsychicVeil } from '../../rules/features/psychicVeilService.js';
 import { checkHolyAuraDamage } from '../../rules/features/holyAuraDamageService.js';
 import { checkDarkOnesBlessing } from '../../rules/features/darkOnesBlessingService.js';
@@ -336,6 +337,11 @@ if (!Array.isArray(damageTypes)) { throw new Error('damageTypes must be an array
             setRuntimeValue(druidName, 'deathFailures', [false, false, false], campaignName);
         }
        }
+
+    // SP-107: Sleep ends on a target that takes damage (staged Incapacitated or Unconscious).
+    if (actualDamageTaken > 0) {
+        wakeSleepOnDamage(campaignName, creature.name, actualDamageTaken);
+    }
 
     // Update lastAttack with actual HP damage dealt (after resistances, feature reduction, ward absorption)
     if (isSecondary) {

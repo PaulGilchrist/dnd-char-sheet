@@ -22,7 +22,7 @@ import { resolveHealingBonusesWithDetails, hasHealingMaximizationForTarget, hasR
 import { rollExpression, rollExpressionMaximized, applyHealingRerollOnes } from '../../../../dice/diceRoller.js';
 import { refundSpellBreakerSlot, applyHexEffects, applyPowerWordHealToTarget, applyPowerWordKillToTarget, triggerDispelMagic, triggerExpertDivination, triggerArcaneWard, applyRegenerateSpell } from './helpers.js';
 import { checkGlobeOfInvulnerability, checkForcecageBlocked } from './blockChecks.js';
-import { handlePowerWordHeal, handlePowerWordKill, handleMassSuggestion, handleCalmEmotions, handleHypnoticPatternEarly, handleConfusionEarly, handleShapechange, handleFear, handleConjureVolley, handleSilence } from './modalSpells.js';
+import { handlePowerWordHeal, handlePowerWordKill, handleMassSuggestion, handleCalmEmotions, handleHypnoticPatternEarly, handleConfusionEarly, handleShapechange, handleFear, handleConjureVolley, handleSilence, handleSleep } from './modalSpells.js';
 import { handleRegenerate, handleSeeInvisibility, handleFleshToStone, handleHoldMonster, handleBanishment, handleConfusion, handleMaze, handlePowerWordStun, handleHypnoticPattern, handleSlow, handleBane, handleBless, handleBeaconOfHope, handleMassSuggestion as handleMassSuggestionTrigger, handleSuggestion, handleCommand, handleOttoDance, handleResilientSphere, handleBlur, handleExpeditiousRetreat, handleFriends, handleCrownOfMadness, handleAnimalFriendship, handleDominateBeast, handleDominateMonster, handleDominatePerson, handleRayOfEnfeeblement, handleCompelledDuel, handleGlobeOfInvulnerability, handleForcecage, handleStinkingCloud, handleSleetStorm, handleFaerieFire, handleTashasHideousLaughter, handleImprisonment, handleHeroism, handleLongstrider, handleSpareTheDying, handleEnhanceAbility, handleProtectionFromEnergy, handleProtectionFromPoison, handleResistance, handleGenericAutomation } from './triggerSpells.js';
 import { computeRange, computeEmpoweredEvocation, computeBlessedStrikes, computeRadiantSoul, computeOverchannel } from './damageCalculation.js';
 import { handleSavePath } from './savePath.js';
@@ -229,6 +229,9 @@ export async function executeSpellCast(spell, metaCtx, { rollAttack, rollDamage,
 
     let shapechangeResult = handleShapechange(fullSpell, metaCtx, playerStats, campaignName, mapName, characters);
     if (shapechangeResult.handled) return shapechangeResult.result;
+
+    let sleepResult = handleSleep(fullSpell, spellSaveDc, playerStats, campaignName, metaCtx, characters);
+    if (sleepResult.handled) return sleepResult.result;
 
     // --- Generic automation routing ---
     let genericAutomationResult = await handleGenericAutomation(spell, executeHandler, (sp, mc, ps, cn) => triggerArcaneWard(sp, mc, ps, cn), playerStats, campaignName, mapName, characters, metaCtx);

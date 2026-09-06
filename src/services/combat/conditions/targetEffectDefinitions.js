@@ -231,6 +231,15 @@ const TARGET_EFFECT_DEFINITIONS = [
 
   // ── Spells ──────────────────────────────────────────────
   {
+    effect: 'sleep_staged',
+    label: 'Sleep',
+    description: 'Staged by the Sleep spell: Incapacitated until the end of the target\'s next turn, when it repeats the WIS save. On a failed repeat save the target becomes Unconscious for the spell\'s duration. The spell ends on a target early if it takes damage or is shaken awake. Elves, undead, constructs, and Exhaustion-immune creatures automatically succeed. Concentration, up to 1 minute.',
+    icon: 'fa-moon',
+    cls: 'effect-debuff',
+    group: 'Spells',
+    fields: ['source', 'dc'],
+  },
+  {
     effect: 'tashas_hideous_laughter',
     label: "Tasha's Hideous Laughter",
     description: 'Target laughs uncontrollably: Prone and Incapacitated for the duration. Target can\'t end the Prone condition on itself. At the end of each turn and each time it takes damage, target can repeat the WIS save (has Advantage on save triggered by damage). On a success, the spell ends. Concentration, up to 1 minute.',

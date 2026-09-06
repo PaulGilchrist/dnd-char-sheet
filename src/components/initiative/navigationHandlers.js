@@ -4,6 +4,7 @@ import storage from '../../services/ui/storage.js'
 import { getNextCreatureName, getPreviousCreatureName } from '../../services/encounters/initiativeService.js'
 import { clearPerRoundMajestyTrackers } from '../../services/combat/auras/unbreakableMajesty.js'
 import { expireStaleEffects, applyTurnStartEffects, applyTurnEndConditionRemoval } from '../../services/rules/effects/expirations.js'
+import { applySleepTurnEnd } from '../../services/rules/features/sleepService.js'
 import { getCombatSummary } from '../../services/encounters/combatData.js'
 
 // Turn-start effects must re-apply each round, so the dedupe key is round-scoped.
@@ -75,6 +76,10 @@ export function createNextCreatureHandler({
             const outgoingChar = characters.find(ch => ch.name === activeCreatureName || ch.name.startsWith(activeCreatureName + ' '))
             applyTurnEndConditionRemoval(activeCreatureName, outgoingChar?.computedStats || outgoingChar, campaignName)
                 .catch((e) => { console.error('[navigationHandlers] CLA-307 turn-end removal failed:', e) })
+            // SP-107: staged Sleep targets repeat their WIS save at the end of their own turn —
+            // success sheds Incapacitated, failure escalates to Unconscious for the duration.
+            applySleepTurnEnd(campaignName, activeCreatureName)
+                .catch((e) => { console.error('[navigationHandlers] SP-107 sleep turn-end save failed:', e) })
         }
         expireStaleEffects(campaignName, newActiveName)
         // BUG CLA-198: turn-start effects must run for EVERY newly active creature, not just

@@ -6,6 +6,7 @@ import SaveAttackAoeModal from './modals/shared/SaveAttackAoeModal.jsx';
 import AOEConditionModal from './modals/shared/AOEConditionModal.jsx';
 import FearModal from './modals/shared/FearModal.jsx';
 import HypnoticPatternModal from './modals/shared/HypnoticPatternModal.jsx';
+import SleepModal from './modals/shared/SleepModal.jsx';
 import TashasLaughterModal from './modals/shared/TashasLaughterModal.jsx';
 import SilenceModal from './modals/SilenceModal.jsx';
 import MassSuggestionModal from './modals/shared/MassSuggestionModal.jsx';
@@ -192,6 +193,12 @@ function SecondaryModals({
                 <FearModal
                     {...mergedModalState.fearModal}
                     onClose={() => setModalState({ fearModal: null })}
+                />
+            )}
+            {mergedModalState.sleepModal && (
+                <SleepModal
+                    {...mergedModalState.sleepModal}
+                    onClose={() => setModalState({ sleepModal: null })}
                 />
             )}
             {mergedModalState.hypnoticPatternModal && (

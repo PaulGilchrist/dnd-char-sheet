@@ -1,23 +1,25 @@
 import { buildSaveDc, createSaveListener } from '../../common/savePrompt.js';
 import { getCombatContext } from '../../../rules/combat/damageUtils.js';
 import { addEntry } from '../../../ui/logService.js';
-
-import { getRuntimeValue, setRuntimeValue } from '../../../../hooks/runtime/useRuntimeState.js';
-import { addExpiration } from '../../../rules/effects/expirations.js';
 import { storeSpellLastAttack, addTargetResult } from '../../common/damageRollback.js';
+import { isSleepImmune, stageSleepTargets } from '../../../rules/features/sleepService.js';
 
 /**
  * Sleep spell handler for 2024 ruleset.
  * Mechanics:
- * - WIS save or Incapacitated until end of target's next turn
- * - Spell ends if target takes damage
- * - Spell ends if someone within 5ft takes action to shake target
- * - Creatures with "Magical Sleep" or "Exhaustion" immunity auto-succeed
+ * - Each target makes a WIS save or becomes Incapacitated until the end of its
+ *   next turn (staged via the 'sleep_staged' target effect), at which point it
+ *   repeats the save (sleepService.applySleepTurnEnd). Failing the repeat save
+ *   escalates to Unconscious for the spell's duration.
+ * - The spell ends on a target that takes damage (applyDamage wake hook) or that
+ *   is shaken awake.
+ * - Creatures that don't sleep (elves, undead, constructs) or that are immune to
+ *   Exhaustion automatically succeed.
  */
-
-export async function handle(action, playerStats, campaignName, _mapName) {
+export async function handle(action, playerStats, campaignName, _mapName, characters) {
     const auto = action.automation || {};
-    const dc = buildSaveDc(auto, playerStats);
+    const dc = action.metaCtx?.spellSaveDc ?? buildSaveDc(auto, playerStats);
+    const casterName = playerStats.name;
 
     const cs = await getCombatContext(campaignName);
     if (!cs?.creatures || cs.creatures.length === 0) {
@@ -31,8 +33,26 @@ export async function handle(action, playerStats, campaignName, _mapName) {
         };
     }
 
-    const casterName = playerStats.name;
-    const targets = cs.creatures.filter(c => c.name !== casterName);
+    const selectedNames = Array.isArray(action.metaCtx?.selectedTargets) && action.metaCtx.selectedTargets.length > 0
+        ? action.metaCtx.selectedTargets
+        : null;
+
+    const targets = cs.creatures.filter(c => {
+        if (c.name === casterName) return false;
+        if (selectedNames && !selectedNames.includes(c.name)) return false;
+        return true;
+    });
+
+    if (targets.length === 0) {
+        return {
+            type: 'popup',
+            payload: {
+                type: 'automation_info',
+                name: action.name,
+                description: 'No valid targets selected.',
+            },
+        };
+    }
 
     storeSpellLastAttack(campaignName, {
         casterName,
@@ -42,63 +62,21 @@ export async function handle(action, playerStats, campaignName, _mapName) {
         attackScope: 'aoe',
     });
 
-    let affectedCount = 0;
-    let savedCount = 0;
-    let immunityCount = 0;
-    const results = [];
+    addEntry(campaignName, {
+        type: 'ability_use',
+        characterName: casterName,
+        abilityName: action.name,
+        description: `${casterName} casts ${action.name}! ${targets.length} target(s) must make a WIS save (DC ${dc}) or become Incapacitated until the end of their next turn.`,
+    }).catch((e) => { console.error('[sleep] Error logging cast:', e); });
+
+    const failedTargets = [];
+    let autoSuccessCount = 0;
 
     for (const target of targets) {
         const targetName = target.name;
 
-        const targetImmunities = target.immunities || [];
-        const hasMagicalSleepImmunity = targetImmunities.some(
-            imm => String(imm).toLowerCase() === 'magical sleep'
-        );
-        const hasExhaustionImmunity = targetImmunities.some(
-            imm => String(imm).toLowerCase() === 'exhaustion'
-        );
-
-        if (hasMagicalSleepImmunity || hasExhaustionImmunity) {
-            immunityCount++;
-            addEntry(campaignName, {
-                type: 'ability_use',
-                characterName: casterName,
-                abilityName: action.name,
-                description: `${targetName} is immune to Sleep (does not sleep / Exhaustion immunity).`,
-            }).catch((e) => { console.error("[sleep] Error:", e); });
-            results.push(`${targetName} is immune to Sleep.`);
-
-            addTargetResult(campaignName, {
-                targetName,
-                saveResult: 'immune',
-                roll: 0,
-                total: 0,
-                conditions: [],
-                appliedDamage: 0,
-            });
-            continue;
-        }
-
-        const { promptId, promise } = createSaveListener(campaignName, {
-            targetName,
-            saveType: 'WIS',
-            saveDc: dc,
-            dcSuccess: 'none',
-            disadvantage: action.metaCtx?.heightenTarget === targetName,
-        });
-
-        addEntry(campaignName, {
-            type: 'ability_use',
-            characterName: casterName,
-            abilityName: action.name,
-            description: `${casterName} casts Sleep! ${targetName} must make a WIS save (DC ${dc}) or become Incapacitated.`,
-            promptId,
-        }).catch((e) => { console.error("[sleep] Error:", e); });
-
-        const saveResult = await promise;
-
-        if (saveResult.success) {
-            savedCount++;
+        if (await isSleepImmune(campaignName, target, characters)) {
+            autoSuccessCount++;
             addEntry(campaignName, {
                 type: 'save_result',
                 characterName: casterName,
@@ -107,73 +85,119 @@ export async function handle(action, playerStats, campaignName, _mapName) {
                 saveDc: dc,
                 saveType: 'WIS',
                 success: true,
-                description: `${targetName} succeeded on WIS save against Sleep.`,
-            }).catch((e) => { console.error("[sleep] Error:", e); });
-
+                description: `${targetName} automatically succeeds on the save against ${action.name} (doesn't sleep or is immune to Exhaustion).`,
+            }).catch((e) => { console.error('[sleep] Error logging auto save:', e); });
             addTargetResult(campaignName, {
                 targetName,
                 saveResult: 'success',
-                roll: saveResult.roll ?? 0,
-                total: saveResult.total ?? 0,
+                roll: null,
+                total: null,
+                conditions: [],
+                appliedDamage: 0,
+            });
+            continue;
+        }
+
+        let success;
+        let roll = null;
+        let total = null;
+        let saveBonus = 0;
+
+        if (target.type === 'npc') {
+            saveBonus = target.saveBonuses?.wis ?? 0;
+            roll = Math.floor(Math.random() * 20) + 1;
+            total = roll + saveBonus;
+            success = total >= dc;
+        } else {
+            const { promptId, promise } = createSaveListener(campaignName, {
+                targetName,
+                saveType: 'WIS',
+                saveDc: dc,
+                dcSuccess: 'none',
+                disadvantage: action.metaCtx?.heightenTarget === targetName,
+                sourceName: casterName,
+                condition: 'Sleep',
+            });
+
+            addEntry(campaignName, {
+                type: 'ability_use',
+                characterName: casterName,
+                abilityName: action.name,
+                description: `${casterName} casts ${action.name}! ${targetName} must make a WIS save (DC ${dc}) or become Incapacitated.`,
+                promptId,
+            }).catch((e) => { console.error('[sleep] Error logging prompt:', e); });
+
+            const saveResult = await promise;
+            success = saveResult.success;
+            roll = saveResult.roll ?? 0;
+            total = saveResult.total ?? 0;
+            saveBonus = saveResult.saveBonus ?? 0;
+        }
+
+        addEntry(campaignName, {
+            type: 'save_result',
+            characterName: casterName,
+            rollType: 'save-sleep',
+            targetName,
+            saveDc: dc,
+            saveType: 'WIS',
+            success,
+            roll,
+            total,
+            saveBonus,
+            description: success
+                ? `${targetName} succeeded on its WIS save (DC ${dc}) against ${action.name}.`
+                : `${targetName} failed its WIS save (DC ${dc}) against ${action.name}.`,
+        }).catch((e) => { console.error('[sleep] Error logging save result:', e); });
+
+        if (success) {
+            addTargetResult(campaignName, {
+                targetName,
+                saveResult: 'success',
+                roll,
+                total,
                 conditions: [],
                 appliedDamage: 0,
             });
         } else {
-            affectedCount++;
-
-            const storedConditions = getRuntimeValue(targetName, 'activeConditions', campaignName) || [];
-            const conditions = Array.isArray(storedConditions) ? storedConditions : [];
-            const filtered = conditions.filter(c => String(c).toLowerCase() !== 'incapacitated');
-            setRuntimeValue(targetName, 'activeConditions', [...filtered, 'incapacitated'], campaignName);
-
-            addExpiration(casterName, targetName, [
-                { type: 'incapacitated', condition: 'incapacitated' },
-            ], campaignName);
-
+            failedTargets.push(targetName);
             addTargetResult(campaignName, {
                 targetName,
                 saveResult: 'failure',
-                roll: saveResult.roll ?? 0,
-                total: saveResult.total ?? 0,
+                roll,
+                total,
                 conditions: ['incapacitated'],
                 appliedDamage: 0,
             });
+        }
+    }
 
+    if (failedTargets.length > 0) {
+        await stageSleepTargets(campaignName, casterName, failedTargets, dc);
+
+        for (const targetName of failedTargets) {
             addEntry(campaignName, {
                 type: 'condition',
                 action: 'applied',
                 characterName: targetName,
                 condition: 'Incapacitated',
-                reason: 'Sleep spell',
-                note: `${targetName} is Incapacitated by Sleep. The spell ends if the target takes damage or someone within 5ft shakes it.`,
-                timestamp: Date.now(),
-            }).catch((e) => { console.error("[sleep] Error:", e); });
-
-            addEntry(campaignName, {
-                type: 'save_result',
-                characterName: casterName,
-                rollType: 'save-sleep',
-                targetName,
-                saveDc: dc,
-                saveType: 'WIS',
-                success: false,
-                description: `${targetName} failed WIS save against Sleep and is Incapacitated.`,
-            }).catch((e) => { console.error("[sleep] Error:", e); });
-
-            results.push(`${targetName} is Incapacitated.`);
+                reason: `${action.name} spell`,
+                sourceName: casterName,
+                note: `${targetName} falls Incapacitated until the end of its next turn, when it repeats the WIS save (DC ${dc}).`,
+            }).catch((e) => { console.error('[sleep] Error logging condition:', e); });
         }
     }
 
-    const summary = affectedCount > 0
-        ? `Sleep affects ${affectedCount} creature(s). ${results.join(' ')} ${savedCount} creature(s) saved. ${immunityCount} creature(s) immune. Affected creatures are Incapacitated until the end of their next turn. The spell ends if a target takes damage or someone within 5ft shakes it.`
-        : `No creatures affected by Sleep. ${savedCount} creature(s) saved. ${immunityCount} creature(s) immune.`;
+    const affectedCount = failedTargets.length;
+    const savedCount = targets.length - affectedCount;
 
     return {
         type: 'popup',
         payload: {
             type: 'automation_info',
             name: action.name,
-            description: summary,
+            description: `${action.name} (DC ${dc}): ${affectedCount} Incapacitated until end of next turn, ${savedCount} succeeded${autoSuccessCount > 0 ? ` (${autoSuccessCount} auto-succeeded)` : ''}.`,
+            automation: auto,
         },
     };
 }

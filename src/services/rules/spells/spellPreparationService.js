@@ -731,7 +731,7 @@ export async function prepareSpellCast(spell, metaCtx, { playerName, playerStats
       const targetName = (spell.name === "Hunter's Mark" || spell.name === 'Hex')
         ? (cs.creatures.find(c => c.name === playerStats.name)?.targetName || null)
         : null;
-      addConcentration(cs, playerName, spell.name, 10, targetName);
+      addConcentration(cs, playerName, spell.name, playerStats.spellAbilities?.saveDc ?? 10, targetName);
       storageService.default.set('combatSummary', cs, campaignName);
     }
   }

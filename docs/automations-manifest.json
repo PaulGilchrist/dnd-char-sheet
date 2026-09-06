@@ -5748,7 +5748,7 @@
       "handler": "src/services/combat/automation/handlers/spellHandler.js",
       "router": "src/services/combat/automation/routers/spellRouter.js",
       "infoBuilder": "src/services/combat/automation/infoBuilders/spellInfoBuilder.js",
-      "verified": "broken — see .opencode/plans/bug-SP-106-silence.md",
+      "verified": "verified",
       "class": "Spell",
       "triggerConditions": "",
       "expectedBehavior": "For the duration, no sound can be created within or pass through a 20-foot-radius Sphere centered on a point you choose within range. Any creature or object entirely inside the Sphere has Immunity to Thunder damage, and creatures have the Deafened condition while entirely inside it. Casting a spell that includes a Verbal component is impossible there."
@@ -5813,10 +5813,10 @@
       "id": "SP-107",
       "name": "Sleep",
       "type": "spell",
-      "handler": "src/services/combat/automation/handlers/spellHandler.js",
-      "router": "src/services/combat/automation/routers/spellRouter.js",
-      "infoBuilder": "src/services/combat/automation/infoBuilders/spellInfoBuilder.js",
-      "verified": "broken — see .opencode/plans/bug-SP-107-sleep.md",
+      "handler": "src/services/automation/handlers/spells/sleepHandler.js",
+      "router": "src/services/rules/spells/spellCastService/execution/index.js",
+      "infoBuilder": "src/services/rules/features/sleepService.js",
+      "verified": "verified",
       "class": "Spell",
       "triggerConditions": "Range: 60 feet; Duration: Concentration, up to 1 minute",
       "expectedBehavior": "Each creature of your choice in a 5-foot-radius Sphere centered on a point within range must succeed on a Wisdom saving throw or have the Incapacitated condition until the end of its next turn, at which point it must repeat the save. If the target fails the second save, the target has the Unconscious condition for the duration. The spell ends on a target if it takes damage or someone within 5 feet of it takes an action to shake it out of the spell's effect. Creatures that don't sleep, such as elves, or that have Immunity to the Exhaustion condition automatically succeed on saves against this spell."

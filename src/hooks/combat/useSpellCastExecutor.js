@@ -88,6 +88,9 @@ function handleModalResult(popup, setModalState) {
         case 'fear':
             setModalState({ fearModal: payload });
             break;
+        case 'sleep':
+            setModalState({ sleepModal: payload });
+            break;
         case 'hypnoticPattern':
             setModalState({ hypnoticPatternModal: payload });
             break;

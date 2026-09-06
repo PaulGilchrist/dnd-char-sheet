@@ -130,7 +130,7 @@ describe('prepareSpellCast — concentration management', () => {
     expect(storageService.default.set).toHaveBeenCalledWith('combatSummary', oldCs, 'camp');
     expect(result.metaCtx.oldConcentrationSpell).toBe('Concentration');
     expect(result.metaCtx.shouldSetConcentration).toBe(true);
-    expect(addConcentration).toHaveBeenCalledWith(oldCs, 'TestWizard', 'Fireball', 10, null);
+    expect(addConcentration).toHaveBeenCalledWith(oldCs, 'TestWizard', 'Fireball', 17, null);
     expect(cleanupConcentrationEffects).toHaveBeenCalledWith('TestWizard', 'Concentration', 'camp');
   });
 
@@ -150,7 +150,7 @@ describe('prepareSpellCast — concentration management', () => {
     expect(breakConcentration).not.toHaveBeenCalled();
     expect(result.metaCtx.oldConcentrationSpell).toBeNull();
     expect(result.metaCtx.shouldSetConcentration).toBe(true);
-    expect(addConcentration).toHaveBeenCalledWith(cs, 'TestWizard', 'Fireball', 10, null);
+    expect(addConcentration).toHaveBeenCalledWith(cs, 'TestWizard', 'Fireball', 17, null);
   });
 
   it('does not set concentration when spell does not require it', async () => {
@@ -202,7 +202,7 @@ describe('prepareSpellCast — concentration management', () => {
       campaignName: 'camp',
     });
 
-    expect(addConcentration).toHaveBeenCalledWith(cs, 'TestWizard', "Hunter's Mark", 10, 'Goblin1');
+    expect(addConcentration).toHaveBeenCalledWith(cs, 'TestWizard', "Hunter's Mark", 17, 'Goblin1');
   });
 
   it('handles Hex concentration with targetName from creature', async () => {
@@ -220,7 +220,7 @@ describe('prepareSpellCast — concentration management', () => {
       campaignName: 'camp',
     });
 
-    expect(addConcentration).toHaveBeenCalledWith(cs, 'TestWizard', 'Hex', 10, 'Goblin1');
+    expect(addConcentration).toHaveBeenCalledWith(cs, 'TestWizard', 'Hex', 17, 'Goblin1');
   });
 
   it('handles Eyebite concentration recast', async () => {

@@ -134,6 +134,7 @@ vi.mock('./modalSpells.js', () => ({
   handleFear: vi.fn(() => ({ handled: false })),
   handleConjureVolley: vi.fn(() => ({ handled: false })),
   handleSilence: vi.fn(() => ({ handled: false })),
+  handleSleep: vi.fn(() => ({ handled: false })),
 }));
 
 vi.mock('./triggerSpells.js', () => ({
