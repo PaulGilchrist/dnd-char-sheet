@@ -57,6 +57,13 @@ function resolveSpellResolution(spell, metaCtx, playerStats, campaignName, getTa
     if (spell.components && spell.components.includes('V')) {
         const silenceCaster = getSilenceSource(playerStats.name, campaignName);
         if (silenceCaster && isCreatureInSilenceZone(playerStats.name, silenceCaster, campaignName)) {
+            addEntry(campaignName, {
+                type: 'automation',
+                creatureName: playerStats.name,
+                name: 'Silence',
+                description: `${spell.name} blocked — ${playerStats.name} is inside ${silenceCaster}'s Silence zone; Verbal components are impossible there.`,
+                timestamp: Date.now(),
+            }).catch((e) => { console.error("[spellResolution:silence-log-error]", e); });
             return { blockedBySilence: true };
         }
     }

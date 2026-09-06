@@ -369,9 +369,10 @@ describe('executeSpellCast — early resolutions', () => {
   /* ---------------------------------------------------------------- */
 
   describe('silence blocking', () => {
-    it('returns undefined when caster is silenced with verbal component', async () => {
+    it('refuses with popup and log when caster is silenced with verbal component', async () => {
       getSilenceSource.mockReturnValue('SilenceCaster');
       isCreatureInSilenceZone.mockReturnValue(true);
+      addEntry.mockClear();
 
       const result = await executeSpellCast(
         makeSpell({ components: ['V', 'S'] }),
@@ -385,7 +386,20 @@ describe('executeSpellCast — early resolutions', () => {
         },
       );
 
-      expect(result).toBeUndefined();
+      expect(result).toEqual({
+        automationPopup: {
+          type: 'popup',
+          payload: expect.objectContaining({
+            type: 'automation_info',
+            name: 'Silence',
+          }),
+        },
+      });
+      const blockLog = addEntry.mock.calls.find(
+        (c) => c[1].type === 'automation' && c[1].name === 'Silence'
+      );
+      expect(blockLog).toBeDefined();
+      expect(blockLog[1].description).toContain('blocked');
     });
 
     it('does not block when spell has no verbal component', async () => {

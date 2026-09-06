@@ -214,7 +214,7 @@ describe('executeSpellCast', () => {
   /* ---------------------------------------------------------------- */
 
   describe('silence blocks verbal components', () => {
-    it('returns early when caster is in silence zone and spell has Verbal', async () => {
+    it('refuses with popup and log when caster is in silence zone and spell has Verbal', async () => {
       const silence = await import('../features/silenceService.js')
       vi.mocked(silence.getSilenceSource).mockReturnValue('SilenceCaster')
       vi.mocked(silence.isCreatureInSilenceZone).mockReturnValue(true)
@@ -226,8 +226,19 @@ describe('executeSpellCast', () => {
         services,
       )
 
-      expect(result).toBeUndefined()
+      expect(result).toEqual({
+        automationPopup: {
+          type: 'popup',
+          payload: expect.objectContaining({
+            type: 'automation_info',
+            name: 'Silence',
+          }),
+        },
+      })
       expect(services.rollDamage).not.toHaveBeenCalled()
+
+      vi.mocked(silence.getSilenceSource).mockReturnValue(null)
+      vi.mocked(silence.isCreatureInSilenceZone).mockReturnValue(false)
     })
   })
 

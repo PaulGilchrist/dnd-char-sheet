@@ -180,27 +180,31 @@ export async function applyDamageToTarget(combatSummary, targetName, rawDamage, 
       }
     }
   }
-  const immunities = isPlayer ? (playerComputed?.immunities || []) : (creature.immunities || []);
+  let immunities = isPlayer ? (playerComputed?.immunities || []) : (creature.immunities || []);
+
+  const rawBuffs = getRuntimeValue(creature.name, 'activeBuffs', campaignName);
+  const activeBuffs = Array.isArray(rawBuffs) ? rawBuffs : [];
 
   if (isPlayer) {
-    const rawBuffs = getRuntimeValue(creature.name, 'activeBuffs', campaignName);
-    const activeBuffs = Array.isArray(rawBuffs) ? rawBuffs : [];
     for (const buff of activeBuffs) {
        if (buff.resistanceTypes?.length) {
            resistances = [...new Set([...resistances, ...buff.resistanceTypes])];
        }
    }
-   // Silence — Thunder immunity for creatures in the silence zone
-   for (const buff of activeBuffs) {
-       if (buff.effect === 'silence' && buff.sourceCharacter) {
-           if (isCreatureInSilenceZone(creature.name, buff.sourceCharacter, campaignName)) {
-               if (!immunities.includes('Thunder')) {
-                   immunities.push('Thunder');
-               }
-           }
-       }
-   }
-}
+  }
+  // Silence — Thunder immunity for ANY creature (player or monster) inside the silence zone
+  let silenceThunderImmunity = false;
+  for (const buff of activeBuffs) {
+      if (buff.effect === 'silence' && buff.sourceCharacter) {
+          if (isCreatureInSilenceZone(creature.name, buff.sourceCharacter, campaignName)) {
+              if (!immunities.some(i => String(i).toLowerCase() === 'thunder')) {
+                  immunities = [...immunities, 'Thunder'];
+              }
+              silenceThunderImmunity = true;
+              break;
+          }
+      }
+  }
 // Aura-granted resistances (e.g., Aura of Warding) — computeAuraComboEffects self-filters
 // to targets that are the source paladin or an ally within Aura of Protection range
 const auraComboEffects = await computeAuraComboEffects({ targetName, characters });
@@ -212,6 +216,16 @@ if (!Array.isArray(damageTypes)) { throw new Error('damageTypes must be an array
     const resResult = computeDamageAfterResistancesWithDetails(rawDamage, damageTypes, resistances, immunities, ignoreResistance);
      let finalDamage = resResult.finalDamage;
     let resistanceDetails = resResult.typeDetails;
+
+    if (silenceThunderImmunity && rawDamage > 0 && damageTypes.some(dt => String(dt).toLowerCase() === 'thunder')) {
+        addEntry(campaignName, {
+            type: 'automation',
+            creatureName: creature.name,
+            name: 'Silence',
+            description: `${creature.name} is immune to Thunder damage inside the Silence zone — ${rawDamage} damage negated.`,
+            timestamp: Date.now(),
+        }).catch((e) => { console.error('[applyDamage] Silence immunity log failed:', e); });
+    }
 
     // Apply damage reduction from features (e.g., Heavy Armor Master)
     let damageReducedByFeature = 0;

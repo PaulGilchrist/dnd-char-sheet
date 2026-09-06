@@ -190,8 +190,95 @@ describe('SilenceModal', () => {
             );
             expect(expirations.addExpiration).toHaveBeenCalledWith(
                 'Wizard1', 'Goblin1',
-                [{ type: 'condition', condition: 'deafened' }],
+                [
+                    { type: 'condition', condition: 'deafened' },
+                    { type: 'remove_active_buff', buffName: 'Silence' },
+                ],
                 'test-campaign'
+            );
+        });
+
+        it('writes a Silence activeBuff with sourceCharacter to caster and each targeted creature', async () => {
+            damageUtils.getCombatContext.mockResolvedValueOnce({
+                players: [{ name: 'Wizard1', gridX: 1, gridY: 1 }],
+                creatures: [{ name: 'Goblin1' }],
+            });
+            runtimeState.getRuntimeValue.mockImplementation((key, prop) => {
+                if (prop === 'activeBuffs') return [];
+                return null;
+            });
+            renderModal();
+            fireEvent.click(screen.getByText('Goblin1'));
+            const confirmButton = screen.getByRole('button', { name: 'Cast Silence (1)' });
+            await act(async () => {
+                fireEvent.click(confirmButton);
+            });
+            const buffCalls = runtimeState.setRuntimeValue.mock.calls.filter(
+                (c) => c[1] === 'activeBuffs'
+            );
+            expect(buffCalls).toHaveLength(2);
+            const casterBuff = buffCalls.find((c) => c[0] === 'Wizard1');
+            const goblinBuff = buffCalls.find((c) => c[0] === 'Goblin1');
+            for (const call of [casterBuff, goblinBuff]) {
+                expect(call[2]).toContainEqual(expect.objectContaining({
+                    name: 'Silence',
+                    effect: 'silence',
+                    duration: 'concentration',
+                    sourceCharacter: 'Wizard1',
+                }));
+            }
+        });
+
+        it('centers the zone on the first placed picked token, not the caster', async () => {
+            damageUtils.getCombatContext.mockResolvedValueOnce({
+                players: [{ name: 'Wizard1', gridX: 1, gridY: 1 }],
+                creatures: [
+                    { name: 'Goblin1', gridX: 8, gridY: 8 },
+                    { name: 'Orc Warrior', gridX: 10, gridY: 10 },
+                ],
+            });
+            renderModal();
+            fireEvent.click(screen.getByText('Goblin1'));
+            fireEvent.click(screen.getByText('Orc Warrior'));
+            const confirmButton = screen.getByRole('button', { name: 'Cast Silence (2)' });
+            await act(async () => {
+                fireEvent.click(confirmButton);
+            });
+            const centerCall = runtimeState.setRuntimeValue.mock.calls.find(
+                (c) => c[1] === 'silenceCenter'
+            );
+            expect(JSON.parse(centerCall[2])).toEqual({ gridX: 8, gridY: 8 });
+        });
+
+        it('refuses picked creatures outside the sphere and logs the refusal', async () => {
+            // Center = Goblin1 @(2,2). Orc Warrior @(8,8): dist = sqrt(72)*5 ≈ 42.4 ft > 20.
+            damageUtils.getCombatContext.mockResolvedValueOnce({
+                players: [{ name: 'Wizard1', gridX: 1, gridY: 1 }],
+                creatures: [
+                    { name: 'Goblin1', gridX: 2, gridY: 2 },
+                    { name: 'Orc Warrior', gridX: 8, gridY: 8 },
+                ],
+            });
+            renderModal();
+            fireEvent.click(screen.getByText('Goblin1'));
+            fireEvent.click(screen.getByText('Orc Warrior'));
+            const confirmButton = screen.getByRole('button', { name: 'Cast Silence (2)' });
+            await act(async () => {
+                fireEvent.click(confirmButton);
+            });
+            const conditionCalls = runtimeState.setRuntimeValue.mock.calls.filter(
+                (c) => c[1] === 'activeConditions'
+            );
+            expect(conditionCalls).toHaveLength(1);
+            expect(conditionCalls[0][0]).toBe('Goblin1');
+            const refusalEntry = logService.addEntry.mock.calls.find(
+                (c) => c[1].type === 'automation' && c[1].creatureName === 'Orc Warrior'
+            );
+            expect(refusalEntry).toBeDefined();
+            expect(refusalEntry[1].description).toContain('outside');
+            expect(silenceService.addSilencedTarget).toHaveBeenCalledTimes(1);
+            expect(silenceService.addSilencedTarget).toHaveBeenCalledWith(
+                'Wizard1', 'Goblin1', 'test-campaign'
             );
         });
 

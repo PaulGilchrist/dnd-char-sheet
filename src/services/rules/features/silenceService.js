@@ -70,11 +70,26 @@ export function getSilenceSource(playerName, campaignName) {
 export function isCreatureInSilenceZone(targetName, casterName, campaignName) {
     if (!isSilenceActive(casterName, campaignName)) return false;
 
+    // Manual-picker zone model: creatures chosen at cast time carry a 'silenced'
+    // te from the caster — that IS zone membership until concentration breaks
+    // (clear_silence_zone drains both te and the Silence activeBuffs).
+    const targetEffects = getRuntimeValue('campaign', 'targetEffects', campaignName) || [];
+    if (Array.isArray(targetEffects) && targetEffects.some(
+        te => te.effect === SILENCE_TARGET_EFFECT && te.source === casterName && te.target === targetName
+    )) {
+        return true;
+    }
+
     const centerStr = getSilenceCenter(casterName, campaignName);
-    if (!centerStr) return false;
+    if (!centerStr) {
+        // No point on the grid: the caster is modeled as standing at the zone center.
+        return targetName === casterName;
+    }
 
     const center = typeof centerStr === 'string' ? JSON.parse(centerStr) : centerStr;
-    if (!center || center.gridX == null || center.gridY == null) return false;
+    if (!center || center.gridX == null || center.gridY == null) {
+        return targetName === casterName;
+    }
 
     const radius = getSilenceRadius(casterName, campaignName);
     const radiusNum = radius ? parseInt(radius, 10) : 20;

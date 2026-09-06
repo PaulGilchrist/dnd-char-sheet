@@ -287,6 +287,42 @@ describe('silenceService', () => {
             getDistanceFeet.mockReturnValue(5);
             expect(isCreatureInSilenceZone('Target', 'Caster', 'TestCampaign')).toBe(true);
         });
+
+        it('grants membership via silenced te from the caster (manual-picker model, no grid)', () => {
+            getRuntimeValue.mockImplementation((player, key) => {
+                if (key === 'silenceCaster') return true;
+                if (key === 'targetEffects') return [
+                    { target: 'Target', effect: 'silenced', source: 'Caster', duration: 'concentration' },
+                ];
+                return undefined;
+            });
+
+            expect(isCreatureInSilenceZone('Target', 'Caster', 'TestCampaign')).toBe(true);
+        });
+
+        it('does not grant te membership for a different caster or effect', () => {
+            getRuntimeValue.mockImplementation((player, key) => {
+                if (key === 'silenceCaster') return true;
+                if (key === 'silenceCenter') return null;
+                if (key === 'targetEffects') return [
+                    { target: 'Target', effect: 'silenced', source: 'OtherCaster', duration: 'concentration' },
+                ];
+                return undefined;
+            });
+
+            expect(isCreatureInSilenceZone('Target', 'Caster', 'TestCampaign')).toBe(false);
+        });
+
+        it('models the caster as standing at the zone center when no center is stored', () => {
+            getRuntimeValue.mockImplementation((player, key) => {
+                if (key === 'silenceCaster') return true;
+                if (key === 'silenceCenter') return null;
+                if (key === 'targetEffects') return [];
+                return undefined;
+            });
+
+            expect(isCreatureInSilenceZone('Caster', 'Caster', 'TestCampaign')).toBe(true);
+        });
     });
 
     describe('getSilencedTargets', () => {

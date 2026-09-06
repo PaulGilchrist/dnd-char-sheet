@@ -97,7 +97,23 @@ export async function executeSpellCast(spell, metaCtx, { rollAttack, rollDamage,
     if (spell.components && spell.components.includes('V')) {
         const silenceCaster = getSilenceSource(playerStats.name, campaignName);
         if (silenceCaster && isCreatureInSilenceZone(playerStats.name, silenceCaster, campaignName)) {
-            return;
+            await addEntry(campaignName, {
+                type: 'automation',
+                creatureName: playerStats.name,
+                name: 'Silence',
+                description: `${spell.name} blocked — ${playerStats.name} is inside ${silenceCaster}'s Silence zone; Verbal components are impossible there.`,
+                timestamp: Date.now(),
+            }).catch((e) => { console.error("[index:silence-log-error]", e); });
+            return {
+                automationPopup: {
+                    type: 'popup',
+                    payload: {
+                        type: 'automation_info',
+                        name: 'Silence',
+                        description: `${spell.name} cannot be cast — ${playerStats.name} is inside a Silence zone and Verbal spell components are impossible there.`,
+                    },
+                },
+            };
         }
     }
 

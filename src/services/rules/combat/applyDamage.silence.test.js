@@ -183,8 +183,85 @@ describe('Silence zone — Thunder immunity for players', () => {
   });
 });
 
-describe('Silence zone — does not apply to NPCs', () => {
-  it('does not add Thunder immunity for NPC creatures', async () => {
+describe('Silence zone — NPC creatures', () => {
+  it('adds Thunder immunity for NPC creatures with a silence buff in the zone (SP-106)', async () => {
+    silenceService.isCreatureInSilenceZone.mockImplementation(() => true);
+    global.fetch.mockReset();
+
+    const npc = {
+      name: 'Thug 1',
+      type: 'monster',
+      maxHp: 32,
+      currentHp: 32,
+      resistances: [],
+      immunities: [],
+      conditions: [],
+      template: [],
+      concentration: null,
+      saveBonuses: {},
+    };
+    const cs = makeCombatSummary([npc]);
+
+    getRuntimeValue.mockImplementation((_charName, key, _campaignName) => {
+      if (key === 'activeBuffs') return [{ name: 'Silence', effect: 'silence', sourceCharacter: 'Divine_Cleric' }];
+      if (key === 'currentHitPoints') return 32;
+      if (key === 'activeConditions') return ['deafened'];
+      if (key === 'tempHp') return 0;
+      if (key === 'polymorphTempHp') return 0;
+      return undefined;
+    });
+
+    const logModule = await import('../../ui/logService.js');
+    logModule.addEntry.mockClear();
+
+    const result = await applyDamageToTarget(cs, 'Thug 1', 9, ['Thunder'], 'TestCampaign', []);
+
+    expect(silenceService.isCreatureInSilenceZone).toHaveBeenCalledWith('Thug 1', 'Divine_Cleric', 'TestCampaign');
+    expect(result.finalDamage).toBe(0);
+    expect(npc.immunities).toEqual([]);
+    expect(npc.currentHp).toBe(32);
+    const immunityLog = logModule.addEntry.mock.calls.find(
+      (c) => c[1].type === 'automation' && c[1].name === 'Silence'
+    );
+    expect(immunityLog).toBeDefined();
+    expect(immunityLog[1].description).toContain('immune to Thunder');
+    expect(immunityLog[1].description).toContain('9 damage negated');
+  });
+
+  it('does not add Thunder immunity for NPC creatures outside the zone', async () => {
+    silenceService.isCreatureInSilenceZone.mockImplementation(() => false);
+    global.fetch.mockReset();
+
+    const npc = {
+      name: 'Thug 2',
+      type: 'monster',
+      maxHp: 32,
+      currentHp: 32,
+      resistances: [],
+      immunities: [],
+      conditions: [],
+      template: [],
+      concentration: null,
+      saveBonuses: {},
+    };
+    const cs = makeCombatSummary([npc]);
+
+    getRuntimeValue.mockImplementation((_charName, key, _campaignName) => {
+      if (key === 'activeBuffs') return [{ name: 'Silence', effect: 'silence', sourceCharacter: 'Divine_Cleric' }];
+      if (key === 'currentHitPoints') return 32;
+      if (key === 'activeConditions') return [];
+      if (key === 'tempHp') return 0;
+      if (key === 'polymorphTempHp') return 0;
+      return undefined;
+    });
+
+    const result = await applyDamageToTarget(cs, 'Thug 2', 9, ['Thunder'], 'TestCampaign', []);
+
+    expect(result.finalDamage).toBe(9);
+    expect(npc.currentHp).toBe(23);
+  });
+
+  it('does not consult silence for NPC creatures with no silence buff', async () => {
     silenceService.isCreatureInSilenceZone.mockClear();
     silenceService.isCreatureInSilenceZone.mockImplementation(() => true);
     global.fetch.mockReset();

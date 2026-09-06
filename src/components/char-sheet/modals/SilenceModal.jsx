@@ -1,6 +1,7 @@
 import { useCallback } from 'react';
 import { setRuntimeValue, getRuntimeValue } from '../../../hooks/runtime/useRuntimeState.js';
 import { getCombatContext } from '../../../services/rules/combat/damageUtils.js';
+import { getDistanceFeet } from '../../../services/rules/combat/rangeValidation.js';
 import { addEntry } from '../../../services/ui/logService.js';
 import { addExpiration } from '../../../services/rules/effects/expirations.js';
 import CreatureSelectionModal from './shared/CreatureSelectionModal.jsx';
@@ -9,6 +10,11 @@ import { addSilencedTarget } from '../../../services/rules/features/silenceServi
 const SILENCE_KEY = 'silenceCaster';
 const SILENCE_CENTER_KEY = 'silenceCenter';
 const SILENCE_RADIUS_KEY = 'silenceRadius';
+const SILENCE_BUFF_NAME = 'Silence';
+
+function hasGridPos(c) {
+    return !!c && c.gridX != null && c.gridY != null;
+}
 
 export default function SilenceModal({
     playerStats,
@@ -32,10 +38,25 @@ export default function SilenceModal({
         }
 
         const combatSummary = await getCombatContext(campaignName);
+        const csAll = [
+            ...(combatSummary?.players || []),
+            ...(combatSummary?.creatures || []),
+        ];
+        const posOf = name => csAll.find(c => c.name === name && hasGridPos(c));
+
+        // "Point you choose" (manual-picker model): the first placed picked token
+        // is the sphere center; fall back to the caster's grid position.
         let centerGrid = null;
-        if (combatSummary) {
-            const casterPos = combatSummary.players?.find(p => p.name === casterName);
-            if (casterPos && casterPos.gridX != null && casterPos.gridY != null) {
+        for (const targetName of targetedNames) {
+            const pickedPos = posOf(targetName);
+            if (pickedPos) {
+                centerGrid = { gridX: pickedPos.gridX, gridY: pickedPos.gridY };
+                break;
+            }
+        }
+        if (!centerGrid) {
+            const casterPos = posOf(casterName);
+            if (casterPos) {
                 centerGrid = { gridX: casterPos.gridX, gridY: casterPos.gridY };
             }
         }
@@ -44,18 +65,53 @@ export default function SilenceModal({
         setRuntimeValue(casterName, SILENCE_CENTER_KEY, centerGrid ? JSON.stringify(centerGrid) : null, campaignName);
         setRuntimeValue(casterName, SILENCE_RADIUS_KEY, aoeRadius, campaignName);
 
+        const grantSilenceBuff = (name) => {
+            const stored = getRuntimeValue(name, 'activeBuffs', campaignName) || [];
+            const buffs = Array.isArray(stored) ? stored : [];
+            if (buffs.some(b => b.name === SILENCE_BUFF_NAME && b.effect === 'silence')) return;
+            setRuntimeValue(name, 'activeBuffs', [...buffs, {
+                name: SILENCE_BUFF_NAME,
+                effect: 'silence',
+                duration: 'concentration',
+                sourceCharacter: casterName,
+            }], campaignName);
+        };
+
+        // The caster's own Silence buff feeds getSilenceSource for the V-component gate.
+        grantSilenceBuff(casterName);
+
         const results = [];
 
         for (const targetName of targetedNames) {
+            // With a known center, creatures provably outside the 20-ft sphere are refused.
+            if (centerGrid) {
+                const targetPos = posOf(targetName);
+                if (targetPos) {
+                    const dist = getDistanceFeet(centerGrid, targetPos);
+                    if (dist != null && dist > aoeRadius) {
+                        await addEntry(campaignName, {
+                            type: 'automation',
+                            creatureName: targetName,
+                            name: SILENCE_BUFF_NAME,
+                            description: `${targetName} is ${Math.round(dist)} ft from the Silence center — outside the ${aoeRadius}-foot-radius sphere, unaffected.`,
+                            timestamp: Date.now(),
+                        }).catch((e) => { console.error("[silence] Error logging refusal:", e); });
+                        continue;
+                    }
+                }
+            }
+
             const storedConditions = getRuntimeValue(targetName, 'activeConditions', campaignName) || [];
             const conditions = Array.isArray(storedConditions) ? storedConditions : [];
             const filtered = conditions.filter(c => String(c).toLowerCase() !== 'deafened');
             const newConditions = [...filtered, 'deafened'];
             setRuntimeValue(targetName, 'activeConditions', newConditions, campaignName);
 
+            grantSilenceBuff(targetName);
             addSilencedTarget(casterName, targetName, campaignName);
             addExpiration(casterName, targetName, [
                 { type: 'condition', condition: 'deafened' },
+                { type: 'remove_active_buff', buffName: SILENCE_BUFF_NAME },
             ], campaignName);
 
             await addEntry(campaignName, {
@@ -72,8 +128,11 @@ export default function SilenceModal({
         }
 
         addExpiration(casterName, casterName, [
-            { type: 'remove_active_buff', buffName: 'Silence' },
+            { type: 'remove_active_buff', buffName: SILENCE_BUFF_NAME },
             { type: 'clear_silence_zone', casterName },
+            { type: 'clear_runtime_value', creatureName: casterName, key: SILENCE_KEY },
+            { type: 'clear_runtime_value', creatureName: casterName, key: SILENCE_CENTER_KEY },
+            { type: 'clear_runtime_value', creatureName: casterName, key: SILENCE_RADIUS_KEY },
         ], campaignName);
 
         await addEntry(campaignName, {

@@ -55,6 +55,7 @@ import { getPsychicSpellsConfig } from '../../../../automation/handlers/class-wa
 import { getSilenceSource, isCreatureInSilenceZone } from '../../../features/silenceService.js';
 import { endFriendsOnHostileAction } from '../../../features/friendsService.js';
 import { endInvisibilityOnHostileAction } from '../../../features/invisibilityService.js';
+import { addEntry } from '../../../../ui/logService.js';
 
 /* ------------------------------------------------------------------ */
 /*  Test-data factories                                                */
@@ -435,6 +436,12 @@ describe('spellResolution', () => {
       );
 
       expect(result).toEqual({ blockedBySilence: true });
+      const blockLog = addEntry.mock.calls.find(
+        (c) => c[1].type === 'automation' && c[1].name === 'Silence'
+      );
+      expect(blockLog).toBeDefined();
+      expect(blockLog[1].description).toContain('blocked');
+      expect(blockLog[1].description).toContain('Fireball');
     });
 
     it('does not block when spell has no Verbal component', () => {

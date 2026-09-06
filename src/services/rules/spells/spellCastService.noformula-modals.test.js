@@ -44,6 +44,10 @@ vi.mock('../features/silenceService.js', () => ({
   triggerSilence: vi.fn(),
 }))
 
+vi.mock('../../ui/logService.js', () => ({
+  addEntry: vi.fn(() => Promise.resolve()),
+}))
+
 vi.mock('../features/invisibilityService.js', () => ({
   endInvisibilityOnHostileAction: vi.fn(),
 }))
@@ -250,6 +254,76 @@ describe('executeSpellCast - no-formula spell routing', () => {
           slotLevel: expect.any(Number),
         }),
       })
+    })
+  })
+
+  // ------------------------------------------------------------------
+  // Silence — Verbal component gate (SP-106)
+  // ------------------------------------------------------------------
+  describe('silence verbal-component gate', () => {
+    async function getSilenceMocks() {
+      const silence = await import('../features/silenceService.js')
+      const log = await import('../../ui/logService.js')
+      return { silence, log }
+    }
+
+    it('blocks a Verbal spell cast by a silenced caster with refusal popup + log', async () => {
+      const { silence, log } = await getSilenceMocks()
+      silence.getSilenceSource.mockReturnValue('Divine_Cleric')
+      silence.isCreatureInSilenceZone.mockReturnValue(true)
+
+      const services = makeServices({ playerStats: makePlayerStats({ name: 'Divine_Cleric' }) })
+      const spell = makeSpell({ name: 'Sacred Flame', level: 0, components: ['V', 'S'] })
+
+      const result = await executeSpellCast(spell, makeMetaCtx({ slotLevel: 0 }), services)
+
+      expect(result.automationPopup).toEqual({
+        type: 'popup',
+        payload: expect.objectContaining({
+          type: 'automation_info',
+          name: 'Silence',
+        }),
+      })
+      expect(result.automationPopup.payload.description).toContain('Verbal')
+      const blockLog = log.addEntry.mock.calls.find(
+        (c) => c[1].type === 'automation' && c[1].name === 'Silence'
+      )
+      expect(blockLog).toBeDefined()
+      expect(blockLog[1].description).toContain('blocked')
+      expect(blockLog[1].description).toContain('Sacred Flame')
+      expect(services.rollDamage).not.toHaveBeenCalled()
+      silence.getSilenceSource.mockReturnValue(null)
+      silence.isCreatureInSilenceZone.mockReturnValue(false)
+    })
+
+    it('does not block a non-Verbal spell while inside the Silence zone', async () => {
+      const { silence } = await getSilenceMocks()
+      silence.getSilenceSource.mockReturnValue('Divine_Cleric')
+      silence.isCreatureInSilenceZone.mockReturnValue(true)
+
+      const services = makeServices()
+      const spell = makeSpell({ name: 'Conjure Volley', components: ['S'] })
+      delete spell.damage
+      delete spell.dc
+
+      const result = await executeSpellCast(spell, makeMetaCtx(), services)
+
+      expect(result.automationPopup.payload.type).toBe('automation_info')
+      expect(result.automationPopup.payload.name).toBe('Conjure Volley')
+    })
+
+    it('does not block Verbal spells when no Silence zone applies', async () => {
+      const { silence } = await getSilenceMocks()
+      silence.getSilenceSource.mockReturnValue(null)
+
+      const services = makeServices()
+      const spell = makeSpell({ name: 'Conjure Volley', components: ['V', 'S'] })
+      delete spell.damage
+      delete spell.dc
+
+      const result = await executeSpellCast(spell, makeMetaCtx(), services)
+
+      expect(result.automationPopup.payload.name).toBe('Conjure Volley')
     })
   })
 })
