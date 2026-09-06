@@ -76,9 +76,11 @@ export function useConfirmableFlow(playerStats, campaignName) {
 
       const isCantrip = (pending.spell?.level === 0);
       if (!isCantrip && pending.spell) {
-        const freeCastAuthorized = isFreeCastAuthorized(playerStats.name, pending.spellName, pending.spellLevel || 0, playerStats, campaignName);
         const upcastLevel = pending.spell.upcastLevel;
         const isUpcast = upcastLevel != null && upcastLevel !== pending.spell.level;
+        // CLA-312: gate free-cast authorization on the EFFECTIVE cast level.
+        const gateLevel = isUpcast ? upcastLevel : (pending.spell.level ?? pending.spellLevel ?? 0);
+        const freeCastAuthorized = isFreeCastAuthorized(playerStats.name, pending.spellName, gateLevel, playerStats, campaignName);
         await prepareSpellCast(pending.spell, {}, {
           playerName: playerStats.name,
           playerStats,

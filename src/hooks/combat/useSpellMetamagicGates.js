@@ -49,7 +49,9 @@ export async function gateMetamagic(spell, metaCtx, {
         const spendPowerWordSlot = async () => {
           const isUpcast = spell.isUpcast;
           const upcastLevel = spell.upcastLevel;
-          const freeCastAuthorized = isFreeCastAuthorized(playerStats.name, spell.name, spell.level, playerStats, campaignName);
+          // CLA-312: gate free-cast authorization on the EFFECTIVE cast level.
+          const gateLevel = (isUpcast && upcastLevel) || spell.level;
+          const freeCastAuthorized = isFreeCastAuthorized(playerStats.name, spell.name, gateLevel, playerStats, campaignName);
           const result = await prepareSpellCast(spell, metaCtx, {
             playerName: playerStats.name,
             playerStats,
@@ -146,7 +148,10 @@ export async function gateMetamagic(spell, metaCtx, {
     } else {
       const isUpcast = spell.isUpcast;
       const upcastLevel = spell.upcastLevel;
-      const freeCastAuthorized = isFreeCastAuthorized(playerStats.name, spell.name, spell.level, playerStats, campaignName);
+      // CLA-312: gate free-cast authorization on the EFFECTIVE cast level —
+      // a higher-level cast of a free-cast feature spell must pay its slot.
+      const gateLevel = (isUpcast && upcastLevel) || spell.level;
+      const freeCastAuthorized = isFreeCastAuthorized(playerStats.name, spell.name, gateLevel, playerStats, campaignName);
       const result = await prepareSpellCast(spell, metaCtx, {
         playerName: playerStats.name,
         playerStats,

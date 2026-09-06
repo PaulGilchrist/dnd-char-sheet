@@ -15,7 +15,15 @@ function SpellDetailPopup({ spell, playerStats, campaignName, onClose, onCast, u
   const charDmg = spell.damage?.damage_at_character_level;
   const isUpcastable = !isCantrip && ((slotDmg && Object.keys(slotDmg).length > 1) || (healAtSlotLevel && Object.keys(healAtSlotLevel).length > 1) || (spell.upcast_at_slot_level && Object.keys(spell.upcast_at_slot_level).length > 1));
 
-  const freeCastAuthorized = isFreeCastAuthorized(playerStats.name, spell.name, spell.level, playerStats, campaignName);
+  // CLA-312: free-cast authorization is gated on the EFFECTIVE cast level —
+  // selecting a higher upcast level here must revoke the free-cast affordance
+  // (Signature Spells / Spell Mastery free casts are fixed to their base level).
+  const [selectedUpcastLvl, setSelectedUpcastLvl] = useState(() => {
+    const firstAvailable = upcastLevels.find(l => l.availableSlots > 0);
+    return firstAvailable ? String(firstAvailable.level) : String(upcastLevels[0]?.level || spell.level);
+  });
+  const gateSpellLevel = isUpcastable ? (Number(selectedUpcastLvl) || spell.level) : spell.level;
+  const freeCastAuthorized = isFreeCastAuthorized(playerStats.name, spell.name, gateSpellLevel, playerStats, campaignName);
 
   // CLA-252: Phantasmal Creatures free cast — spectral Illusion version, halved HP.
   const phantasmalPassive = playerStats?.automation?.passives?.find(p => p.type === 'phantasmal_creatures');
@@ -83,10 +91,6 @@ function SpellDetailPopup({ spell, playerStats, campaignName, onClose, onCast, u
   const [noVComponents] = useState(hasImprovedIllusions && isIllusionSpell());
 
   const [usePsionicPayment, setUsePsionicPayment] = useState(false);
-  const [selectedUpcastLvl, setSelectedUpcastLvl] = useState(() => {
-    const firstAvailable = upcastLevels.find(l => l.availableSlots > 0);
-    return firstAvailable ? String(firstAvailable.level) : String(upcastLevels[0]?.level || spell.level);
-  });
    const hasOverchannelPassive = playerStats?.automation?.passives?.some(p => p.type === 'overchannel');
    const isOverchannelApplicable = hasOverchannelPassive && hasDamage && spell.level >= 1 && spell.level <= 5;
    const [useOverchannel, setUseOverchannel] = useState(false);

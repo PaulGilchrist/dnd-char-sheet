@@ -55,9 +55,11 @@ export function useMetamagicHandler(playerStats, campaignName, cfClearPending, g
       metaCtx.psionicSpell = true
     }
 
-    const freeCastAuthorized = isFreeCastAuthorized(playerStats.name, pending.spellName, pending.spellLevel, playerStats, campaignName)
     const isUpcast = pending.spell?.isUpcast
     const upcastLevel = pending.spell?.upcastLevel
+    // CLA-312: gate free-cast authorization on the EFFECTIVE cast level.
+    const gateLevel = (isUpcast && upcastLevel) || (pending.spell?.level ?? pending.spellLevel ?? 0)
+    const freeCastAuthorized = isFreeCastAuthorized(playerStats.name, pending.spellName, gateLevel, playerStats, campaignName)
     const result2 = await prepareSpellCast(pending.spell, metaCtx, {
       playerName: playerStats.name,
       playerStats,
