@@ -5876,7 +5876,7 @@
       "handler": "src/services/combat/automation/handlers/classFeatureHandler.js",
       "router": "src/services/combat/automation/routers/classFeatureRouter.js",
       "infoBuilder": "src/services/combat/automation/infoBuilders/classFeatureInfoBuilder.js",
-      "verified": "broken — see .opencode/plans/bug-CLA-315-slow-fall.md",
+      "verified": "verified",
       "class": "Monk",
       "triggerConditions": "Trigger: falling; Action: 1 reaction",
       "expectedBehavior": "You can take a Reaction when you fall to reduce fall damage by an amount equal to five times your Monk level."

@@ -145,6 +145,20 @@ describe('damageRollback', () => {
             expect(result.attackerName).toBe('Orc');
             expect(result.targetName).toBe('Wizard');
         });
+
+        it('passes through the trigger stamp (CLA-315 Slow Fall gate)', async () => {
+            const attack = makeLastAttack({ attackerName: 'Collapsing Floor', targetName: 'Monk', trigger: 'falling', damageTypes: ['bludgeoning'] });
+            getRuntimeValue.mockReturnValue(attack);
+
+            const result = await findLastAttack(campaignName);
+            expect(result.trigger).toBe('falling');
+            expect(result.attackEvent.trigger).toBe('falling');
+
+            const plain = makeLastAttack({ attackerName: 'Thug 1', targetName: 'Monk' });
+            getRuntimeValue.mockReturnValue(plain);
+            const plainResult = await findLastAttack(campaignName);
+            expect(plainResult.trigger).toBeNull();
+        });
     });
 
     // ─── findAttackRollAgainstTarget ─────────────────────────

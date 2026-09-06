@@ -50,6 +50,7 @@ export function createNextCreatureHandler({
                     setRuntimeValue(creature.name, '_Retaliation_usedRound', null, campaignName)
                     setRuntimeValue(creature.name, '_ShadowyDodge_usedRound', null, campaignName)
                     setRuntimeValue(creature.name, '_ShadowyDodge_appliedAttack', null, campaignName)
+                    setRuntimeValue(creature.name, '_Slow_Fall_usedRound', null, campaignName)
                     setRuntimeValue(creature.name, '_Riposte_usedRound', null, campaignName)
                     setRuntimeValue(creature.name, '_Riposte_appliedAttack', null, campaignName)
                     setRuntimeValue(creature.name, 'pendingRiposteDieValue', null, campaignName)

@@ -77,6 +77,14 @@ function matchesTrigger(lastAttack, trigger) {
         return lastAttack.attackEvent?.weaponType === 'ranged';
     }
 
+    if (trigger === 'falling') {
+        // CLA-315: Slow Fall triggers on FALL damage only. The app has no
+        // fall-damage producer yet; only a lastAttack explicitly stamped
+        // trigger === 'falling' by a GM fall tool passes. Weapon attacks
+        // must never satisfy it (was failing open on any lastAttack).
+        return lastAttack.trigger === 'falling' || lastAttack.attackEvent?.trigger === 'falling';
+    }
+
     return true;
 }
 
@@ -160,15 +168,59 @@ export async function handle(action, playerStats, campaignName, _mapName) {
     }
 
     if (!matchesTrigger(lastAttack, auto.trigger)) {
+        const refusalText = auto.trigger === 'falling'
+            ? `${featureName}: You are not falling — this Reaction can only be used when you take falling damage.`
+            : `${featureName}: The last attack's damage type does not match the trigger condition (${auto.trigger}).`;
+        addEntry(campaignName, {
+            type: 'automation',
+            characterName: playerName,
+            automationType: auto.trigger === 'falling' ? 'slow_fall_refused' : 'damage_reduction_refused',
+            name: featureName,
+            description: refusalText,
+            timestamp: Date.now(),
+        }).catch((e) => { console.error("[damageReduction] Error logging refusal:", e); });
         return {
             type: 'popup',
             payload: {
                 type: 'automation_info',
                 name: featureName,
-                description: `${featureName}: The last attack's damage type does not match the trigger condition (${auto.trigger}).`,
+                description: refusalText,
                 automation: auto,
             },
         };
+    }
+
+    // CLA-315: Reaction economy latch for the 'falling' trigger consumers
+    // (Slow Fall) — mirrors the CLA-297 Retaliation / CLA-310 Shadowy Dodge
+    // recipe: stamp holder playerStats.name, re-arms when the combat round
+    // advances (also cleared at round wrap in initiative.jsx /
+    // navigationHandlers.js).
+    const combatContext = await getCombatContext(campaignName);
+    const usedRoundKey = `_${featureName.replace(/\s+/g, '_')}_usedRound`;
+    if (auto.trigger === 'falling') {
+        const currentRound = combatContext?.round || 1;
+        const usedRound = Number(getRuntimeValue(playerName, usedRoundKey, campaignName) ?? 0);
+        if (usedRound === currentRound) {
+            const refusalText = `You have already used ${featureName} this round — your Reaction is spent until your next turn.`;
+            addEntry(campaignName, {
+                type: 'automation',
+                characterName: playerName,
+                automationType: 'slow_fall_refused',
+                name: featureName,
+                description: refusalText,
+                timestamp: Date.now(),
+            }).catch((e) => { console.error("[damageReduction] Error logging refusal:", e); });
+            return {
+                type: 'popup',
+                payload: {
+                    type: 'automation_info',
+                    name: featureName,
+                    description: refusalText,
+                    automation: auto,
+                },
+            };
+        }
+        await setRuntimeValue(playerName, usedRoundKey, currentRound, campaignName);
     }
 
     const totalDamage = lastAttack.totalDamage || 0;
@@ -180,7 +232,7 @@ export async function handle(action, playerStats, campaignName, _mapName) {
     const actualHeal = Math.min(reductionAmount, totalDamage);
     const damageAfterReduction = Math.max(0, totalDamage - reductionAmount);
 
-    const cs = await getCombatContext(campaignName);
+    const cs = combatContext;
     let healedAmount = 0;
     if (cs && actualHeal > 0) {
         const healResult = await applyHealingToTarget(cs, playerName, actualHeal, campaignName);

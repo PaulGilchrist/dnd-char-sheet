@@ -29,6 +29,7 @@ export async function findLastAttack(campaignName) {
         },
         attackerName: a.attackerName,
         targetName: a.targetName,
+        trigger: a.trigger || null,
         primaryDamage: primary,
         secondaryDamage: secondary,
         totalDamage: actualDamage,
