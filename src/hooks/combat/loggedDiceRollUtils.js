@@ -58,6 +58,13 @@ export function getShieldOfFaithAcBonus(characterName, campaignName) {
     return shieldOfFaithActive ? 2 : 0;
 }
 
+// SP-109: Slow imposes a -2 AC penalty on the target until the spell ends.
+export function getSlowAcPenalty(characterName, campaignName) {
+    if (!characterName) return 0;
+    const activeConditions = getRuntimeValue(characterName, 'activeConditions', campaignName) || [];
+    return Array.isArray(activeConditions) && activeConditions.some(c => String(c).toLowerCase() === 'slow') ? 2 : 0;
+}
+
 export function isMagicMissileImmune(characterName, campaignName) {
     const activeBuffs = getRuntimeValue(characterName, 'activeBuffs', campaignName) || [];
     return Array.isArray(activeBuffs) && activeBuffs.some(b => b.effect === 'shield');

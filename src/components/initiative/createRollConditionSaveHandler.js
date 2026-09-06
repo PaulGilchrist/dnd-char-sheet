@@ -4,6 +4,7 @@ import storage from '../../services/ui/storage.js'
 import { rollConditionSave, removeCondition, buildConditionPopup } from '../../services/combat/conditions/conditionSaveService.js'
 import { removeForcecageEffect } from '../../services/automation/handlers/spells/forcecageHandler.js'
 import { removeMazeEffect } from '../../services/automation/handlers/spells/mazeHandler.js'
+import { removeSlowEffectsForTarget } from '../../services/combat/conditions/slowEffects.js'
 import { getAbilityLabel } from '../../services/combat/conditions/conditionUtils.js'
 import { logConditionSave } from '../../services/encounters/combatLoggingService.js'
 import * as logService from '../../services/ui/logService.js'
@@ -31,6 +32,21 @@ export function createRollConditionSaveHandler({
 
         if (success) {
             removeCondition(combatSummary, creatureName, condition, getRuntimeValue, setRuntimeValue, campaignName)
+
+            // SP-109: Slow ends on itself on a successful repeat save — strip its target effects
+            if (String(condition.key).toLowerCase() === 'slow') {
+                if (removeSlowEffectsForTarget(creatureName, campaignName)) {
+                    await logService.addEntry(campaignName, {
+                        type: 'condition',
+                        action: 'removed',
+                        characterName: creatureName,
+                        condition: 'Slow effects',
+                        reason: 'Slow (successful repeat save)',
+                        note: `${creatureName} succeeded on the WIS repeat save; Slow ends and its target effects are removed.`,
+                        timestamp: Date.now(),
+                    }).catch((e) => { console.error("[initiativeConditionSave:log-error]", e); })
+                }
+            }
 
             // Otto's Irresistible Dance
             if (String(condition.key).toLowerCase() === 'charmed') {

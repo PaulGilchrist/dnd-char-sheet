@@ -11,7 +11,10 @@ export function getSaveDisadvantage(current, campaignName) {
   const targetConditions = getRuntimeValue(current.targetName, 'activeConditions', campaignName) || [];
   if (targetConditions.some(c => String(c).toLowerCase() === 'charmed')) return true;
   const targetEffects = getRuntimeValue('campaign', 'targetEffects', campaignName) || [];
-  return targetEffects.some(te => te.target === current.targetName && te.effect === 'ottos_irresistible_dance');
+  if (targetEffects.some(te => te.target === current.targetName && te.effect === 'ottos_irresistible_dance')) return true;
+  // SP-109: Slow imposes disadvantage on DEX saves (house model of the RAW -2 penalty).
+  if (targetConditions.some(c => String(c).toLowerCase() === 'slow')) return true;
+  return targetEffects.some(te => te.target === current.targetName && te.effect === 'dex_save_disadvantage');
 }
 
 // Holy Aura: protected targets (holy_aura targetEffect) gain advantage on ALL saving throws.

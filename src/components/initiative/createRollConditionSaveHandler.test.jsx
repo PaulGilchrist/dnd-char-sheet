@@ -27,6 +27,11 @@ vi.mock('../../services/automation/handlers/spells/mazeHandler.js', () => ({
     removeMazeEffect: vi.fn(),
 }));
 
+vi.mock('../../services/combat/conditions/slowEffects.js', () => ({
+    removeSlowEffectsForTarget: vi.fn(() => true),
+    SLOW_TE_EFFECTS: ['no_reactions', 'dex_save_disadvantage', 'ac_penalty', 'action_limit', 'single_attack_limit', 'somatic_failure_chance'],
+}));
+
 vi.mock('../../services/encounters/combatLoggingService.js', () => ({
     logConditionSave: vi.fn(),
 }));
@@ -45,6 +50,7 @@ import storage from '../../services/ui/storage.js';
 import { rollConditionSave, removeCondition, buildConditionPopup } from '../../services/combat/conditions/conditionSaveService.js';
 import { removeForcecageEffect } from '../../services/automation/handlers/spells/forcecageHandler.js';
 import { removeMazeEffect } from '../../services/automation/handlers/spells/mazeHandler.js';
+import { removeSlowEffectsForTarget } from '../../services/combat/conditions/slowEffects.js';
 import { logConditionSave } from '../../services/encounters/combatLoggingService.js';
 import { addEntry } from '../../services/ui/logService.js';
 import { getRuntimeValue, setRuntimeValue } from '../../hooks/runtime/useRuntimeState.js';
@@ -699,6 +705,43 @@ describe('createRollConditionSaveHandler', () => {
                 .resolves.toBeUndefined();
 
             expect(removeForcecageEffect).toHaveBeenCalled();
+        });
+    });
+
+    // ------------------------------------------------------------------
+    // SP-109: Slow ends on itself on a successful repeat save — strip te + log
+    // ------------------------------------------------------------------
+    describe('SP-109 slow save-end cleanup', () => {
+        it('strips Slow target effects and logs on a successful slow repeat save', async () => {
+            const handler = createHandler();
+            rollConditionSave.mockResolvedValue(makeSuccessRoll());
+
+            await handler('Goblin', { key: 'slow', label: 'Slow', dc: 17, ability: 'wis' });
+
+            expect(removeCondition).toHaveBeenCalled();
+            expect(removeSlowEffectsForTarget).toHaveBeenCalledWith('Goblin', 'test-campaign');
+            expect(addEntry).toHaveBeenCalledWith(
+                'test-campaign',
+                expect.objectContaining({ type: 'condition', action: 'removed', characterName: 'Goblin', condition: 'Slow effects' }),
+            );
+        });
+
+        it('does not touch target effects when the slow repeat save fails', async () => {
+            const handler = createHandler();
+            rollConditionSave.mockResolvedValue(makeFailureRoll());
+
+            await handler('Goblin', { key: 'slow', label: 'Slow', dc: 17, ability: 'wis' });
+
+            expect(removeSlowEffectsForTarget).not.toHaveBeenCalled();
+        });
+
+        it('does not strip slow te for non-slow conditions', async () => {
+            const handler = createHandler();
+            rollConditionSave.mockResolvedValue(makeSuccessRoll());
+
+            await handler('Alice', { key: 'blinded', label: 'Blinded', dc: 15, ability: 'con' });
+
+            expect(removeSlowEffectsForTarget).not.toHaveBeenCalled();
         });
     });
 });

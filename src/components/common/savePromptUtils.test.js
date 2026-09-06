@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { getHolyAuraSaveAdvantage } from './savePromptUtils.js';
+import { getHolyAuraSaveAdvantage, getSaveDisadvantage } from './savePromptUtils.js';
 import { getRuntimeValue } from '../../hooks/runtime/useRuntimeState.js';
 
 vi.mock('../../hooks/runtime/useRuntimeState.js', () => ({
@@ -44,5 +44,48 @@ describe('getHolyAuraSaveAdvantage', () => {
 
   it('returns false without a current prompt', () => {
     expect(getHolyAuraSaveAdvantage(null, 'test-campaign')).toBe(false);
+  });
+});
+
+describe('getSaveDisadvantage — SP-109 Slow DEX save enforcement', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    getRuntimeValue.mockReturnValue(null);
+  });
+
+  it('returns true for a DEX save on a slowed NPC via dex_save_disadvantage te', () => {
+    getRuntimeValue.mockImplementation((name, key) => {
+      if (key === 'targetEffects') return [{ target: 'Thug 1', effect: 'dex_save_disadvantage', source: 'DivinationWizard' }];
+      if (key === 'activeConditions') return [];
+      return null;
+    });
+    expect(getSaveDisadvantage({ targetName: 'Thug 1', saveType: 'DEX' }, 'test-campaign')).toBe(true);
+  });
+
+  it('returns true for a DEX save while the slow condition is active even without te', () => {
+    getRuntimeValue.mockImplementation((name, key) => {
+      if (key === 'activeConditions') return ['slow'];
+      if (key === 'targetEffects') return [];
+      return null;
+    });
+    expect(getSaveDisadvantage({ targetName: 'Thug 1', saveType: 'DEX' }, 'test-campaign')).toBe(true);
+  });
+
+  it('does not apply slow to non-DEX saves', () => {
+    getRuntimeValue.mockImplementation((name, key) => {
+      if (key === 'activeConditions') return ['slow'];
+      if (key === 'targetEffects') return [{ target: 'Thug 1', effect: 'dex_save_disadvantage', source: 'DivinationWizard' }];
+      return null;
+    });
+    expect(getSaveDisadvantage({ targetName: 'Thug 1', saveType: 'WIS' }, 'test-campaign')).toBe(false);
+  });
+
+  it('returns false for a non-slowed creature', () => {
+    getRuntimeValue.mockImplementation((name, key) => {
+      if (key === 'activeConditions') return ['poisoned'];
+      if (key === 'targetEffects') return [];
+      return null;
+    });
+    expect(getSaveDisadvantage({ targetName: 'Zombie 1', saveType: 'DEX' }, 'test-campaign')).toBe(false);
   });
 });

@@ -94,7 +94,7 @@ export function useSimpleSpellHandlers(createConfirmHandler, createSkipHandler, 
     const action = {
       name: pending.spellName,
       spell: pending.spell,
-      automation: { type: 'slow', range: pending.range },
+      automation: { type: 'slow', range: pending.range, saveDc: pending.spellSaveDc || playerStats.spellAbilities?.saveDc || 8 + (playerStats.proficiency || 2), saveType: 'WIS' },
       metaCtx: { targets: result },
     }
     await executeHandler(action, playerStats, campaignName, null, null)

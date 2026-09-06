@@ -148,8 +148,17 @@ function SaveAttackAoeModal({
 
                 const targetEffects = getRuntimeValue('campaign', 'targetEffects') || [];
                 const hasRiderDisadvantage = targetEffects.some(te => te.target === targetName && te.effect === 'disadvantage_on_next_save');
+                // SP-109: Slow forces disadvantage on DEX saves (house model of the RAW -2 penalty).
+                const targetActiveConditions = getRuntimeValue(targetName, 'activeConditions') || [];
+                const slowDexDisadvantage = saveType.toLowerCase() === 'dex' && (
+                    (Array.isArray(targetActiveConditions) && targetActiveConditions.some(c => String(c).toLowerCase() === 'slow'))
+                    || targetEffects.some(te => te.target === targetName && te.effect === 'dex_save_disadvantage')
+                );
 
-                const saveRoll = (isHeightenTarget || hasRiderDisadvantage) ? Math.min(Math.floor(Math.random() * 20) + 1, Math.floor(Math.random() * 20) + 1) : Math.floor(Math.random() * 20) + 1;
+                const saveRollRaw1 = Math.floor(Math.random() * 20) + 1;
+                const saveRollRaw2 = Math.floor(Math.random() * 20) + 1;
+                const hasSaveDisadvantage = isHeightenTarget || hasRiderDisadvantage || slowDexDisadvantage;
+                const saveRoll = hasSaveDisadvantage ? Math.min(saveRollRaw1, saveRollRaw2) : saveRollRaw1;
                 const saveTotal = saveRoll + saveBonus;
                 const success = saveTotal >= saveDc;
                 const isRadiantSoulTarget = targetName === radiantSoulTarget;
@@ -207,7 +216,8 @@ function SaveAttackAoeModal({
                         saveResult: success ? 'success' : 'failure',
                         saveRoll: saveRoll,
                         saveBonus,
-                        saveRawRolls: [saveRoll, saveRoll],
+                        saveRawRolls: [saveRollRaw1, saveRollRaw2],
+                        mode: hasSaveDisadvantage ? 'disadvantage' : 'normal',
                         finalDamage: finalDamage,
                         timestamp: Date.now(),
                     }).catch((e) => { console.error('[SaveAttackAoeModal] Error logging save:', e); });

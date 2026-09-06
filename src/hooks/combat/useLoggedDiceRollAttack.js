@@ -7,6 +7,7 @@ import { addEntry } from '../../services/ui/logService.js';
 import {
     getShieldAcBonus,
     getShieldOfFaithAcBonus,
+    getSlowAcPenalty,
 } from './loggedDiceRollUtils.js';
 import { isResilientSphereActive } from '../../services/combat/automation/automationPassives.js';
 import { endSanctuary } from '../../services/automation/handlers/spells/sanctuaryHandler.js';
@@ -109,6 +110,7 @@ export function createLogAndShow(deps) {
 
         ctx._shieldAcBonus = getShieldAcBonus(target?.name, campaignName);
         ctx._shieldOfFaithAcBonus = getShieldOfFaithAcBonus(target?.name, campaignName);
+        ctx._slowAcPenalty = getSlowAcPenalty(target?.name, campaignName);
 
         // Bi die size for bardic inspiration defense (attack-only)
         ctx._biDieSize = (rollType === 'attack' && target) ? (getBardicInspirationDieSize(target.name, campaignName) || getBardicInspirationDieSizeFromClass(characters.find(c => c.name === target.name)?.computedStats)) : null;
@@ -183,6 +185,7 @@ export function createLogAndShow(deps) {
             effectiveAc: ctx.effectiveAc,
             shieldAcBonus: ctx._shieldAcBonus || 0,
             shieldOfFaithAcBonus: ctx._shieldOfFaithAcBonus || 0,
+            slowAcPenalty: ctx._slowAcPenalty || 0,
             damageType: context?.damageType,
             hit: ctx.hit,
             isAutoMiss: ctx.isAutoMiss,
@@ -245,6 +248,7 @@ export function createLogAndShow(deps) {
                 effectiveAc: ctx.effectiveAc,
                 shieldAcBonus: ctx._shieldAcBonus || 0,
                 shieldOfFaithAcBonus: ctx._shieldOfFaithAcBonus || 0,
+                slowAcPenalty: ctx._slowAcPenalty || 0,
                 hit: ctx.hit,
                 isAutoMiss: ctx.isAutoMiss,
                 rangeReason: context?.rangeReason,

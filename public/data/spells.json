@@ -9049,6 +9049,7 @@
         ],
         "automation": {
             "type": "slow",
+            "saveDc": "spell_save_dc",
             "saveType": "WIS",
             "range": "120 feet",
             "duration": "Concentration, up to 1 minute",

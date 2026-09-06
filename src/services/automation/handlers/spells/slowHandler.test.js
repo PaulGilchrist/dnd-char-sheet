@@ -27,7 +27,22 @@ vi.mock('../../../rules/effects/expirations.js', () => ({
   addExpiration: vi.fn(),
 }));
 
+vi.mock('../../../encounters/combatData.js', () => ({
+  getCombatSummary: vi.fn(),
+}));
+
+vi.mock('../../../combat/concentration/concentrationService.js', () => ({
+  addConcentration: vi.fn(),
+}));
+
+vi.mock('../../../ui/storage.js', () => ({
+  default: { set: vi.fn() },
+}));
+
 import { handle } from './slowHandler.js';
+import { getCombatSummary } from '../../../encounters/combatData.js';
+import { addConcentration } from '../../../combat/concentration/concentrationService.js';
+import storage from '../../../ui/storage.js';
 import { buildSaveDc, createSaveListener } from '../../common/savePrompt.js';
 import { getCombatContext } from '../../../rules/combat/damageUtils.js';
 import { getRuntimeValue, setRuntimeValue } from '../../../../hooks/runtime/useRuntimeState.js';
@@ -624,4 +639,71 @@ describe('slowHandler.handle', () => {
       expect(addEntry).toHaveBeenCalled();
     });
   });
+
+  describe('SP-109: real save DC, ac_penalty te, concentration persistence', () => {
+    function setupFailedSaveWithDc(dc) {
+      getCombatContext.mockResolvedValue(baseCombatContext);
+      buildSaveDc.mockReturnValue(dc);
+      getCombatSummary.mockReturnValue({
+        creatures: [
+          { name: casterName, type: 'player' },
+          { name: targetName, type: 'npc' },
+        ],
+      });
+      getRuntimeValue.mockImplementation((_entity, keyOrProp) => {
+        if (keyOrProp === 'activeConditions') return [];
+        if (keyOrProp === 'activeConditionMeta') return {};
+        if (keyOrProp === 'targetEffects') return [];
+        return null;
+      });
+      createSaveListener.mockReturnValue({
+        promptId: 'prompt-sp109',
+        promise: Promise.resolve({ success: false }),
+      });
+    }
+
+    it('stamps the forwarded real DC into prompts and activeConditionMeta', async () => {
+      setupFailedSaveWithDc(17);
+      await handle(makeAction({ saveDc: 17 }), makePlayerStats(), campaignName, null);
+      const [, listenerCfg] = createSaveListener.mock.calls[0];
+      expect(listenerCfg.saveDc).toBe(17);
+      expect(setRuntimeValue).toHaveBeenCalledWith(
+        targetName, 'activeConditionMeta',
+        expect.objectContaining({ slow: expect.objectContaining({ dc: 17, ability: 'wis' }) }),
+        campaignName,
+      );
+    });
+
+    it('does not write an ac_penalty te (slow condition carries the -2 AC penalty)', async () => {
+      setupFailedSaveWithDc(17);
+      await handle(makeAction({ saveDc: 17 }), makePlayerStats(), campaignName, null);
+      const effectsArg = setRuntimeValue.mock.calls.find(c => c[1] === 'targetEffects')[2];
+      expect(effectsArg.some(te => te.effect === 'ac_penalty')).toBe(false);
+      expect(effectsArg.filter(te => te.target === targetName)).toHaveLength(5);
+    });
+
+    it('persists caster concentration with the real DC and stores combatSummary', async () => {
+      setupFailedSaveWithDc(17);
+      await handle(makeAction({ saveDc: 17 }), makePlayerStats(), campaignName, null);
+      expect(addConcentration).toHaveBeenCalledWith(
+        expect.objectContaining({ creatures: expect.any(Array) }),
+        casterName, 'Slow', 17,
+      );
+      expect(storage.set).toHaveBeenCalledWith('combatSummary', expect.objectContaining({ creatures: expect.any(Array) }), campaignName);
+    });
+
+    it('does not overwrite an existing concentration record for the same spell', async () => {
+      setupFailedSaveWithDc(17);
+      getCombatSummary.mockReturnValue({
+        creatures: [
+          { name: casterName, type: 'player', concentration: { spell: 'Slow', dc: 17 } },
+          { name: targetName, type: 'npc' },
+        ],
+      });
+      await handle(makeAction({ saveDc: 17 }), makePlayerStats(), campaignName, null);
+      expect(addConcentration).not.toHaveBeenCalled();
+      expect(storage.set).not.toHaveBeenCalled();
+    });
+  });
+
 });

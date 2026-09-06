@@ -5,6 +5,12 @@ import { addEntry } from '../../../ui/logService.js';
 import { getRuntimeValue, setRuntimeValue } from '../../../../hooks/runtime/useRuntimeState.js';
 import { addExpiration } from '../../../rules/effects/expirations.js';
 import { storeSpellLastAttack, addTargetResult } from '../../common/damageRollback.js';
+import { getCombatSummary } from '../../../encounters/combatData.js';
+import { addConcentration } from '../../../combat/concentration/concentrationService.js';
+import storage from '../../../ui/storage.js';
+import { SLOW_TE_EFFECTS } from '../../../combat/conditions/slowEffects.js';
+
+export { SLOW_TE_EFFECTS, removeSlowEffectsForTarget } from '../../../combat/conditions/slowEffects.js';
 
 export async function handle(action, playerStats, campaignName, _mapName) {
     const auto = action.automation || {};
@@ -122,60 +128,46 @@ export async function handle(action, playerStats, campaignName, _mapName) {
             // Store target effects for the slow debuffs with condition reference for concentration cleanup
             const targetEffects = getRuntimeValue('campaign', 'targetEffects', campaignName) || [];
             const effects = Array.isArray(targetEffects) ? targetEffects : [];
-            const noReactionEffect = {
-                target: targetName,
-                effect: 'no_reactions',
-                source: casterName,
-                duration: 'concentration',
-                condition: 'slow',
-            };
-            const dexSaveDisadvantageEffect = {
-                target: targetName,
-                effect: 'dex_save_disadvantage',
-                source: casterName,
-                duration: 'concentration',
-                condition: 'slow',
-            };
-            const actionLimitEffect = {
-                target: targetName,
-                effect: 'action_limit',
-                source: casterName,
-                duration: 'concentration',
-                condition: 'slow',
-            };
-            const singleAttackEffect = {
-                target: targetName,
-                effect: 'single_attack_limit',
-                source: casterName,
-                duration: 'concentration',
-                condition: 'slow',
-            };
-            const somaticFailureEffect = {
-                target: targetName,
-                effect: 'somatic_failure_chance',
-                source: casterName,
-                chance: 25,
-                duration: 'concentration',
-                condition: 'slow',
-            };
 
             // Remove existing slow effects from this caster for this target
             const existingFiltered = effects.filter(
                 te => !(te.target === targetName && te.source === casterName &&
-                    ['no_reactions', 'dex_save_disadvantage',
-                     'action_limit', 'single_attack_limit', 'somatic_failure_chance']
-                        .includes(te.effect))
+                    SLOW_TE_EFFECTS.includes(te.effect))
             );
 
+            const slowEffect = (effect, extra) => ({
+                target: targetName,
+                effect,
+                source: casterName,
+                duration: 'concentration',
+                condition: 'slow',
+                ...extra,
+            });
+
+            // SP-109: the -2 AC penalty is carried by the slow CONDITION
+            // (conditionEffects case 'slow' → acPenalty) and folded into hit
+            // resolution via getSlowAcPenalty — no ac_penalty te (would double-count).
             const allEffects = [
                 ...existingFiltered,
-                noReactionEffect,
-                dexSaveDisadvantageEffect,
-                actionLimitEffect,
-                singleAttackEffect,
-                somaticFailureEffect,
+                slowEffect('no_reactions'),
+                slowEffect('dex_save_disadvantage'),
+                slowEffect('action_limit'),
+                slowEffect('single_attack_limit'),
+                slowEffect('somatic_failure_chance', { chance: 25 }),
             ];
             setRuntimeValue('campaign', 'targetEffects', allEffects, campaignName);
+
+            // Persist the caster's concentration with the real save DC (SP-107 pattern)
+            const summary = getCombatSummary(campaignName);
+            console.warn('[slow-debug] concentration write:', { hasSummary: !!summary, creatures: summary?.creatures?.length, casterName, concBefore: JSON.stringify(summary?.creatures?.find(c => c.name === casterName)?.concentration) });
+            if (summary?.creatures) {
+                const casterCreature = summary.creatures.find(c => c.name === casterName);
+                if (casterCreature && casterCreature.concentration?.spell !== action.name) {
+                    addConcentration(summary, casterName, action.name, dc);
+                    storage.set('combatSummary', summary, campaignName);
+                    console.warn('[slow-debug] concentration stored:', JSON.stringify(summary.concentration), 'casterConc:', JSON.stringify(summary.creatures.find(c => c.name === casterName)?.concentration));
+                }
+            }
 
             addEntry(campaignName, {
                 type: 'condition',

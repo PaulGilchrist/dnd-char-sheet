@@ -68,7 +68,7 @@ function DiceRollResult(props) {
     const {
         name, type, rolls, rollType, bonus = 0, bonusDetail, formula = '', modifier = 0,
         targetName, targetAc, hit, isAutoMiss, rangeReason, coverReason, coverLevel, coverAcBonus,
-        defensiveDuelistBonus, baitAndSwitchBonus, shieldAcBonus, shieldOfFaithAcBonus, unerringStrikeApplied, interceptedFeature,
+        defensiveDuelistBonus, baitAndSwitchBonus, shieldAcBonus, shieldOfFaithAcBonus, slowAcPenalty, unerringStrikeApplied, interceptedFeature,
         isCrit, isAutoCrit,
         dc, success, dcType, dcSuccess, waitingForPlayerSave, saveDc, saveType, saveResult, holyAuraSaveResult,
         finalDamage, damageApplied, targetCurrentHp, damageReduced, damageType, autoDamage,
@@ -126,6 +126,7 @@ function DiceRollResult(props) {
     const acBuffLabels = [];
     if (shieldOfFaithAcBonus > 0) acBuffLabels.push(`+${shieldOfFaithAcBonus} Shield of Faith`);
     if (shieldAcBonus > 0) acBuffLabels.push(`+${shieldAcBonus} Shield`);
+    if (slowAcPenalty > 0) acBuffLabels.push(`−${slowAcPenalty} Slow`);
     const acDisplay = `${effectiveAc ?? targetAc ?? '—'}${acBuffLabels.length ? ` (${acBuffLabels.join(', ')})` : ''}`;
 
     const {

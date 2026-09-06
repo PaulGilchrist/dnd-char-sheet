@@ -165,8 +165,28 @@ function CharReactions({ playerStats, campaignName, cannotAct, mapName, characte
         reactions.push(OPPORTUNITY_ATTACK);
     }
 
+    // SP-109: a slowed creature can't take Reactions.
+    const isSlowed = () => {
+        const conditions = getRuntimeValue(playerStats.name, 'activeConditions', campaignName) || [];
+        return Array.isArray(conditions) && conditions.some(c => String(c).toLowerCase() === 'slow');
+    };
+    const refuseSlowedReaction = (reactionName) => {
+        setPopupHtml(`<b>Reaction Blocked</b><br/>${playerStats.name} is Slowed and can't take Reactions.`);
+        addEntry(campaignName, {
+            type: 'automation',
+            creatureName: playerStats.name,
+            name: 'Slow',
+            description: `${reactionName} blocked — ${playerStats.name} is Slowed and can't take Reactions.`,
+            timestamp: Date.now(),
+        }).catch((e) => { console.error('[CharReactions:log-error]', e); });
+    };
+
     const handleReactionClick = async (reaction) => {
         if (cannotAct) return;
+        if (isSlowed()) {
+            refuseSlowedReaction(reaction.name);
+            return;
+        }
         if (hasAutomation(reaction)) {
             handleAutomationReaction(reaction);
             return;
@@ -567,7 +587,10 @@ function CharReactions({ playerStats, campaignName, cannotAct, mapName, characte
                     const isSpellAtk = !spell.dc;
                     const hasAttackType = spell.attack_type != null && spell.attack_type !== '';
                     return <React.Fragment key={spell.name}>
-                        <div className='left clickable' onClick={() => setSelectedSpell(spell)}>{spell.name}</div>
+                        <div className='left clickable' onClick={() => {
+                            if (isSlowed()) { refuseSlowedReaction(spell.name); return; }
+                            setSelectedSpell(spell);
+                        }}>{spell.name}</div>
                         <div>{spell.level === 0 ? 'Cantrip' : spell.level}</div>
                         <div>{spell.range}</div>
                         {autoHit

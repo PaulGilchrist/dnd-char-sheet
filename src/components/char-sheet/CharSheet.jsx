@@ -385,6 +385,9 @@ function CharSheetContent({
     const handleBuffsChange = () => { }
 
     const activeBuffs = useRuntimeValue(playerSummary?.name, 'activeBuffs', campaignName) ?? [];
+    // SP-109: subscribe to own activeConditions so the header Speed/AC recompute the moment
+    // a condition (e.g. Slow) is applied or removed — no forced unrelated re-render needed.
+    void useRuntimeValue(playerSummary?.name, 'activeConditions', campaignName);
     // CLA-230: subscribe to campaign targetEffects so that a one-shot next_attack_advantage
     // te consumed by attackPostProcessing after an attack roll recomputes
     // conditionAttackMode immediately (no sheet remount needed for the next attack).

@@ -76,6 +76,7 @@ vi.mock('../../services/combat/automation/automationPassives.js', () => ({
 }));
 
 vi.mock('./loggedDiceRollUtils.js', () => ({
+  getSlowAcPenalty: () => 0,
     dispatchUnbreakableMajestySave: vi.fn(),
     hasPotentCantrip: vi.fn(),
     getShieldAcBonus: vi.fn(),

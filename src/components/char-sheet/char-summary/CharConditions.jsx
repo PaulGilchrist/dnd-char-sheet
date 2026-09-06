@@ -7,6 +7,7 @@ import { addEntry } from '../../../services/ui/logService.js'
 import { EXHAUSTION_LEVELS, isDeadFromExhaustion, getExhaustionSaveDC } from '../../../services/combat/conditions/exhaustionRules.js'
 import { logConditionSave } from '../../../services/encounters/combatLoggingService.js'
 import { hasSaveAdvantage } from '../../../services/combat/conditions/conditionEffects.js'
+import { removeSlowEffectsForTarget } from '../../../services/combat/conditions/slowEffects.js'
 import { isAuraOfPurityActive, getAuraOfPuritySaveAdvantageConditions } from '../../../services/automation/handlers/buffs/auraOfPurityHandler.js'
 import usePopup from '../../../hooks/combat/usePopup.js'
 import Popup from '../../common/popup.jsx'
@@ -54,6 +55,11 @@ function CharConditions({ playerStats, campaignName, activeMapName, characters, 
   }, [playerStats.name, campaignName])
 
   React.useEffect(() => {
+    // SP-109: never POST a stale empty list while the runtime store is still
+    // un-hydrated (reports no activeConditions key) — a fresh sheet mount must
+    // not wipe server-side conditions.
+    const raw = getRuntimeValue(playerStats.name, STORAGE_KEY)
+    if (!Array.isArray(raw) && activeConditions.length === 0) return
     saveConditions(playerStats.name, campaignName, activeConditions)
   }, [activeConditions, playerStats.name, campaignName])
 
@@ -155,6 +161,19 @@ function CharConditions({ playerStats, campaignName, activeMapName, characters, 
       const existingMeta = { ...conditionMeta }
       delete existingMeta[conditionKey]
       setConditionMeta(existingMeta)
+      // SP-109: Slow ends on itself on a successful repeat save — strip its target effects
+      if (String(conditionKey).toLowerCase() === 'slow') {
+        removeSlowEffectsForTarget(playerStats.name, campaignName)
+        logEntry({
+          type: 'condition',
+          action: 'removed',
+          characterName: playerStats.name,
+          condition: 'Slow effects',
+          reason: 'Slow (successful repeat save)',
+          note: `${playerStats.name} succeeded on the WIS repeat save; Slow ends and its target effects are removed.`,
+          timestamp: Date.now(),
+        })
+      }
       onConditionsChange?.()
     }
   }
