@@ -8,7 +8,7 @@ import CharSpellSlots from './CharSpellSlots.jsx'
 import SpellTargetPopups from './SpellTargetPopups.jsx'
 import CreatureTargetPopups from './CreatureTargetPopups.jsx'
 import TargetSpellPopups from './TargetSpellPopups.jsx'
-import { getExcludedSpellNames } from '../../../services/ui/spellSectionUtils.js'
+import { getExcludedSpellNames, isSpellBreakerBonusActionSpell } from '../../../services/ui/spellSectionUtils.js'
 import { useSpellMetamagicFlow } from '../../../hooks/combat/useSpellMetamagicFlow.js'
 import { useSpellUpcastFlow } from '../../../hooks/combat/useSpellUpcastFlow.js'
 import { useSpellCastExecutor } from '../../../hooks/combat/useSpellCastExecutor.js';
@@ -409,7 +409,8 @@ return (
                             <td>{spell.level === 0 ? 'Cantrip' : spell.level}</td>
                             {showPreparedColumn && (spell.prepared !== 'Prepared' && spell.prepared !== '') && <td>{spell.prepared}</td>}
                             {showPreparedColumn && (spell.prepared === 'Prepared' || spell.prepared === '') && <td><input tabIndex={0} type="checkbox" checked={spell.prepared === 'Prepared'} onChange={() => handleTogglePreparedSpells(spell.name)}/></td>}
-                            <td>{spell.casting_time ? spell.casting_time.replace(/\bbonus action\b/g, 'BA').replace(/\baction\b/g, ' A').replace(/\breaction\b/g, 'Reaction').replace(/\bminute\b/g, 'min').replace(/\bminutes\b/g, 'min') : ''}</td>
+                            {/* CLA-322: Spell Breaker shows Dispel Magic as Bonus Action */}
+                            <td>{(() => { const ct = isSpellBreakerBonusActionSpell(playerStats, spell.name) ? 'bonus action' : spell.casting_time; return ct ? ct.replace(/\bbonus action\b/g, 'BA').replace(/\baction\b/g, ' A').replace(/\breaction\b/g, 'Reaction').replace(/\bminute\b/g, 'min').replace(/\bminutes\b/g, 'min') : ''; })()}</td>
                             <td>{spell.range}</td>
                             <td>{effect}</td>
                             <td>{spell.duration ? spell.duration.replace('Instantaneous','Instant').replace('minute','min').replace('minutes','min').replace('up to ','') : ''}</td>

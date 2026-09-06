@@ -63,30 +63,6 @@ function applyHexEffects(spell, playerStats, campaignName, targetName, ability) 
     setRuntimeValue('campaign', 'targetEffects', effects, campaignName);
 }
 
-// Spell Breaker slot retention for Dispel Magic: listens for spell-result events
-// dispatched when Dispel Magic ability check resolves. Refunds the slot if the
-// check failed (Dispel Magic didn't stop the spell).
-function setupSpellBreakerDispelRetention(playerName, spellLevel, campaignName, playerStats) {
-    const passives = playerStats?.automation?.passives;
-    const spellBreaker = passives?.find(p => p.type === 'spell_breaker');
-    if (!spellBreaker || !spellBreaker.slotRetentionSpells?.includes('Dispel Magic')) return;
-
-    const slotKey = `spell_slots_level_${spellLevel}`;
-    const handler = (event) => {
-        if (event.detail?.spellName !== 'Dispel Magic') return;
-        if (event.detail?.checkFailed !== true) return;
-
-        const currentSlots = getRuntimeValue(playerName, slotKey);
-        if (currentSlots != null && currentSlots >= 0) {
-            setRuntimeValue(playerName, slotKey, currentSlots + 1, campaignName);
-        }
-
-        window.removeEventListener('spell-result', handler);
-    };
-
-    window.addEventListener('spell-result', handler);
-}
-
 async function triggerArcaneWard(spell, metaCtx, playerStats, campaignName) {
     const passives = playerStats.automation?.passives;
     if (passives == null) {
@@ -114,13 +90,21 @@ async function triggerArcaneWard(spell, metaCtx, playerStats, campaignName) {
     }
 }
 
-// Dispel Magic: ability check to dispel a spell on a target.
-// Spell Breaker adds Proficiency Bonus to this check.
-// On failure, dispatches a spell-result event for slot retention.
-async function triggerDispelMagic(metaCtx, spell, playerStats, _campaignName, _mapName) {
+export function refundSpellBreakerSlot(playerName, spellLevel, campaignName) {
+    const slotKey = `spell_slots_level_${spellLevel}`;
+    const currentSlots = getRuntimeValue(playerName, slotKey);
+    if (currentSlots == null || currentSlots < 0) return;
+    setRuntimeValue(playerName, slotKey, currentSlots + 1, campaignName);
+}
+
+// Dispel Magic: resolves the caster ability check (d20 + spellcasting modifier,
+// + Proficiency Bonus with Spell Breaker) vs DC 10 + spell level. CLA-322:
+// logs the check, dispatches `spell-result` with `checkFailed` for popup
+// consumers, and on failure refunds the spent slot via Spell Breaker slot
+// retention keyed by the ACTUAL cast slot level.
+async function triggerDispelMagic(metaCtx, spell, playerStats, campaignName, _mapName) {
     const profBonus = Math.floor((playerStats.level - 1) / 4 + 2);
 
-    // Build the ability check bonus: spellcasting ability modifier + proficiency bonus + Spell Breaker bonus
     const spellCastAbility = spell.spellCastingAbility || playerStats.spellAbilities?.spellCastingAbility;
     let abilityMod = playerStats.spellAbilities?.modifier || 0;
     if (spellCastAbility && playerStats.abilities) {
@@ -130,30 +114,56 @@ async function triggerDispelMagic(metaCtx, spell, playerStats, _campaignName, _m
         }
     }
 
-    const totalCheckBonus = abilityMod + profBonus + (metaCtx?.dispelAbilityCheckBonus || 0);
+    const spellBreaker = playerStats.automation?.passives?.find(p => p.type === 'spell_breaker');
+    // SpellDetailPopup forwards PB in metaCtx when Spell Breaker is held —
+    // it is the same bonus the passive grants, so take the larger of the two
+    // instead of stacking (CLA-322 PB double-count).
+    const ctxBonus = typeof metaCtx?.dispelAbilityCheckBonus === 'number' ? metaCtx.dispelAbilityCheckBonus : 0;
+    const breakerBonus = Math.max(spellBreaker ? profBonus : 0, ctxBonus);
+    const totalCheckBonus = abilityMod + breakerBonus;
 
-    // Show a popup prompting for the Dispel Magic ability check
     const targetName = metaCtx?.targetName || 'unknown target';
-    const spellLevel = metaCtx?.slotLevel || spell.level;
+    const spellLevel = metaCtx?.slotLevel || spell.level || 0;
     const targetDC = 10 + spellLevel;
+
+    const rollResult = rollExpression('1d20');
+    const d20 = rollResult?.rolls?.[0] ?? rollResult?.total ?? 0;
+    const total = d20 + totalCheckBonus;
+    const checkFailed = total < targetDC;
+
+    addEntry(campaignName, {
+        type: 'ability_use',
+        characterName: playerStats.name,
+        abilityName: 'Dispel Magic',
+        description: `Dispel Magic ability check on ${targetName}: d20 (${d20}) + ${totalCheckBonus} = ${total} vs DC ${targetDC} — ${checkFailed ? 'failed, spell not stopped' : 'succeeded'}.`,
+        timestamp: Date.now(),
+    }).catch((e) => { console.error('[spellCast] Dispel Magic check log failed:', e); });
 
     window.dispatchEvent(new CustomEvent('spell-result', {
         detail: {
             spellName: 'Dispel Magic',
+            casterName: playerStats.name,
             targetName,
             checkBonus: totalCheckBonus,
             targetDC,
+            d20,
+            total,
+            checkFailed,
             isDispelMagic: true,
         },
         bubbles: true,
     }));
-}
 
-export function refundSpellBreakerSlot(playerName, spellLevel, campaignName) {
-    const slotKey = `spell_slots_level_${spellLevel}`;
-    const currentSlots = getRuntimeValue(playerName, slotKey);
-    if (currentSlots == null || currentSlots < 0) return;
-    setRuntimeValue(playerName, slotKey, currentSlots + 1, campaignName);
+    if (checkFailed && spellBreaker?.slotRetentionSpells?.includes('Dispel Magic') && usesSpellSlot(spell, metaCtx)) {
+        refundSpellBreakerSlot(playerStats.name, spellLevel, campaignName);
+        addEntry(campaignName, {
+            type: 'ability_use',
+            characterName: playerStats.name,
+            abilityName: 'Spell Breaker',
+            description: `Spell Breaker: Dispel Magic failed to stop a spell — spell slot level ${spellLevel} refunded.`,
+            timestamp: Date.now(),
+        }).catch((e) => { console.error('[spellCast] Spell Breaker refund log failed:', e); });
+    }
 }
 
 async function applyPowerWordHealToTarget(targetName, playerStats, campaignName) {
@@ -547,7 +557,6 @@ async function executeMagicMissile(spell, metaCtx, { rollDamage, playerStats, ge
 export {
     DIVINATION_SCHOOL,
     applyHexEffects,
-    setupSpellBreakerDispelRetention,
     triggerArcaneWard,
     triggerDispelMagic,
     applyPowerWordHealToTarget,

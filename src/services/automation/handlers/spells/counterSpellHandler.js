@@ -77,6 +77,35 @@ export async function handle(action, playerStats, campaignName, _mapName) {
         };
     }
 
+    // CLA-322: reaction-spent round latch (CLA-297 house pattern, stamped on
+    // playerStats.name) — a used Counterspell must not re-trigger repeatedly
+    // against the same lastAttack; re-arms when the round advances.
+    const usedRoundKey = '_Counterspell_usedRound';
+    const currentRound = cs.round || 1;
+    const usedRound = Number(getRuntimeValue(playerName, usedRoundKey, campaignName) ?? 0);
+    if (usedRound === currentRound) {
+        // The cast path paid the slot before this handler ran — the reaction was
+        // not used, so return the charge to keep the slot ledger neutral.
+        const refusedLevel = (action.spell?.isUpcast && action.spell?.upcastLevel) || action.spell?.level || 3;
+        const refusedKey = `spell_slots_level_${refusedLevel}`;
+        if (!action.spell?.freeCastAuthorized) {
+            const paidSlots = getRuntimeValue(playerName, refusedKey, campaignName);
+            if (paidSlots != null && paidSlots >= 0) {
+                setRuntimeValue(playerName, refusedKey, paidSlots + 1, campaignName);
+            }
+        }
+        return {
+            type: 'popup',
+            payload: {
+                type: 'automation_info',
+                name: featureName,
+                description: `${featureName} — Reaction already used this round. Spell slot level ${refusedLevel} returned.`,
+                automation: auto,
+            },
+        };
+    }
+    setRuntimeValue(playerName, usedRoundKey, currentRound, campaignName);
+
     const saveDc = buildSaveDc(auto, playerStats);
 
     const { promptId } = createSaveListener(campaignName, {
@@ -150,10 +179,19 @@ export async function handle(action, playerStats, campaignName, _mapName) {
             const passives = playerStats.automation?.passives;
             const spellBreaker = passives?.find(p => p.type === 'spell_breaker');
             if (spellBreaker && spellBreaker.slotRetentionSpells?.includes('Counterspell')) {
-                const slotKey = 'spell_slots_level_3';
+                // CLA-322: refund keyed by the ACTUAL cast slot level (upcast-safe),
+                // not hardcoded level 3, and logged (house rule: every automation logs).
+                const castLevel = (action.spell?.isUpcast && action.spell?.upcastLevel) || action.spell?.level || 3;
+                const slotKey = `spell_slots_level_${castLevel}`;
                 const currentSlots = getRuntimeValue(playerName, slotKey);
                 if (currentSlots != null && currentSlots >= 0) {
                     setRuntimeValue(playerName, slotKey, currentSlots + 1, campaignName);
+                    addEntry(campaignName, {
+                        type: 'ability_use',
+                        characterName: playerName,
+                        abilityName: 'Spell Breaker',
+                        description: `Spell Breaker: Counterspell failed to counter '${spellName}' — spell slot level ${castLevel} refunded.`,
+                    }).catch((e) => { console.error('[counterSpell] Error:', e); });
                 }
             }
         }

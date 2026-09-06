@@ -104,6 +104,7 @@ vi.mock('../../../services/rules/combat/rangeValidation.js', () => ({
 
 vi.mock('../../../services/ui/spellSectionUtils.js', () => ({
   getExcludedSpellNames: vi.fn(() => new Set()),
+  isSpellBreakerBonusActionSpell: vi.fn(() => false),
 }));
 
 vi.mock('../../../services/combat/buffs/buffService.js', () => ({

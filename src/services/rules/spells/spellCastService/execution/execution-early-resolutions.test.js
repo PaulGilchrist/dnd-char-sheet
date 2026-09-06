@@ -113,7 +113,6 @@ vi.mock('./helpers.js', () => ({
   applyPowerWordKillToTarget: vi.fn(),
   triggerArcaneWard: vi.fn(() => Promise.resolve()),
   triggerDispelMagic: vi.fn(() => Promise.resolve()),
-  setupSpellBreakerDispelRetention: vi.fn(),
   triggerExpertDivination: vi.fn(() => Promise.resolve(null)),
   applyRegenerateSpell: vi.fn(),
   executeMagicMissile: vi.fn(() => Promise.resolve()),

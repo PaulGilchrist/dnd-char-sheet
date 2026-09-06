@@ -113,7 +113,6 @@ vi.mock('./helpers.js', () => ({
   applyPowerWordKillToTarget: vi.fn(),
   triggerArcaneWard: vi.fn(() => Promise.resolve()),
   triggerDispelMagic: vi.fn(() => Promise.resolve()),
-  setupSpellBreakerDispelRetention: vi.fn(),
   triggerExpertDivination: vi.fn(() => Promise.resolve(null)),
   applyRegenerateSpell: vi.fn(),
   executeMagicMissile: vi.fn(() => Promise.resolve()),
@@ -233,7 +232,7 @@ const { triggerPrimalCompanionSpellShare } = await import('../../../features/pri
 const { triggerBewitchingMagic, triggerPostCastRiderSaves, triggerSpellThief } = await import('../../../../rules/spells/postCastRiderService.js');
 const {
   triggerArcaneWard: mockTriggerArcaneWard,
-  setupSpellBreakerDispelRetention: mockSetupSpellBreaker,
+  triggerDispelMagic: mockTriggerDispelMagic,
   triggerExpertDivination: mockTriggerExpertDivination,
 } = await import('./helpers.js');
 const { handleSavePath: mockHandleSavePath } = await import('./savePath.js');
@@ -417,8 +416,8 @@ describe('executeSpellCast — post-cast', () => {
       expect(mockTriggerArcaneWard).toHaveBeenCalled();
     });
 
-    it('calls setupSpellBreakerDispelRetention for Dispel Magic with slotLevel > 0', async () => {
-      resolveSpellDamageWithTypes.mockReturnValue({ formula: '8d6', primaryType: 'Fire' });
+    it('resolves Dispel Magic via triggerDispelMagic on the no-damage path (CLA-322)', async () => {
+      resolveSpellDamageWithTypes.mockReturnValue({ formula: null, primaryType: null });
       computeRange.mockReturnValue({});
 
       await executeSpellCast(
@@ -433,29 +432,16 @@ describe('executeSpellCast — post-cast', () => {
         },
       );
 
-      expect(mockSetupSpellBreaker).toHaveBeenCalledWith('TestWizard', 2, 'test-campaign', expect.any(Object));
-    });
-
-    it('does not call setupSpellBreakerDispelRetention for Dispel Magic with slotLevel 0', async () => {
-      resolveSpellDamageWithTypes.mockReturnValue({ formula: '8d6', primaryType: 'Fire' });
-      computeRange.mockReturnValue({});
-
-      await executeSpellCast(
-        makeSpell({ name: 'Dispel Magic' }),
-        { ...makeMetaCtx(), slotLevel: 0 },
-        {
-          rollAttack: vi.fn(),
-          rollDamage: vi.fn(),
-          playerStats: makePlayerStats(),
-          getTargetInfo: async () => ({ name: 'Goblin' }),
-          campaignName: 'test-campaign',
-        },
+      expect(mockTriggerDispelMagic).toHaveBeenCalledWith(
+        expect.objectContaining({ targetName: 'Goblin' }),
+        expect.objectContaining({ name: 'Dispel Magic' }),
+        expect.any(Object),
+        'test-campaign',
+        undefined,
       );
-
-      expect(mockSetupSpellBreaker).not.toHaveBeenCalled();
     });
 
-    it('does not call setupSpellBreakerDispelRetention for non-Dispel Magic', async () => {
+    it('does not call triggerDispelMagic for non-Dispel Magic', async () => {
       resolveSpellDamageWithTypes.mockReturnValue({ formula: '8d6', primaryType: 'Fire' });
       computeRange.mockReturnValue({});
 
@@ -471,7 +457,7 @@ describe('executeSpellCast — post-cast', () => {
         },
       );
 
-      expect(mockSetupSpellBreaker).not.toHaveBeenCalled();
+      expect(mockTriggerDispelMagic).not.toHaveBeenCalled();
     });
   });
 

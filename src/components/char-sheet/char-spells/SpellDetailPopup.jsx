@@ -7,6 +7,7 @@ import { isPsionicSpell, hasPsionicSorcery } from '../../../services/rules/spell
 import { isFreeCastAuthorized } from '../../../services/rules/spells/spellPreparationService.js';
 import { getConsumedMaterial } from '../../../services/rules/spells/materialComponents.js';
 import { hasMaterial } from '../../../services/rules/spells/materialComponents.js';
+import { isSpellBreakerBonusActionSpell } from '../../../services/ui/spellSectionUtils.js';
 
 function SpellDetailPopup({ spell, playerStats, campaignName, onClose, onCast, upcastLevels = [], playerLevel = 1 }) {
   const isCantrip = spell.level === 0;
@@ -73,7 +74,6 @@ function SpellDetailPopup({ spell, playerStats, campaignName, onClose, onCast, u
   const hasAnySlots = isCantrip || freeCastAuthorized || upcastLevels.some(l => l.availableSlots > 0) || (isWarlock && warlockSlotLevel !== null) || _psionicSorceryAvailable > 0;
 
   const hasPsychicSpells = playerStats.automation?.passives?.some(p => p.type === 'psychic_spells');
-  const hasSpellBreaker = playerStats.automation?.passives?.some(p => p.type === 'spell_breaker');
   const hasImprovedIllusions = playerStats.automation?.passives?.some(p => p.type === 'improved_illusions');
   const hasDamage = !!spell.damage;
   const isEnchantmentOrIllusion = () => {
@@ -85,7 +85,8 @@ function SpellDetailPopup({ spell, playerStats, campaignName, onClose, onCast, u
     return school === 'illusion';
   };
   const canChangeDamageType = isWarlock && hasPsychicSpells && hasDamage;
-  const isDispelMagicAsBonusAction = hasSpellBreaker && spell.name === 'Dispel Magic';
+  // CLA-322: Spell Breaker bonus-action conversion is registry-driven (bonusActionSpells)
+  const isDispelMagicAsBonusAction = isSpellBreakerBonusActionSpell(playerStats, spell.name);
   const [usePsychicDamage, setUsePsychicDamage] = useState(false);
   const [noVSComponents] = useState(isWarlock && hasPsychicSpells && isEnchantmentOrIllusion());
   const [noVComponents] = useState(hasImprovedIllusions && isIllusionSpell());
@@ -155,7 +156,8 @@ function SpellDetailPopup({ spell, playerStats, campaignName, onClose, onCast, u
         <div dangerouslySetInnerHTML={{ __html: sanitizeHtml(Array.isArray(spell.description) ? spell.description.join('') : spell.description || '') }} />
         <div className="spell-detail-meta">
           <span><b>Level:</b> {isCantrip ? 'Cantrip' : spell.level}</span>
-          <span><b>Casting Time:</b> {spell.casting_time || '—'}</span>
+          {/* CLA-322: Spell Breaker converts its bonusActionSpells to Bonus Action display */}
+          <span><b>Casting Time:</b> {isDispelMagicAsBonusAction ? 'Bonus Action' : (spell.casting_time || '—')}</span>
           <span><b>Range:</b> {spell.range || '—'}</span>
           <span><b>Duration:</b> {spell.duration || '—'}</span>
           {spell.school && <span><b>School:</b> {isPhantasmalFreeCast ? 'Illusion (spectral)' : spell.school}</span>}

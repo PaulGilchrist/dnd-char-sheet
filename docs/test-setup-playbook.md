@@ -86,7 +86,7 @@ Damage/resolution seams:
 Save/immunity seams:
 - EB join strips monsters.json condition-immunities (cs.immunities=["Poison"] only) — undead auto-success-style gates keyed on cs.immunities miss.
 - `saveBonuses` lookups need LOWERCASE keys (uppercase callers got silent +0 pre-2026-09-04 fix).
-- Fallback DC 10 with `[buildSaveDc]` console error = numeric saveDc never forwarded (SP-109, Counterspell, CLA-322 dispel).
+- Fallback DC 10 with `[buildSaveDc]` console error = numeric saveDc never forwarded (SP-109 family; Counterspell FIXED 2026-09-05 via `saveDc:"spell_save_dc"` in spells.json both paths). Spell Breaker dispel (CLA-322 fixed) resolves inline in triggerDispelMagic: d20+mod+PB (PB once — popup-forwarded `dispelAbilityCheckBonus` IS the passive PB, never add both) vs DC 10+targetSpellLevel, `spell-result` w/ `checkFailed`, refund keyed by actual cast slot level + log. Pitfalls: lv3-depleted SpellDetailPopup keeps stale `upcastLevels` (Cast disabled despite high slots — upcast from grid dead for that mount); wizard short rest doesn't refill lv3; reaction-latch refusals occur AFTER prepare-cast payment → handler must return the charge itself.
 - Calm Emotions picker auto-applies without rolling its DC-17 CHA save — invalid as a CHA-save probe. CHA-save spells: Bane/Zone of Truth/Divine Word/Banishment; Charm Person is WIS in both rulesets.
 Dead-by-design (accepted models, do not chase): feats with `automation:null` benefits are display-only; sheet skill/save cells have no prof annotation (numeric delta IS the marker); base mastery cells are text-only auto-apply (opt-in pickers don't exist); Sacred Weapon CD counter lags modal-open.
 

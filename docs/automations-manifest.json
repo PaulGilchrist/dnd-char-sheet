@@ -5996,7 +5996,7 @@
       "handler": "src/services/combat/automation/handlers/classFeatureHandler.js",
       "router": "src/services/combat/automation/routers/classFeatureRouter.js",
       "infoBuilder": "src/services/combat/automation/infoBuilders/classFeatureInfoBuilder.js",
-      "verified": "broken — see .opencode/plans/bug-CLA-322-spell-breaker.md",
+      "verified": "verified",
       "class": "Wizard",
       "triggerConditions": "Passive: Always active",
       "expectedBehavior": "Always have Counterspell and Dispel Magic prepared. Cast Dispel Magic as Bonus Action, add Proficiency Bonus to ability check. When you cast either with spell slot, slot isn't expended if spell fails to stop a spell."

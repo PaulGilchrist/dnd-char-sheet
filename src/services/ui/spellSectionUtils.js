@@ -93,6 +93,18 @@ export function getReactionSpellNames(playerStats) {
 }
 
 /**
+ * CLA-322: Spell Breaker casts its bonusActionSpells (e.g. Dispel Magic) as a
+ * bonus action. Display-only override for sheet rows / spell popups — the entry's
+ * casting_time is left untouched so section partitioning is unchanged.
+ */
+export function isSpellBreakerBonusActionSpell(playerStats, spellName) {
+    if (!spellName) return false;
+    const spellBreaker = playerStats?.automation?.passives?.find(p => p.type === 'spell_breaker');
+    if (!spellBreaker) return false;
+    return (spellBreaker.bonusActionSpells || []).includes(spellName);
+}
+
+/**
  * Returns a Set of all spell names that appear in Actions, Bonus Actions, or Reactions.
  * CharSpells should exclude these names.
  */

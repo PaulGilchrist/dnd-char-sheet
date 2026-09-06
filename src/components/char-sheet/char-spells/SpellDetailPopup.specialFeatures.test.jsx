@@ -97,7 +97,7 @@ describe('SpellDetailPopup - handleCast: Special features', () => {
       return {
         ...baseMockPlayerStats,
         automation: {
-          passives: [{ type: 'spell_breaker' }],
+          passives: [{ type: 'spell_breaker', bonusActionSpells: ['Dispel Magic'], slotRetentionSpells: ['Counterspell', 'Dispel Magic'] }],
           actions: [],
         },
       };

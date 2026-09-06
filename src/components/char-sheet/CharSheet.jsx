@@ -484,6 +484,22 @@ function CharSheetContent({
         return () => window.removeEventListener('counterspell-save-result', handler);
     }, [setPopupHtml]);
 
+    // CLA-322: Update popup when the Dispel Magic ability check resolves on this caster
+    React.useEffect(() => {
+        if (!playerStats) return;
+        const handler = (event) => {
+            const { casterName, targetName, checkBonus, targetDC, total, checkFailed } = event.detail;
+            if (casterName !== playerStats.name) return;
+            setPopupHtml({
+                type: 'automation_info',
+                name: 'Dispel Magic',
+                description: `${targetName}: ability check ${total} (${checkBonus >= 0 ? '+' : ''}${checkBonus}) vs DC ${targetDC} — ${checkFailed ? 'failed, spell not stopped' : 'spell ended'}.`,
+            });
+        };
+        window.addEventListener('spell-result', handler);
+        return () => window.removeEventListener('spell-result', handler);
+    }, [playerStats, setPopupHtml]);
+
     React.useEffect(() => {
         if (!playerStats) return;
         if (!isRaging) {

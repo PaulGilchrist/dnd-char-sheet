@@ -3080,6 +3080,7 @@
         "automation": {
             "type": "reaction_counterspell",
             "casting_time": "1 reaction",
+            "saveDc": "spell_save_dc",
             "saveType": "CON",
             "saveAbility": "CHA",
             "range": "60 ft",

@@ -20,7 +20,7 @@ import { resolveSpellDamageWithTypes } from '../../../core/spellDamageUtils.js';
 import { triggerConfusion } from '../../../features/confusionService.js';
 import { resolveHealingBonusesWithDetails, hasHealingMaximizationForTarget, hasRerollHealingOnes } from '../../../../combat/automation/automationService.js';
 import { rollExpression, rollExpressionMaximized, applyHealingRerollOnes } from '../../../../dice/diceRoller.js';
-import { refundSpellBreakerSlot, applyHexEffects, applyPowerWordHealToTarget, applyPowerWordKillToTarget, triggerDispelMagic, setupSpellBreakerDispelRetention, triggerExpertDivination, triggerArcaneWard, applyRegenerateSpell } from './helpers.js';
+import { refundSpellBreakerSlot, applyHexEffects, applyPowerWordHealToTarget, applyPowerWordKillToTarget, triggerDispelMagic, triggerExpertDivination, triggerArcaneWard, applyRegenerateSpell } from './helpers.js';
 import { checkGlobeOfInvulnerability, checkForcecageBlocked } from './blockChecks.js';
 import { handlePowerWordHeal, handlePowerWordKill, handleMassSuggestion, handleCalmEmotions, handleHypnoticPatternEarly, handleConfusionEarly, handleShapechange, handleFear, handleConjureVolley, handleSilence } from './modalSpells.js';
 import { handleRegenerate, handleSeeInvisibility, handleFleshToStone, handleHoldMonster, handleBanishment, handleConfusion, handleMaze, handlePowerWordStun, handleHypnoticPattern, handleSlow, handleBane, handleBless, handleBeaconOfHope, handleMassSuggestion as handleMassSuggestionTrigger, handleSuggestion, handleCommand, handleOttoDance, handleResilientSphere, handleBlur, handleExpeditiousRetreat, handleFriends, handleCrownOfMadness, handleAnimalFriendship, handleDominateBeast, handleDominateMonster, handleDominatePerson, handleRayOfEnfeeblement, handleCompelledDuel, handleGlobeOfInvulnerability, handleForcecage, handleStinkingCloud, handleSleetStorm, handleFaerieFire, handleTashasHideousLaughter, handleImprisonment, handleHeroism, handleLongstrider, handleSpareTheDying, handleEnhanceAbility, handleProtectionFromEnergy, handleProtectionFromPoison, handleResistance, handleGenericAutomation } from './triggerSpells.js';
@@ -514,8 +514,10 @@ export async function executeSpellCast(spell, metaCtx, { rollAttack, rollDamage,
         if (spell.name && spell.name.toLowerCase() === 'dispel magic') {
             const dispelTarget = await getTargetInfo();
             if (dispelTarget) {
-                const dispelMetaCtx = { ...metaCtx, targetName: dispelTarget.name };
-                await triggerDispelMagic(dispelMetaCtx, spell, playerStats, campaignName, mapName);
+                // CLA-322: ability check resolves inside triggerDispelMagic — it logs
+                // the check, dispatches `spell-result` with `checkFailed`, and refunds
+                // the slot inline (keyed by cast slot level) when Spell Breaker is held.
+                await triggerDispelMagic({ ...metaCtx, targetName: dispelTarget.name }, spell, playerStats, campaignName, mapName);
             }
         }
 
@@ -622,10 +624,6 @@ export async function executeSpellCast(spell, metaCtx, { rollAttack, rollDamage,
     triggerArcaneWard(spell, metaCtx, playerStats, campaignName).catch(e => {
         console.error('[spellCast] Arcane Ward trigger failed:', e);
     });
-
-    if (spell.name === 'Dispel Magic' && metaCtx?.slotLevel > 0) {
-        setupSpellBreakerDispelRetention(playerStats.name, metaCtx.slotLevel, campaignName, playerStats);
-    }
 
     const sanctuaryEffects = (function () {
         try {

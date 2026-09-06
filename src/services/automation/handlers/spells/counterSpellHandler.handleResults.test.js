@@ -287,7 +287,7 @@ describe('counterSpellHandler.handleSaveResult', () => {
         },
       });
 
-      expect(setRuntimeValue).not.toHaveBeenCalled();
+      expect(setRuntimeValue).not.toHaveBeenCalledWith(expect.any(String), expect.stringContaining('spell_slots_level_'), expect.any(Number), campaignName);
       addEventListenerSpy.mockRestore();
     });
 
@@ -323,7 +323,7 @@ describe('counterSpellHandler.handleSaveResult', () => {
         },
       });
 
-      expect(setRuntimeValue).not.toHaveBeenCalled();
+      expect(setRuntimeValue).not.toHaveBeenCalledWith(expect.any(String), expect.stringContaining('spell_slots_level_'), expect.any(Number), campaignName);
       addEventListenerSpy.mockRestore();
     });
   });

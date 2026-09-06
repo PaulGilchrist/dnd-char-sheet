@@ -201,6 +201,7 @@ vi.mock('../../../../automation/handlers/class-wizard/arcaneWardHandler.js', () 
 import { executeSpellCast } from './index.js'
 import * as runtimeState from '../../../../../hooks/runtime/useRuntimeState.js'
 import * as arcWardHandler from '../../../../automation/handlers/class-wizard/arcaneWardHandler.js'
+import { addEntry } from '../../../../ui/logService.js'
 
 function makeSpell(overrides = {}) {
   return {
@@ -485,8 +486,12 @@ describe('executeSpellCast - feature trigger edge cases', () => {
     })
   })
 
-  describe('setupSpellBreakerDispelRetention', () => {
-    it('sets up event listener for Dispel Magic slot retention', async () => {
+  describe('dispel magic — inline ability check resolution (CLA-322)', () => {
+    it('dispatches spell-result with checkFailed and logs the check', async () => {
+      const events = []
+      const handler = (e) => events.push(e.detail)
+      window.addEventListener('spell-result', handler)
+
       const services = makeServices({
         playerStats: makePlayerStats({
           automation: {
@@ -501,7 +506,15 @@ describe('executeSpellCast - feature trigger edge cases', () => {
       delete spell.dc
 
       await executeSpellCast(spell, makeMetaCtx({ slotLevel: 2 }), services)
+      window.removeEventListener('spell-result', handler)
+
       expect(services.getTargetInfo).toHaveBeenCalled()
+      const dispelEvent = events.find(e => e.isDispelMagic)
+      expect(dispelEvent).toBeDefined()
+      expect(typeof dispelEvent.checkFailed).toBe('boolean')
+
+      const checkLog = addEntry.mock.calls.map(c => c[1]).find(d => d.abilityName === 'Dispel Magic')
+      expect(checkLog).toBeDefined()
     })
   })
 
