@@ -5690,7 +5690,7 @@
       "handler": "src/services/combat/automation/handlers/featHandler.js",
       "router": "src/services/combat/automation/routers/featRouter.js",
       "infoBuilder": "src/services/combat/automation/infoBuilders/featInfoBuilder.js",
-      "verified": "broken — see .opencode/plans/bug-FT-071-sharpshooter.md",
+      "verified": "verified",
       "triggerConditions": "Passive: Always active",
       "expectedBehavior": "Your ranged attacks with weapons ignore Half Cover and Three-Quarters Cover."
     },

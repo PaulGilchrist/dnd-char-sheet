@@ -177,13 +177,42 @@ describe('contextBuilder: buildAttackContext (map-based)', () => {
       loadMapData.mockResolvedValue(makeMapDataWithNPCs(null, [{ name: 'Orc', gridX: 10, gridY: 10 }]));
     }
 
-    it('ignores cover when ignore_cover_ranged passive exists', async () => {
+    it('ignores half cover for ranged weapon attacks with ignore_cover_ranged passive', async () => {
       setupCoverTest();
-      computeCover.mockReturnValue({ level: 'full', acBonus: 4 });
+      computeCover.mockReturnValue({ level: 'half', acBonus: 2 });
       const stats = { ...mockStats, automation: { passives: [{ type: 'passive_rule', effect: 'ignore_cover_ranged' }] } };
       const result = await buildAttackContext(mockRangedAttack, stats, 'camp', 'test-map', 'normal', {});
       expect(result.coverAcBonus).toBeUndefined();
       expect(result.isAutoMiss).toBeUndefined();
+      expect(result.coverReason).toBe('Sharpshooter');
+    });
+
+    it('ignores three-quarter cover for ranged weapon attacks with ignore_cover_ranged passive', async () => {
+      setupCoverTest();
+      computeCover.mockReturnValue({ level: 'threeQuarter', acBonus: 5 });
+      const stats = { ...mockStats, automation: { passives: [{ type: 'passive_rule', effect: 'ignore_cover_ranged' }] } };
+      const result = await buildAttackContext(mockRangedAttack, stats, 'camp', 'test-map', 'normal', {});
+      expect(result.coverAcBonus).toBeUndefined();
+      expect(result.isAutoMiss).toBeUndefined();
+      expect(result.coverReason).toBe('Sharpshooter');
+    });
+
+    it('does not ignore full cover for ranged weapon attacks with ignore_cover_ranged passive', async () => {
+      setupCoverTest();
+      computeCover.mockReturnValue({ level: 'full', acBonus: null });
+      const stats = { ...mockStats, automation: { passives: [{ type: 'passive_rule', effect: 'ignore_cover_ranged' }] } };
+      const result = await buildAttackContext(mockRangedAttack, stats, 'camp', 'test-map', 'normal', {});
+      expect(result.isAutoMiss).toBe(true);
+      expect(result.coverReason).toBe('Target has full cover');
+    });
+
+    it('respects coverTypes metadata on the ignore_cover_ranged passive', async () => {
+      setupCoverTest();
+      computeCover.mockReturnValue({ level: 'threeQuarter', acBonus: 5 });
+      const stats = { ...mockStats, automation: { passives: [{ type: 'passive_rule', effect: 'ignore_cover_ranged', coverTypes: ['Half'] }] } };
+      const result = await buildAttackContext(mockRangedAttack, stats, 'camp', 'test-map', 'normal', {});
+      expect(result.coverAcBonus).toBe(5);
+      expect(result.coverLevel).toBe('threeQuarter');
     });
 
     it('sets auto miss when cover is full', async () => {
@@ -219,14 +248,34 @@ describe('contextBuilder: buildAttackContext (map-based)', () => {
       expect(result.coverLevel).toBe('half');
     });
 
-    it('ignores cover for melee spell attacks when ignore_cover_ranged passive exists', async () => {
+    it('applies cover for melee spell attacks even when ignore_cover_ranged passive exists', async () => {
       setupCoverTest();
-      computeCover.mockReturnValue({ level: 'three_quarters', acBonus: 4 });
+      computeCover.mockReturnValue({ level: 'threeQuarter', acBonus: 5 });
       const meleeSpellAttack = { name: 'Inflict Wounds', damage: '3d10', damageType: 'Necrotic', hitBonus: 7, weaponType: 'melee', range: 5, school: 'Necromancy' };
       const stats = { ...mockStats, automation: { passives: [{ type: 'passive_rule', effect: 'ignore_cover_ranged' }] } };
       const result = await buildAttackContext(meleeSpellAttack, stats, 'camp', 'test-map', 'normal', {});
-      expect(result.coverAcBonus).toBeUndefined();
-      expect(result.coverLevel).toBeUndefined();
+      expect(result.coverAcBonus).toBe(5);
+      expect(result.coverLevel).toBe('threeQuarter');
+    });
+
+    it('applies cover for ranged spell attacks even when ignore_cover_ranged passive exists', async () => {
+      setupCoverTest();
+      computeCover.mockReturnValue({ level: 'half', acBonus: 2 });
+      const rangedSpellAttack = { name: 'Fire Bolt', damage: '4d10', damageType: 'Fire', hitBonus: 9, range: 120, school: 'Evocation' };
+      const stats = { ...mockStats, automation: { passives: [{ type: 'passive_rule', effect: 'ignore_cover_ranged' }] } };
+      const result = await buildAttackContext(rangedSpellAttack, stats, 'camp', 'test-map', 'normal', {});
+      expect(result.coverAcBonus).toBe(2);
+      expect(result.coverLevel).toBe('half');
+    });
+
+    it('applies cover for melee weapon attacks with ignore_cover_ranged passive', async () => {
+      setupCoverTest();
+      computeCover.mockReturnValue({ level: 'half', acBonus: 2 });
+      const meleeAttack = { ...mockRangedAttack, weaponType: 'melee', range: 5 };
+      const stats = { ...mockStats, automation: { passives: [{ type: 'passive_rule', effect: 'ignore_cover_ranged' }] } };
+      const result = await buildAttackContext(meleeAttack, stats, 'camp', 'test-map', 'normal', {});
+      expect(result.coverAcBonus).toBe(2);
+      expect(result.coverLevel).toBe('half');
     });
 
     it('does not apply cover when target position cannot be resolved', async () => {

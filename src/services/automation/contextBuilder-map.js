@@ -185,12 +185,20 @@ export function buildAttackContext(attack, playerStats, campaignName, mapName, c
                     mapData?.placedItems || [],
                 );
 
-                // Check ignore_cover_ranged passive (e.g., Sharpshooter/Spell Sniper feat bypass cover)
-                const hasIgnoreCoverRanged = (playerStats.automation?.passives || []).some(
+                // Sharpshooter "Bypass Cover": ranged WEAPON attacks ignore Half/Three-Quarters
+                // cover only. Full cover still blocks the attack; melee and spell attacks keep cover.
+                // (Live sheet rows leave weaponType empty; spell rows carry school — the same
+                // spell discriminator used by the improved-illusions check above.)
+                const ignoreCoverPassive = (playerStats.automation?.passives || []).find(
                     p => p.type === 'passive_rule' && p.effect === 'ignore_cover_ranged'
                 );
-                if (hasIgnoreCoverRanged) {
+                const isRangedWeaponAttack = isRanged && !attack.school && attack.weaponType !== 'spell';
+                // FT-071 debug (keep until GM confirms fix)
+                console.log('[FT071] attack:', JSON.stringify({ name: attack.name, weaponType: attack.weaponType, school: attack.school, range: attack.range }), 'isRangedWeaponAttack:', isRangedWeaponAttack, 'cover:', JSON.stringify(coverResult));
+                if (ignoreCoverPassive && isRangedWeaponAttack
+                    && getIgnorableCoverLevels(ignoreCoverPassive).includes(coverResult.level)) {
                     coverResult = { level: 'none', acBonus: 0 };
+                    base.coverReason = 'Sharpshooter';
                 }
 
                 // Check Nature's Sanctuary half cover — any creature in the sanctuary list
@@ -286,6 +294,21 @@ export function buildAttackContext(attack, playerStats, campaignName, mapName, c
         });
     })
         .catch(() => basePromise);
+}
+
+// Cover level values mirror COVER in rules/combat/coverService.js
+const COVER_LEVEL_BY_TYPE = {
+    half: 'half',
+    threequarter: 'threeQuarter',
+    threequarters: 'threeQuarter',
+    full: 'full',
+};
+
+function getIgnorableCoverLevels(passive) {
+    if (!passive?.coverTypes?.length) return ['half', 'threeQuarter'];
+    return passive.coverTypes
+        .map(t => COVER_LEVEL_BY_TYPE[String(t).toLowerCase().replace(/[^a-z]/g, '')])
+        .filter(Boolean);
 }
 
 function getAuraSourceForSmiteCover(playerStats, mapData) {
