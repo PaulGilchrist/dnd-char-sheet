@@ -135,7 +135,7 @@ All targetEffect types (te.effect values) are defined in `src/services/combat/co
 
 ## CRITICAL CORE RULES
 - **One subagent at a time** to conserve memory.
-- During debugging, all added debug logging must remain in the code until I explicitly say the bug is fixed.
+- Debug logging: if the AI model added debug logging on its own initiative, it may also remove it once it judges the logging is no longer needed. If the user specifically asked for logging, it must remain until the user specifically asks for it to be removed.
 - Look for and re-use existing code and avoid duplicating code.
 
 Before exploring or testing the app, read docs/app-exploration.md

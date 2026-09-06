@@ -193,8 +193,6 @@ export function buildAttackContext(attack, playerStats, campaignName, mapName, c
                     p => p.type === 'passive_rule' && p.effect === 'ignore_cover_ranged'
                 );
                 const isRangedWeaponAttack = isRanged && !attack.school && attack.weaponType !== 'spell';
-                // FT-071 debug (keep until GM confirms fix)
-                console.log('[FT071] attack:', JSON.stringify({ name: attack.name, weaponType: attack.weaponType, school: attack.school, range: attack.range }), 'isRangedWeaponAttack:', isRangedWeaponAttack, 'cover:', JSON.stringify(coverResult));
                 if (ignoreCoverPassive && isRangedWeaponAttack
                     && getIgnorableCoverLevels(ignoreCoverPassive).includes(coverResult.level)) {
                     coverResult = { level: 'none', acBonus: 0 };

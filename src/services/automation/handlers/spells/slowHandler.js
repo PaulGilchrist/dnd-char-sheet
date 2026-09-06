@@ -159,13 +159,11 @@ export async function handle(action, playerStats, campaignName, _mapName) {
 
             // Persist the caster's concentration with the real save DC (SP-107 pattern)
             const summary = getCombatSummary(campaignName);
-            console.warn('[slow-debug] concentration write:', { hasSummary: !!summary, creatures: summary?.creatures?.length, casterName, concBefore: JSON.stringify(summary?.creatures?.find(c => c.name === casterName)?.concentration) });
             if (summary?.creatures) {
                 const casterCreature = summary.creatures.find(c => c.name === casterName);
                 if (casterCreature && casterCreature.concentration?.spell !== action.name) {
                     addConcentration(summary, casterName, action.name, dc);
                     storage.set('combatSummary', summary, campaignName);
-                    console.warn('[slow-debug] concentration stored:', JSON.stringify(summary.concentration), 'casterConc:', JSON.stringify(summary.creatures.find(c => c.name === casterName)?.concentration));
                 }
             }
 
