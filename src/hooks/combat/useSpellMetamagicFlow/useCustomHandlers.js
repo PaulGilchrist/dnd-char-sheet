@@ -7,6 +7,7 @@ import { applyProtectionFromPoisonHandler } from '../../../services/automation/i
 import { applyStoneSkinHandler } from '../../../services/automation/index.js'
 import { consumeMaterial } from '../../../services/rules/spells/materialComponents.js'
 import { isFreeCastAuthorized, prepareSpellCast } from '../../../services/rules/spells/spellPreparationService.js'
+import { triggerPrimalCompanionSpellShare } from '../../../services/rules/features/primalCompanionSpellShareService.js'
 
 export function useCustomHandlers(playerStats, campaignName, cfClearPending, getPending, setPopupHtml, characters) {
   const handleBarkskinConfirm = React.useCallback(async (result) => {
@@ -89,6 +90,16 @@ export function useCustomHandlers(playerStats, campaignName, cfClearPending, get
       null,
       result
     )
+
+    // CLA-311: Share Spells — self-range spell confirmed on targets; mirror the
+    // spell's targetEffects onto the active Primal Companion (within 30 ft).
+    triggerPrimalCompanionSpellShare(
+      pending.spell,
+      { slotLevel: pending.spellLevel || 0 },
+      playerStats,
+      campaignName,
+      null
+    ).catch((e) => { console.error('[useCustomHandlers] Share Spells trigger failed:', e) })
 
     if (popup && setPopupHtml) {
       setPopupHtml(popup.payload)

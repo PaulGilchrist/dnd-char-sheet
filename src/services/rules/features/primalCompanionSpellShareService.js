@@ -62,6 +62,8 @@ export async function triggerPrimalCompanionSpellShare(spell, metaCtx, playerSta
             casting_time: shareFeature.casting_time || 'passive',
             companionType: companionType,
         },
+        spell,
+        spellSlotLevel: metaCtx?.slotLevel || spell.level || 0,
     };
 
     try {
