@@ -117,7 +117,7 @@ export function createSaveListener(campaignName, config) {
         } else if (disadvantage) {
             rollDetail += ' (disadvantage)';
         }
-        if (dcSuccess !== undefined && dcSuccess !== null) {
+        if (success && dcSuccess !== undefined && dcSuccess !== null) {
             const successLabel = dcSuccess === 0 ? 'none' : (dcSuccess === 0.5 ? 'half' : 'full');
             rollDetail += ` — ${successLabel} success`;
         }

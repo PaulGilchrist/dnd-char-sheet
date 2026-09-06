@@ -37,6 +37,10 @@ vi.mock('../../../../services/combat/conditions/conditionSaveService.js', () => 
   addCondition: vi.fn(),
 }));
 
+vi.mock('../../../rules/combat/rangeCheck.js', () => ({
+  isWithinRange: vi.fn(() => Promise.resolve(true)),
+}));
+
 // ── Imports ──────────────────────────────────────────────────────
 
 import { shieldBash, applyShieldBashEffect } from './shieldBash.js';
@@ -48,6 +52,7 @@ import { addEntry } from '../../../ui/logService.js';
 import { buildSaveDc, createSaveListener } from '../../../automation/common/savePrompt.js';
 import { checkOncePerTurnWithSkip } from '../../../automation/common/oncePerTurn.js';
 import { addCondition } from '../../../../services/combat/conditions/conditionSaveService.js';
+import { isWithinRange } from '../../../rules/combat/rangeCheck.js';
 
 // ── Helpers ──────────────────────────────────────────────────────
 
@@ -398,6 +403,34 @@ describe('shieldBash', () => {
       });
     });
 
+    describe('range gate (FT-074)', () => {
+      it('returns { data: prevData } when target is beyond 5 ft', async () => {
+        getRuntimeValue.mockResolvedValue({ hit: true, attackerName: 'Fighter1', weaponType: 'melee', targetName: 'Goblin1' });
+        checkOncePerTurnWithSkip.mockResolvedValue(null);
+        parseMagicItemName.mockReturnValue({ baseName: 'Shield', magicBonus: 0 });
+        isWithinRange.mockResolvedValue(false);
+        const ctx = makeShieldCtx();
+        const result = await shieldBash.handler(ctx, PREV_DATA);
+        expect(isWithinRange).toHaveBeenCalledWith('Fighter1', 'Goblin1', 5);
+        expect(createSaveListener).not.toHaveBeenCalled();
+        expect(result).toEqual({ data: PREV_DATA });
+        isWithinRange.mockResolvedValue(true);
+      });
+
+      it('proceeds when target is within 5 ft', async () => {
+        getRuntimeValue.mockResolvedValue({ hit: true, attackerName: 'Fighter1', weaponType: 'melee', targetName: 'Goblin1' });
+        checkOncePerTurnWithSkip.mockResolvedValue(null);
+        parseMagicItemName.mockReturnValue({ baseName: 'Shield', magicBonus: 0 });
+        buildSaveDc.mockReturnValue(15);
+        createSaveListener.mockReturnValue({ promise: Promise.resolve({ success: false, total: 5, roll: 5, saveBonus: 0 }) });
+        isWithinRange.mockResolvedValue(true);
+        const ctx = makeShieldCtx();
+        const result = await shieldBash.handler(ctx, PREV_DATA);
+        expect(isWithinRange).toHaveBeenCalledWith('Fighter1', 'Goblin1', 5);
+        expect(result.modal.type).toBe('shieldBash');
+      });
+    });
+
     describe('modal structure', () => {
       it('returns modal with correct options', async () => {
         getRuntimeValue.mockResolvedValue({ hit: true, attackerName: 'Fighter1', weaponType: 'melee', targetName: 'Dragon1' });
@@ -493,6 +526,14 @@ describe('applyShieldBashEffect', () => {
     await applyShieldBashEffect(baseAction, basePlayerStats, 'test-campaign', 'Goblin1', 'Prone', 14);
     expect(setRuntimeValue).toHaveBeenCalledWith(
       'Fighter1', '_Shield_Bash_usedRound', { round: 2, activeCreature: 'Fighter1' }, 'test-campaign',
+    );
+  });
+
+  it('stamps the holder name (not the stale cs mirror) as latch owner (FT-074)', async () => {
+    setupApplyEffect({ round: 1, activeCreatureName: 'AasimarTest' });
+    await applyShieldBashEffect(baseAction, basePlayerStats, 'test-campaign', 'Goblin1', 'Prone', 15);
+    expect(setRuntimeValue).toHaveBeenCalledWith(
+      'Fighter1', '_Shield_Bash_usedRound', { round: 1, activeCreature: 'Fighter1' }, 'test-campaign',
     );
   });
 

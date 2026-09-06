@@ -371,7 +371,7 @@ function CharActionModals({
             {mergedModalState.shieldBashModal && (
                 <ShieldBashChoiceModal
                     {...mergedModalState.shieldBashModal}
-                    onClose={() => { setModalState({ shieldBashModal: null }); window.dispatchEvent(new CustomEvent('target-effects-updated')); window.dispatchEvent(new CustomEvent('combat-summary-updated')); }}
+                    onClose={() => { setModalState({ shieldBashModal: null }); window.dispatchEvent(new CustomEvent('target-effects-updated')); window.dispatchEvent(new CustomEvent('combat-summary-updated')); return resumeAttackPipeline?.(); }}
                 />
             )}
             {mergedModalState.quiveringPalmModal && (

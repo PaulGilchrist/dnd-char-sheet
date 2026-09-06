@@ -5,6 +5,7 @@ import { addEntry } from '../../../ui/logService.js';
 import { buildSaveDc, createSaveListener } from '../../../automation/common/savePrompt.js';
 import { checkOncePerTurnWithSkip } from '../../../automation/common/oncePerTurn.js';
 import { addCondition } from '../../../../services/combat/conditions/conditionSaveService.js';
+import { isWithinRange } from '../../../rules/combat/rangeCheck.js';
 
 export const shieldBash = {
   name: 'shieldBash',
@@ -31,6 +32,10 @@ export const shieldBash = {
 
     const targetName = lastAttack.targetName;
     if (!targetName) return { data: prevData };
+
+    // FT-074: target must be within 5 ft (lenient true when gridless/unplaced)
+    const withinFive = await isWithinRange(ctx.playerStats.name, targetName, 5);
+    if (!withinFive) return { data: prevData };
 
     // Check shield equipped
     const hasShield = ctx.playerStats.inventory?.equipped?.some(itemName => {
@@ -181,11 +186,11 @@ export async function applyShieldBashEffect(action, playerStats, campaignName, t
     }).catch((e) => { console.error("[shieldBash:log-error]", e); });
   }
 
-  // Mark oncePerTurn as used
+  // Mark oncePerTurn as used — stamp the holder's name (FT-074): the
+  // cs.activeCreatureName mirror can be stale mid-combat and corrupt re-arm.
   const cs = await getCombatContext(campaignName);
   const currentRound = cs?.round || 1;
-  const currentCreature = cs?.activeCreatureName || playerStats.name;
-  await setRuntimeValue(playerStats.name, '_Shield_Bash_usedRound', { round: currentRound, activeCreature: currentCreature }, campaignName);
+  await setRuntimeValue(playerStats.name, '_Shield_Bash_usedRound', { round: currentRound, activeCreature: playerStats.name }, campaignName);
 
   return {
     type: 'popup',

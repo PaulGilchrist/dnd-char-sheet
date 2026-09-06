@@ -292,7 +292,11 @@ export default function useAttackDamageResolution({
      */
     const resumeAttackPipeline = async () => {
         const pausedStep = resumeRef.current?._pausedStep;
-        if (pausedStep !== 'cunningStrike' && pausedStep !== 'attackRiderManeuvers' && pausedStep !== 'tacticalMaster') return;
+        // FT-074: the Shield Bash modal pauses inside the featureRiders step.
+        // Allow resume only for the shieldBash modal so other featureRiders
+        // modals (stalkersFlurry, cantripBonuses) keep their own flows.
+        const shieldBashPause = pausedStep === 'featureRiders' && resumeRef.current?._modalType === 'shieldBash';
+        if (pausedStep !== 'cunningStrike' && pausedStep !== 'attackRiderManeuvers' && pausedStep !== 'tacticalMaster' && !shieldBashPause) return;
         const stash = resumeRef.current?.pipelineStash;
         if (!stash) return;
         await stash.pipeline.resume(stash.ctx, resumeRef);
