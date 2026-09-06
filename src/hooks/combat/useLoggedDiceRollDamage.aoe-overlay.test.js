@@ -77,6 +77,8 @@ vi.mock('./loggedDiceRollUtils.js', () => ({
     hasPotentCantrip: vi.fn(),
     isMagicMissileImmune: vi.fn(),
     hasSoulstitchProtection: vi.fn(),
+    getSoulstitchProtectedCreatures: vi.fn(() => []),
+    clearSoulstitchStamp: vi.fn(),
     applyMinDamageAdjustment: vi.fn((d) => d),
 }));
 

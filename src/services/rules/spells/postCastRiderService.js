@@ -1,7 +1,6 @@
 import { getRuntimeValue } from '../../../hooks/runtime/useRuntimeState.js';
 import { executeHandler } from '../../automation/index.js';
 import { isBlockedBySpellThief } from '../../automation/handlers/class-fighter-rogue/spellThiefHandler.js';
-import { applySoulstitchSelection } from '../../automation/handlers/class-wizard/soulstitchSpellsHandler.js';
 import { usesSpellSlot } from '../features/spellUtils.js';
 
 let soulstitchResolve = null;
@@ -180,9 +179,9 @@ export async function triggerSoulstitchSpells(spell, metaCtx, playerStats, campa
                 soulstitchResolve = resolve;
             });
             window.dispatchEvent(new CustomEvent('soulstitch-modal-show', { detail: result.payload }));
+            // CLA-321: the modal applies the selection (single writer); cancel resolves [] (decline).
             const selectedNames = await confirmationPromise;
-            await applySoulstitchSelection(action, playerStats, campaignName, selectedNames);
-            return null;
+            return Array.isArray(selectedNames) ? selectedNames : [];
         }
         if (result) {
             return result;

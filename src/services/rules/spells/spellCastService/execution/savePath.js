@@ -9,8 +9,14 @@ async function handleSavePath(spell, fullSpell, metaCtx, playerStats, campaignNa
     getTargetInfo, getRuntimeValue, innateSorceryActive, effectiveDamageType, spellSaveDc,
     overchannelFormula, overchannelActive, overchannelUseCount, rollAttack, rollDamage, formula, hasInvisible) {
 
+    // CLA-321: chooser applies the stamp before resolution; the selection list flags this
+    // cast so single-target save consumers consume (clear) the stamp at cast resolution.
+    let soulstitchSelection = [];
     try {
-        await triggerSoulstitchSpells(fullSpell, metaCtx, playerStats, campaignName, mapName);
+        const soulstitchResult = await triggerSoulstitchSpells(fullSpell, metaCtx, playerStats, campaignName, mapName);
+        if (Array.isArray(soulstitchResult)) {
+            soulstitchSelection = soulstitchResult;
+        }
     } catch (e) {
         console.error('[spellCast] Soulstitch Spells trigger failed:', e);
     }
@@ -28,7 +34,7 @@ async function handleSavePath(spell, fullSpell, metaCtx, playerStats, campaignNa
 
     return await handleSingleTargetSave(spell, fullSpell, metaCtx, playerStats, campaignName, mapName, characters,
         getTargetInfo, getRuntimeValue, innateSorceryActive, effectiveDamageType, spellSaveDc,
-        overchannelFormula, overchannelActive, overchannelUseCount, rollDamage, formula, hasInvisible);
+        overchannelFormula, overchannelActive, overchannelUseCount, rollDamage, formula, hasInvisible, soulstitchSelection);
 }
 
 async function handleAoE(spell, fullSpell, metaCtx, playerStats, campaignName, mapName, getTargetInfo, getRuntimeValue,
@@ -149,12 +155,13 @@ async function handleAoE(spell, fullSpell, metaCtx, playerStats, campaignName, m
 
 async function handleSingleTargetSave(spell, fullSpell, metaCtx, playerStats, campaignName, mapName, characters,
     getTargetInfo, getRuntimeValue, innateSorceryActive, effectiveDamageType, spellSaveDc,
-    overchannelFormula, overchannelActive, overchannelUseCount, rollDamage, formula, hasInvisible) {
+    overchannelFormula, overchannelActive, overchannelUseCount, rollDamage, formula, hasInvisible, soulstitchSelection = []) {
 
     const target = await getTargetInfo();
     const context = {
         targetName: target?.name,
         attackerName: playerStats.name,
+        soulstitchCast: soulstitchSelection.length > 0,
         ...metaCtx,
         damageType: effectiveDamageType,
         saveDc: spellSaveDc + (innateSorceryActive ? 1 : 0),

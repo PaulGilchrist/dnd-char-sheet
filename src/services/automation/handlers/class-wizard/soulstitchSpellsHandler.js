@@ -1,6 +1,7 @@
-import { getRuntimeValue, setRuntimeValue } from '../../../../hooks/runtime/useRuntimeState.js';
+import { setRuntimeValue } from '../../../../hooks/runtime/useRuntimeState.js';
 import { getCombatSummary } from '../../../../services/encounters/combatData.js';
 import { addEntry } from '../../../../services/ui/logService.js';
+import { soulstitchStampKey } from '../../../../hooks/combat/loggedDiceRollUtils.js';
 
 const EVOCATION_SCHOOL = 'evocation';
 
@@ -34,12 +35,8 @@ export async function handle(action, playerStats, campaignName, _mapName) {
         return null;
     }
 
-    // Get previously chosen creatures for this spell cast
-    const castKey = `_${playerName.replace(/\s+/g, '_')}_Soulstitch_Spells_cast_${Date.now()}`;
-    const chosenCreatures = getRuntimeValue(playerName, castKey, campaignName) || [];
-
-    // All creatures in combat are eligible targets (including self)
-    const eligibleTargets = combatSummary.creatures.map(c => c.name);
+    // CLA-321: "other creatures you can see" — the caster is never an eligible target.
+    const eligibleTargets = combatSummary.creatures.filter(c => c.name !== playerName).map(c => c.name);
 
     return {
         type: 'modal',
@@ -52,7 +49,6 @@ export async function handle(action, playerStats, campaignName, _mapName) {
             featureName,
             maxSelections,
             eligibleTargets,
-            chosenCreatures,
             spellName: spell?.name || 'Unknown',
             spellSchool,
         },
@@ -63,7 +59,11 @@ export async function applySoulstitchSelection(action, playerStats, campaignName
     const featureName = action.name || 'Soulstitch Spells';
     const playerName = playerStats.name;
 
+    const persistentKey = soulstitchStampKey(playerName);
+
     if (!selectedNames || selectedNames.length === 0) {
+        // CLA-321: declining the chooser protects no one this cast — clear any stale stamp.
+        await setRuntimeValue(playerName, persistentKey, [], campaignName);
         return {
             type: 'popup',
             payload: {
@@ -74,11 +74,7 @@ export async function applySoulstitchSelection(action, playerStats, campaignName
         };
     }
 
-    const castKey = `_${playerName.replace(/\s+/g, '_')}_Soulstitch_Spells_cast_${Date.now()}`;
-    await setRuntimeValue(playerName, castKey, selectedNames, campaignName);
-
-    // Store a persistent key for the current spell cast context
-    const persistentKey = `_${playerName.replace(/\s+/g, '_')}_Soulstitch_Spells_active`;
+    // CLA-321: per-cast stamp; consumed (cleared) when the cast resolves.
     await setRuntimeValue(playerName, persistentKey, selectedNames, campaignName);
 
     addEntry(campaignName, {

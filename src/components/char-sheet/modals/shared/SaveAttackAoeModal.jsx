@@ -12,6 +12,7 @@ import CreatureSelectionModal from './CreatureSelectionModal.jsx';
 import AreaEffectTargetModalBase from './AreaEffectTargetModalBase.jsx';
 import { renderTargetList, persistAndNotify } from './AreaEffectTargetModalBase.utils.jsx';
 import { handleOverchannelSelfDamage } from '../../../../hooks/combat/handlers/handleOverchannelSelfDamage.js';
+import { hasSoulstitchProtection, clearSoulstitchStamp } from '../../../../hooks/combat/loggedDiceRollUtils.js';
 
 function SaveAttackAoeModal({
     action,
@@ -96,6 +97,53 @@ function SaveAttackAoeModal({
 
             if (isNpc) {
                 const carefulSpellProtected = isCarefulSpell && isCarefulAlly(targetName);
+                const isSoulstitchProtected = hasSoulstitchProtection(targetName, playerStats.name, campaignName);
+
+                if (isSoulstitchProtected) {
+                    // CLA-321: Soulstitch Spells — chosen creature auto-succeeds, takes no damage.
+                    addEntry(campaignName, {
+                        type: 'roll',
+                        characterName: playerStats.name,
+                        rollType: 'save-damage',
+                        name: `${action.name} (Soulstitch)`,
+                        formula: resolvedDamage,
+                        rolls: [],
+                        total: 0,
+                        modifier: 0,
+                        damageType: damageType,
+                        targetName,
+                        saveType: saveType,
+                        saveDc: saveDc,
+                        dcSuccess: dcSuccess,
+                        saveResult: 'soulstitch_auto_success',
+                        saveRoll: null,
+                        saveBonus,
+                        saveRawRolls: [],
+                        finalDamage: 0,
+                        timestamp: Date.now(),
+                    }).catch((e) => { console.error('[SaveAttackAoeModal] Error logging soulstitch auto-save:', e); });
+
+                    addTargetResult(campaignName, {
+                        targetName,
+                        saveResult: 'soulstitch_auto_success',
+                        roll: null,
+                        total: saveBonus,
+                        conditions: [],
+                        appliedDamage: 0,
+                    });
+                    results.push({
+                        targetName,
+                        success: true,
+                        roll: null,
+                        total: saveBonus,
+                        saveBonus,
+                        rawDamage: 0,
+                        finalDamage: 0,
+                        soulstitchProtected: true,
+                    });
+                    continue;
+                }
+
                 const isHeightenTarget = heightenTarget === targetName;
 
                 const targetEffects = getRuntimeValue('campaign', 'targetEffects') || [];
@@ -189,8 +237,50 @@ function SaveAttackAoeModal({
                 });
             } else {
                 const carefulSpellProtected = isCarefulSpell && isCarefulAlly(targetName);
+                const isSoulstitchProtected = hasSoulstitchProtection(targetName, playerStats.name, campaignName);
 
-                if (carefulSpellProtected) {
+                if (isSoulstitchProtected) {
+                    // CLA-321: chosen creature auto-succeeds its save — no prompt, no damage.
+                    applyDamageToTarget(
+                        combatSummary, targetName, 0, [damageType],
+                        campaignName, characters, true, playerStats.name, false
+                    );
+
+                    addEntry(campaignName, {
+                        type: 'roll',
+                        characterName: playerStats.name,
+                        rollType: 'save-damage',
+                        name: `${action.name} (Soulstitch)`,
+                        targetName,
+                        saveType: saveType,
+                        saveDc: saveDc,
+                        dcSuccess: dcSuccess,
+                        saveResult: 'soulstitch_auto_success',
+                        saveRoll: null,
+                        finalDamage: 0,
+                        timestamp: Date.now(),
+                    }).catch((e) => { console.error('[SaveAttackAoeModal] Error logging soulstitch auto-save:', e); });
+
+                    addTargetResult(campaignName, {
+                        targetName,
+                        saveResult: 'soulstitch_auto_success',
+                        roll: null,
+                        total: 0,
+                        conditions: [],
+                        appliedDamage: 0,
+                    });
+
+                    results.push({
+                        targetName,
+                        success: true,
+                        roll: null,
+                        total: 0,
+                        saveBonus: 0,
+                        rawDamage: 0,
+                        finalDamage: 0,
+                        soulstitchProtected: true,
+                    });
+                } else if (carefulSpellProtected) {
                     applyDamageToTarget(
                         combatSummary, targetName, 0, [damageType],
                         campaignName, characters, true, playerStats.name, false
@@ -243,6 +333,9 @@ function SaveAttackAoeModal({
                 characters);
         }
 
+        // CLA-321: Soulstitch protection lasts only for the cast that wrote the stamp.
+        clearSoulstitchStamp(playerStats.name, campaignName);
+
         return { results, prompts };
     }, [campaignName, action.name, action.automation?.scaling, playerStats, damage, damageType, radiantSoulChaMod, dcSuccess, saveDc, saveType, isCarefulSpell, isCarefulAlly, heightenTarget, overchannelActive, overchannelUseCount, overchannelSpellLevel]);
 
@@ -254,10 +347,12 @@ function SaveAttackAoeModal({
         if (pendingIndex === -1) return;
 
         const targetName = pendingPrompts[pendingIndex].targetName;
-        const success = detail.success;
+        // CLA-321: soulstitch-chosen target auto-succeeds the prompt's save, takes no damage.
+        const isSoulstitchProtected = hasSoulstitchProtection(targetName, playerStats.name, campaignName);
+        const success = isSoulstitchProtected ? true : detail.success;
         const saveBonus = detail.saveBonus ?? 0;
 
-        const rawDamage = detail.rawDamage ?? 0;
+        const rawDamage = isSoulstitchProtected ? 0 : (detail.rawDamage ?? 0);
 
         const combatSummary = getCombatSummary(campaignName);
         const targetChar = (combatSummary?.creatures?.filter(c => c.type === 'player') || []).find(c => c.name === targetName);
@@ -265,6 +360,24 @@ function SaveAttackAoeModal({
         const normalizedSaveType = normalizeSaveType(detail.saveType);
         const evasionActive = hasEvasionForSave(evasionEffects, normalizedSaveType);
         const finalDamage = computeDamageAfterEvasion(rawDamage, success, dcSuccess, evasionActive);
+
+        if (isSoulstitchProtected) {
+            addEntry(campaignName, {
+                type: 'roll',
+                rollType: 'save-damage',
+                characterName: playerStats.name,
+                name: `${action.name} (Soulstitch)`,
+                targetName,
+                saveType: detail.saveType,
+                saveDc: detail.saveDc,
+                dcSuccess: detail.dcSuccess,
+                saveResult: 'soulstitch_auto_success',
+                saveRoll: detail.roll ?? 0,
+                saveBonus,
+                finalDamage: 0,
+                timestamp: Date.now(),
+            }).catch((e) => { console.error('[SaveAttackAoeModal] Error logging soulstitch auto-save:', e); });
+        }
 
         const scalingEntry = resolveScaling(playerStats, action.automation?.scaling);
         const resolvedDamage = scalingEntry?.damage || damage;
@@ -335,7 +448,7 @@ function SaveAttackAoeModal({
 
         addTargetResult(campaignName, {
             targetName,
-            saveResult: success ? 'success' : 'failure',
+            saveResult: isSoulstitchProtected ? 'soulstitch_auto_success' : (success ? 'success' : 'failure'),
             roll: detail.roll ?? 0,
             total: detail.total ?? 0,
             conditions: [],
@@ -353,6 +466,7 @@ function SaveAttackAoeModal({
             saveBonus,
             rawDamage,
             finalDamage,
+            soulstitchProtected: isSoulstitchProtected,
         };
         if (ctx) {
             ctx.setResults(prev => {
@@ -563,11 +677,13 @@ function SaveAttackAoeModal({
                     <div className="abjure-results-list">
                         {ctx.results.map(r => (
                             <div key={r.targetName} className={`abjure-result ${r.success ? 'abjure-result-success' : 'abjure-result-fail'}`}>
-                                <strong>{r.targetName}</strong>: {r.success
-                                    ? (r.finalDamage ?? 0) > 0
-                                        ? `Saved — takes ${r.finalDamage} ${damageType} damage (rolled ${r.roll ?? 0}, halved)`
-                                        : `Saved — takes no damage (rolled ${r.roll ?? 0})`
-                                    : `Failed — takes ${r.finalDamage ?? 0} ${damageType} damage (rolled ${r.roll ?? 0})`}
+                                <strong>{r.targetName}</strong>: {r.soulstitchProtected
+                                    ? 'Soulstitch — automatically succeeds, takes no damage'
+                                    : r.success
+                                        ? (r.finalDamage ?? 0) > 0
+                                            ? `Saved — takes ${r.finalDamage} ${damageType} damage (rolled ${r.roll ?? 0}, halved)`
+                                            : `Saved — takes no damage (rolled ${r.roll ?? 0})`
+                                        : `Failed — takes ${r.finalDamage ?? 0} ${damageType} damage (rolled ${r.roll ?? 0})`}
                             </div>
                         ))}
                         {ctx.pendingPrompts.map(p => (
@@ -621,11 +737,13 @@ function SaveAttackAoeModal({
                         <div className="abjure-results-list">
                             {summary.results.map(r => (
                                 <div key={r.targetName} className={`abjure-result ${r.success ? 'abjure-result-success' : 'abjure-result-fail'}`}>
-                                    <strong>{r.targetName}</strong>: {r.success
-                                        ? (r.finalDamage ?? 0) > 0
-                                            ? `Saved — takes ${r.finalDamage} ${damageType} damage (rolled ${r.roll ?? 0}, halved)`
-                                            : `Saved — takes no damage (rolled ${r.roll ?? 0})`
-                                        : `Failed — takes ${r.finalDamage ?? 0} ${damageType} damage (rolled ${r.roll ?? 0})`}
+                                    <strong>{r.targetName}</strong>: {r.soulstitchProtected
+                                        ? 'Soulstitch — automatically succeeds, takes no damage'
+                                        : r.success
+                                            ? (r.finalDamage ?? 0) > 0
+                                                ? `Saved — takes ${r.finalDamage} ${damageType} damage (rolled ${r.roll ?? 0}, halved)`
+                                                : `Saved — takes no damage (rolled ${r.roll ?? 0})`
+                                            : `Failed — takes ${r.finalDamage ?? 0} ${damageType} damage (rolled ${r.roll ?? 0})`}
                                 </div>
                             ))}
                         </div>

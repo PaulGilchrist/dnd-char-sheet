@@ -1,5 +1,5 @@
 import { sendSavePrompt } from '../../services/combat/conditions/savePromptService.js';
-import { getRuntimeValue } from '../runtime/useRuntimeState.js';
+import { getRuntimeValue, setRuntimeValue } from '../runtime/useRuntimeState.js';
 import { hasMinDamage } from '../../services/combat/automation/automationService.js';
 import { loadMapData } from '../../services/maps/mapsService.js';
 
@@ -63,15 +63,25 @@ export function isMagicMissileImmune(characterName, campaignName) {
     return Array.isArray(activeBuffs) && activeBuffs.some(b => b.effect === 'shield');
 }
 
+export function soulstitchStampKey(playerName) {
+    return `_${playerName.replace(/\s+/g, '_')}_Soulstitch_Spells_active`;
+}
+
 export function getSoulstitchProtectedCreatures(playerName, campaignName) {
-    const key = `_${playerName.replace(/\s+/g, '_')}_Soulstitch_Spells_active`;
-    const stored = getRuntimeValue(playerName, key, campaignName);
+    const stored = getRuntimeValue(playerName, soulstitchStampKey(playerName), campaignName);
     return Array.isArray(stored) ? stored : [];
 }
 
 export function hasSoulstitchProtection(targetName, playerName, campaignName) {
     const protectedList = getSoulstitchProtectedCreatures(playerName, campaignName);
     return protectedList.includes(targetName);
+}
+
+// CLA-321: Soulstitch protection is per-cast — consume (clear) the stamp once the
+// cast that wrote it has resolved all its saves.
+export function clearSoulstitchStamp(playerName, campaignName) {
+    if (getSoulstitchProtectedCreatures(playerName, campaignName).length === 0) return;
+    setRuntimeValue(playerName, soulstitchStampKey(playerName), [], campaignName);
 }
 
 export function applyMinDamageAdjustment(rawDamage, rolls, playerStats, damageType) {

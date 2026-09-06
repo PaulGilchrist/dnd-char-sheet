@@ -38,6 +38,7 @@ vi.mock('../../../services/rules/features/invisibilityService.js', () => ({
 vi.mock('../loggedDiceRollUtils.js', () => ({
     hasPotentCantrip: vi.fn(),
     hasSoulstitchProtection: vi.fn(),
+    clearSoulstitchStamp: vi.fn(),
     applyMinDamageAdjustment: vi.fn((d) => d),
 }));
 

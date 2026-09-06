@@ -11,7 +11,7 @@ import {
 import { getRuntimeValue, setRuntimeValue } from '../../runtime/useRuntimeState.js';
 import { hasIgnoreResistance, playerIsImmuneToCondition, hasGreatWeaponFighting, applyGreatWeaponFightingToDamage, evaluateAutoExpression } from '../../../services/combat/automation/automationService.js';
 import { endInvisibilityOnHostileAction } from '../../../services/rules/features/invisibilityService.js';
-import { hasPotentCantrip, hasSoulstitchProtection, applyMinDamageAdjustment } from '../loggedDiceRollUtils.js';
+import { hasPotentCantrip, hasSoulstitchProtection, applyMinDamageAdjustment, clearSoulstitchStamp } from '../loggedDiceRollUtils.js';
 import { getCoronaSaveDisadvantage } from '../../../services/combat/auras/coronaAuraUtils.js';
 import { getElderChampionSaveDisadvantage } from '../../../services/combat/auras/elderChampionAuraUtils.js';
 import { resolveCreatureType } from '../../../services/combat/creatureTypeResolver.js';
@@ -340,7 +340,6 @@ export function createNpcSaveDamageHandler(deps) {
         if (!saveResult.success && context?.statusEffects?.length > 0) {
             for (const effect of context.statusEffects) {
                 const condKey = String(effect).toLowerCase();
-                const targetCharacter = (characters || []).find(c => utils.getName(c.name) === target.name);
                 const targetStats = targetCharacter?.computedStats || targetCharacter;
                 const attackerCreature = combatSummary?.creatures?.find(c => c.name === characterName);
                 if (targetStats && playerIsImmuneToCondition({
@@ -352,15 +351,9 @@ export function createNpcSaveDamageHandler(deps) {
                 })) {
                     continue;
                 }
-                if (target.type === 'player') {
-                    const conditions = getRuntimeValue(target.name, 'activeConditions') || [];
-                    const filtered = conditions.filter(c => String(c).toLowerCase() !== condKey);
-                    setRuntimeValue(target.name, 'activeConditions', [...filtered, condKey], campaignName);
-                } else {
-                    const conditions = getRuntimeValue(target.name, 'activeConditions') || [];
-                    const filtered = conditions.filter(c => String(c).toLowerCase() !== condKey);
-                    setRuntimeValue(target.name, 'activeConditions', [...filtered, condKey], campaignName);
-                }
+                const conditions = getRuntimeValue(target.name, 'activeConditions') || [];
+                const filtered = conditions.filter(c => String(c).toLowerCase() !== condKey);
+                setRuntimeValue(target.name, 'activeConditions', [...filtered, condKey], campaignName);
             }
         }
 
@@ -379,7 +372,8 @@ export function createNpcSaveDamageHandler(deps) {
             saveDc,
             saveType,
             dcSuccess,
-            saveResult: isSoulstitchProtected ? { success: true, roll: 1, total: 0, bonus: 0 } : saveResult,
+            // CLA-321: popup displays the same roll the log records (success forced, damage 0).
+            saveResult: isSoulstitchProtected ? { success: true, roll: saveResult.roll, total: saveResult.total, bonus: saveResult.bonus } : saveResult,
             finalDamage: primaryApplyResult?.finalDamage ?? finalDamage,
             damageApplied: (primaryApplyResult?.finalDamage ?? finalDamage) > 0,
             damageReduced: primaryApplyResult?.damageReduced,
@@ -430,6 +424,11 @@ export function createNpcSaveDamageHandler(deps) {
         setPopupHtml(popupData);
 
         handleOverchannelSelfDamage(characterName, campaignName, context, logEntry, characters);
+
+        // CLA-321: Soulstitch protection lasts only for the cast that wrote the stamp.
+        if (context?.soulstitchCast) {
+            clearSoulstitchStamp(characterName, campaignName);
+        }
 
         if (context?.metamagicTwinTarget) {
             const twinTarget = combatSummary?.creatures?.find(c => c.name === context.metamagicTwinTarget);

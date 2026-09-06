@@ -4,7 +4,7 @@ import { setRuntimeValue } from '../../runtime/useRuntimeState.js';
 import { getAllyList } from '../../useAllySelection.js';
 import { loadCombatSummary } from '../../../services/encounters/combatData.js';
 import { endInvisibilityOnHostileAction } from '../../../services/rules/features/invisibilityService.js';
-import { readAoeContext, hasSoulstitchProtection } from '../loggedDiceRollUtils.js';
+import { readAoeContext, hasSoulstitchProtection, clearSoulstitchStamp } from '../loggedDiceRollUtils.js';
 import { handleOverchannelSelfDamage } from './handleOverchannelSelfDamage.js';
 
 export function createAoeDamageHandler(deps) {
@@ -186,5 +186,8 @@ export function createAoeDamageHandler(deps) {
         setRuntimeValue('campaign', 'lastAttack', aoeLastAttackData, campaignName);
 
         handleOverchannelSelfDamage(characterName, campaignName, context, logEntry, characters);
+
+        // CLA-321: Soulstitch protection lasts only for the cast that wrote the stamp.
+        clearSoulstitchStamp(casterName, campaignName);
     };
 }

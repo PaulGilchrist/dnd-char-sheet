@@ -37,10 +37,6 @@ vi.mock('../../automation/handlers/class-fighter-rogue/spellThiefHandler.js', ()
   isBlockedBySpellThief: vi.fn(() => false),
 }))
 
-vi.mock('../../automation/handlers/class-wizard/soulstitchSpellsHandler.js', () => ({
-  applySoulstitchSelection: vi.fn(),
-}))
-
 describe('postCastRiderService', () => {
   beforeEach(() => {
     vi.clearAllMocks()
@@ -613,7 +609,7 @@ describe('postCastRiderService', () => {
   })
 
   describe('confirmSoulstitchSelection', () => {
-    it('resolves the pending promise with selected names', () => {
+    it('resolves the pending promise and the trigger returns the applied selection', () => {
       return new Promise((resolve) => {
         // Use mockReturnValue so executeHandler resolves synchronously in the same microtask
         // This ensures soulstitchResolve is set before confirmSoulstitchSelection is called
@@ -630,7 +626,28 @@ describe('postCastRiderService', () => {
           confirmSoulstitchSelection(['A'])
 
           triggerPromise.then((result) => {
-            expect(result).toBeNull()
+            // CLA-321: trigger forwards the selection so savePath can flag the cast;
+            // the modal is the single writer of the stamp (deduped apply).
+            expect(result).toEqual(['A'])
+            resolve(null)
+          })
+        })
+      })
+    })
+
+    it('CLA-321: cancel (empty selection) resolves the trigger with no selection (no deadlock)', () => {
+      return new Promise((resolve) => {
+        executeHandler.mockReturnValue(Promise.resolve({ type: 'modal', payload: { options: ['A', 'B'] } }))
+        const stats = { automation: { passives: [{ type: 'soulstitch_spells', name: 'Soulstitch' }] } }
+        const evocationSpell = { name: 'Fireball', school: 'Evocation', dc: { dc_type: 'CON' } }
+
+        const triggerPromise = triggerSoulstitchSpells(evocationSpell, {}, stats, 'camp', 'map')
+
+        Promise.resolve().then(() => {
+          confirmSoulstitchSelection([])
+
+          triggerPromise.then((result) => {
+            expect(result).toEqual([])
             resolve(null)
           })
         })

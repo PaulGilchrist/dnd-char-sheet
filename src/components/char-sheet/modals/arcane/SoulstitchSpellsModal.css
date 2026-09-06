@@ -1,0 +1,33 @@
+.soulstitch-result-overlay {
+  z-index: 2050;
+}
+
+.soulstitch-spells-selected-count {
+  font-size: 0.9em;
+  opacity: 0.8;
+  margin-top: 4px;
+}
+
+.soulstitch-spells-target-list {
+  text-align: left;
+  margin-top: 12px;
+  max-height: 400px;
+  overflow-y: auto;
+}
+
+.soulstitch-spells-target {
+  display: block;
+  padding: 2px 12px;
+  border-radius: 6px;
+  cursor: pointer;
+  border: 1px solid transparent;
+}
+
+.soulstitch-spells-target-selected {
+  background: rgba(255, 255, 255, 0.15);
+  border: 1px solid var(--color-link);
+}
+
+.soulstitch-spells-target input[type="checkbox"] {
+  margin-right: 8px;
+}

@@ -5961,7 +5961,7 @@
       "handler": "src/services/combat/automation/handlers/classFeatureHandler.js",
       "router": "src/services/combat/automation/routers/classFeatureRouter.js",
       "infoBuilder": "src/services/combat/automation/infoBuilders/classFeatureInfoBuilder.js",
-      "verified": "broken — see .opencode/plans/bug-CLA-321-soulstitch-spells.md",
+      "verified": "verified",
       "class": "Wizard",
       "triggerConditions": "Action: passive",
       "expectedBehavior": "When you cast an Evocation spell that affects other creatures you can see, choose a number equal to 1 + spell's level. Chosen creatures automatically succeed on saving throws, and take no damage if they would normally take half damage on a successful save."

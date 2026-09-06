@@ -19,6 +19,10 @@ vi.mock('../../../../services/ui/logService.js', () => ({
   addEntry: vi.fn(() => Promise.resolve()),
 }));
 
+vi.mock('../../../../hooks/combat/loggedDiceRollUtils.js', () => ({
+  soulstitchStampKey: (n) => `_${String(n).replace(/\s+/g, '_')}_Soulstitch_Spells_active`,
+}));
+
 import { handle, applySoulstitchSelection } from './soulstitchSpellsHandler.js';
 import * as useRuntimeState from '../../../../hooks/runtime/useRuntimeState.js';
 import * as combatData from '../../../../services/encounters/combatData.js';
@@ -222,7 +226,7 @@ describe('soulstitchSpellsHandler.handle', () => {
   });
 
   describe('target resolution', () => {
-    it('should include all combat creatures as eligible targets', async () => {
+    it('should exclude the caster from eligible targets ("other creatures you can see")', async () => {
       const action = makeEvocationAction();
       combatData.getCombatSummary.mockReturnValue({
         creatures: [
@@ -234,31 +238,8 @@ describe('soulstitchSpellsHandler.handle', () => {
 
       const result = await handle(action, makePlayerStats(), campaignName, null);
 
-      expect(result.payload.eligibleTargets).toEqual(['Ally1', 'TestWizard', 'Enemy1']);
-    });
-
-    it('should load previously chosen creatures from runtime state, defaulting to empty array', async () => {
-      const action = makeEvocationAction();
-      combatData.getCombatSummary.mockReturnValue({
-        creatures: [{ name: 'Goblin1' }],
-      });
-      useRuntimeState.getRuntimeValue.mockReturnValue(['Goblin1']);
-
-      const result = await handle(action, makePlayerStats(), campaignName, null);
-
-      expect(result.payload.chosenCreatures).toEqual(['Goblin1']);
-    });
-
-    it('should default chosenCreatures to empty array when runtime returns null/undefined', async () => {
-      const action = makeEvocationAction();
-      combatData.getCombatSummary.mockReturnValue({
-        creatures: [{ name: 'Goblin1' }],
-      });
-      useRuntimeState.getRuntimeValue.mockReturnValue(null);
-
-      const result = await handle(action, makePlayerStats(), campaignName, null);
-
-      expect(result.payload.chosenCreatures).toEqual([]);
+      expect(result.payload.eligibleTargets).toEqual(['Ally1', 'Enemy1']);
+      expect(result.payload.eligibleTargets).not.toContain('TestWizard');
     });
   });
 
@@ -364,10 +345,16 @@ describe('soulstitchSpellsHandler.applySoulstitchSelection', () => {
       });
     });
 
-    it('should not store runtime values or log when no creatures selected', async () => {
+    it('should clear the stamp (decline = no protection this cast) and not log when no creatures selected', async () => {
       await applySoulstitchSelection(makeAction(), makePlayerStats(), campaignName, []);
 
-      expect(useRuntimeState.setRuntimeValue).not.toHaveBeenCalled();
+      expect(useRuntimeState.setRuntimeValue).toHaveBeenCalledTimes(1);
+      expect(useRuntimeState.setRuntimeValue).toHaveBeenCalledWith(
+        'TestWizard',
+        '_TestWizard_Soulstitch_Spells_active',
+        [],
+        campaignName,
+      );
       expect(logService.addEntry).not.toHaveBeenCalled();
     });
 
@@ -386,18 +373,12 @@ describe('soulstitchSpellsHandler.applySoulstitchSelection', () => {
   });
 
   describe('successful selection', () => {
-    it('should store selected creatures with cast key and persistent active key', async () => {
+    it('should store selected creatures under the persistent active key only (no cast-timestamp key)', async () => {
       const selectedNames = ['Goblin1'];
 
       await applySoulstitchSelection(makeAction(), makePlayerStats(), campaignName, selectedNames);
 
-      expect(useRuntimeState.setRuntimeValue).toHaveBeenCalledTimes(2);
-      expect(useRuntimeState.setRuntimeValue).toHaveBeenCalledWith(
-        'TestWizard',
-        expect.stringMatching(/_TestWizard_Soulstitch_Spells_cast_/),
-        selectedNames,
-        campaignName,
-      );
+      expect(useRuntimeState.setRuntimeValue).toHaveBeenCalledTimes(1);
       expect(useRuntimeState.setRuntimeValue).toHaveBeenCalledWith(
         'TestWizard',
         '_TestWizard_Soulstitch_Spells_active',

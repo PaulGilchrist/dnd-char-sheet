@@ -38,6 +38,7 @@ vi.mock('../../../services/rules/features/invisibilityService.js', () => ({
 vi.mock('../loggedDiceRollUtils.js', () => ({
     hasPotentCantrip: vi.fn(),
     hasSoulstitchProtection: vi.fn(),
+    clearSoulstitchStamp: vi.fn(),
     applyMinDamageAdjustment: vi.fn((d) => d),
 }));
 
@@ -75,7 +76,7 @@ vi.mock('../../../services/rules/combat/applyDamage.js', () => ({
 import { rollExpression } from '../../../services/dice/diceRoller.js';
 import { getRuntimeValue, setRuntimeValue } from '../../runtime/useRuntimeState.js';
 import { hasIgnoreResistance } from '../../../services/combat/automation/automationService.js';
-import { hasPotentCantrip, hasSoulstitchProtection, applyMinDamageAdjustment } from '../loggedDiceRollUtils.js';
+import { hasPotentCantrip, hasSoulstitchProtection, applyMinDamageAdjustment, clearSoulstitchStamp } from '../loggedDiceRollUtils.js';
 import { getCoronaSaveDisadvantage } from '../../../services/combat/auras/coronaAuraUtils.js';
 import { getElderChampionSaveDisadvantage } from '../../../services/combat/auras/elderChampionAuraUtils.js';
 import { isCircleOfPowerActive } from '../../../services/automation/handlers/buffs/circleOfPowerHandler.js';
@@ -352,6 +353,39 @@ describe('handleNpcSaveDamage - basic save damage flow', () => {
             // Save is still rolled, but damage is forced to 0
             const damageCall = applyDamageToTarget.mock.calls[0];
             expect(damageCall[2]).toBe(0);
+        });
+
+        it('CLA-321: consumes (clears) the caster stamp when the context flags a soulstitch cast', async () => {
+            setupActiveConditions([]);
+            hasSoulstitchProtection.mockReturnValue(true);
+
+            await callHandler(createFn(), { soulstitchCast: true });
+
+            expect(clearSoulstitchStamp).toHaveBeenCalledWith('TestWizard', 'test-campaign');
+        });
+
+        it('CLA-321: does not clear the stamp for a non-soulstitch cast', async () => {
+            setupActiveConditions([]);
+
+            await callHandler(createFn());
+
+            expect(clearSoulstitchStamp).not.toHaveBeenCalled();
+        });
+
+        it('CLA-321: popup save roll matches the log save roll on the enforced path', async () => {
+            setupActiveConditions([]);
+            hasSoulstitchProtection.mockReturnValue(true);
+            rollSaveForCreature.mockReturnValue({ roll: 5, total: 5, bonus: 0, success: false, rawRolls: [5] });
+            applyDamageToTarget.mockResolvedValue({ finalDamage: 0, newHp: 13, damageReduced: false });
+
+            await callHandler(createFn());
+
+            const popupData = deps.setPopupHtml.mock.calls[0][0];
+            const logCall = deps.logEntry.mock.calls.find(c => c[0].rollType === 'save-damage')[0];
+            expect(logCall.saveRoll).toBe(5);
+            expect(popupData.saveResult.success).toBe(true);
+            expect(popupData.saveResult.roll).toBe(5);
+            expect(popupData.finalDamage).toBe(0);
         });
     });
 
