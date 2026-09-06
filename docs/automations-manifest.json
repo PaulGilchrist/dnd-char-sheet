@@ -5724,7 +5724,7 @@
       "handler": "src/services/combat/automation/handlers/spellHandler.js",
       "router": "src/services/combat/automation/routers/spellRouter.js",
       "infoBuilder": "src/services/combat/automation/infoBuilders/spellInfoBuilder.js",
-      "verified": "broken — see .opencode/plans/bug-SP-105-shield-of-faith.md",
+      "verified": "verified",
       "class": "Spell",
       "triggerConditions": "Action: Bonus Action; Range: 60 feet; Duration: Concentration, up to 10 minutes",
       "expectedBehavior": "A shimmering field surrounds a creature of your choice within range, granting it a +2 bonus to AC for the duration."

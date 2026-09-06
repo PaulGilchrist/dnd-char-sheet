@@ -68,7 +68,7 @@ function DiceRollResult(props) {
     const {
         name, type, rolls, rollType, bonus = 0, bonusDetail, formula = '', modifier = 0,
         targetName, targetAc, hit, isAutoMiss, rangeReason, coverReason, coverLevel, coverAcBonus,
-        defensiveDuelistBonus, baitAndSwitchBonus, unerringStrikeApplied, interceptedFeature,
+        defensiveDuelistBonus, baitAndSwitchBonus, shieldAcBonus, shieldOfFaithAcBonus, unerringStrikeApplied, interceptedFeature,
         isCrit, isAutoCrit,
         dc, success, dcType, dcSuccess, waitingForPlayerSave, saveDc, saveType, saveResult, holyAuraSaveResult,
         finalDamage, damageApplied, targetCurrentHp, damageReduced, damageType, autoDamage,
@@ -119,10 +119,14 @@ function DiceRollResult(props) {
         safeRolls, finalRoll, originalTotal, displayRoll, displayTotal,
         strReplaceApplied, finalDisplayTotal,
         finalTotal, showFumble,
-        computedHit, homingStrikesApplied,
+        computedHit, homingStrikesApplied, effectiveAc,
     } = state;
 
     const hitMissTotal = homingStrikesApplied ? finalTotal : displayTotal;
+    const acBuffLabels = [];
+    if (shieldOfFaithAcBonus > 0) acBuffLabels.push(`+${shieldOfFaithAcBonus} Shield of Faith`);
+    if (shieldAcBonus > 0) acBuffLabels.push(`+${shieldAcBonus} Shield`);
+    const acDisplay = `${effectiveAc ?? targetAc ?? '—'}${acBuffLabels.length ? ` (${acBuffLabels.join(', ')})` : ''}`;
 
     const {
         handleReroll, handleTacticalMind, handleDarkOnesLuck,
@@ -322,7 +326,7 @@ function DiceRollResult(props) {
             {showFumble && <div className="dice-roll-crit dice-roll-crit-miss">Critical Miss!</div>}
                {targetName && computedHit !== undefined && !isSaveDamageType && rollType === 'attack' && (
                     <div className={`dice-roll-hit-miss ${computedHit ? 'hit' : 'miss'}`}>
-                       {isAutoMiss ? `✗ AUTO-MISS (${coverReason || rangeReason || 'out of range'})` : (computedHit ? `✓ HIT (${hitMissTotal} vs AC ${targetAc ?? '—'}${(defensiveDuelistBonus > 0 || (baitAndSwitchBonus || 0) > 0) ? ` + ${Math.max(0, defensiveDuelistBonus || 0) + Math.max(0, baitAndSwitchBonus || 0)} reaction` : ''})` : `✗ MISS (${hitMissTotal} vs AC ${targetAc ?? '—'}${(defensiveDuelistBonus > 0 || (baitAndSwitchBonus || 0) > 0) ? ` + ${Math.max(0, defensiveDuelistBonus || 0) + Math.max(0, baitAndSwitchBonus || 0)} reaction` : ''})`)}
+                       {isAutoMiss ? `✗ AUTO-MISS (${coverReason || rangeReason || 'out of range'})` : (computedHit ? `✓ HIT (${hitMissTotal} vs AC ${acDisplay}${(defensiveDuelistBonus > 0 || (baitAndSwitchBonus || 0) > 0) ? ` + ${Math.max(0, defensiveDuelistBonus || 0) + Math.max(0, baitAndSwitchBonus || 0)} reaction` : ''})` : `✗ MISS (${hitMissTotal} vs AC ${acDisplay}${(defensiveDuelistBonus > 0 || (baitAndSwitchBonus || 0) > 0) ? ` + ${Math.max(0, defensiveDuelistBonus || 0) + Math.max(0, baitAndSwitchBonus || 0)} reaction` : ''})`)}
                     </div>
                   )}
 
@@ -334,7 +338,7 @@ function DiceRollResult(props) {
 
             {homingStrikesApplied && homingStrikesUsed !== false && (
               <div className="dice-roll-reroll-result">
-                <i className="fa-solid fa-brain"></i> Soul Blades (Homing Strikes): psionic die +{Number(homingStrikesBonus)} → {finalTotal} vs AC {targetAc ?? '—'} — miss converted into a hit, 1 Psionic Energy expended
+                <i className="fa-solid fa-brain"></i> Soul Blades (Homing Strikes): psionic die +{Number(homingStrikesBonus)} → {finalTotal} vs AC {acDisplay} — miss converted into a hit, 1 Psionic Energy expended
               </div>
             )}
 

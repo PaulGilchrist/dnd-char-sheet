@@ -4,6 +4,7 @@ export function useDiceRollState(props) {
     const {
         rolls, rollType, bonus = 0, modifier = 0, total = 0,
         targetAc, hit, isAutoMiss, coverAcBonus, defensiveDuelistBonus, baitAndSwitchBonus,
+        shieldAcBonus, shieldOfFaithAcBonus,
         reliableTalent, d20Floor10, starryDragonFloor, strSaveReplace, strCheckReplace, strScore,
         wisCheckReplace, wisCheckMinBonus, luckyRerolled, luckyRerollValue,
         targetName, homingStrikesBonus,
@@ -83,8 +84,13 @@ export function useDiceRollState(props) {
     const finalTotal = baseTotal + (homingStrikesApplied ? Number(homingStrikesBonus) : 0);
     const showFumble = isNatural1 && rollType === 'attack';
 
-    const effectiveAc = targetAc + (coverAcBonus || 0) + (defensiveDuelistBonus || 0) + (baitAndSwitchBonus || 0);
-    const computedHit = isAutoMiss ? false : (targetName && hit !== undefined && targetAc !== undefined ? finalTotal >= effectiveAc : hit);
+    // SP-105: trust the resolver's authoritative effectiveAc when forwarded
+    // (covers Shield of Faith, Shield, cover, reactions); otherwise recompute
+    // from the forwarded per-bonus fields so computedHit agrees with hit.
+    const effectiveAc = props.effectiveAc !== undefined
+        ? props.effectiveAc
+        : (targetAc !== undefined ? targetAc + (coverAcBonus || 0) + (defensiveDuelistBonus || 0) + (baitAndSwitchBonus || 0) + (shieldAcBonus || 0) + (shieldOfFaithAcBonus || 0) : undefined);
+    const computedHit = isAutoMiss ? false : (targetName && hit !== undefined && effectiveAc !== undefined ? finalTotal >= effectiveAc : hit);
 
     const isSaveDamageType = type === 'save-damage';
 
