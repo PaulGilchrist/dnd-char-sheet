@@ -29,7 +29,8 @@ vi.mock('../../services/npcs/monsterUtils.js', () => ({
 vi.mock('../../services/encounters/combatData.js', () => ({
   getCombatSummary: vi.fn(() => ({
     // Goblin C dead (0 HP) so the SP-100 Revivify dead-target gate arms pending.
-    creatures: [{ name: 'Goblin A' }, { name: 'Goblin B' }, { name: 'Goblin C', type: 'monster', currentHp: 0 }],
+    // Goblin A is a dying PC (runtime 0 HP) so the SP-110 Spare the Dying gate arms pending.
+    creatures: [{ name: 'Goblin A', type: 'player' }, { name: 'Goblin B' }, { name: 'Goblin C', type: 'monster', currentHp: 0 }],
   })),
 }));
 
@@ -52,7 +53,13 @@ vi.mock('../../services/rules/spells/spellPreparationService.js', () => ({
 }));
 
 vi.mock('../runtime/useRuntimeState.js', () => ({
-  getRuntimeValue: vi.fn(() => 3),
+  // SP-110: Goblin A must read as a dying PC (runtime 0 HP) for the Spare the
+  // Dying gate; everything else keeps the legacy 3.
+  getRuntimeValue: vi.fn((name, key) => {
+    if (name === 'Goblin A' && key === 'currentHitPoints') return 0;
+    if (name === 'Goblin A' && (key === 'isDead' || key === 'deathSaves')) return null;
+    return 3;
+  }),
   setRuntimeValue: vi.fn(),
 }));
 

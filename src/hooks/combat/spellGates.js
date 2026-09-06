@@ -1,6 +1,6 @@
 import { getCombatSummary } from '../../services/encounters/combatData.js';
 import { getAllyList } from '../useAllySelection.js';
-import { getCsAndTargets, extractMaxTargets, resolveHumanoids, resolveBeasts, makePending } from './spellGateHelpers.js';
+import { getCsAndTargets, extractMaxTargets, resolveHumanoids, resolveBeasts, makePending, isSpareTheDyingTarget } from './spellGateHelpers.js';
 import { isCreatureDead } from '../../services/shared/hpModifier.js';
 
 // ── Spell gate handlers ──────────────────────────────────────────────────────
@@ -351,13 +351,26 @@ function gateLongstrider(spell, campaignName, cfSetPending, _playerStats, _metaC
   return false;
 }
 
-function gateSpareTheDying(spell, campaignName, cfSetPending, playerStats, _metaCtx, _characters, _isSorcerer) {
-  const { creatureTargets } = getCsAndTargets(campaignName, { excludeCaster: true, casterName: playerStats.name });
-  if (creatureTargets.length > 0) {
-    cfSetPending('spareTheDying', makePending('spareTheDying', spell, { range: spell.range || '15 feet', creatureTargets }));
+// SP-110: Spare the Dying can only target a living creature at 0 Hit Points.
+// Canonical HP truth: PCs via the runtime store, monsters via cs.currentHp
+// (pitfall 29). Returns true even when no valid target exists (refusal popup)
+// so the cast never falls through to the generic path — mirrors gateRevivify.
+function gateSpareTheDying(spell, campaignName, cfSetPending, playerStats, _metaCtx, _characters, _isSorcerer, setPopupHtml) {
+  const { cs, creatureTargets } = getCsAndTargets(campaignName, { excludeCaster: true, casterName: playerStats.name });
+  const dyingTargets = creatureTargets.filter(name => isSpareTheDyingTarget(cs, name));
+  if (dyingTargets.length > 0) {
+    cfSetPending('spareTheDying', makePending('spareTheDying', spell, { range: spell.range || '15 feet', creatureTargets: dyingTargets }));
     return true;
   }
-  return false;
+  if (setPopupHtml) {
+    setPopupHtml({
+      type: 'automation_info',
+      name: spell.name,
+      automationType: 'spareTheDying',
+      description: 'No living creature at 0 Hit Points is in range. Spare the Dying can only target a living creature that has 0 Hit Points, and has no effect on undead or constructs.',
+    });
+  }
+  return true;
 }
 
 function gatePassWithoutTrace(spell, campaignName, cfSetPending, _playerStats, _metaCtx, _characters, _isSorcerer) {

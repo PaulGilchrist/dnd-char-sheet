@@ -115,7 +115,9 @@ const gatedSpellsWithCreatureChecks = [
   { name: 'Prismatic Spray', level: 7, pendingKey: 'pendingPrismaticSpray', casterExcluded: true },
   { name: 'Faerie Fire', level: 1, pendingKey: 'pendingFaerieFire', casterExcluded: true },
   { name: 'Enhance Ability', level: 2, pendingKey: 'pendingEnhanceAbility', casterIncluded: true },
-  { name: 'Spare The Dying', level: 0, pendingKey: 'pendingSpareTheDying', casterExcluded: true },
+  // SP-110: 'Spare The Dying' gate now filters to 0-HP-not-dead creatures —
+  // covered by spellGates.spareTheDying.test.js (this suite's runtime mocks
+  // have no dying creature).
   { name: 'Revivify', level: 5, pendingKey: 'pendingRevivify', casterExcluded: true },
 ];
 

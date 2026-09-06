@@ -242,7 +242,7 @@ const TargetSpellPopups = function TargetSpellPopups({
                     targets={pendingSpareTheDying.creatureTargets.map(name => ({ name, type: 'creature' }))}
                     onTargetSelected={(targetName) => handleSpareTheDyingConfirm({ targetName })}
                     onSkip={handleSpareTheDyingSkip}
-                    description="Choose a creature within range that has 0 HP. The target rises to 1 HP and gains the Unconscious condition."
+                    description="Choose a creature within range that has 0 Hit Points and isn't dead. The creature becomes Stable."
                     confirmLabel="Cast Spare the Dying"
                     confirmIcon="fa-hand-holding-medical"
                 />

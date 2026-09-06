@@ -1,5 +1,7 @@
 import { getCombatSummary } from '../../services/encounters/combatData.js';
 import { getMonsterData } from '../../services/npcs/monsterUtils.js';
+import { getRuntimeValue } from '../runtime/useRuntimeState.js';
+import { isStable } from '../../services/combat/conditions/deathSaveRules.js';
 
 // ── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -18,6 +20,28 @@ export function getCsAndTargets(campaignName, opts = {}) {
     creatureTargets.unshift(casterName);
   }
   return { cs, creatureTargets };
+}
+
+// SP-110: canonical Spare-the-Dying target — a living creature at 0 HP that is
+// not yet Stable. PCs read the runtime store (combatSummary player entries are
+// 1/1 placeholders); monsters carry real HP on their combatSummary currentHp only,
+// and per the canonical isCreatureDead model a monster at 0 HP is DEAD — so only
+// a dying-modelled monster (deathSaves array on its cs entry) can qualify.
+// Undead and constructs are excluded (5e spell text, retained app behavior).
+export function isSpareTheDyingTarget(cs, creatureName) {
+  const creature = cs?.creatures?.find(c => c.name === creatureName);
+  if (!creature) return false;
+  const monsterType = String(creature.monsterType || '').toLowerCase();
+  if (monsterType.includes('undead') || monsterType.includes('construct')) return false;
+  if (creature.type === 'player') {
+    const hp = getRuntimeValue(creatureName, 'currentHitPoints');
+    if (hp == null || Number(hp) !== 0) return false;
+    if (getRuntimeValue(creatureName, 'isDead')) return false;
+    const saves = getRuntimeValue(creatureName, 'deathSaves');
+    return !(Array.isArray(saves) && isStable(saves));
+  }
+  if (Number(creature.currentHp) !== 0) return false;
+  return Array.isArray(creature.deathSaves) && !isStable(creature.deathSaves);
 }
 
 export function extractMaxTargets(spell) {

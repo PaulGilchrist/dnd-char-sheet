@@ -5973,7 +5973,7 @@
       "handler": "src/services/combat/automation/handlers/spellHandler.js",
       "router": "src/services/combat/automation/routers/spellRouter.js",
       "infoBuilder": "src/services/combat/automation/infoBuilders/spellInfoBuilder.js",
-      "verified": "broken — see .opencode/plans/bug-SP-110-spare-the-dying.md",
+      "verified": "verified",
       "class": "Spell",
       "triggerConditions": "Action: action; Range: 15 feet",
       "expectedBehavior": "Choose a creature within range that has 0 Hit Points and isn't dead. The creature becomes Stable."
