@@ -5949,7 +5949,7 @@
       "handler": "src/services/combat/automation/handlers/classFeatureHandler.js",
       "router": "src/services/combat/automation/routers/classFeatureRouter.js",
       "infoBuilder": "src/services/combat/automation/infoBuilders/classFeatureInfoBuilder.js",
-      "verified": "broken — see .opencode/plans/bug-CLA-320-soul-blades.md",
+      "verified": "verified",
       "class": "Rogue",
       "triggerConditions": "Automation type: undefined",
       "expectedBehavior": "Homing Strikes: If attack with Psychic Blade misses, roll Psionic Energy Die and add to attack roll. If causes hit, die expended. Psychic Teleportation: Bonus Action, manifest Psychic Blade, expend Psionic Energy Die, throw to unoccupied space up to 10x die roll feet. Teleport to that space, blade vanishes."

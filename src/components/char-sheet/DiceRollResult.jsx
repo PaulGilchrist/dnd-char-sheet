@@ -87,6 +87,7 @@ function DiceRollResult(props) {
         autoReroll, autoRerollBonus, autoRerollCondition, autoRerollForAttack,
         tavernBrawlerRerolls, d20Floor10, starryDragonFloor,
         luckyRerolled, luckyRerollValue,
+        homingStrikesUsed, homingStrikesBonus,
         healingRerollOriginalRolls, healingRerollDisplayRolls,
         gwfApplied, gwfOriginalRolls, gwfDisplayRolls,
         critLabels,
@@ -118,8 +119,10 @@ function DiceRollResult(props) {
         safeRolls, finalRoll, originalTotal, displayRoll, displayTotal,
         strReplaceApplied, finalDisplayTotal,
         finalTotal, showFumble,
-        computedHit,
+        computedHit, homingStrikesApplied,
     } = state;
+
+    const hitMissTotal = homingStrikesApplied ? finalTotal : displayTotal;
 
     const {
         handleReroll, handleTacticalMind, handleDarkOnesLuck,
@@ -319,13 +322,19 @@ function DiceRollResult(props) {
             {showFumble && <div className="dice-roll-crit dice-roll-crit-miss">Critical Miss!</div>}
                {targetName && computedHit !== undefined && !isSaveDamageType && rollType === 'attack' && (
                     <div className={`dice-roll-hit-miss ${computedHit ? 'hit' : 'miss'}`}>
-                       {isAutoMiss ? `✗ AUTO-MISS (${coverReason || rangeReason || 'out of range'})` : (computedHit ? `✓ HIT (${displayTotal} vs AC ${targetAc ?? '—'}${(defensiveDuelistBonus > 0 || (baitAndSwitchBonus || 0) > 0) ? ` + ${Math.max(0, defensiveDuelistBonus || 0) + Math.max(0, baitAndSwitchBonus || 0)} reaction` : ''})` : `✗ MISS (${displayTotal} vs AC ${targetAc ?? '—'}${(defensiveDuelistBonus > 0 || (baitAndSwitchBonus || 0) > 0) ? ` + ${Math.max(0, defensiveDuelistBonus || 0) + Math.max(0, baitAndSwitchBonus || 0)} reaction` : ''})`)}
+                       {isAutoMiss ? `✗ AUTO-MISS (${coverReason || rangeReason || 'out of range'})` : (computedHit ? `✓ HIT (${hitMissTotal} vs AC ${targetAc ?? '—'}${(defensiveDuelistBonus > 0 || (baitAndSwitchBonus || 0) > 0) ? ` + ${Math.max(0, defensiveDuelistBonus || 0) + Math.max(0, baitAndSwitchBonus || 0)} reaction` : ''})` : `✗ MISS (${hitMissTotal} vs AC ${targetAc ?? '—'}${(defensiveDuelistBonus > 0 || (baitAndSwitchBonus || 0) > 0) ? ` + ${Math.max(0, defensiveDuelistBonus || 0) + Math.max(0, baitAndSwitchBonus || 0)} reaction` : ''})`)}
                     </div>
                   )}
 
             {unerringStrikeApplied && (
               <div className="dice-roll-reroll-result">
                 <i className="fa-solid fa-shield-halved"></i> Unerring Strike: missed weapon attack turned into a hit
+              </div>
+            )}
+
+            {homingStrikesApplied && homingStrikesUsed !== false && (
+              <div className="dice-roll-reroll-result">
+                <i className="fa-solid fa-brain"></i> Soul Blades (Homing Strikes): psionic die +{Number(homingStrikesBonus)} → {finalTotal} vs AC {targetAc ?? '—'} — miss converted into a hit, 1 Psionic Energy expended
               </div>
             )}
 

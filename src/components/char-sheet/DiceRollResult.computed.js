@@ -6,7 +6,7 @@ export function useDiceRollState(props) {
         targetAc, hit, isAutoMiss, coverAcBonus, defensiveDuelistBonus, baitAndSwitchBonus,
         reliableTalent, d20Floor10, starryDragonFloor, strSaveReplace, strCheckReplace, strScore,
         wisCheckReplace, wisCheckMinBonus, luckyRerolled, luckyRerollValue,
-        targetName,
+        targetName, homingStrikesBonus,
     } = props;
 
     const {
@@ -75,7 +75,12 @@ export function useDiceRollState(props) {
     const reliableTalentTotal = reliableTalent && (rollType === 'check' || rollType === 'skill') && displayRoll <= 9 ? 10 + bonus + modifier : null;
     const d20Floor10Total = d20Floor10 && displayRoll <= 9 ? 10 + bonus + modifier : null;
     const starryDragonFloorTotal = starryDragonFloor && displayRoll <= 9 ? 10 + bonus + modifier : null;
-    const finalTotal = (starryDragonFloorTotal !== null ? starryDragonFloorTotal : d20Floor10Total !== null ? d20Floor10Total : reliableTalentTotal !== null ? reliableTalentTotal : (wisCheckReplace && (rollType === 'check' || rollType === 'skill') ? wisDisplayTotal : finalDisplayTotal));
+    const baseTotal = (starryDragonFloorTotal !== null ? starryDragonFloorTotal : d20Floor10Total !== null ? d20Floor10Total : reliableTalentTotal !== null ? reliableTalentTotal : (wisCheckReplace && (rollType === 'check' || rollType === 'skill') ? wisDisplayTotal : finalDisplayTotal));
+    // CLA-320: Homing Strikes (Soul Blades) — the authoritative resolver has
+    // already folded the psionic die into the attack; mirror it here so the
+    // popup's recomputed hit agrees with the flipped hit and "Done" appears.
+    const homingStrikesApplied = rollType === 'attack' && Number(homingStrikesBonus) > 0 && !isAutoMiss;
+    const finalTotal = baseTotal + (homingStrikesApplied ? Number(homingStrikesBonus) : 0);
     const showFumble = isNatural1 && rollType === 'attack';
 
     const effectiveAc = targetAc + (coverAcBonus || 0) + (defensiveDuelistBonus || 0) + (baitAndSwitchBonus || 0);
@@ -102,6 +107,6 @@ export function useDiceRollState(props) {
         safeRolls, finalRoll, originalTotal, displayRoll, displayTotal,
         appliesReplace, strReplaceApplied, finalDisplayTotal, wisBonus, wisDisplayTotal,
         reliableTalentTotal, d20Floor10Total, starryDragonFloorTotal, finalTotal, showFumble,
-        effectiveAc, computedHit, isNatural1,
+        effectiveAc, computedHit, isNatural1, homingStrikesApplied,
     };
 }

@@ -706,6 +706,11 @@ export async function executeHandler(action, playerStats, campaignName, mapName,
     } else if (auto.type === 'auto_effect' && auto.effect === 'wild_magic_double_roll') {
         // Controlled Chaos — just set the flag, no handler needed
         return null;
+    } else if (auto.type === 'auto_effect' && auto.effect === 'psychic_teleportation') {
+        // CLA-320: Soul Blades' Psychic Teleportation declares type 'auto_effect'
+        // (no type-level handler) — route by effect to its registered handler so
+        // the Bonus Actions row expends the Psionic Energy die and logs.
+        handler = handlePsychicTeleportation;
     } else {
         handler = HANDLER_MAP[auto.type];
     }

@@ -8,7 +8,7 @@ import { getEmpoweredEvocationFeatures, getEmpoweredEvocationIntModifier } from 
 import { addEntry } from '../../services/ui/logService.js';
 
 export async function processAttackAfterResult(hit, isAutoMiss, targetName, characterName, campaignName, context, combatSummary, characters, logEntry, setPopupHtml, state) {
-    const { effectiveD20, r1, r2, bonus, effectiveD20Roll, isCrit, targetAc, effectiveAc, homingStrikesUsed, homingStrikesBonus, hit: finalHit, isAutoMiss: finalAutoMiss } = state;
+    const { effectiveD20, r1, r2, bonus, effectiveD20Roll, isCrit, targetAc, effectiveAc, homingStrikesUsed, homingStrikesBonus, homingStrikesAttempted, hit: finalHit, isAutoMiss: finalAutoMiss } = state;
 
     if (context?.rollType === 'attack') {
         const hsUsed = homingStrikesUsed;
@@ -77,6 +77,13 @@ export async function processAttackAfterResult(hit, isAutoMiss, targetName, char
                 baitAndSwitchBonus: context?.baitAndSwitchBonus || 0,
                 statusEffects: context?.statusEffects || null,
                 affectedTargets: context?.affectedTargets || [targetName],
+                // CLA-320: machine-readable Homing Strikes evidence + Psychic
+                // Blade trigger stamp so the manual Reactions row can enforce
+                // its trigger and refuse an already-resolved miss.
+                isPsychicBlade: context?.isPsychicBlade === true,
+                homingStrikesAttempted: !!homingStrikesAttempted,
+                homingStrikesUsed: !!homingStrikesUsed,
+                homingStrikesBonus: homingStrikesUsed ? homingStrikesBonus : null,
             };
             setRuntimeValue('campaign', 'lastAttack', lastAttackData, campaignName);
         }

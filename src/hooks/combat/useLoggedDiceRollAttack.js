@@ -290,6 +290,8 @@ export function createLogAndShow(deps) {
                 luckyRerolled: ctx.luckyRerolled,
                 luckyRerollValue: ctx.luckyRerollValue,
                 unerringStrikeApplied: ctx.unerringStrikeApplied,
+                homingStrikesUsed: ctx.homingStrikesUsed === true,
+                homingStrikesBonus: ctx.homingStrikesBonus || 0,
                 characterName,
                 campaignName,
                 availableSuperiorityManeuvers,

@@ -300,6 +300,66 @@ export async function handle(action, playerStats, campaignName, _mapName) {
             return infoPopup(action.name, `${action.name}: No Psionic Energy remaining. Recharges on a Short or Long Rest.`, auto);
         }
 
+        // CLA-320: Homing Strikes (Soulknife Soul Blades) is the only
+        // psionic_energy_die auto_reroll in the 2024 data. RAW gates: the
+        // trigger is a missed Psychic Blade attack roll (not a natural 1,
+        // not a check, not an already-resolved miss), and the Psionic Energy
+        // die is expended ONLY if the boosted total turns the miss into a hit.
+        const isHomingStrikes = auto.trigger === 'psychic_blade_miss' || auto.condition === 'psychic_blade_miss';
+        if (isHomingStrikes) {
+            const attackFresh = lastAttack?.rollType === 'attack' && lastAttack.hit === false && lastAttack.attackerName === playerName;
+            if (!attackFresh) {
+                return infoPopup(action.name, `${action.name}: No recent missed attack found — Homing Strikes can only be used when one of your own attack rolls misses.`, auto);
+            }
+            if (lastAttack.isPsychicBlade !== true) {
+                return infoPopup(action.name, `${action.name}: your last miss was with ${lastAttack.attackName || 'a normal attack'} — Homing Strikes only works with Psychic Blade attacks.`, auto);
+            }
+            if (lastAttack.d20 === 1) {
+                return infoPopup(action.name, `${action.name}: you rolled a natural 1 — an attack roll of 1 always misses, and Homing Strikes cannot be used.`, auto);
+            }
+            if (lastAttack.homingStrikesAttempted || lastAttack.homingStrikesUsed) {
+                return infoPopup(action.name, `${action.name}: Homing Strikes has already resolved this attack roll. Manifest a new Psychic Blade and attack again.`, auto);
+            }
+
+            const psionicDieSize = evaluateAutoExpression('psionic_energy_die', playerStats);
+            const dieRoll = Math.floor(Math.random() * psionicDieSize) + 1;
+            const { d20, bonus: atkBonus, targetAc } = lastAttack;
+            const ac = lastAttack.effectiveAc ?? targetAc;
+            const modifiedD20 = d20 + dieRoll;
+            const modifiedTotal = modifiedD20 + atkBonus;
+            const modifiedHit = ac != null ? (modifiedTotal >= ac) : null;
+            const originalTotal = d20 + atkBonus;
+
+            let logDescription = `${playerName} used ${action.name} (Homing Strikes) on Psychic Blade attack: d20(${d20}) + ${atkBonus} = ${originalTotal} vs AC ${ac != null ? ac : '—'} → MISS. Psionic die: 1d${psionicDieSize} (${dieRoll}) → Modified: d20(${modifiedD20}) + ${atkBonus} = ${modifiedTotal} vs AC ${ac != null ? ac : '—'} → ${modifiedHit == null ? 'N/A' : modifiedHit ? 'HIT' : 'MISS'}.`;
+            let result;
+            if (modifiedHit === true) {
+                await setRuntimeValue(playerName, usesKey, currentUses - 1, campaignName);
+                logDescription += ` Miss turned into a hit — 1 Psionic Energy expended. Psionic Energy: ${currentUses - 1}/${defaultMax}.`;
+                result = await handleAttackRoll(action, dieRoll, lastAttack, playerStats, campaignName);
+            } else {
+                logDescription += ` Still a miss — Psionic Energy die NOT expended. Psionic Energy: ${currentUses}/${defaultMax}.`;
+                result = handleAttackRoll(action, dieRoll, lastAttack, playerStats, campaignName);
+            }
+
+            await setRuntimeValue('campaign', 'lastAttack', {
+                ...lastAttack,
+                hit: modifiedHit === true,
+                homingStrikesAttempted: true,
+                homingStrikesUsed: modifiedHit === true,
+                homingStrikesBonus: modifiedHit === true ? dieRoll : null,
+            }, campaignName);
+
+            addEntry(campaignName, {
+                type: 'ability_use',
+                characterName: playerName,
+                abilityName: action.name,
+                description: logDescription,
+                timestamp: Date.now(),
+            }).catch((e) => { console.error("[autoReroll] Error:", e); });
+
+            return result;
+        }
+
         const psionicDieSize = evaluateAutoExpression('psionic_energy_die', playerStats);
         const dieRoll = Math.floor(Math.random() * psionicDieSize) + 1;
 

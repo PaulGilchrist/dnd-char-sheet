@@ -62,6 +62,15 @@ function CharBonusActions({ playerStats, campaignName, exhaustionPenalty, condit
     const poisonDoses = useRuntimeValue(playerStats.name, 'poisonDoses', campaignName);
     const showApplyPoison = hasApplyPoison && Number(poisonDoses ?? 0) > 0 && !cannotAct;
 
+    // CLA-320: Soulknife Soul Blades Psychic Teleportation — the router routes
+    // the auto_effect half into automation.bonusActions; render it as a
+    // clickable Bonus Actions row (same pattern as Apply Poison) that
+    // dispatches psychicTeleportationHandler (expends 1 Psionic Energy die).
+    const psychicTeleportationAuto = (playerStats.automation?.bonusActions ?? []).find(
+        a => a.effect === 'psychic_teleportation'
+    );
+    const showPsychicTeleportation = !!psychicTeleportationAuto && !cannotAct;
+
     const handleApplyPoison = React.useCallback(async () => {
         if (cannotAct) return;
         const currentDoses = Number(getRuntimeValue(playerStats.name, 'poisonDoses', campaignName) ?? 0);
@@ -455,6 +464,16 @@ function CharBonusActions({ playerStats, campaignName, exhaustionPenalty, condit
                 {showApplyPoison && (
                     <div>
                         <b className="clickable" onClick={handleApplyPoison}>Apply Poison:</b> <span>Apply a poison dose to a weapon. Target must succeed on a CON save (DC {8 + Math.max(playerStats.abilities?.find(a => a.name === 'Dexterity')?.bonus ?? 0, playerStats.abilities?.find(a => a.name === 'Intelligence')?.bonus ?? 0) + (playerStats.proficiency || 0)}) or take 2d8 Poison damage and have the Poisoned condition until the end of your next turn.</span>
+                    </div>
+                )}
+
+                {showPsychicTeleportation && (
+                    <div>
+                        <b className="clickable" onClick={() => onAutomationAction({
+                            name: 'Psychic Teleportation',
+                            description: 'Expend 1 Psionic Energy die, throw a manifested Psychic Blade to an unoccupied space you can see, and teleport to that space. The blade vanishes.',
+                            automation: psychicTeleportationAuto,
+                        })}>Psychic Teleportation:</b> <span>Expend 1 Psionic Energy die and teleport up to 10 ft per the die roll to an unoccupied space you can see. The blade vanishes.</span>
                     </div>
                 )}
 

@@ -6,6 +6,7 @@ import { hasBardicInspirationDefense } from '../../services/combat/auras/bardicI
 import { getCurrentCombatRound } from '../../services/encounters/combatData.js';
 import { addEntry } from '../../services/ui/logService.js';
 import { getCombatContext, getTargetFromAttacker } from '../../services/rules/combat/damageUtils.js';
+import { evaluateAutoExpression } from '../../services/combat/automation/automationExpressions.js';
 
 export async function resolveHit(characterName, campaignName, context, bonus, effectiveD20Roll, target, combatSummary, characters, logEntry, _setPopupHtml) {
     let { hit, isAutoMiss } = context;
@@ -163,12 +164,22 @@ export async function resolveHit(characterName, campaignName, context, bonus, ef
     const isPsychicBlade = context?.isPsychicBlade === true;
     let homingStrikesUsed = false;
     let homingStrikesBonus = 0;
-    if (hasSoulBlades && isPsychicBlade && hit === false && !isAutoMiss) {
-        const classLevel = ps?.class?.class_levels?.find(cl => cl.level === ps?.level);
-        const psionicDieSize = classLevel?.energy?.energy_die || 6;
+    let homingStrikesAttempted = false;
+    const homingAc = effectiveAc != null ? effectiveAc : targetAc;
+    if (hasSoulBlades && isPsychicBlade && hit === false && !isAutoMiss && effectiveD20Roll === 1) {
+        addEntry(campaignName, {
+            type: 'ability_use',
+            characterName,
+            abilityName: 'Soul Blades',
+            description: `${characterName} rolled a natural 1 with the Psychic Blade — an attack roll of 1 always misses; Homing Strikes was not attempted.`,
+            timestamp: Date.now(),
+        }).catch((e) => { console.error('[homingStrikes] Log error:', e); });
+    } else if (hasSoulBlades && isPsychicBlade && hit === false && !isAutoMiss) {
+        const psionicDieSize = Number(evaluateAutoExpression('psionic_energy_die', ps)) || 6;
         const psionicBonus = Math.floor(Math.random() * psionicDieSize) + 1;
+        homingStrikesAttempted = true;
         const newTotal = effectiveD20Roll + context.bonus + psionicBonus;
-        const newHit = targetAc ? (newTotal >= targetAc) : null;
+        const newHit = homingAc != null ? (newTotal >= homingAc) : null;
         if (newHit === true) {
             const defaultMax = ps?._trackedResources?.psionicEnergy?.max || 0;
             const currentEnergy = Number(getRuntimeValue(characterName, 'psionicEnergy', campaignName) ?? defaultMax);
@@ -181,7 +192,7 @@ export async function resolveHit(characterName, campaignName, context, bonus, ef
                     type: 'ability_use',
                     characterName,
                     abilityName: 'Soul Blades',
-                    description: `${characterName} used Soul Blades (Homing Strikes) to turn a miss into a hit, consuming 1 Psionic Energy. Psionic Energy: ${currentEnergy - 1}/${defaultMax}.`,
+                    description: `${characterName} used Soul Blades (Homing Strikes) to turn a miss into a hit (total: ${newTotal} vs AC: ${homingAc}), consuming 1 Psionic Energy. Psionic Energy: ${currentEnergy - 1}/${defaultMax}.`,
                     timestamp: Date.now(),
                 }).catch((e) => { console.error('[homingStrikes] Log error:', e); });
             }
@@ -190,7 +201,7 @@ export async function resolveHit(characterName, campaignName, context, bonus, ef
                 type: 'ability_use',
                 characterName,
                 abilityName: 'Soul Blades',
-                description: `${characterName} tried Soul Blades (Homing Strikes) but even with the psionic die roll of ${psionicBonus}, the attack still missed (total: ${newTotal} vs AC: ${targetAc}).`,
+                description: `${characterName} tried Soul Blades (Homing Strikes) but even with the psionic die roll of ${psionicBonus}, the attack still missed (total: ${newTotal} vs AC: ${homingAc}).`,
                 timestamp: Date.now(),
             }).catch((e) => { console.error('[homingStrikes] Log error:', e); });
         }
@@ -270,5 +281,5 @@ export async function resolveHit(characterName, campaignName, context, bonus, ef
         }
     }
 
-    return { hit, isAutoMiss, isCrit, unerringStrikeApplied, homingStrikesUsed, homingStrikesBonus, targetAc, effectiveAc, effectiveD20Roll };
+    return { hit, isAutoMiss, isCrit, unerringStrikeApplied, homingStrikesUsed, homingStrikesBonus, homingStrikesAttempted, targetAc, effectiveAc, effectiveD20Roll };
 }
